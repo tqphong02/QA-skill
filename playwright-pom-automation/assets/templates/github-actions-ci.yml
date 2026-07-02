@@ -1,0 +1,81 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  # k6 job dùng workflow_dispatch (manual) + schedule (cron) — KHÔNG chạy mỗi PR
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *' # hàng ngày 02:00 UTC — cho k6
+
+jobs:
+  test-ui-api:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-pw-${{ matrix.browser }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Run UI + API tests
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+        run: npx playwright test --project=${{ matrix.browser }} --grep '@ui|@api'
+
+      # Publish Allure report (cần action bên thứ 3, vd simple-elf/allure-report-action)
+      # - name: Generate Allure report
+      #   if: always()
+      #   uses: simple-elf/allure-report-action@v1.9
+      #   with:
+      #     allure_results: allure-results
+      #     allure_history: allure-history
+
+      - name: Upload report + traces (on fail)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-${{ matrix.browser }}-${{ github.run_id }}
+          path: |
+            reports/
+            test-results/
+            allure-results/
+          retention-days: 14
+
+  # k6 — JOB RIÊNG, không block pipeline chính
+  k6-load-test:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: k6 load test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/performance/k6-load-test.js
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }} # tuỳ chọn: đẩy result lên k6 Cloud

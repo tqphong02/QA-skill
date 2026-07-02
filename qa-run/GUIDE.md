@@ -1,0 +1,157 @@
+# 📖 qa-run — Hướng dẫn sử dụng (cheat-sheet)
+
+> Skill QA **exploratory/ad-hoc** bằng AI lái UI (MCP Playwright) + script npm Playwright. Một skill, chạy mọi project. Đây là guide **human-facing**; AI đọc `SKILL.md` khi kích hoạt.
+>
+> **Phân biệt skill:**
+> - **qa-run** (this) → săn bug **live**, AI lái UI tương tác, exploratory/retest/sanity
+> - **playwright-pom-automation** → viết **test code** deterministic (regression suite, CI)
+> - **testcase-template** → sinh **test case Excel** theo template team
+
+---
+
+## 🚀 Setup (1 lần)
+
+```bash
+cd ~/.claude/skills/qa-run && npm install     # cài playwright cho engine
+```
+
+Cho mỗi dự án, trong thư mục QA (vd `MyProject/qa/`):
+```bash
+cp ~/.claude/skills/qa-run/.env.example .env
+# điền: QA_BASE_URL, QA_EMAIL, QA_PASSWORD  (+ PLANE_* nếu log bug Plane)
+node ~/.claude/skills/qa-run/scripts/login.mjs  # → tạo auth.json + evidence/ ở thư mục này
+```
+
+Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong **thư mục dự án** — KHÔNG đụng skill.
+
+---
+
+## 🧭 Workflow chính — chọn theo mục đích
+
+### 1️⃣ Khám phá / săn bug mới (Exploratory)
+**AI tự làm:** đọc spec → hiểu logic → map flow → lái UI tương tác qua **MCP Playwright** (`browser_navigate/click/type/snapshot/evaluate/network_requests`).
+
+Bạn chỉ cần nói: *"Khám phá feature X tìm bug"* hoặc *"Test đầy đủ feature filter"*.
+
+AI áp dụng Nguyên tắc #1 (**HIỂU NGỮ CẢNH trước khi lái**) + 12 kỹ thuật testing (`TESTING-TECHNIQUES.md`).
+
+### 2️⃣ Retest từ 1 link ticket (Sanity)
+Bạn paste URL ticket → AI tự `WebFetch` → trích AC → verify từng AC qua UI → poke adjacent areas → verdict PASS/FAIL.
+
+*"Retest ticket https://plane.../issues/427"*
+
+| Kết quả | Hành động |
+|---|---|
+| PASS | ticket → **Done** |
+| FAIL | ticket → **In Progress** + comment lý do |
+| Bug mới ngoài scope | tạo ticket mới → **Todo** |
+
+### 3️⃣ UI/UX testing (spam, che content, vượt layout)
+*"Test spam nút Sync"*, *"Check trang dashboard có che content không"*, *"Check responsive"*
+
+```bash
+# Auto-scan UX metric (overflow/truncation/touch/overlap/CLS/latency/a11y)
+node ~/.claude/skills/qa-run/scripts/ux-health.mjs /dashboard "button#save,a.delete"
+
+# Spam test: click N lần, đếm API call (phải = 1, >1 = bug thiếu guard)
+node ~/.claude/skills/qa-run/scripts/ux-health.mjs /dashboard --spam "button:has-text('Sync')" "/api/sync" 5
+
+# Cross-browser/device
+node ~/.claude/skills/qa-run/scripts/compat.mjs /login chromium,firefox,webkit iphone-12,ipad-11
+```
+
+10 category bug UI trong `references/UI-BUG-CATALOG.md`.
+
+### 4️⃣ Log bug Plane (ảnh preview INLINE trong description)
+```bash
+# Bug mới (Todo)
+node log-bug.mjs --title "[W26][Filter] Status Pending không lọc" \
+  --steps "1. Mở /events|2. Chọn Status=Pending" \
+  --expected "Total = 6" --actual "Total = 0" \
+  --screenshots "evidence/probe.png" --assign hungtn,phongtq --state Todo
+
+# Retest FAIL (In Progress + comment có ảnh)
+node log-bug.mjs --mode retest-fail --issue-id <uuid> \
+  --reason "AC #1 fail" --screenshots "evidence/after.png" --assign hungtn,phongtq
+
+# Retest PASS (Done)
+node log-bug.mjs --mode retest-pass --issue-id <uuid> --note "AC #1-3 đúng"
+```
+Cần `.env` có `PLANE_API_KEY`, `PLANE_BASE_URL`, `PLANE_WORKSPACE`, `PLANE_PROJECT_ID`, `PLANE_STATE_*`.
+
+### 5️⃣ Thiếu data khi test
+AI tự xử lý: **(a)** hỏi user khi cần data thật/không tạo được, **(b)** **tự tạo theo business flow** (qua API/UI) + cleanup bằng `withRevert()`.
+
+*"Test filter Pending" nhưng 0 record → AI tự tạo event Pending qua API → test → cleanup.*
+
+---
+
+## 🛠️ Tất cả script (7 cái)
+
+| Script | Lệnh | Dùng khi |
+|---|---|---|
+| `login.mjs` | `node login.mjs` | setup auth (1 lần/dự án) |
+| `sweep.mjs` | `node sweep.mjs` | quét nav tìm HTTP≥400/console error |
+| `explore.mjs` | `node explore.mjs /path` | soi nhanh 1 trang |
+| `api-health.mjs` | `node api-health.mjs` | probe endpoint tìm 4xx/5xx |
+| `ux-health.mjs` | `node ux-health.mjs /path [sels] [--spam ...]` | UX metric + spam test |
+| `compat.mjs` | `node compat.mjs /path engines devices` | cross-browser/device |
+| `log-bug.mjs` | `node log-bug.mjs ...` | log bug Plane (3 mode) |
+
+**Lib** (`lib/`): `driver.mjs` (browser/snap/shot) · `ui.mjs` (recordNet/waitForText/waitForStable/clickText/withRevert) · `assert.mjs` (check/eq/summary).
+
+---
+
+## 🧪 12 kỹ thuật testing (xem `TESTING-TECHNIQUES.md`)
+
+Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
+
+---
+
+## ⚡ Tối ưu khi AI lái browser
+- **Scope snapshot** (`target` + `depth`) thay vì full page → nhỏ 5-20×
+- **Batch fill** (`browser_fill_form`) + **batch evaluate** (1 call đọc nhiều value)
+- **Wait deterministic** (`wait_for text`) thay vì sleep cứng
+- **Cross-verify** mỗi verdict: DOM + network + console (đừng chỉ tin snapshot)
+- **Heuristic checklists** theo loại feature (form/table/filter/auth/modal/concurrency)
+- **Pattern memory**: đọc `FINDINGS.md` cũ → nhận regression/root-cause lặp
+
+---
+
+## 🔁 Fallback: Antigravity (nếu hết Claude Code + Playwright)
+Phần lớn asset portable (lib, scripts, methodology). Chỉ đổi "bộ não lái UI":
+- MCP Playwright → **Gemini-in-Chrome** (Antigravity)
+- WebFetch → Antigravity web tool / curl
+- Script npm (`node scripts/x.mjs`) → chạy y hệt từ Antigravity terminal
+
+Chi tiết: `SKILL.md` §🔁. Skill cũng dùng được với Cursor/Cline/Aider+playwright-mcp.
+
+---
+
+## 📁 Cấu trúc skill
+```
+~/.claude/skills/qa-run/
+├── SKILL.md                      # AI instructions (model-facing)
+├── GUIDE.md                      # ← bạn đang đọc (human-facing)
+├── TESTING-TECHNIQUES.md         # 12 kỹ thuật + coverage matrix
+├── references/
+│   └── UI-BUG-CATALOG.md         # 10 category bug UI
+├── lib/                          # driver / ui / assert (engine Node thuần)
+├── scripts/                      # 7 script (login/sweep/explore/api-health/ux-health/compat/log-bug)
+├── report/                       # REPORT-TEMPLATE + export-pdf + upload-to-drive
+└── package.json
+```
+
+---
+
+## 💬 Câu lệnh mẫu (copy-paste cho AI)
+| Bạn nói | AI làm |
+|---|---|
+| *"Khám phá feature Booking tìm bug"* | Exploratory: hiểu → lái UI → poke theo 12 kỹ thuật → FINDINGS.md |
+| *"Retest #427"* | Sanity: fetch ticket → verify AC → PASS=Done / FAIL=In Progress |
+| *"Test spam nút Sync"* | `ux-health.mjs --spam` → đếm API call |
+| *"Check UX trang dashboard"* | `ux-health.mjs` auto-scan + heuristic |
+| *"Check compat Firefox + iPad"* | `compat.mjs` cross-browser/device matrix |
+| *"Log bug: filter Pending không lọc"* | `log-bug.mjs --mode create` → Plane ticket có ảnh inline |
+| *"Test CRUD entity user"* | Tạo→đọc→sửa→xoá + verify persist + withRevert cleanup |
+| *"Thiếu data test Pending"* | Tự tạo event Pending qua API → test → cleanup |

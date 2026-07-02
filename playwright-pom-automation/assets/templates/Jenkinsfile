@@ -1,0 +1,89 @@
+// Jenkinsfile — Declarative Pipeline (generic).
+// Pipeline UI + API chạy song song, archive artifact + publish Allure, k6 tách riêng.
+// Yêu cầu Jenkins: NodeJS plugin (tool name 'Node-20'), Allure plugin (tuỳ chọn).
+
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+    timeout(time: 30, unit: 'MINUTES')
+    ansiColor('xterm')
+  }
+
+  tools {
+    nodejs 'Node-20' // cấu hình tên NodeJS installation trong Jenkins > Global Tool Configuration
+  }
+
+  // Secrets từ Jenkins Credentials — KHÔNG hardcode.
+  environment {
+    BASE_URL     = credentials('base-url')
+    API_BASE_URL = credentials('api-base-url')
+    TEST_USER    = credentials('test-user')
+    TEST_PASS    = credentials('test-pass')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Install') {
+      steps {
+        sh 'npm ci'
+        sh 'npx playwright install --with-deps'
+      }
+    }
+
+    stage('Lint') {
+      steps { sh 'npm run lint --if-present' }
+    }
+
+    // UI + API chạy song song (filter bằng tag --grep)
+    stage('Test (UI + API parallel)') {
+      parallel {
+        stage('UI') {
+          steps {
+            sh 'npx playwright test --grep @ui'
+          }
+        }
+        stage('API') {
+          steps {
+            sh 'npx playwright test --grep @api'
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      // Archive trace + screenshot + report khi fail
+      archiveArtifacts artifacts: 'reports/**, test-results/**, allure-results/**', allowEmptyArchive: true
+      // JUnit report — hiển thị test results trong Jenkins UI
+      junit testResults: 'reports/junit.xml', allowEmptyResults: true
+      // Allure report qua Allure Jenkins plugin (cài plugin + allure commandline):
+      // allure includeProperties: false, results: [[path: 'allure-results']]
+      // Clean workspace khi xong (tuỳ chọn)
+      // cleanWs()
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// k6 LOAD TEST — TÁCH SANG Jenkinsfile.perf (KHÔNG cho vào PR pipeline).
+// Trigger bởi cron/TimerTrigger, chạy against STAGING (không prod).
+//
+// // Jenkinsfile.perf
+// pipeline {
+//   agent any
+//   triggers { cron('0 2 * * *') }   // hàng ngày 02:00
+//   environment { BASE_URL = credentials('staging-base-url') }
+//   stages {
+//     stage('k6') {
+//       steps { sh 'k6 run tests/performance/k6-load-test.js' }
+//     }
+//   }
+// }
+// ─────────────────────────────────────────────────────────────

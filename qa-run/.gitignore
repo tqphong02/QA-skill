@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+# skill KHÔNG chứa data project; nếu lỡ có:
+.env
+auth.json
+evidence/
