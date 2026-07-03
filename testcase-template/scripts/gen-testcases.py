@@ -165,9 +165,28 @@ def main():
         print("Cách dùng: gen-testcases.py <input.json> <output.xlsx> [template.xlsx]")
         sys.exit(1)
     inp_path, out_path = sys.argv[1], sys.argv[2]
-    tmpl = get_template_path(sys.argv[3] if len(sys.argv) > 3 else None, 'BCP')
+    # Đọc JSON input trước để lấy project code (cho template auto-detect)
     with open(inp_path, encoding='utf-8') as f:
         data = json.load(f)
+    project_code_from_json = data.get('project', {}).get('code', '')
+    # Auto-detect template: ưu tiên CLI arg, sau đó project_code từ JSON, cuối cùng fallback Template.xlsx
+    cli_template = sys.argv[3] if len(sys.argv) > 3 else None
+    if cli_template:
+        tmpl = cli_template
+    elif project_code_from_json:
+        # Tìm template riêng cho project code này
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        assets_dir = os.path.join(os.path.dirname(base_dir), 'assets')
+        project_specific = os.path.join(assets_dir, f'{project_code_from_json}-Template.xlsx')
+        if os.path.exists(project_specific):
+            tmpl = project_specific
+        else:
+            tmpl = os.path.join(assets_dir, 'Template.xlsx')
+    else:
+        # Không có project code → dùng Template.xlsx mặc định (Nina Studio)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        assets_dir = os.path.join(os.path.dirname(base_dir), 'assets')
+        tmpl = os.path.join(assets_dir, 'Template.xlsx')
 
     # 1. Copy template → output
     shutil.copyfile(tmpl, out_path)
@@ -215,7 +234,9 @@ def main():
 
     # 4. Update Cover metadata
     p = data.get('project', {})
-    project_code = p.get('code', 'BCP')
+    project_code = p.get('code', '')
+    if not project_code:
+        print("  ⚠️  CẢNH BÁO: project.code chưa có trong JSON. Test case ID sẽ trống prefix (vd '[NN]' thay vì '[BCP-NN]').")
     safe_set(cover, 'B3', p.get('name', ''))
     safe_set(cover, 'C3', project_code)
     safe_set(cover, 'D3', p.get('device', ''))
