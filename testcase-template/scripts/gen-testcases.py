@@ -149,15 +149,21 @@ def find_group_position(ws, section_title, group_name):
         first_empty = group_row + 1
     return section_row, group_row, first_empty
 
-def get_template_path(specified_path, project_code):
+def get_template_path(specified_path=None, project_code=None):
+    """Lấy template path. Ưu tiên:
+    1. CLI argument (specified_path)
+    2. Default template (Template.xlsx) - dùng chung cho mọi project
+
+    Lưu ý: Skill này dùng 1 template duy nhất cho mọi project. Mọi thông tin
+    project-specific (name, code, modules) đều configurable từ JSON input.
+    Member khi clone code về chạy được ngay với project bất kỳ.
+    """
     if specified_path:
         return specified_path
     base_dir = os.path.dirname(os.path.abspath(__file__))
     assets_dir = os.path.join(os.path.dirname(base_dir), 'assets')
-    project_specific = os.path.join(assets_dir, f'{project_code}-Template.xlsx')
-    if os.path.exists(project_specific):
-        return project_specific
     return os.path.join(assets_dir, 'Template.xlsx')
+
 
 # ---------- main ----------
 def main():
@@ -165,28 +171,11 @@ def main():
         print("Cách dùng: gen-testcases.py <input.json> <output.xlsx> [template.xlsx]")
         sys.exit(1)
     inp_path, out_path = sys.argv[1], sys.argv[2]
-    # Đọc JSON input trước để lấy project code (cho template auto-detect)
+    # Ưu tiên CLI arg, nếu không có thì dùng Template.xlsx (template chung cho mọi project)
+    cli_template = sys.argv[3] if len(sys.argv) > 3 else None
+    tmpl = get_template_path(specified_path=cli_template)
     with open(inp_path, encoding='utf-8') as f:
         data = json.load(f)
-    project_code_from_json = data.get('project', {}).get('code', '')
-    # Auto-detect template: ưu tiên CLI arg, sau đó project_code từ JSON, cuối cùng fallback Template.xlsx
-    cli_template = sys.argv[3] if len(sys.argv) > 3 else None
-    if cli_template:
-        tmpl = cli_template
-    elif project_code_from_json:
-        # Tìm template riêng cho project code này
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        assets_dir = os.path.join(os.path.dirname(base_dir), 'assets')
-        project_specific = os.path.join(assets_dir, f'{project_code_from_json}-Template.xlsx')
-        if os.path.exists(project_specific):
-            tmpl = project_specific
-        else:
-            tmpl = os.path.join(assets_dir, 'Template.xlsx')
-    else:
-        # Không có project code → dùng Template.xlsx mặc định (Nina Studio)
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        assets_dir = os.path.join(os.path.dirname(base_dir), 'assets')
-        tmpl = os.path.join(assets_dir, 'Template.xlsx')
 
     # 1. Copy template → output
     shutil.copyfile(tmpl, out_path)
