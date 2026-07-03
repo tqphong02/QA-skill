@@ -1,6 +1,6 @@
-# MERGE-README — Hướng dẫn dùng 2 helper mới + 6 phần đã merge
+# MERGE-README — Hướng dẫn dùng helper đã merge
 
-> Tài liệu này bổ sung cho `SKILL.md` chính. Tóm tắt cách dùng 2 file helper vừa tạo + 6 section mới được merge từ `anhtester/codex-testing-kit` (Anh Tester, MIT, 7⭐).
+> Tài liệu này bổ sung cho `SKILL.md` chính. Tóm tắt cách dùng các helper đã port từ `anhtester/codex-testing-kit` (Anh Tester, MIT, 7⭐).
 
 ---
 
@@ -8,16 +8,16 @@
 
 Mượn concept từ **26 skill + 6 rule** của codex-testing-kit, port sang 3 skill Claude Code của bạn:
 
-| Skill Claude | Section mới | Nguồn codex | Mục đích |
-|---|---|---|---|
-| `qa-run` | **A.1** Test Data Generator | `$generate-test-data` | Sinh data unique + traceable cho probe |
-| `qa-run` | **A.2** Flaky Detector | `$analyze-flaky-tests` | Tránh log bug "ảo" do timing/race |
-| `playwright-pom-automation` | **A.1** Locator Strategy + Healer | `$generate-locator` + `$locator-healer-agent` | Locator ổn định + tự fallback khi UI đổi |
-| `playwright-pom-automation` | **A.2** UI Flow Generator | `$generate-automation-from-ui-flow` | Auto-generate page object + spec từ DOM thật |
-| `playwright-pom-automation` | **A.3** API Test Generator | `$generate-api-tests-from-swagger` | Auto-generate API test từ OpenAPI spec |
-| `testcase-template` | **A.1** Plane Fetch | `$fetch-jira-requirements` | Auto-fetch ticket Plane từ URL, không hỏi user |
+| Skill Claude | Module | Nguồn codex | Mục đích | Trạng thái |
+|---|---|---|---|---|
+| `qa-run` | **A.1** Test Data Generator | `$generate-test-data` | Sinh data unique + traceable cho probe | ✅ Đã port (`lib/tdata.mjs`) |
+| `qa-run` | **A.2** Flaky Detector | `$analyze-flaky-tests` | Tránh log bug "ảo" do timing/race | ⏳ Roadmap (chưa port) |
+| `playwright-pom-automation` | **A.1** Locator Strategy + Healer | `$generate-locator` + `$locator-healer-agent` | Locator ổn định + tự fallback khi UI đổi | ⏳ Roadmap (chưa port) |
+| `playwright-pom-automation` | **A.2** UI Flow Generator | `$generate-automation-from-ui-flow` | Auto-generate page object + spec từ DOM thật | ⏳ Roadmap (chưa port) |
+| `playwright-pom-automation` | **A.3** API Test Generator | `$generate-api-tests-from-swagger` | Auto-generate API test từ OpenAPI spec | ⏳ Roadmap (chưa port) |
+| `testcase-template` | **A.1** Plane Fetch | `$fetch-jira-requirements` | Auto-fetch ticket Plane từ URL, không hỏi user | ✅ Đã port (`fetch-plane-issue.sh`) |
 
-→ 6 section mới nằm ở **cuối** mỗi file `SKILL.md`, có tiêu đề `## A.x` và `## A.x.y` để dễ tham chiếu.
+→ Hiện chỉ 2/6 module đã port thực sự. Phần còn lại là roadmap.
 
 ---
 
@@ -132,11 +132,7 @@ const email = emailOf('ing', 'createCustomer');
 // + ghi "Trace: tdata('ing','createCustomer')" trong FINDINGS
 ```
 
-**Khi nghi bug flaky (merge A.2):**
-1. Không log bug ngay
-2. Chạy probe 3 lần
-3. Nếu 1-2/3 fail lung tung → mark flaky, ghi vào `FINDINGS.md` section "⚠ Flaky (chưa log Plane)"
-4. Nếu 3/3 fail cùng step → log bug bình thường
+**Khi nghi bug flaky (TODO — A.2 chưa port):**
 
 ### `playwright-pom-automation` (viết auto)
 
@@ -207,12 +203,12 @@ bash ~/.claude/skills/qa-run/scripts/fetch-plane-issue.sh <project_id> <seq_id> 
 
 | Bước | Effort | Giá trị |
 |---|---|---|
-| Tạo `scripts/probe-flaky.mjs` template (merge A.2 chưa có file) | 30 phút | Trung bình |
-| Tạo `scripts/extract-locators.ts` + `gen-page-from-selectors.ts` (merge A.2 code) | 1 giờ | Cao cho project mới |
-| Tạo `scripts/gen-api-tests.ts` (merge A.3 code) | 1 giờ | Cao nếu có OpenAPI |
+| Tạo `scripts/probe-flaky.mjs` template (A.2 qa-run) | 30 phút | Trung bình |
+| Tạo `scripts/extract-locators.ts` + `gen-page-from-selectors.ts` (A.2 code playwright-pom) | 1 giờ | Cao cho project mới |
+| Tạo `scripts/gen-api-tests.ts` (A.3 playwright-pom) | 1 giờ | Cao nếu có OpenAPI |
 | Rule `delivery_checklist.md` (tách ra `.agents/rules/` như codex) | 2 giờ | Trung bình |
 
-→ Tất cả snippet code đã có sẵn trong 3 file `SKILL.md` phần Appendix, chỉ cần copy ra file riêng.
+→ Hiện tại chưa có code snippet nào trong SKILL.md Appendix (chỉ là mô tả concept). Khi implement phải viết từ đầu, không thể copy-paste.
 
 ---
 

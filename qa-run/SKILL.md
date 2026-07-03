@@ -309,11 +309,10 @@ Một lần cấu hình key tại `../config/api_keys.json` (gitignored), dùng 
 
 ## Appendix — codex-testing-kit
 
-Skill này merge concept từ `anhtester/codex-testing-kit` (MIT). 2 module được port:
-- **A.1 Test Data Generator** (codex `$generate-test-data`) — format chuẩn `[prefix]_[testName]_[timestamp]_[random]`
-- **A.2 Flaky Detector** (codex `$analyze-flaky-tests`) — 3 lần chạy rule
+Skill này merge concept từ `anhtester/codex-testing-kit` (MIT). Module đã port:
+- **A.1 Test Data Generator** (codex `$generate-test-data`) — format chuẩn `[prefix]_[testName]_[timestamp]_[random]`, helper tại `lib/tdata.mjs` (xem MERGE-README.md §2)
 
-Xem chi tiết trong file appendix tương ứng.
+Các concept codex chưa port (để roadmap): A.2 Flaky Detector (`$analyze-flaky-tests`), A.2 Locator Healer (`$locator-healer-agent`), A.3 UI/API Flow Generator.
 
 ## Tóm tắt nhanh
 
