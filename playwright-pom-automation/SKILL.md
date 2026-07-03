@@ -584,3 +584,16 @@ test('POST /users — 401 no auth', async ({ request }) => {
 - ✅ Cần test schema validation (response shape)
 - ❌ KHÔNG dùng nếu spec outdated / không khớp code (refactor spec trước)
 - ❌ KHÔNG thay thế test business logic phức tạp (vẫn viết tay)
+
+---
+
+## API Key (chung cho cả 3 skill)
+
+Skill này dùng API key từ `../config/api_keys.json` (chung trong repo `qa-skill`). 
+
+**3 cách config** (ưu tiên từ cao xuống thấp):
+1. **Env var** (override): `ANTHROPIC_API_KEY=sk-ant-...`
+2. **Config file**: `cp config/api_keys.example.json config/api_keys.json` rồi paste key
+3. **Auto-detect**: Nếu dùng Copilot Pro / Antigravity / Claude Code CLI → KHÔNG cần key
+
+Chi tiết xem [README.md](../README.md) và `scripts/ai_provider.py`.

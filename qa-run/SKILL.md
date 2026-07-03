@@ -749,3 +749,15 @@ Bug flaky KHÔNG lên Plane ngay. Ghi trong `FINDINGS.md` section **"⚠ Flaky (
 ### Khi nào close flaky
 - 5 lần chạy liên tiếp pass hết → close.
 - App refactor đoạn nghi vấn → close (re-verify).
+---
+
+## API Key (chung cho cả 3 skill)
+
+Skill này dùng API key từ `../config/api_keys.json` (chung trong repo `qa-skill`). 
+
+**3 cách config** (ưu tiên từ cao xuống thấp):
+1. **Env var** (override): `ANTHROPIC_API_KEY=sk-ant-...`
+2. **Config file**: `cp config/api_keys.example.json config/api_keys.json` rồi paste key
+3. **Auto-detect**: Nếu dùng Copilot Pro / Antigravity / Claude Code CLI → KHÔNG cần key
+
+Chi tiết xem [README.md](../README.md) và `scripts/ai_provider.py`.
