@@ -271,6 +271,156 @@ bash ~/.claude/skills/qa-run/scripts/fetch-plane-issue.sh 9482533a-c9ca-4be6-be3
 
 ---
 
+## G. Config API Key (cho AI models)
+
+Một số skill có thể dùng AI (vd testcase-template dùng AI để suggest test case). Hỗ trợ **3 cách config**, ưu tiên từ cao xuống thấp:
+
+| # | Cách | Khi nào dùng |
+|---|---|---|
+| 1 | **Env var** | Cần override nhanh (vd test key mới) |
+| 2 | **`config/api_keys.json`** (gitignored) | Cắm key 1 lần cho cả 3 skill |
+| 3 | **Auto-detect environment** | Đang dùng Copilot Pro / Antigravity / Claude Code (miễn phí) |
+
+### G.1 Trên macOS
+
+**Cách 1 — Env var (nhanh, tạm thời):**
+
+```bash
+# Thêm vào ~/.zshrc hoặc ~/.bashrc
+echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc
+echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc
+echo 'export GOOGLE_API_KEY="AIza..."' >> ~/.zshrc
+echo 'export PLANE_API_KEY="plane_pat_..."' >> ~/.zshrc
+source ~/.zshrc
+
+# Verify
+python3 ~/.claude/skills/scripts/ai_provider.py
+```
+
+**Cách 2 — Config file (khuyến nghị cho cả team):**
+
+```bash
+cd ~/projects/qa-skills  # hoặc nơi chứa repo qa-skill
+
+# 1. Copy template
+cp config/api_keys.example.json config/api_keys.json
+
+# 2. Edit file bằng TextEdit / VSCode / vim
+open -e config/api_keys.json
+# Hoặc
+code config/api_keys.json
+
+# 3. Paste key thật vào field tương ứng
+# Lưu file
+
+# 4. Verify
+python3 scripts/ai_provider.py
+```
+
+**Cách 3 — Auto-detect (không cần key):**
+
+| Môi trường | Detect qua |
+|---|---|
+| GitHub Copilot Pro | env `COPILOT_PRO` hoặc `GITHUB_COPILOT_TOKEN` |
+| Google Antigravity | env `ANTIGRAVITY_API_KEY` hoặc `/Applications/Antigravity.app` |
+| Claude Code CLI | env `ANTHROPIC_API_KEY` |
+
+Nếu bạn dùng 1 trong 3 môi trường trên → **không cần làm gì**, skill tự detect.
+
+### G.2 Trên Windows
+
+**Cách 1 — Env var (System Properties):**
+
+1. `Win + R` → gõ `sysdm.cpl` → Enter
+2. Tab **Advanced** → **Environment Variables...**
+3. Phần **User variables**, click **New...**:
+   - Variable name: `ANTHROPIC_API_KEY`
+   - Variable value: `sk-ant-...`
+4. Lặp lại cho `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `PLANE_API_KEY`
+5. OK → OK → restart terminal/PowerShell
+
+**Hoặc dùng PowerShell (admin):**
+
+```powershell
+[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
+[Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "sk-...", "User")
+[Environment]::SetEnvironmentVariable("GOOGLE_API_KEY", "AIza...", "User")
+[Environment]::SetEnvironmentVariable("PLANE_API_KEY", "plane_pat_...", "User")
+```
+
+**Cách 2 — Config file (khuyến nghị):**
+
+```powershell
+# Mở PowerShell trong thư mục qa-skill
+cd C:\projects\qa-skills
+
+# 1. Copy template
+copy config\api_keys.example.json config\api_keys.json
+
+# 2. Mở file bằng Notepad / VSCode
+notepad config\api_keys.json
+# Hoặc
+code config\api_keys.json
+
+# 3. Paste key thật
+# Lưu file
+
+# 4. Verify
+python scripts\ai_provider.py
+```
+
+**Lưu ý Windows:**
+- Đường dẫn dùng `\` thay vì `/`
+- Script `ai_provider.py` đã test OK trên Windows (Python 3.9+)
+- Nếu `python` không nhận, thử `py` thay vì `python`
+- File `api_keys.json` phải lưu encoding **UTF-8** (không phải UTF-8 BOM)
+
+### G.3 Dùng key trong code
+
+Các skill tự động load key qua helper `scripts/ai_provider.py`:
+
+```python
+# Trong script của skill
+import sys
+sys.path.insert(0, '<đường dẫn đến>/qa-skill/scripts')
+from ai_provider import get_anthropic_client, get_openai_client, get_provider_info
+
+# Get client (None nếu user dùng Copilot Pro/Antigravity/Claude Code)
+client = get_anthropic_client()
+if client:
+    response = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        messages=[{"role": "user", "content": "Hello"}]
+    )
+    print(response.content[0].text)
+else:
+    print("Dùng model sẵn có của môi trường (Copilot/Antigravity)")
+
+# Check status
+info = get_provider_info()
+print(info)
+# {'environment': 'antigravity', 'active_provider': 'Antigravity (Gemini - free)', ...}
+```
+
+### G.4 Get API key từ đâu
+
+| Provider | URL lấy key |
+|---|---|
+| Anthropic (Claude) | https://console.anthropic.com/ |
+| OpenAI (GPT) | https://platform.openai.com/api-keys |
+| Google (Gemini) | https://aistudio.google.com/app/apikey |
+| Plane | Plane → Profile → Personal Access Tokens |
+
+### G.5 Lưu ý bảo mật
+
+- `config/api_keys.json` đã được gitignore — **không commit** key thật
+- Đã có template `config/api_keys.example.json` (commit được, key trống)
+- Khi push lên GitHub, check `git status` trước để chắc chắn không có file nhạy cảm
+- Nếu lỡ commit key, **rotate key ngay** tại provider + dùng `git filter-branch` hoặc BFG Repo-Cleaner để xoá khỏi history
+
+---
+
 ## F. Cập nhật sau này
 
 ```bash
