@@ -60,7 +60,17 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
 ```bash
 python3 scripts/gen-testcases.py input.json output.xlsx
 ```
-→ Script copy template → update Cover từ JSON → clear sample rows → ghi section/group/case rows theo type order → hardcode test case ID (vd `[BCP-01]`, `[BCP-02]`) → save.
+→ Script copy template → update Cover từ JSON → clear sample rows (chỉ giữ groups khai báo trong JSON) → **xóa hẳn dòng mẫu không dùng** → ghi section/group/case rows theo type order → hardcode test case ID (vd `[BCP-01]`, `[BCP-02]`) → save.
+
+### Output cleanup (auto)
+
+Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers mẫu** (REGISTER, LOGIN, HOME, BOOKING, PROFILE, SETTING, NOTIFICATION, DASHBOARD) làm reference cho AI biết cấu trúc + padding rows từ Excel. Khi sinh file output, script tự động:
+
+1. **Dynamic whitelist**: chỉ giữ group header nào khai báo trong `JSON sections[].groups[].name`. Group mẫu không dùng → xóa hẳn.
+2. **Delete rows**: dòng trống nào còn sót (group bị bỏ + sample case rows) → `ws.delete_rows()` xóa hoàn toàn, không giữ fill color / row height.
+3. **STT liên tục**: `[CODE-UI-NN]` cho UI (1-4), `[CODE-NN]` cho Functional (5-30) trong cùng file.
+
+**Kết quả**: file output gọn, chỉ chứa dữ liệu thật của dự án hiện tại (vd demo project với 1 group LOGIN × 2 sections → file ~43 rows thay vì 657 rows như template).
 
 ## Format columns (Test cases_App)
 
@@ -83,7 +93,8 @@ Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover
 
 ## Tóm tắt nhanh
 
-- **Template**: 1 file `assets/Template.xlsx` (dùng chung)
+- **Template**: 1 file `assets/Template.xlsx` (dùng chung, có sample rows làm reference)
+- **Output cleanup**: Tự động xóa group/sample rows không dùng → file gọn
 - **Format**: MANUAL tester, hardcoded ID, shared scenario name
 - **API key**: từ `config/api_keys.json` hoặc env var hoặc auto-detect (Antigravity/Copilot)
 - **Row height**: 51pt cố định
