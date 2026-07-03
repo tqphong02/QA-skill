@@ -31,18 +31,21 @@ fi
 OUTPUT="${2:-${INPUT%.*}.md}"
 
 # Find Python 3.10+ (MarkItDown requires 3.10+)
-PYTHON_BIN=""
-for py in python3.12 python3.11 python3.10 /usr/bin/python3 /usr/local/bin/python3; do
-  if command -v "$py" &>/dev/null; then
-    version=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
-    major=$(echo "$version" | cut -d. -f1)
-    minor=$(echo "$version" | cut -d. -f2)
-    if [ "$major" -ge 3 ] && [ "$minor" -ge 10 ] 2>/dev/null; then
-      PYTHON_BIN="$py"
-      break
+# Allow override via env var: PYTHON_BIN=/path/to/python3.11 bash convert.sh ...
+PYTHON_BIN="${PYTHON_BIN:-}"
+if [ -z "$PYTHON_BIN" ]; then
+  for py in python3.12 python3.11 python3.10 /usr/bin/python3 /usr/local/bin/python3; do
+    if command -v "$py" &>/dev/null; then
+      version=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+      major=$(echo "$version" | cut -d. -f1)
+      minor=$(echo "$version" | cut -d. -f2)
+      if [ "$major" -ge 3 ] && [ "$minor" -ge 10 ] 2>/dev/null; then
+        PYTHON_BIN="$py"
+        break
+      fi
     fi
-  fi
-done
+  done
+fi
 
 if [ -z "$PYTHON_BIN" ]; then
   echo "❌ Cần Python 3.10+ để chạy MarkItDown. Hệ thống đang dùng Python cũ hơn."
