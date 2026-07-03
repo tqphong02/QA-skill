@@ -91,6 +91,39 @@ Optional dependencies cho từng format:
 - OCR cho ảnh: cần `tesseract` (`brew install tesseract` trên Mac)
 - Audio: cần `ffmpeg` + `whisper`
 
+### ⚠️ macOS — cryptography build error (thường gặp trên máy công ty)
+
+`markitdown[all]` kéo `cryptography` (qua `[pdf]` + `[azure]`). Trên macOS, `pip install "markitdown[all]"` hay fail với:
+```
+Failed building wheel for cryptography
+ERROR: Could not build wheels for cryptography
+```
+
+Nguyên nhân: `cryptography` cần **OpenSSL development headers** + **Rust** để build từ source — macOS không có sẵn, và cài qua brew đụng `/usr/local` (nhiều khi cấm trên máy công ty).
+
+**Fix đơn giản (dùng wheel prebuilt, KHÔNG cần build):**
+
+```bash
+pip3 install --only-binary=:all: "markitdown[all]"
+```
+
+Pip tự tải wheel `cryptography-*-macosx_*_universal2.whl` đã build sẵn từ PyPI (universal binary cho cả Intel + Apple Silicon) — không cần OpenSSL dev, không cần Rust, không cần quyền admin.
+
+**Verify thành công:**
+```bash
+PYTHON_BIN=/usr/local/bin/python3.11 python3 -c "import cryptography; print('OK', cryptography.__version__)"
+# → OK 48.0.1
+```
+
+Sau đó chạy `convert.sh` bình thường:
+```bash
+~/.claude/skills/doc-to-md/scripts/convert.sh ~/Documents/spec.pdf
+```
+
+**Nếu vẫn fail** (vd Python từ pyenv custom, macOS rất cũ):
+- Cài `pkg-config` + OpenSSL: `brew install pkgconf openssl` (cần đổi ownership `/usr/local` — KHÔNG khuyến nghị trên máy công ty)
+- Dùng Conda thay pip: `conda install -c conda-forge markitdown`
+
 ## Ví dụ
 
 ### Convert PDF spec
