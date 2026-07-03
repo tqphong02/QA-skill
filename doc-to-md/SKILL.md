@@ -83,11 +83,7 @@ with open('/tmp/spec.md', 'r') as f:
 Lần đầu chạy, script tự động install MarkItDown. Nếu fail, install manually:
 
 ```bash
-# Cài từ local vendor (đã clone sẵn trong skill)
-pip3 install -e ~/.claude/skills/doc-to-md/vendor/markitdown/packages/markitdown
-
-# Hoặc từ PyPI
-pip3 install markitdown[all]
+pip3 install "markitdown[all]"
 ```
 
 Optional dependencies cho từng format:
