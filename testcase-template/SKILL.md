@@ -1,11 +1,11 @@
 ---
 name: testcase-template
-description: Viết / sinh test case ra Excel theo ĐÚNG template chuẩn team (Nina Studio format — 4 sheet Cover/Test cases_App/Dropdown Keys/Report, cột Scenario ID/Description/Pre-condition/Procedure/Expected/Results/Priority, Test case ID tự sinh bằng formula, dropdown Pass-Fail & Priority, Report auto-aggregate bằng COUNTIFS). BẮT BUỘC bám document — mỗi case trace về 1 requirement/AC (Ref trong Notes), KHÔNG bịa. Case SẮP XẾP theo type order chuẩn: Happy Path → Alternative → Validation → Edge Case → Negative → Error Handling (script tự sort + prefix [TYPE] trong Description). Skill LƯU template gốc trong assets/Template.xlsx — khi cần tạo BẢN SAO rồi gen. Dùng khi: "viết test case", "tạo test case excel", "sinh test case theo template/spec", "QA test case", "fill test case vào template", "test case từ spec/ticket", "SCN test case". Áp dụng mọi project — chỉ đổi project code/metadata.
+description: Viết / sinh test case ra Excel theo ĐÚNG template chuẩn team (Nina Studio format — 4 sheet Cover/Test cases_App/Dropdown Keys/Report, cột Scenario ID/Scenario Name/Description/Pre-condition/Procedure/Expected, Test case ID hardcoded theo STT, dropdown Pass-Fail & Priority, Report auto-aggregate bằng COUNTIFS). BẮT BUỘC bám document — mỗi case trace về 1 requirement/AC (Ref trong Notes), KHÔNG bịa. Case SẮP XẾP theo type order chuẩn: Happy Path → Alternative → Validation → Edge Case → Negative → Error Handling (script tự sort). Format MANUAL tester: Description bắt đầu bằng "Xác minh rằng ...", Scenario Name là tên nhóm chức năng chung cho nhiều case (vd "Email validation", "Login authentication fail"). Script LƯU template gốc trong assets/Template.xlsx (Nina Studio) và assets/BCP-Template.xlsx (BCP AI customized). Dùng khi: "viết test case", "tạo test case excel", "sinh test case theo template/spec", "QA test case", "fill test case vào template", "test case từ spec/ticket", "SCN test case". Áp dụng mọi project — chỉ đổi project code/metadata.
 ---
 
 # testcase-template — sinh test case Excel theo template chuẩn team
 
-Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, dùng chung cho mọi project). Khi cần test case, AI **tạo bản sao** template rồi **gen test case vào** — format (formulas, dropdowns, styles, Report auto-aggregate) giữ **y chang**, chỉ đổi metadata + nội dung test case.
+Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, dùng chung cho mọi project) và `assets/BCP-Template.xlsx` (BCP AI customized). Khi cần test case, AI **tạo bản sao** template rồi **gen test case vào** — format (formulas, dropdowns, styles, Report auto-aggregate) giữ **y chang**, chỉ đổi metadata + nội dung test case.
 
 > **Khi nào dùng skill này:**
 > - User muốn viết test case ra **file Excel** theo chuẩn team.
@@ -21,8 +21,8 @@ Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, d�
 ### Sheet `Cover` — metadata project
 | Cell | Ý nghĩa |
 |---|---|
-| B3 | Project Name |
-| **C3** | **Project Code** (vd `NSM`, `DEM`) — **QUAN TRỌNG**: cột D + Report dùng code này để sinh Test case ID |
+| B3 | Project Name (vd "BCP AI") |
+| **C3** | **Project Code** (vd `BCP`, `NSM`, `DEM`) — **QUAN TRỌNG**: cột D dùng code này để sinh Test case ID. Script tự detect template theo code này. |
 | D3 | Device (Web/iPhone/...) |
 | E3 | Priority tổng |
 | B5 | Description |
@@ -36,7 +36,7 @@ Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, d�
 
 > **Cấu trúc 2 PHẦN BẮT BUỘC** — sheet chia làm 2 phần cố định, theo đúng template:
 >
-> | Phần | Section header (col C) | `kind` | Style header | Cột D formula |
+> | Phần | Section header (col C) | `kind` | Style header | Cột D format |
 > |---|---|---|---|---|
 > | **Phần 1 — UI** | `1.1. USER INTERFACE` | `"ui"` | Xanh nhạt (light blue) | `[CODE-UI-01]`, `[CODE-UI-02]`... |
 > | **Phần 2 — Functional** | `1.2. FUNCTION` | `"function"` | Xanh lá (green) | `[CODE-01]`, `[CODE-02]`... |
@@ -49,25 +49,27 @@ Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, d�
 > - Thêm phần mới (vd `1.3. PERFORMANCE`) thì đặt SAU Functional, `kind` không phải `ui`.
 
 
-| Col | Header | Ai fill |
-|---|---|---|
-| B | Scenario ID | AI (vd `SCN-LOG-001`) |
-| C | Scenario Name | AI (section/group header: `1.1. USER INTERFACE`, `REGISTER`, `LOGIN`...) |
-| **D** | **Test case ID** | **FORMULA tự sinh** — KHÔNG fill tay (xem bên dưới) |
-| E | Description | AI |
-| F | Pre-condition | AI |
-| G | Test Case Procedure | AI (steps `1. ... 2. ...`) |
-| H | Expected Results | AI |
-| I | Results | **Tester** điền khi chạy (dropdown: Pass/Fail/N/A/Untested) |
-| J | Priority | AI (dropdown: Critical/High/Medium/Low/N/A) |
-| K | Date | Tester |
-| L | Tester | Tester |
-| M | Notes | Tester |
+| Col | Header | Ai fill | Ghi chú |
+|---|---|---|---|
+| B | Scenario ID | AI | vd `SCN-LOG-001` |
+| **C** | **Scenario Name** | **AI** | **Tên nhóm chức năng** - SHARED cho nhiều case cùng scenario (vd "Email validation", "Login authentication fail"). Đặt ở level `scenario` trong JSON, KHÔNG đặt riêng cho từng case. |
+| **D** | **Test case ID** | **AI - HARDCODED** | Format `[CODE-NN]` hoặc `[CODE-UI-NN]`. KHÔNG dùng formula. STT liên tục trong file. |
+| **E** | **Description** | **AI** | **Format MANUAL tester**: bắt đầu bằng "Xác minh rằng..." (verify that user...). KHÔNG có `[STT]`, `[Type]`, `/` hay ký tự kỹ thuật. |
+| F | Pre-condition | AI | Điều kiện trước khi chạy (account, data, state) |
+| G | Test Case Procedure | AI | Steps đánh số `1. ...\n2. ...\n3. ...` |
+| H | Expected Results | AI | Kết quả mong đợi, đo được |
+| I | Results | **Tester** điền khi chạy | dropdown: `Pass | Fail | N/A | Untested` |
+| J | Priority | **Tester** điền khi review | dropdown: `Critical | High | Medium | Low | N/A` |
+| K | Date | **Tester** | Ngày chạy test |
+| L | Tester | **Tester** | Tên người chạy |
+| M | Notes | **Tester** | Ghi chú khi chạy |
 
-**Cột D (Test case ID) = FORMULA** tự sinh từ Project Code (C3) + số thứ tự:
-- Section **UI** → `[CODE-UI-01]`, `[CODE-UI-02]`...
-- Section **Function** (hoặc khác) → `[CODE-01]`, `[CODE-02]`...
-- ID chỉ hiện khi cột H (Expected) có nội dung → chỉ tính test case đã hoàn chỉnh.
+**Quan trọng:**
+- **Cột C (Scenario Name)**: Nhiều case có thể CHIA SẺ cùng tên scenario (vd 5 case "Bỏ trống email", "Email thiếu @", "Email thiếu domain" đều có scenario_name = "Email validation"). KHÔNG dùng tên test case riêng lẻ.
+- **Cột D (Test case ID)**: HARDCODED giá trị, không phải formula. Format `[BCP-01]`, `[BCP-02]`, ... `[BCP-NN]` cho Functional; `[BCP-UI-01]`, ... cho UI. STT liên tục trong toàn bộ file (cả UI + Functional).
+- **Cột I, J, K, L, M**: ĐỂ TRỐNG khi gen, **chỉ apply style** để giữ format. Tester sẽ tự điền khi execution.
+- **Row height**: Set cố định 51pt cho mỗi test case row, 33pt cho section header, 27pt cho group header. KHÔNG để Excel tự co giãn.
+- **Wrap text**: Bật cho columns E, F, G, H (description-rich).
 
 **Dropdown** (data validation tự có):
 - Cột I (Results): `Pass | Fail | N/A | Untested`
@@ -77,7 +79,7 @@ Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, d�
 Nguồn cho dropdown. Đã có: EXECUTION STATUS, PRIORITY, IMPLEMENTATION STATUS, TEST CASE STATUS.
 
 ### Sheet `Report` — tự tổng hợp (KHÔNG cần đụng)
-COUNTIFS tự đếm Pass/Fail/NA theo module + priority từ `Test cases_App` (rows 9-1723). **Điều kiện để Report đúng**: Scenario ID (cột B) hoặc grouping phải khớp module code ở cột B của Report (vd `M.01.01`, `M.02.01`). → Khi gen, đặt module code vào Scenario ID hoặc báo user cập nhật danh sách module ở Report cho khớp project.
+COUNTIFS tự đếm Pass/Fail/NA theo module + priority từ `Test cases_App` (rows 9-1723). **Điều kiện để Report đúng**: Scenario ID (cột B) hoặc grouping phải khớp module code ở cột B của Report (vd `M.01.01`, `M.02.01`). → Khi gen, đặt module code vào Scenario ID hoặc cập nhật danh sách module ở Report cho khớp project.
 
 ---
 

@@ -1,23 +1,23 @@
 {
   "project": {
-    "name": "Demo Booking System",
-    "code": "DEM",
-    "device": "Web (Chrome)",
-    "version": "v1.0.0",
+    "name": "BCP AI",
+    "code": "BCP",
+    "device": "Web (Chrome, Edge, Firefox, Safari)",
+    "version": "v1.0",
     "priority": "Medium",
-    "test_date": "2026-06-29",
+    "test_date": "2026-07-03",
     "author": "QA Team",
     "reviewer": "Lead QA",
-    "description": "Testing the functionalities of the demo booking system.",
-    "objective": "Ensure that the booking feature is working correctly and the UI is user-friendly."
+    "description": "Testing the functionalities of the BCP AI login feature.",
+    "objective": "Ensure that user can login with valid credentials and proper validation/handling."
   },
   "source_document": "spec/login-feature-spec.md (vd — AI thay bằng tài liệu thật)",
   "requirements": [
-    { "id": "AC1", "text": "User đăng nhập thành công với email + password đúng → chuyển Dashboard" },
-    { "id": "AC2", "text": "Hiện error message khi credentials sai" },
-    { "id": "AC3", "text": "Validate required: KHÔNG submit khi bỏ trống email/password" },
-    { "id": "AC4", "text": "Email phải đúng format (có @)" },
-    { "id": "AC5", "text": "Password tối thiểu 8 ký tự" }
+    { "id": "AC1", "text": "User đăng nhập thành công với email + password đúng" },
+    { "id": "AC2", "text": "Hệ thống báo lỗi khi credentials sai" },
+    { "id": "AC3", "text": "Validate required fields: KHÔNG submit khi bỏ trống email/password" },
+    { "id": "AC4", "text": "Email phải đúng format (có @ và có domain)" },
+    { "id": "AC7", "text": "Xử lý error khi mạng chậm/timeout hoặc server lỗi" }
   ],
   "sections": [
     {
@@ -26,23 +26,7 @@
       "groups": [
         {
           "name": "LOGIN",
-          "scenarios": [
-            {
-              "scenario_id": "SCN-LOG-001",
-              "requirement": "AC1",
-              "cases": [
-                {
-                  "type": "ui",
-                  "req": "AC1",
-                  "description": "Hiển thị đúng các element trên trang Login (email/password input, nút Login, link Forgot password)",
-                  "pre_condition": "User ở trang /login, chưa đăng nhập",
-                  "procedure": "1. Mở trang /login\n2. Quan sát các element hiển thị",
-                  "expected": "Tất cả element hiển thị đúng, label rõ, căn lề đúng, không overlap",
-                  "priority": "Medium"
-                }
-              ]
-            }
-          ]
+          "scenarios": []
         }
       ]
     },
@@ -56,86 +40,135 @@
             {
               "scenario_id": "SCN-LOG-001",
               "requirement": "AC1",
+              "scenario_name": "Đăng nhập thành công",
               "cases": [
                 {
                   "type": "happy",
                   "req": "AC1",
-                  "description": "Login thành công với email + password đúng",
-                  "pre_condition": "Có account test (test@example.com / Test@123)",
-                  "procedure": "1. Mở /login\n2. Nhập email test@example.com\n3. Nhập password Test@123\n4. Click Login",
-                  "expected": "Đăng nhập thành công, chuyển Dashboard, header hiện tên user",
+                  "description": "Xác minh rằng người dùng có thể đăng nhập thành công với email và password đúng",
+                  "pre_condition": "Có account test bao.nguyen@bcp.global với password Bcp@12345",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email bao.nguyen@bcp.global\n3. Nhập password Bcp@12345\n4. Click nút Login",
+                  "expected": "1. Đăng nhập thành công, chuyển sang trang chính",
                   "priority": "High"
                 },
                 {
                   "type": "alternative",
                   "req": "AC1",
-                  "description": "Login thành công khi bấm Enter thay vì click nút",
-                  "pre_condition": "Có account test",
-                  "procedure": "1. Mở /login\n2. Nhập email + password đúng\n3. Bấm Enter (không click nút)",
-                  "expected": "Login thành công như click nút, chuyển Dashboard",
+                  "description": "Xác minh rằng người dùng có thể đăng nhập bằng phím Enter thay vì click nút Login",
+                  "pre_condition": "Có account test hợp lệ",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng\n3. Nhập password đúng\n4. Bấm phím Enter (không click nút)",
+                  "expected": "1. Đăng nhập thành công",
                   "priority": "Medium"
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-LOG-002",
+              "requirement": "AC3",
+              "scenario_name": "Email validation",
+              "cases": [
+                {
+                  "type": "validation",
+                  "req": "AC3",
+                  "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống email",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Để trống ô Email\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "expected": "1. Không submit form\n2. Hiển thị thông báo yêu cầu nhập Email",
+                  "priority": "High"
                 },
                 {
                   "type": "validation",
                   "req": "AC3",
-                  "description": "Bỏ trống email → chặn submit, hiện validation",
-                  "pre_condition": "User ở /login",
-                  "procedure": "1. Để trống email\n2. Nhập password bất kỳ\n3. Click Login",
-                  "expected": "Hiện validation 'Vui lòng nhập email', KHÔNG gọi API login",
-                  "priority": "Medium"
+                  "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống password",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng format\n3. Để trống ô Password\n4. Click nút Login",
+                  "expected": "1. Không submit form\n2. Hiển thị thông báo yêu cầu nhập Password",
+                  "priority": "High"
+                },
+                {
+                  "type": "validation",
+                  "req": "AC3",
+                  "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống cả email và password",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Để trống cả 2 ô\n3. Click nút Login",
+                  "expected": "1. Không submit form\n2. Hiển thị thông báo lỗi cho cả 2 field",
+                  "priority": "High"
                 },
                 {
                   "type": "validation",
                   "req": "AC4",
-                  "description": "Email sai format (thiếu @) → chặn submit",
-                  "pre_condition": "User ở /login",
-                  "procedure": "1. Nhập email 'testexample.com' (thiếu @)\n2. Nhập password\n3. Click Login",
-                  "expected": "Hiện validation 'Email không hợp lệ', KHÔNG submit",
-                  "priority": "Medium"
+                  "description": "Xác minh rằng người dùng validate email thiếu ký tự @",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email hieugmail.com (thiếu @)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "expected": "1. Hiển thị thông báo lỗi Invalid email format",
+                  "priority": "High"
                 },
                 {
                   "type": "validation",
-                  "req": "AC5",
-                  "description": "Password ngắn hơn 8 ký tự → chặn submit",
-                  "pre_condition": "User ở /login",
-                  "procedure": "1. Nhập email đúng format\n2. Nhập password 'Ab1' (3 ký tự)\n3. Click Login",
-                  "expected": "Hiện validation 'Password tối thiểu 8 ký tự', KHÔNG submit",
-                  "priority": "Medium"
-                },
-                {
-                  "type": "edge",
-                  "req": "AC1",
-                  "description": "Password đúng ở boundary 8 ký tự (giới hạn tối thiểu)",
-                  "pre_condition": "Có account với password đúng 8 ký tự",
-                  "procedure": "1. Nhập email đúng\n2. Nhập password 8 ký tự (boundary)\n3. Click Login",
-                  "expected": "Login thành công (8 ký tự = đạt tối thiểu)",
-                  "priority": "Medium"
-                },
+                  "req": "AC4",
+                  "description": "Xác minh rằng người dùng validate email thiếu domain",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email hieugmailcom (thiếu domain)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "expected": "1. Hiển thị thông báo lỗi Invalid email format",
+                  "priority": "High"
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-LOG-003",
+              "requirement": "AC2",
+              "scenario_name": "Login authentication fail",
+              "cases": [
                 {
                   "type": "negative",
                   "req": "AC2",
-                  "description": "Login fail với password sai",
-                  "pre_condition": "Có account test@example.com",
-                  "procedure": "1. Nhập email test@example.com\n2. Nhập password sai 'WrongPass'\n3. Click Login",
-                  "expected": "Hiện error 'Email hoặc mật khẩu không đúng', KHÔNG chuyển trang",
+                  "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập sai mật khẩu",
+                  "pre_condition": "Có account bao.nguyen@bcp.global",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng bao.nguyen@bcp.global\n3. Nhập password sai (ví dụ: WrongPass123)\n4. Click nút Login",
+                  "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi Wrong password hoặc tương tự",
                   "priority": "High"
                 },
                 {
                   "type": "negative",
                   "req": "AC2",
-                  "description": "Login fail với email không tồn tại trong hệ thống",
-                  "pre_condition": "User ở /login",
-                  "procedure": "1. Nhập email 'nobody@example.com'\n2. Nhập password bất kỳ\n3. Click Login",
-                  "expected": "Hiện error, KHÔNG leak thông tin email nào tồn tại",
+                  "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập email không tồn tại",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email không tồn tại (ví dụ: nonexistent@bcp.global)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi authentication error chung",
+                  "priority": "High"
+                },
+                {
+                  "type": "negative",
+                  "req": "AC2",
+                  "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập sai cả email và mật khẩu",
+                  "pre_condition": "User ở trang đăng nhập",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email sai nonexistent@bcp.global\n3. Nhập password sai TestWrong\n4. Click nút Login",
+                  "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi chung",
+                  "priority": "High"
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-LOG-004",
+              "requirement": "AC7",
+              "scenario_name": "Login error handling",
+              "cases": [
+                {
+                  "type": "error",
+                  "req": "AC7",
+                  "description": "Xác minh rằng hệ thống xử lý đúng khi mạng chậm hoặc timeout",
+                  "pre_condition": "Có account hợp lệ, mạng chậm hoặc giả lập timeout",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email và password đúng\n3. Giả lập mạng timeout (DevTools throttle Slow 3G)\n4. Click nút Login",
+                  "expected": "1. Hiển thị loading state\n2. Sau timeout, hiển thị error message network error",
                   "priority": "Medium"
                 },
                 {
                   "type": "error",
-                  "req": "AC1",
-                  "description": "Server lỗi (500) giữa chừng login → graceful error",
-                  "pre_condition": "Mock server trả 500 khi /auth/login",
-                  "procedure": "1. Nhập credentials đúng\n2. Click Login khi server trả 500",
-                  "expected": "Hiện error 'Hệ thống lỗi, thử lại sau', KHÔNG crash, KHÔNG chuyển trang",
+                  "req": "AC7",
+                  "description": "Xác minh rằng hệ thống xử lý đúng khi server trả về lỗi 500",
+                  "pre_condition": "Có account hợp lệ, server đang lỗi",
+                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email và password đúng\n3. Giả lập server trả 500 (DevTools block request)\n4. Click nút Login",
+                  "expected": "1. Hiển thị error message Internal server error hoặc tương tự\n2. Không crash app\n3. User có thể retry",
                   "priority": "Medium"
                 }
               ]
