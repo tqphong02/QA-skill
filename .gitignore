@@ -1,0 +1,42 @@
+# Node
+node_modules/
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ===== API KEYS - NEVER COMMIT =====
+# config/api_keys.json chứa API key thật của user
+# CHỈ commit config/api_keys.example.json (template không có key)
+config/api_keys.json
+
+# Secret (defensive)
+.env
+.env.local
+*.env
+auth.json
+*service-account*.json
+*credentials*.json
+
+# Test output (không bao giờ commit evidence/screenshots)
+evidence/
+output/
+*.log
+__pycache__/
+*.pyc
+
+# Python (nếu có helper .py)
+.pytest_cache/
+
+# Backup
+*.bak
+*.tmp
+*.orig

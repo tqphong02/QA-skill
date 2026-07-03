@@ -34,6 +34,57 @@ chmod 600 ~/Documents/QA-MDS/MyProject/.env
 
 Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) để biết chi tiết (git config, troubleshooting, bảo mật).
 
+## API Keys (cho AI models)
+
+Bộ skill này dùng AI model (Claude, GPT, Gemini) cho một số tác vụ (vd testcase-template có thể dùng AI để suggest test cases). Hỗ trợ 3 cách config:
+
+**Cách 1: Dùng môi trường free (KHÔNG cần API key)**
+
+| Môi trường | Cách detect |
+|---|---|
+| GitHub Copilot Pro | Tự detect qua env `COPILOT_PRO` hoặc `GITHUB_COPILOT_TOKEN` |
+| Google Antigravity | Tự detect qua env `ANTIGRAVITY_API_KEY` hoặc app `/Applications/Antigravity.app` |
+| Claude Code CLI | Tự detect qua env `ANTHROPIC_API_KEY` |
+
+**Cách 2: Config API key vào `config/api_keys.json` (gitignored)**
+
+```bash
+# 1. Copy template
+cp config/api_keys.example.json config/api_keys.json
+
+# 2. Edit file, paste key thật
+nano config/api_keys.json
+
+# 3. Verify provider đang dùng
+python3 scripts/ai_provider.py
+```
+
+**Cách 3: Env var (ưu tiên cao nhất)**
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+export OPENAI_API_KEY="sk-..."
+export GOOGLE_API_KEY="AIza..."
+export PLANE_API_KEY="plane_pat_..."
+```
+
+### Helper module
+
+`scripts/ai_provider.py` — tự detect môi trường và load key:
+
+```python
+from scripts.ai_provider import (
+    get_anthropic_client,    # Returns anthropic.Anthropic or None
+    get_openai_client,       # Returns openai.OpenAI or None
+    get_google_client,       # Returns google.generativeai or None
+    get_provider_info,       # Returns dict với status
+    detect_environment,      # 'antigravity' | 'copilot_pro' | 'claude_code' | 'standalone'
+)
+
+info = get_provider_info()
+# {'environment': 'antigravity', 'active_provider': 'Antigravity (Gemini - free)', ...}
+```
+
 ## Nguồn
 
 - Đóng góp từ [anhtester/codex-testing-kit](https://github.com/anhtester/codex-testing-kit) (MIT, 7⭐) — bộ 26 skill cho OpenAI Codex.

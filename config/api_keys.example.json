@@ -1,0 +1,38 @@
+{
+  "_comment": "Template for API keys. Copy this file to api_keys.json and fill in your actual keys. api_keys.json is gitignored - your real keys will NOT be committed.",
+
+  "_instructions": {
+    "1": "If you have Copilot Pro or Antigravity, you don't need any keys below - just leave them empty.",
+    "2": "Otherwise, paste your API keys for the providers you want to use.",
+    "3": "Get keys from:",
+    "anthropic": "https://console.anthropic.com/",
+    "openai": "https://platform.openai.com/api-keys",
+    "google": "https://aistudio.google.com/app/apikey",
+    "plane": "Plane → Profile → Personal Access Tokens (used by qa-run)"
+  },
+
+  "anthropic": {
+    "_comment": "Claude API key (used by testcase-template, playwright-pom-automation)",
+    "api_key": "",
+    "model": "claude-sonnet-4-5"
+  },
+
+  "openai": {
+    "_comment": "OpenAI API key (used by AI helpers in qa-run)",
+    "api_key": "",
+    "model": "gpt-4o"
+  },
+
+  "google": {
+    "_comment": "Google Gemini API key (alternative provider)",
+    "api_key": "",
+    "model": "gemini-2.0-flash-exp"
+  },
+
+  "plane": {
+    "_comment": "Plane API token (used by qa-run for ticket fetching)",
+    "api_key": "",
+    "base_url": "https://api.plane.so/api/v1",
+    "workspace_slug": ""
+  }
+}
