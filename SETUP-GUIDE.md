@@ -163,8 +163,6 @@ mkdir -p ~/projects
 cd ~/projects
 git clone https://github.com/YOUR_ORG/mds-qa-skills.git
 cd mds-qa-skills
-# QUAN TRỌNG: clone cả submodules (MarkItDown trong doc-to-md)
-git submodule update --init --recursive
 ls
 # → qa-run/  testcase-template/  playwright-pom-automation/  doc-to-md/  LICENSE
 ```
