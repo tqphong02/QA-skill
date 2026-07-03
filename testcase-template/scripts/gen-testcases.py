@@ -199,17 +199,26 @@ def main():
         'N': capture_style(ws, 'N12') or capture_style(ws, 'E12'),
     }
 
-    # 3. Clear existing data rows (10..max) - GIỮ section/group headers
+    # 3. Clear existing data rows (10..max) - GIỮ section headers + group headers
+    # mà JSON input thực sự khai báo. Template gốc (assets/Template.xlsx) chứa
+    # nhiều group mẫu (HOME, BOOKING, PROFILE, ...) để AI biết cấu trúc; nếu
+    # project hiện tại không có group đó thì row phải được clear.
     section_titles = ['1.1. USER INTERFACE', '1.2. FUNCTION', '1.3. PERFORMANCE']
-    group_names = ['REGISTER', 'LOGIN', 'HOME', 'BOOKING', 'PROFILE', 'SETTING', 'NOTIFICATION', 'DASHBOARD']
+    # Whitelist group names từ JSON input sections -> groups (KHÔNG hardcode nữa).
+    sections_input = data.get('sections', []) or []
+    declared_groups = set()
+    for sec in sections_input:
+        for grp in sec.get('groups', []) or []:
+            gn = grp.get('name')
+            if gn:
+                declared_groups.add(gn)
     max_r = ws.max_row
     for r in range(10, max_r + 1):
         c_val = ws.cell(row=r, column=3).value
-        b_val = ws.cell(row=r, column=2).value
-        # Giữ section header và group header
-        if c_val in section_titles or c_val in group_names:
+        # Giữ section headers (always) + group headers thuộc whitelist
+        if c_val in section_titles or (c_val in declared_groups):
             continue
-        # Clear data
+        # Clear data row (group mẫu không dùng, hoặc sample case row)
         for c in range(1, 32):
             try:
                 cell = ws.cell(row=r, column=c)
