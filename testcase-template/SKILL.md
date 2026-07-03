@@ -5,7 +5,7 @@ description: Viết / sinh test case ra Excel theo ĐÚNG template chuẩn team 
 
 # testcase-template — sinh test case Excel theo template chuẩn team
 
-Skill lưu **template gốc** ở `assets/Template.xlsx` (Nina Studio format, dùng chung cho mọi project) và `assets/BCP-Template.xlsx` (BCP AI customized). Khi cần test case, AI **tạo bản sao** template rồi **gen test case vào** — format (formulas, dropdowns, styles, Report auto-aggregate) giữ **y chang**, chỉ đổi metadata + nội dung test case.
+Skill lưu **template gốc** ở `assets/Template.xlsx` (chuẩn format dùng chung cho MỌI project — không cần tạo template riêng cho từng project). Mọi thông tin project-specific (tên, code, modules) đều configurable từ JSON input. Khi cần test case, AI **tạo bản sao** template rồi **gen test case vào** — format (formulas, dropdowns, styles, Report auto-aggregate) giữ **y chang**, chỉ đổi metadata + nội dung test case. Member khi clone code về chạy được ngay với project bất kỳ, chỉ cần thay `project.code` trong JSON input.
 
 > **Khi nào dùng skill này:**
 > - User muốn viết test case ra **file Excel** theo chuẩn team.
