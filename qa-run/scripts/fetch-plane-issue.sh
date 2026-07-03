@@ -87,18 +87,23 @@ DETAIL_URL="${PLANE_BASE_URL}/workspaces/${PLANE_WORKSPACE}/projects/${PROJECT_I
 JSON=$(curl -s -H "X-API-Key: ${PLANE_API_KEY}" "${DETAIL_URL}")
 
 # --- Tuỳ chọn comments ---
+# Truyền comments qua env var (an toàn với mọi ký tự, kể cả '''/"\\/Unicode)
+# thay vì inline vào source Python (gây parse fail khi comment chứa ''').
 if [ "${WITH_COMMENTS:-0}" = "1" ]; then
   COMMENTS=$(curl -s -H "X-API-Key: ${PLANE_API_KEY}" \
     "${PLANE_BASE_URL}/workspaces/${PLANE_WORKSPACE}/projects/${PROJECT_ID}/work-items/${ISSUE_ID}/comments/")
-  JSON=$(echo "$JSON" | python3 -c "
-import sys, json
+  export _PLANE_COMMENTS="$COMMENTS"
+  JSON=$(echo "$JSON" | COMMENTS_JSON="$_PLANE_COMMENTS" python3 -c "
+import os, json, sys
 d = json.load(sys.stdin)
 try:
-    cmts = json.loads('''$COMMENTS''').get('results', [])
+    cmts = json.loads(os.environ['COMMENTS_JSON']).get('results', [])
     d['comments'] = cmts
-except: pass
+except Exception:
+    pass
 print(json.dumps(d, ensure_ascii=False))
 ")
+  unset _PLANE_COMMENTS
 fi
 
 # --- Output theo format ---
