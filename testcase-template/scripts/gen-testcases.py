@@ -314,7 +314,31 @@ def main():
         dv_j.add(f'J{rmin}:J{rmax}')
         ws.add_data_validation(dv_j)
 
-    # 7. Save
+    # 7. Xoá HẲN các row mẫu còn sót (group headers KHÔNG có trong JSON + sample
+    # case rows) thay vì chỉ clear value. Sau bước này, file đầu ra sẽ KHÔNG
+    # còn dòng rác (trống nhưng vẫn giữ fill color + row height).
+    # Tìm các row từ 10..max mà TẤT CẢ các cột B/C/D/E/F/G/H đều trống.
+    # Chỉ giữ section rows. Duyệt từ dưới lên để delete_rows không shift index.
+    rows_to_delete = []
+    for r in range(10, ws.max_row + 1):
+        c_val = ws.cell(row=r, column=3).value
+        if c_val in section_titles:
+            continue  # section header — luôn giữ
+        # Check empty
+        is_empty = all(
+            (ws.cell(row=r, column=c).value in (None, ''))
+            for c in range(2, 9)  # B..H
+        )
+        if is_empty:
+            rows_to_delete.append(r)
+    # Delete từ cuối lên đầu để index không bị shift sai
+    for r in reversed(rows_to_delete):
+        ws.delete_rows(r, 1)
+
+    if rows_to_delete:
+        print(f"  Đã xóa {len(rows_to_delete)} dòng mẫu (group header + sample rows không dùng)")
+
+    # 8. Save
     wb.save(out_path)
     print(f"✅ Generated {out_path}")
     print(f"   Template: {os.path.basename(tmpl)}")
