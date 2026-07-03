@@ -1,9 +1,46 @@
-# SETUP-GUIDE — Push 3 skill lên GitHub → clone máy khác chạy
+# SETUP-GUIDE — Push 4 skill lên GitHub → clone máy khác chạy
 
-> Hướng dẫn này dành cho **3 skill** trong `~/.claude/skills/`:
+> Hướng dẫn này dành cho **4 skill** trong `~/.claude/skills/`:
 > - `qa-run/` (engine + 2 helper mới)
 > - `testcase-template/`
 > - `playwright-pom-automation/`
+> - `doc-to-md/` (MarkItDown, Python ≥3.10)
+
+---
+
+## ⚡ Quick start — chạy 1 lệnh duy nhất (Recommended)
+
+Sau khi `git clone` repo, chỉ cần chạy:
+
+```bash
+git clone git@github.com:tqphong02/QA-skill.git ~/projects/qa-skill
+cd ~/projects/qa-skill
+./scripts/setup.sh
+```
+
+Script sẽ tự động:
+1. Detect OS (macOS / Linux / WSL)
+2. Check Python ≥3.10 + Node ≥20 (warning nếu thiếu, không abort)
+3. Copy 4 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
+4. Cài `npm install` cho qa-run + playwright-pom-automation
+5. Cài `pip install markitdown[all] + openpyxl` (dùng prebuilt wheel)
+6. Auto-detect AI provider (Antigravity / Copilot Pro / Claude Code / standalone)
+7. Tạo `config/api_keys.json` từ template (nếu standalone)
+8. Verify end-to-end + in next-steps
+
+**Flags hữu ích:**
+- `--skip-deps` — chỉ copy skills + setup AI config, bỏ qua npm/pip
+- `--dry-run` — xem plan trước, không mutate filesystem
+- `--only=doc-to-md,qa-run` — chỉ setup 1 hoặc vài skill
+- `--yes` / `-y` — non-interactive (auto backup khi xung đột)
+- `--help` — xem đầy đủ options
+
+**Hướng dẫn bên dưới (phần A, B, C, D, E, G) là FALLBACK** dành cho:
+- User muốn hiểu chi tiết từng bước
+- Máy không thể chạy script (vd CI/CD, container)
+- Cần debug khi setup fail
+
+Phần còn lại của file này vẫn giữ nguyên để tham khảo — nhưng **`./scripts/setup.sh` đã tự động hóa tất cả**.
 
 ---
 

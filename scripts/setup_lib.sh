@@ -1,0 +1,440 @@
+#!/usr/bin/env bash
+# setup_lib.sh — Helper functions cho scripts/setup.sh
+# Tách riêng để dễ test độc lập từng function nếu cần.
+# KHÔNG chạy trực tiếp — luôn được source từ setup.sh.
+
+# ==== Logging (tput-based, fallback plain text) ====
+_setup_color() {
+  if [[ -t 1 ]] && [[ -z "${NO_COLOR:-}" ]] && command -v tput >/dev/null 2>&1; then
+    C_OK="$(tput setaf 2)"; C_WARN="$(tput setaf 3)"; C_ERR="$(tput setaf 1)"
+    C_STEP="$(tput setaf 6)"; C_BOLD="$(tput bold)"; C_RST="$(tput sgr0)"
+    return 0
+  fi
+  C_OK=""; C_WARN=""; C_ERR=""; C_STEP=""; C_BOLD=""; C_RST=""
+}
+
+_setup_color
+
+log_info() { printf '  %s\n' "$*"; }
+log_ok()   { printf '  %s✓%s %s\n' "$C_OK" "$C_RST" "$*"; }
+log_warn() { printf '  %s!%s %s\n' "$C_WARN" "$C_RST" "$*" >&2; }
+log_err()  { printf '  %s✗%s %s\n' "$C_ERR" "$C_RST" "$*" >&2; }
+log_step() { printf '\n%s[Step]%s %s\n' "$C_STEP" "$C_RST" "$*"; }
+log_dry()  { printf '  %s[DRY-RUN]%s would: %s\n' "$C_WARN" "$C_RST" "$*"; }
+
+# ==== Banner ====
+print_banner() {
+  printf '%s' "$C_BOLD"
+  cat <<'EOF'
+
+  ┌──────────────────────────────────────────┐
+  │      QA-skill setup (1 lệnh setup)       │
+  │   qa-run · testcase · pom · doc-to-md    │
+  └──────────────────────────────────────────┘
+EOF
+  printf '%s\n\n' "$C_RST"
+}
+
+# ==== Help ====
+print_help() {
+  cat <<'EOF'
+Usage: ./scripts/setup.sh [options]
+
+Setup toàn bộ 4 QA skill (qa-run, testcase-template, playwright-pom-automation,
+doc-to-md) + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
+deps + auto-detect AI provider + verify.
+
+Options:
+  --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
+  --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
+  --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
+  --skills-dir=<path>   Đổi target install (default: ~/.claude/skills/)
+  --yes / -y            Non-interactive (default = backup khi xung đột)
+  --no-color            Tắt màu output
+  --help / -h           In trợ giúp này
+
+Environment variables:
+  SKILLS_DIR            Override ~/.claude/skills
+  SKIP_DEPS=1           Tương đương --skip-deps
+  NO_COLOR=1            Tắt màu
+
+Examples:
+  ./scripts/setup.sh                            # Setup đầy đủ, interactive
+  ./scripts/setup.sh --skip-deps --yes          # Nhanh, không cài deps
+  ./scripts/setup.sh --dry-run                  # Chỉ in plan
+  ./scripts/setup.sh --only=doc-to-md --yes     # Chỉ setup 1 skill
+EOF
+}
+
+# ==== OS detect ====
+detect_os() {
+  case "$(uname -s 2>/dev/null)" in
+    Darwin)        echo "macos" ;;
+    Linux)
+      if grep -qi 'microsoft\|WSL' /proc/version 2>/dev/null; then echo "wsl"
+      else echo "linux"; fi ;;
+    MINGW*|MSYS*|CYGWIN*) echo "windows-gitbash" ;;
+    *) echo "unsupported" ;;
+  esac
+}
+
+# ==== Python check (no abort — print version + warn) ====
+# Returns: python_version string ("3.11.9" / "9.9" / "")
+check_python() {
+  local candidates=("python3.12" "python3.11" "python3.10" "python3" "/usr/bin/python3" "/usr/local/bin/python3")
+  for py in "${candidates[@]}"; do
+    if command -v "$py" >/dev/null 2>&1; then
+      local v
+      v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")' 2>/dev/null || echo "")
+      if [[ -n "$v" ]]; then echo "$v"; return 0; fi
+    fi
+  done
+  echo ""
+}
+
+warn_if_python_too_old() {
+  local v="$1"
+  if [[ -z "$v" ]]; then
+    log_warn "Python 3 NOT found. doc-to-md + testcase-template sẽ KHÔNG chạy được."
+    log_warn "  Cài từ https://python.org/downloads (>= 3.10)"
+    return 1
+  fi
+  local major minor
+  major=$(echo "$v" | cut -d. -f1)
+  minor=$(echo "$v" | cut -d. -f2)
+  if [[ "$major" -lt 3 ]] || { [[ "$major" -eq 3 ]] && [[ "$minor" -lt 10 ]]; }; then
+    log_warn "Python $v found (< 3.10). doc-to-md cần >= 3.10."
+    log_warn "  Tải Python 3.10+ từ https://python.org/downloads"
+    return 1
+  fi
+  log_ok "Python $v"
+  return 0
+}
+
+# ==== Node check ====
+# Returns: node version string
+check_node() {
+  if command -v node >/dev/null 2>&1; then
+    node -v 2>/dev/null | sed 's/^v//' || echo ""
+  else
+    echo ""
+  fi
+}
+
+warn_if_node_too_old() {
+  local v="$1"
+  if [[ -z "$v" ]]; then
+    log_warn "Node.js NOT found. qa-run sẽ KHÔNG chạy được."
+    log_warn "  Cài từ https://nodejs.org (>= 20) hoặc 'brew install node@20'"
+    return 1
+  fi
+  local major
+  major=$(echo "$v" | cut -d. -f1)
+  if [[ "$major" -lt 20 ]]; then
+    log_warn "Node $v found (< 20). qa-run cần >= 20."
+    log_warn "  'brew install node@20' hoặc 'nvm install 20'"
+    return 1
+  fi
+  log_ok "Node $v"
+  return 0
+}
+
+# ==== Skills resolution ====
+DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md")
+
+resolve_skill_list() {
+  local only="$1"
+  if [[ -z "$only" ]]; then
+    printf '%s\n' "${DEFAULT_SKILLS[@]}"
+    return 0
+  fi
+  local IFS=','
+  local req=($only)
+  local valid=()
+  for s in "${req[@]}"; do
+    if [[ -d "$REPO_DIR/$s" ]]; then
+      valid+=("$s")
+    else
+      log_err "Skill không tồn tại trong repo: $s (đã bỏ qua)"
+    fi
+  done
+  if [[ ${#valid[@]} -eq 0 ]]; then
+    log_err "--only=$only không match skill nào"
+    return 1
+  fi
+  printf '%s\n' "${valid[@]}"
+}
+
+# ==== Copy skill (with excludes) ====
+copy_skill() {
+  local src="$REPO_DIR/$1"
+  local dst="$SKILLS_DIR/$1"
+
+  if [[ ! -d "$src" ]]; then
+    log_err "Source không tồn tại: $src"
+    return 1
+  fi
+
+  if [[ -e "$dst" ]]; then
+    resolve_skill_conflict "$dst" || return 1
+  fi
+
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    log_dry "cp -R (with excludes) $src $dst"
+    return 0
+  fi
+
+  mkdir -p "$dst"
+  # rsync if available (macOS có sẵn), fallback cp
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -a --exclude='node_modules' --exclude='evidence' --exclude='.env' \
+      --exclude='auth.json' --exclude='.DS_Store' --exclude='__pycache__' \
+      --exclude='*.pyc' --exclude='dist' --exclude='build' \
+      --exclude='*.bak' --exclude='*.tmp' \
+      "$src/" "$dst/"
+  else
+    cp -R "$src/." "$dst/" 2>/dev/null || cp -R "$src" "$dst"
+    # Cleanup excludes (best-effort)
+    for exclude in node_modules evidence '.env' auth.json '.DS_Store' __pycache__; do
+      rm -rf "$dst/$exclude" 2>/dev/null || true
+    done
+    find "$dst" -name '*.pyc' -delete 2>/dev/null || true
+  fi
+  log_ok "$1 → $dst"
+}
+
+resolve_skill_conflict() {
+  local dst="$1"
+  local default_action="b"
+  if [[ "${YES:-0}" -eq 1 ]]; then
+    default_action="b"
+  fi
+
+  local choice
+  if [[ -t 0 ]] && [[ "${YES:-0}" -eq 0 ]]; then
+    printf '\n  %s đã tồn tại tại %s\n' "$(basename "$dst")" "$dst"
+    printf '  Chọn: [o]verwrite (đè), [b]ackup (giữ + backup cũ), [s]kip: '
+    read -r choice
+    choice="${choice:-$default_action}"
+  else
+    choice="$default_action"
+    log_info "$dst đã có — auto backup (--yes mode)"
+  fi
+
+  case "$choice" in
+    o|O)
+      log_info "  → overwrite $dst"
+      rm -rf "$dst"
+      ;;
+    b|B)
+      local ts
+      ts=$(date +%Y%m%d-%H%M%S)
+      local bak="${dst}.bak.$ts"
+      if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        log_dry "mv $dst $bak"
+      else
+        mv "$dst" "$bak"
+        log_info "  → backed up to $bak"
+      fi
+      ;;
+    s|S)
+      log_info "  → skip $dst"
+      return 1  # Signal "skip"
+      ;;
+    *)
+      log_warn "Lựa chọn không hợp lệ '$choice' — skip"
+      return 1
+      ;;
+  esac
+  return 0
+}
+
+# ==== Install Node deps ====
+install_node_deps() {
+  local skills=("$@")
+  if [[ -z "${NODE_VERSION:-}" ]] || [[ -z "$NODE_VERSION" ]]; then
+    log_warn "Skipping Node deps (Node không khả dụng)"
+    return 0
+  fi
+  for skill in "${skills[@]}"; do
+    local skill_path="$SKILLS_DIR/$skill"
+    if [[ -f "$skill_path/package.json" ]]; then
+      if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        log_dry "cd $skill_path && npm install --no-audit --no-fund"
+      else
+        log_step "npm install trong $skill"
+        (cd "$skill_path" && npm install --no-audit --no-fund --loglevel=error) \
+          && log_ok "$skill: npm install OK" \
+          || log_warn "$skill: npm install fail (kiểm tra network)"
+      fi
+    else
+      log_info "$skill: không có package.json — skip npm"
+    fi
+  done
+}
+
+# ==== Install Python deps ====
+install_python_deps() {
+  local py_bin=""
+  for py in python3.11 python3.12 python3.10 python3 "/usr/bin/python3"; do
+    if command -v "$py" >/dev/null 2>&1; then
+      local v
+      v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
+      local maj min
+      maj=$(echo "$v" | cut -d. -f1); min=$(echo "$v" | cut -d. -f2)
+      if [[ "$maj" -ge 3 ]] && [[ "$min" -ge 10 ]]; then py_bin="$py"; break; fi
+    fi
+  done
+
+  if [[ -z "$py_bin" ]]; then
+    log_warn "Skipping Python deps (không có Python 3.10+)"
+    return 0
+  fi
+
+  local pip_cmd=("$py_bin" "-m" "pip" "install" "--user" "--quiet" "--only-binary=:all:")
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl"
+    return 0
+  fi
+  log_step "pip install markitdown[all] + openpyxl (Python $("$py_bin" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")'))"
+  if "${pip_cmd[@]}" "markitdown[all]" 2>&1 | tail -3 \
+     && "$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl 2>&1 | tail -3; then
+    log_ok "Python deps OK"
+  else
+    log_warn "pip install fail (kiểm tra network / dùng --skip-deps để bỏ qua)"
+  fi
+}
+
+# ==== AI env detect (mirror ai_provider.py:detect_environment) ====
+detect_ai_env() {
+  if [[ -n "${ANTIGRAVITY_API_KEY:-}" ]] || [[ -d "/Applications/Antigravity.app" ]]; then
+    echo "antigravity"
+  elif [[ -n "${COPILOT_PRO:-}" ]] || [[ -n "${GITHUB_COPILOT_TOKEN:-}" ]]; then
+    echo "copilot_pro"
+  elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+    echo "claude_code"
+  else
+    echo "standalone"
+  fi
+}
+
+# ==== Setup AI config ====
+setup_ai_config() {
+  local env_type
+  env_type=$(detect_ai_env)
+  log_step "AI provider detect: $env_type"
+
+  case "$env_type" in
+    antigravity)
+      log_ok "Antigravity detected — không cần API key"
+      if [[ -d "/Applications/Antigravity.app" ]]; then
+        log_info "  (via /Applications/Antigravity.app)"
+      else
+        log_info "  (via \$ANTIGRAVITY_API_KEY)"
+      fi
+      ;;
+    copilot_pro)
+      log_ok "GitHub Copilot Pro detected — không cần API key"
+      ;;
+    claude_code)
+      log_ok "Claude Code CLI detected — key đã có sẵn"
+      ;;
+    standalone)
+      log_warn "Standalone mode — cần API key cho AI model"
+      if [[ -f "$REPO_DIR/config/api_keys.json" ]]; then
+        log_ok "config/api_keys.json đã tồn tại"
+      else
+        if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+          log_dry "cp $REPO_DIR/config/api_keys.example.json $REPO_DIR/config/api_keys.json"
+        else
+          cp "$REPO_DIR/config/api_keys.example.json" "$REPO_DIR/config/api_keys.json"
+          chmod 600 "$REPO_DIR/config/api_keys.json"
+          log_ok "Đã tạo config/api_keys.json (chmod 600)"
+          log_warn "  ⚠️  Edit file để paste API key thật:"
+          log_info "     nano $REPO_DIR/config/api_keys.json"
+        fi
+      fi
+      ;;
+  esac
+}
+
+# ==== Verify ====
+verify_installation() {
+  log_step "Verify"
+  # 1. AI provider status (works as long as python3 anywhere)
+  local py_bin=""
+  for py in python3.11 python3.12 python3.10 python3; do
+    command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
+  done
+  if [[ -n "$py_bin" ]] && [[ -f "$REPO_DIR/scripts/ai_provider.py" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      log_dry "$py_bin $REPO_DIR/scripts/ai_provider.py"
+    else
+      "$py_bin" "$REPO_DIR/scripts/ai_provider.py" 2>&1 | head -20 || true
+    fi
+  fi
+
+  # 2. Python deps smoke
+  if [[ -n "$py_bin" ]]; then
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      log_dry "$py_bin -c 'import openpyxl, markitdown'"
+    else
+      if "$py_bin" -c "import openpyxl; import markitdown" 2>/dev/null; then
+        log_ok "Python deps (openpyxl + markitdown)"
+      else
+        log_warn "Python deps thiếu — chạy lại không --skip-deps"
+      fi
+    fi
+  fi
+
+  # 3. Node smoke
+  if command -v node >/dev/null 2>&1; then
+    local qa_run_tdata="$SKILLS_DIR/qa-run/lib/tdata.mjs"
+    if [[ -f "$qa_run_tdata" ]]; then
+      if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+        log_dry "node -e 'import(\"$qa_run_tdata\")...' (tdata)"
+      else
+        if node -e "import('$qa_run_tdata').then(m => console.log('  qa-run tdata: ' + m.tdata('setup','smoke')))" 2>/dev/null; then
+          log_ok "Node deps (qa-run/lib/tdata.mjs)"
+        else
+          log_warn "qa-run tdata load fail — kiểm tra cd qa-run && npm install"
+        fi
+      fi
+    fi
+  fi
+}
+
+# ==== Print plan ====
+print_plan() {
+  log_step "Plan"
+  log_info "  Repo:           $REPO_DIR"
+  log_info "  Skills dir:     $SKILLS_DIR"
+  log_info "  Skills to setup: $*"
+  log_info "  Skip deps:       $([[ ${SKIP_DEPS:-0} -eq 1 ]] && echo yes || echo no)"
+  log_info "  Dry run:         $([[ ${DRY_RUN:-0} -eq 1 ]] && echo yes || echo no)"
+  log_info "  Non-interactive: $([[ ${YES:-0} -eq 1 ]] && echo yes || echo no)"
+}
+
+# ==== Summary ====
+print_summary() {
+  local skills=("$@")
+  printf '\n%s%s=== Setup complete ===%s\n\n' "$C_BOLD" "$C_OK" "$C_RST"
+  printf '  %-30s %s\n' "Skill" "Path"
+  printf '  %-30s %s\n' "-----" "----"
+  for skill in "${skills[@]}"; do
+    local path="$SKILLS_DIR/$skill"
+    local status="MISSING"
+    [[ -f "$path/SKILL.md" ]] && status="OK"
+    printf '  %-30s %s [%s]\n' "$skill" "$path" "$status"
+  done
+  cat <<EOF
+
+Next steps:
+  1. Mở Claude Code mới, gõ /skills — sẽ thấy 4 skill đã load
+  2. Test doc-to-md:      ~/.claude/skills/doc-to-md/scripts/convert.sh <file.pdf>
+  3. Test qa-run:         cd <project>/qa && node ~/.claude/skills/qa-run/scripts/login.mjs
+
+Cập nhật skill sau này: git pull trong repo, rồi chạy lại ./scripts/setup.sh
+(chỉ skill nào có file thay đổi sẽ được backup + copy lại).
+EOF
+}
