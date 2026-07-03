@@ -24,10 +24,36 @@
 set -euo pipefail
 
 # --- Load .env (thử project trước, fallback skill global) ---
+# Python parse theo RFC dotenv (quote, escape) → in "export KEY=value" →
+# bash eval để set env var CHÍNH XÁC kể cả value có space/special char.
+# Tránh `source` bash word-split gây split nhầm (vd QA_PASSWORD có space).
+load_env_file() {
+  local env_file="$1"
+  [ -f "$env_file" ] || return 1
+  python3 - "$env_file" <<'PYEOF' >/dev/null
+import sys
+from pathlib import Path
+for line in Path(sys.argv[1]).read_text(encoding='utf-8').splitlines():
+    line = line.strip()
+    if not line or line.startswith('#') or '=' not in line: continue
+    k, v = line.split('=', 1)
+    k, v = k.strip(), v.strip()
+    # Strip optional matching quotes
+    if len(v) >= 2 and v[0] == v[-1] and v[0] in ('"', "'"):
+        v = v[1:-1]
+    # Print as shell-safe 'export KEY=value' (single-quoted)
+    print(f"export {k}='{v.replace(chr(39), chr(39)+chr(92)+chr(39)+chr(39))}'")
+PYEOF
+}
+
+ENV_FILE=""
 if [ -f "./.env" ]; then
-  set -a; source ./.env; set +a
+  ENV_FILE="./.env"
 elif [ -f "$HOME/.claude/skills/qa-run/config.env" ]; then
-  set -a; source "$HOME/.claude/skills/qa-run/config.env"; set +a
+  ENV_FILE="$HOME/.claude/skills/qa-run/config.env"
+fi
+if [ -n "$ENV_FILE" ]; then
+  eval "$(load_env_file "$ENV_FILE")"
 fi
 
 # --- Check required env ---
