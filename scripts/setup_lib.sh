@@ -96,7 +96,18 @@ warn_if_python_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
     log_warn "Python 3 NOT found. doc-to-md + testcase-template sẽ KHÔNG chạy được."
-    log_warn "  Cài từ https://python.org/downloads (>= 3.10)"
+    local os
+    os=$(detect_os)
+    case "$os" in
+      windows-gitbash)
+        log_warn "  Windows: tick 'Add Python to PATH' khi cài từ python.org"
+        log_warn "  Hoặc: winget install Python.Python.3.11" ;;
+      wsl|linux)
+        log_warn "  sudo apt install python3.11  (Debian/Ubuntu)" ;;
+      macos)
+        log_warn "  Tải từ https://python.org/downloads (>= 3.10)" ;;
+      *) log_warn "  Tải từ https://python.org/downloads (>= 3.10)" ;;
+    esac
     return 1
   fi
   local major minor
@@ -125,7 +136,18 @@ warn_if_node_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
     log_warn "Node.js NOT found. qa-run sẽ KHÔNG chạy được."
-    log_warn "  Cài từ https://nodejs.org (>= 20) hoặc 'brew install node@20'"
+    local os
+    os=$(detect_os)
+    case "$os" in
+      windows-gitbash)
+        log_warn "  Windows: winget install OpenJS.NodeJS.LTS"
+        log_warn "  Hoặc tải từ https://nodejs.org (>= 20, tick add to PATH)" ;;
+      wsl|linux)
+        log_warn "  Cài qua nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash && nvm install 20" ;;
+      macos)
+        log_warn "  brew install node@20 hoặc tải từ https://nodejs.org" ;;
+      *) log_warn "  Tải từ https://nodejs.org (>= 20)" ;;
+    esac
     return 1
   fi
   local major
@@ -185,7 +207,8 @@ copy_skill() {
   fi
 
   mkdir -p "$dst"
-  # rsync if available (macOS có sẵn), fallback cp
+  # Detect Windows-style src to make sure $dst exists as a dir already
+  # rsync if available (macOS có sẵn, Linux thường có), fallback cp
   if command -v rsync >/dev/null 2>&1; then
     rsync -a --exclude='node_modules' --exclude='evidence' --exclude='.env' \
       --exclude='auth.json' --exclude='.DS_Store' --exclude='__pycache__' \
@@ -193,7 +216,9 @@ copy_skill() {
       --exclude='*.bak' --exclude='*.tmp' \
       "$src/" "$dst/"
   else
-    cp -R "$src/." "$dst/" 2>/dev/null || cp -R "$src" "$dst"
+    # Fallback: copy then cleanup (works on Git Bash MINGW/MSYS too,
+    # since 'cp -R src/.' is non-POSIX; we use 'cp -R src dst').
+    cp -R "$src"/* "$dst"/ 2>/dev/null || cp -R "$src" "$dst"
     # Cleanup excludes (best-effort)
     for exclude in node_modules evidence '.env' auth.json '.DS_Store' __pycache__; do
       rm -rf "$dst/$exclude" 2>/dev/null || true
@@ -291,17 +316,36 @@ install_python_deps() {
     return 0
   fi
 
+  local os
+  os=$(detect_os)
   local pip_cmd=("$py_bin" "-m" "pip" "install" "--user" "--quiet" "--only-binary=:all:")
+  # Windows + PEP 668 + pip from python.org thường cần --break-system-packages
+  # hoặc dùng venv. Git Bash user-friendly hơn nếu dùng --break-system-packages.
+  local pip_break=""
+  if [[ "$os" == "windows-gitbash" ]]; then
+    pip_break="--break-system-packages"
+    pip_cmd+=("$pip_break")
+  fi
+
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl"
     return 0
   fi
-  log_step "pip install markitdown[all] + openpyxl (Python $("$py_bin" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")'))"
+
+  local py_ver
+  py_ver=$("$py_bin" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')
+  log_step "pip install markitdown[all] + openpyxl (Python $py_ver$([ -n "$pip_break" ] && echo " + $pip_break"))"
+
+  # Retry without --break-system-packages nếu user tự cấu hình PEP 668 với override
   if "${pip_cmd[@]}" "markitdown[all]" 2>&1 | tail -3 \
-     && "$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl 2>&1 | tail -3; then
+     && ("$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl 2>&1 | tail -3 \
+         || "$py_bin" -m pip install --user --quiet --only-binary=:all: --break-system-packages openpyxl 2>&1 | tail -3); then
     log_ok "Python deps OK"
   else
-    log_warn "pip install fail (kiểm tra network / dùng --skip-deps để bỏ qua)"
+    log_warn "pip install fail. Thử:"
+    log_warn "  1. Kiểm tra network"
+    log_warn "  2. Trên Windows: dùng venv: 'python -m venv .venv && source .venv/Scripts/activate' trước"
+    log_warn "  3. Hoặc chạy lại với --skip-deps để bỏ qua phần này"
   fi
 }
 

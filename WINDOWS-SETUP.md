@@ -1,6 +1,60 @@
-# WINDOWS-SETUP.md — Chạy 3 QA skill trên Windows
+# WINDOWS-SETUP.md — Chạy 4 QA skill trên Windows
 
-> Hướng dẫn chi tiết cho máy Windows 10/11, dùng Git Bash (khuyến nghị) hoặc PowerShell.
+> Hướng dẫn chi tiết cho máy Windows 10/11.
+
+---
+
+## ⚡ Quick start — chạy 1 lệnh duy nhất (Recommended)
+
+Khuyến nghị dùng **WSL2** (Windows Subsystem for Linux). Bash shell thuần → setup.sh chạy 100% như macOS/Linux.
+
+### Cách 1 — WSL2 (Recommended)
+
+```powershell
+# 1. Cài WSL2 (1 lần, cần admin)
+wsl --install
+
+# 2. Khởi động Ubuntu (mặc định)
+wsl
+
+# 3. Trong WSL Ubuntu, cài Python ≥3.10 + Node ≥20:
+sudo apt update
+sudo apt install -y python3.11 python3-pip curl git
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+source ~/.bashrc
+nvm install 20
+nvm use 20
+
+# 4. Clone + setup (1 lệnh duy nhất):
+git clone git@github.com:tqphong02/QA-skill.git ~/projects/QA-skill
+cd ~/projects/QA-skill && ./scripts/setup.sh
+```
+
+### Cách 2 — Git Bash native (chạy được, có cảnh báo)
+
+Nếu không cài WSL, vẫn dùng Git Bash:
+
+```bash
+# 1. Cài Node ≥20 + Python ≥3.10 (1 lần):
+winget install OpenJS.NodeJS.LTS Python.Python.3.11
+# HOẶC tải từ nodejs.org + python.org, tick "Add to PATH"
+
+# 2. Clone + setup:
+git clone git@github.com:tqphong02/QA-skill.git
+cd QA-skill
+./scripts/setup.sh
+```
+
+Script tự động:
+- Detect Windows Git Bash → warn "khuyến nghị WSL"
+- Tự động dùng `--break-system-packages` cho pip trên Windows (PEP 668)
+- Cp skill bằng `cp -R src dst` (không dùng POSIX `cp -R src/. dst/`)
+- Color output fallback OK trên Git Bash
+
+**Hướng dẫn bên dưới (phần A, B, ...) là FALLBACK** cho user:
+- Không cài được WSL (vd máy công ty chặn)
+- Cần hiểu chi tiết từng bước (debug)
+- Dùng PowerShell native (chưa có `setup.ps1`, dùng guide manual)
 
 ---
 

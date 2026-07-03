@@ -12,9 +12,29 @@
 # Usage: ./scripts/setup.sh [--skip-deps] [--dry-run] [--only=<skill[,..]>] [--yes]
 # Help:  ./scripts/setup.sh --help
 
-set -eo pipefail
+set -eo pipefail 2>/dev/null || set -eo  # Git Bash on bash 3.2 may lack pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
+
+# ==== Git Bash path helpers ====
+# Convert POSIX path → Windows path (vd /c/Users/foo → C:\Users\foo)
+to_win_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -w "$1" 2>/dev/null || echo "$1"
+  else
+    echo "$1"
+  fi
+}
+# Convert Windows path → POSIX path (vd C:\Users\foo → /c/Users/foo)
+to_posix_path() {
+  if command -v cygpath >/dev/null 2>&1; then
+    cygpath -u "$1" 2>/dev/null || echo "$1"
+  else
+    echo "$1"
+  fi
+}
+# On Git Bash, $HOME may be POSIX (/c/Users/foo) — used everywhere, don't convert
+# But paths that get passed to Python/Node should stay POSIX
 
 # Source lib (also exposes env vars REPO_DIR, etc.)
 source "$SCRIPT_DIR/setup_lib.sh"
@@ -48,6 +68,14 @@ trap 'rc=$?; if [[ $rc -ne 0 ]] && [[ $rc -ne 1 ]]; then log_err "Setup failed (
 
 # ==== Print banner ====
 print_banner
+
+# ==== Windows-specific warning ====
+OS_EARLY=$(detect_os)
+if [[ "$OS_EARLY" == "windows-gitbash" ]]; then
+  log_warn "Đang chạy trên Git Bash — một số lệnh có thể cần WSL để ổn định 100%"
+  log_warn "  Khuyến nghị: cài WSL2 (wsl --install) và chạy setup.sh trong WSL"
+  log_warn "  Tạm thời vẫn chạy được, lệnh nào fail sẽ báo rõ để debug"
+fi
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
   log_warn "DRY-RUN MODE — không mutate filesystem"
