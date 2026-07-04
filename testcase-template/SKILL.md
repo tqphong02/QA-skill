@@ -1,9 +1,11 @@
 ---
 name: testcase-template
-description: Viết / sinh test case ra Excel theo template chuẩn team (Nina Studio — 4 sheet Cover/Test cases_App/Dropdown Keys/Report). Format MANUAL: Description "Xác minh rằng...", Scenario Name shared cho nhiều case. Test case ID hardcoded theo STT. 1 template chung assets/Template.xlsx cho MỌI project. Config từ JSON. Dùng khi: "viết test case", "tạo test case excel", "sinh test case theo template", "fill test case vào template", "test case từ spec/ticket".
+description: Use when generating structured test case documents (Excel/CSV/MD) with consistent columns, shared keys, and review-ready formatting. Not for exploratory testing notes or bug reports.
 ---
 
-# testcase-template — sinh test case Excel theo template chuẩn team
+# Test Case Template
+
+**Core principle:** Cùng một bộ cột — không sáng tạo cột mới.
 
 Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi thông tin project (name, code, modules) configurable từ JSON input. **KHÔNG cần tạo template riêng cho từng project**.
 
@@ -11,12 +13,16 @@ Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi t
 > **KHÁC** `qa-run` (live exploratory) và `playwright-pom-automation` (code automation `.spec.ts`): skill này = document test case Excel (manual test design).
 > **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI. Member khi git clone code về chạy được ngay với project bất kỳ.
 
-## Workflow — AI gen test case (5 bước)
+## The trap this skill exists to prevent
 
-### Bước 1 — Đọc & trích requirements
+**Freeform columns per author** — each tester invents their own column set, breaking cross-project aggregation and review tooling. Skill enforces a single shared template so test cases from different projects can be queried, compared, and rolled up.
+
+## Process
+
+### 1. Đọc & trích requirements
 **BẮT BUỘC bám document**. Mỗi case phải trace về 1 AC. Nếu KHÔNG có document → hỏi user. Chi tiết fetch từ Plane: `@references/plane-integration.md`.
 
-### Bước 2 — Tổ chức theo 2 phần + type order
+### 2. Tổ chức theo 2 phần + type order
 ```
 PHẦN 1 — UI: 1.1. USER INTERFACE (kind=ui)    ← col C, xanh nhạt
 └─ Group (LOGIN, REGISTER...)                 ← col C, group header
@@ -30,10 +36,10 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
 ```
 **Cùng feature có ở cả 2 phần** (UI test hiển thị, Functional test logic).
 
-### Bước 3 — Gen cases theo type order
+### 3. Gen cases theo type order
 8 loại: `happy → alternative → validation → edge → negative → error → ui → additional`. Chi tiết + ví dụ: `@references/test-types.md`.
 
-### Bước 4 — Build JSON input
+### 4. Build JSON input
 ```json
 {
   "project": {"code": "BCP", "name": "BCP AI", ...},
@@ -56,7 +62,7 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
 - `scenario_id` (string) — mã scenario, vd `SCN-LOG-001`
 - Mỗi case có `type` (1 trong 8) + `req` (trace về AC) - BẮT BUỘC
 
-### Bước 5 — Chạy script gen
+### 5. Chạy script gen
 ```bash
 python3 scripts/gen-testcases.py input.json output.xlsx
 ```
@@ -72,7 +78,7 @@ Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers m
 
 **Kết quả**: file output gọn, chỉ chứa dữ liệu thật của dự án hiện tại (vd demo project với 1 group LOGIN × 2 sections → file ~43 rows thay vì 657 rows như template).
 
-## Format columns (Test cases_App)
+### Column schema (Test cases_App sheet)
 
 | Col | Fill | Ghi chú |
 |---|---|---|
@@ -87,28 +93,43 @@ Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers m
 
 **Quan trọng**: Cột I, J, K, L, M để trống. Script chỉ apply style, KHÔNG fill value. Tester tự điền khi chạy test thực tế.
 
-## Cấu trúc template chi tiết
+### Template structure chi tiết
 
 Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover, Test cases_App, Dropdown Keys, Report).
 
-## Tóm tắt nhanh
+## Red flags
 
-- **Template**: 1 file `assets/Template.xlsx` (dùng chung, có sample rows làm reference)
-- **Output cleanup**: Tự động xóa group/sample rows không dùng → file gọn
-- **Format**: MANUAL tester, hardcoded ID, shared scenario name
-- **API key**: từ `config/api_keys.json` hoặc env var hoặc auto-detect (Antigravity/Copilot)
-- **Row height**: 51pt cố định
-- **Wrap text**: bật cho E, F, G, H
-- **Cột I, J, K, L, M**: để trống cho tester
+| Symptom | Why it's wrong | Fix |
+|---|---|---|
+| File output > 200 rows cho project nhỏ | Sample rows từ template không bị xóa | Verify dynamic whitelist trong JSON có đầy đủ groups |
+| Test case ID không liên tục (`[BCP-01]`, `[BCP-03]` thiếu `[BCP-02]`) | Hardcoded STT bị lệch khi type order thay đổi | Re-run script; đảm bảo thứ tự type đúng 8 loại chuẩn |
+| Cột I-M bị fill sẵn data | Script apply sai style | Verify branch trong `gen-testcases.py` chỉ apply style, không fill value |
+| Description bắt đầu bằng `[STT]` hoặc `[Type]` | Format manual bị vi phạm | AI phải reformat lại trước khi ghi JSON |
+| Expected result mơ hồ ("hệ thống hoạt động đúng") | Không đo được | Hỏi user để biết expected cụ thể |
 
-## Lưu ý quan trọng
+## Common mistakes
 
-- Mỗi case **BẮT BUỘC** có `req` trỏ về 1 AC (trong Notes ghi `Ref: ACx`)
-- Case `additional` (ngoài spec) → flag rõ `Ref: (out-of-spec)` + báo user
-- **KHÔNG bịa** expected result dựa trên spec mơ hồ — hỏi user
-- Description format MANUAL: "Xác minh rằng..." không có `[STT]`, `[Type]`, `/` lạ
-- Nhiều case có thể cùng `scenario_name` (chia sẻ tên nhóm chức năng)
+- **Mỗi case BẮT BUỘC có `req` trỏ về 1 AC** (trong Notes ghi `Ref: ACx`). Không có ref → case không trace được, fail coverage check.
 
-## Bản chính - 3 skill này dùng chung key
+- **Case `additional` (ngoài spec)** → flag rõ `Ref: (out-of-spec)` + báo user. Đừng ship như case bình thường.
 
-Cấu hình key 1 lần tại `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill. Xem [README.md](../README.md) mục "API Keys".
+- **KHÔNG bịa expected result** dựa trên spec mơ hồ — hỏi user. Spec nói "xử lý lỗi hợp lệ" → KHÔNG ĐƯỢC tự định nghĩa "hợp lệ" là gì.
+
+- **Description format MANUAL**: "Xác minh rằng..." không có `[STT]`, `[Type]`, `/` lạ. Format này để tester (người đọc Excel) hiểu nhanh.
+
+- **Nhiều case có thể cùng `scenario_name`** (chia sẻ tên nhóm chức năng). Đừng duplicate tên cho mỗi case.
+
+- **Khi git clone về máy mới**: chạy `pip install openpyxl` trước (script cần). API key config 1 lần ở `config/api_keys.json` (gitignored) — dùng chung cho cả 3 skill.
+
+- **Cấu hình key**: 1 file config chung `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill. Xem [README.md](../README.md) mục "API Keys".
+
+## References
+
+- [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), 1 file dùng chung
+- [examples/sample-input.json](examples/sample-input.json) — ví dụ JSON input hoàn chỉnh
+- [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)
+- [references/template-schema.md](references/template-schema.md) — 4 sheet chi tiết (Cover, Test cases_App, Dropdown Keys, Report)
+- [references/test-types.md](references/test-types.md) — 8 loại test case + ví dụ
+- [references/plane-integration.md](references/plane-integration.md) — fetch AC từ Plane API
+- Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)
+- Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)

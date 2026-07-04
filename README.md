@@ -2,7 +2,7 @@
 
 Bộ 3 skill Claude Code cho **QA team** (MIT).
 
-## 3 skill
+## 4 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|

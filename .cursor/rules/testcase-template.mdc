@@ -1,0 +1,21 @@
+---
+description: Use when generating structured test case documents with consistent columns and shared keys.
+globs:
+alwaysApply: false
+---
+
+# Test Case Template
+
+When the user's request matches the triggers above, load the full skill body:
+- Skill file: [`testcase-template/SKILL.md`](../testcase-template/SKILL.md)
+
+## Khi nào áp dụng
+- Sinh test case document (Excel / CSV / MD)
+- Cần cột nhất quán + key dùng chung
+
+## Không dùng
+- Ghi chú exploratory
+- Viết bug report
+
+## Nguyên tắc cốt lõi
+> Cùng một bộ cột — không sáng tạo cột mới.
