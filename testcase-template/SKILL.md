@@ -36,6 +36,24 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
 ```
 **Cùng feature có ở cả 2 phần** (UI test hiển thị, Functional test logic).
 
+**Quy tắc 1 scenario = 1 nhóm chức năng cụ thể** (KHÔNG gộp nhiều field/behavior):
+- Tách scenario khi khác **field/input** (email validation ≠ password validation → 2 scenario)
+- Tách scenario khi khác **behavior** (submit-fail ≠ account-lock)
+- Tách scenario khi khác **AC** (AC3 ≠ AC4 ≠ AC5)
+- Cùng `scenario_name` SHARED cho nhiều case CÙNG scenario — nhưng KHÔNG dùng chung scenario_name cho validation của field khác nhau
+
+Ví dụ SAI vs ĐÚNG cho trang login:
+```
+❌ SAI: 1 scenario "Validation email và password" gộp 6 case
+       (3 case email validation + 2 case password validation + 1 case cả 2 trống)
+       → Tester khó filter, khó coverage check, scenario_name mơ hồ
+
+✅ ĐÚNG: tách 2 scenario riêng
+   - SCN-LOG-002 "Validation email"        → case về email (trống, thiếu @, thiếu domain, subdomain)
+   - SCN-LOG-003 "Validation password"     → case về password (trống, cả 2 trống, <8 chars, =8 chars)
+   → Mỗi scenario có 1 nhóm rõ ràng, tester filter được, coverage dễ check
+```
+
 ### 3. Gen cases theo type order
 8 loại: `happy → alternative → validation → edge → negative → error → ui → additional`. Chi tiết + ví dụ: `@references/test-types.md`.
 
@@ -111,13 +129,15 @@ Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover
 
 - **Mỗi case BẮT BUỘC có `req` trỏ về 1 AC** (trong Notes ghi `Ref: ACx`). Không có ref → case không trace được, fail coverage check.
 
+- **Gộp nhiều field/behavior khác nhau vào 1 scenario** — ví dụ: 1 scenario "Validation email và password" gộp cả email validation + password validation. SAI. Phải tách thành 2 scenario riêng: "Validation email" (case về email) và "Validation password" (case về password). Xem Process step 2 để biết tiêu chí tách cụ thể.
+
 - **Case `additional` (ngoài spec)** → flag rõ `Ref: (out-of-spec)` + báo user. Đừng ship như case bình thường.
 
 - **KHÔNG bịa expected result** dựa trên spec mơ hồ — hỏi user. Spec nói "xử lý lỗi hợp lệ" → KHÔNG ĐƯỢC tự định nghĩa "hợp lệ" là gì.
 
 - **Description format MANUAL**: "Xác minh rằng..." không có `[STT]`, `[Type]`, `/` lạ. Format này để tester (người đọc Excel) hiểu nhanh.
 
-- **Nhiều case có thể cùng `scenario_name`** (chia sẻ tên nhóm chức năng). Đừng duplicate tên cho mỗi case.
+- **Nhiều case CÙNG scenario có thể cùng `scenario_name`** (chia sẻ tên nhóm chức năng). Đừng duplicate tên cho mỗi case. **NHƯNG** không gộp case của field/behavior khác vào cùng scenario — tách ra (xem Process step 2).
 
 - **Khi git clone về máy mới**: chạy `pip install openpyxl` trước (script cần). API key config 1 lần ở `config/api_keys.json` (gitignored) — dùng chung cho cả 3 skill.
 
