@@ -1,0 +1,107 @@
+# ─────────────────────────────────────────────────────────────
+# Dependencies
+# ─────────────────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+
+# ─────────────────────────────────────────────────────────────
+# Build output
+# ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────
+# Test output (runtime-generated)
+# ─────────────────────────────────────────────────────────────
+# Playwright reports
+reports/
+test-results/
+playwright-report/
+blob-report/
+
+# Allure results (raw data, regenerate report from these)
+reports/allure-results/
+# Keep allure-report/ if you want to commit pre-generated HTML
+!reports/allure-report/.gitkeep
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# ─────────────────────────────────────────────────────────────
+# Sessions & Testdata (runtime-generated, contains secrets/data)
+# ─────────────────────────────────────────────────────────────
+sessions/*.json
+!sessions/.gitkeep
+!sessions/README.md
+
+testdata/*.json
+!testdata/.gitkeep
+!testdata/README.md
+# OPTIONAL: commit seed files for sharing across team
+# !testdata/seed-*.json
+
+# ─────────────────────────────────────────────────────────────
+# Environment & secrets
+# ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# Secrets files
+*.pem
+*.key
+*.p12
+secrets/
+
+# ─────────────────────────────────────────────────────────────
+# IDE & OS
+# ─────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─────────────────────────────────────────────────────────────
+# Cache
+# ─────────────────────────────────────────────────────────────
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+.rpt2_cache/
+
+# ─────────────────────────────────────────────────────────────
+# Playwright-specific
+# ─────────────────────────────────────────────────────────────
+playwright/.cache/
+playwright/.last-run.json
+
+# ─────────────────────────────────────────────────────────────
+# k6 (performance testing)
+# ─────────────────────────────────────────────────────────────
+k6-results/
+k6-summary.json

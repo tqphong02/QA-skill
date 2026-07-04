@@ -1,0 +1,56 @@
+{
+  "name": "<project-name>",
+  "version": "1.0.0",
+  "description": "Playwright + TypeScript test automation với POM pattern",
+  "private": true,
+  "scripts": {
+    "test": "npm run placeholder-check && npm run lint && playwright test",
+    "test:ui": "playwright test --grep @ui",
+    "test:api": "playwright test --grep @api",
+    "test:functional": "playwright test --grep @functional",
+    "test:perf": "playwright test --grep @perf",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:regression": "playwright test --grep-invert @perf",
+
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "test:ui-mode": "playwright test --ui",
+
+    "test:report": "playwright show-report reports/html",
+    "allure:gen": "allure generate reports/allure-results -o reports/allure-report --clean",
+    "allure:open": "allure open reports/allure-report",
+    "allure:serve": "allure serve reports/allure-results",
+
+    "placeholder-check": "bash scripts/check-placeholders.sh",
+    "lint": "tsc --noEmit && eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write \"**/*.{ts,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,js,json,md}\"",
+
+    "install:browsers": "playwright install --with-deps chromium firefox webkit",
+    "bootstrap": "bash scripts/bootstrap.sh",
+    "postinstall": "playwright install --with-deps chromium",
+    "clean": "rm -rf reports test-results playwright-report node_modules/.cache",
+    "cleanup:sessions": "node -e \"require('./fixtures/session').cleanupOldSessions(7)\""
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "@types/node": "^20.14.0",
+    "allure-commandline": "^2.27.0",
+    "allure-playwright": "^2.15.0",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "prettier": "^3.3.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.4.0",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
