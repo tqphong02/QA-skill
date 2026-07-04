@@ -1,6 +1,6 @@
 # QA-skill
 
-Bộ 3 skill Claude Code cho **QA team**, merge concept từ [anhtester/codex-testing-kit](https://github.com/anhtester/codex-testing-kit) (MIT).
+Bộ 3 skill Claude Code cho **QA team** (MIT).
 
 ## 3 skill
 
@@ -85,11 +85,6 @@ from scripts.ai_provider import (
 info = get_provider_info()
 # {'environment': 'antigravity', 'active_provider': 'Antigravity (Gemini - free)', ...}
 ```
-
-## Nguồn
-
-- Đóng góp từ [anhtester/codex-testing-kit](https://github.com/anhtester/codex-testing-kit) (MIT, 7⭐) — bộ 26 skill cho OpenAI Codex.
-- Port sang Claude Code, giữ nguyên concept, viết lại native cho MCP Playwright + Plane API.
 
 ## License
 

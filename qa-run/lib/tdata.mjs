@@ -1,4 +1,4 @@
-// Traceable test-data generator (mượn từ $generate-test-data của codex-testing-kit).
+// Traceable test-data generator.
 // Format: [prefix]_[testName]_[timestamp]_[random]
 //   prefix   = viết tắt feature/module (vd: ing, wf, qlt, dash, api)
 //   testName = tên probe (vd: createUser, loginValid, searchBounded)

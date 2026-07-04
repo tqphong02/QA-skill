@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Fetch 1 ticket từ Plane API theo (project_id, sequence_id) hoặc theo URL đầy đủ.
-# Tương đương $fetch-jira-requirements của codex-testing-kit, port sang Plane.
 #
 # Cách 1 — theo URL:
 #   ./fetch-plane-issue.sh "https://projects.metasolutions.ai/mds-team/projects/9482533a-.../issues/39/"

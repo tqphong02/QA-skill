@@ -307,12 +307,12 @@ Cấu trúc data-driven: `cases.mjs` + `run.mjs`, idempotent (withRevert), verdi
 
 Một lần cấu hình key tại `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill trong repo qa-skill. Xem [README.md](../README.md) mục "API Keys" và `scripts/ai_provider.py`.
 
-## Appendix — codex-testing-kit
+## Appendix — ported modules
 
-Skill này merge concept từ `anhtester/codex-testing-kit` (MIT). Module đã port:
-- **A.1 Test Data Generator** (codex `$generate-test-data`) — format chuẩn `[prefix]_[testName]_[timestamp]_[random]`, helper tại `lib/tdata.mjs` (xem MERGE-README.md §2)
+Các module đã port:
+- **A.1 Test Data Generator** — format chuẩn `[prefix]_[testName]_[timestamp]_[random]`, helper tại `lib/tdata.mjs`
 
-Các concept codex chưa port (để roadmap): A.2 Flaky Detector (`$analyze-flaky-tests`), A.2 Locator Healer (`$locator-healer-agent`), A.3 UI/API Flow Generator.
+Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer, A.3 UI/API Flow Generator.
 
 ## Tóm tắt nhanh
 

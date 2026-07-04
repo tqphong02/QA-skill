@@ -146,8 +146,7 @@ git commit -m "Initial commit: 3 QA skills (qa-run, testcase-template, playwrigh
 
 - qa-run: exploratory + Plane integration + 2 helper (tdata, fetch-plane-issue)
 - testcase-template: Excel template generator (Nina Studio format)
-- playwright-pom-automation: Playwright + TS + POM scaffold
-- Merged concepts from anhtester/codex-testing-kit (MIT, 7⭐)"
+- playwright-pom-automation: Playwright + TS + POM scaffold"
 
 # Tạo repo trên GitHub (cách tay): https://github.com/new
 # Tên gợi ý: mds-qa-skills hoặc claude-qa-toolkit
