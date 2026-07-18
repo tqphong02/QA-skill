@@ -25,13 +25,13 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 python3 "$SCRIPT_DIR/render-qa.py" "$INPUT" "$OUTPUT_DIR" "$BASE_NAME"
-node "$SCRIPT_DIR/render-xmind.mjs" "$INPUT" "$OUTPUT_DIR/$BASE_NAME-business-flow.xmind"
+node "$SCRIPT_DIR/render-xmind.mjs" "$INPUT" "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"
 python3 "$SCRIPT_DIR/render-qa.py" --check \
-  "$OUTPUT_DIR/$BASE_NAME-business-qa.md" \
-  "$OUTPUT_DIR/$BASE_NAME-business-qa.xlsx"
-node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/$BASE_NAME-business-flow.xmind"
+  "$OUTPUT_DIR/${BASE_NAME}_Q&A.md" \
+  "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx"
+node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"
 
 echo "BUSINESS ANALYSIS PASS"
-echo "$OUTPUT_DIR/$BASE_NAME-business-flow.xmind"
-echo "$OUTPUT_DIR/$BASE_NAME-business-qa.md"
-echo "$OUTPUT_DIR/$BASE_NAME-business-qa.xlsx"
+echo "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"
+echo "$OUTPUT_DIR/${BASE_NAME}_Q&A.md"
+echo "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx"

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Business Analysis QA"
-  short_description: "Map business flows and generate senior QA questions"
-  default_prompt: "Use $business-analysis to analyze this business document and create an editable XMind flow plus matching Q&A Markdown and Excel files"
+  display_name: "Phân tích nghiệp vụ QA"
+  short_description: "Vẽ luồng nghiệp vụ và tạo bộ câu hỏi QA senior"
+  default_prompt: "Dùng $business-analysis để phân tích tài liệu nghiệp vụ, tạo XMind có thể chỉnh sửa cùng bộ Q&A Markdown và Excel bằng tiếng Việt"

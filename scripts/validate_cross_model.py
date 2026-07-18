@@ -147,9 +147,11 @@ REQUIRED = {
     "business-analysis/SKILL.md": [
         "doc-to-md/scripts/convert.sh",
         "18 areas",
-        "business-flow.xmind",
-        "business-qa.md",
-        "business-qa.xlsx",
+        "Business_Flow.xmind",
+        "_Q&A.md",
+        "_Q&A.xlsx",
+        "_Analysis_Source.json",
+        ".business-analysis",
         "scripts/generate.sh",
     ],
     "business-analysis/references/SENIOR_REVIEW_CHECKLIST.md": [
@@ -166,7 +168,8 @@ REQUIRED = {
     ],
     "business-analysis/scripts/render-xmind.mjs": [
         "parseXMindMarkToXMindFile",
-        "Business modules",
+        "Module nghiệp vụ",
+        "Câu hỏi đang mở",
         "XMIND PASS",
     ],
     "business-analysis/examples/sample-analysis.json": [

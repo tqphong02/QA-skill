@@ -1,6 +1,6 @@
 ---
 name: business-analysis
-description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a business flow map, editable XMind file, requirement gap analysis, ambiguity review, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces matching business-flow.xmind, business-qa.md, and business-qa.xlsx from one validated analysis JSON source
+description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a business flow map, editable XMind file, requirement gap analysis, ambiguity review, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces Vietnamese business flow and Q&A deliverables from one hidden validated JSON source
 ---
 
 # Business Analysis
@@ -13,7 +13,7 @@ Convert first, reason once, render deterministically
 2. For PDF, DOCX, PPTX, XLSX, HTML or image input, run `doc-to-md/scripts/convert.sh` first
 3. Read the converted Markdown, not the binary document, and preserve source heading or requirement references
 4. Review all 18 areas in [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md)
-5. Build one structured JSON using [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md)
+5. Build one structured JSON using [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md) and keep its human-readable content in Vietnamese
 6. Never turn an observed behavior or inference into a confirmed business rule
 7. Run `scripts/generate.sh` to create XMind and both Q&A formats
 8. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success
@@ -62,36 +62,36 @@ Create Q&A for ambiguity, contradiction, missing rule, untestable expectation, u
 
 ### 4. Save the structured source
 
-Save as:
+Save the machine source inside a hidden technical folder:
 
 ```text
-<project-output>/<project-slug>-business-analysis.json
+<project-output>/.business-analysis/<project-name>_Analysis_Source.json
 ```
 
-This JSON is the single source for all generated artifacts. Update the JSON and regenerate instead of editing Markdown, Excel and XMind independently
+This JSON is not a user deliverable. It is the internal source that keeps IDs and content synchronized across Markdown, Excel and XMind. Update the JSON and regenerate instead of editing those three outputs independently
 
 ### 5. Generate all outputs
 
 ```bash
 bash scripts/generate.sh \
-  <project-slug>-business-analysis.json \
+  .business-analysis/<project-name>_Analysis_Source.json \
   <project-output> \
-  <project-slug>
+  <project-name>
 ```
 
 Outputs:
 
 ```text
-<project-slug>-business-flow.xmind
-<project-slug>-business-qa.md
-<project-slug>-business-qa.xlsx
+<project-name>_Business_Flow.xmind
+<project-name>_Q&A.md
+<project-name>_Q&A.xlsx
 ```
 
 The XMind file is generated with the official `xmindmark` package and remains editable in XMind
 
 ### 6. Read back
 
-- Open Q&A Markdown and verify question count, priority and source references
+- Open Q&A Markdown and verify question count, priority and nontechnical readability
 - Open Excel and verify the same Question IDs and content
 - Run `node scripts/render-xmind.mjs --check <file.xmind>`
 - Report `BLOCKED` when conversion, review coverage, dependency or output validation fails
@@ -99,6 +99,12 @@ The XMind file is generated with the official `xmindmark` package and remains ed
 ## Output rules
 
 - Q&A Markdown and Excel must have matching Question IDs and content
+- All user-facing headings, descriptions, questions, assumptions and workbook labels must be Vietnamese
+- Keep filenames in English using exactly `<project-name>_Business_Flow.xmind`, `<project-name>_Q&A.md` and `<project-name>_Q&A.xlsx`
+- Use a restrained navy, teal, blue, amber, red and green palette with readable contrast
+- Keep the internal JSON under `.business-analysis` and do not present it as a deliverable
+- Keep document paths, section codes, `source_ref` and missing-source diagnostics only in the hidden JSON, never in user-facing Markdown, Excel or XMind
+- Use plain business language so a nontechnical reader can understand every visible field
 - Keep unanswered questions `Open` with an empty Answer
 - Use `Answered` only when an authority supplied the answer
 - Do not use emoji or icons

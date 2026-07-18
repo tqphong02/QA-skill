@@ -1,6 +1,10 @@
 # Business analysis JSON contract
 
-Use one JSON object as the source for XMind, Q&A Markdown and Q&A Excel
+Use one JSON object as the hidden technical source for XMind, Q&A Markdown and Q&A Excel
+
+All human-readable values such as scope, actor, module, flow, review note, question, risk and assumption must be Vietnamese. Keep machine enums, IDs, URLs, filenames, API fields and code unchanged
+
+Store this file as `<project-output>/.business-analysis/<project-name>_Analysis_Source.json` and do not present it as a user deliverable
 
 ## Required top-level fields
 
