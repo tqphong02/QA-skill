@@ -29,7 +29,7 @@ node "$SCRIPT_DIR/render-xmind.mjs" "$INPUT" "$OUTPUT_DIR/${BASE_NAME}_Business_
 python3 "$SCRIPT_DIR/render-qa.py" --check \
   "$OUTPUT_DIR/${BASE_NAME}_Q&A.md" \
   "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx"
-node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"
+node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind" "$INPUT"
 
 echo "BUSINESS ANALYSIS PASS"
 echo "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"

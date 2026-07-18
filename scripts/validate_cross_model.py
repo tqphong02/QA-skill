@@ -152,6 +152,8 @@ REQUIRED = {
         "_Q&A.xlsx",
         "_Analysis_Source.json",
         ".business-analysis",
+        "flow_links",
+        "sanity_journeys",
         "scripts/generate.sh",
     ],
     "business-analysis/references/SENIOR_REVIEW_CHECKLIST.md": [
@@ -168,14 +170,17 @@ REQUIRED = {
     ],
     "business-analysis/scripts/render-xmind.mjs": [
         "parseXMindMarkToXMindFile",
-        "Module nghiệp vụ",
-        "Câu hỏi đang mở",
+        "Kịch bản sanity end-to-end",
+        "Chi tiết và liên kết chức năng",
+        "relationshipMarkers",
         "XMIND PASS",
     ],
     "business-analysis/examples/sample-analysis.json": [
         "\"review_coverage\"",
         "\"QA-001\"",
         "\"questions\"",
+        "\"flow_links\"",
+        "\"sanity_journeys\"",
     ],
     "testcase-template/examples/sample-api-input.json": [
         '"kind": "api"',

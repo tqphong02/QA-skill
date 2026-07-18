@@ -33,6 +33,8 @@
           "actor": "Người dùng đã đăng ký",
           "status": "verified",
           "source_ref": "account-portal.md#login",
+          "entry_state": "Chưa xác thực",
+          "exit_state": "Đã xác thực",
           "preconditions": ["Tài khoản đang hoạt động"],
           "trigger": "Người dùng gửi biểu mẫu đăng nhập",
           "steps": [
@@ -50,8 +52,101 @@
           "exceptions": [],
           "business_rules": ["Tài khoản đã vô hiệu không được tạo phiên mới"],
           "dependencies": ["Dịch vụ định danh"],
+          "sanity_checks": [
+            "Đăng nhập thành công với tài khoản đang hoạt động",
+            "Tạo đúng phiên và chuyển người dùng vào trang tổng quan",
+            "Thông tin không hợp lệ không tạo phiên"
+          ],
           "unresolved": ["Hành vi của phiên hiện có sau khi vô hiệu tài khoản"]
+        },
+        {
+          "id": "FLOW-002",
+          "name": "Vô hiệu tài khoản người dùng",
+          "actor": "Quản trị viên",
+          "status": "verified",
+          "source_ref": "account-portal.md#administration",
+          "entry_state": "Tài khoản đang hoạt động",
+          "exit_state": "Tài khoản đã vô hiệu",
+          "preconditions": ["Quản trị viên đã đăng nhập và có quyền quản lý tài khoản"],
+          "trigger": "Quản trị viên xác nhận vô hiệu tài khoản",
+          "steps": [
+            {
+              "id": "S1",
+              "action": "Chọn tài khoản và xác nhận vô hiệu",
+              "system_response": "Kiểm tra quyền và cập nhật trạng thái tài khoản",
+              "state_change": "Đang hoạt động sang Đã vô hiệu",
+              "api_data": "PATCH /accounts/{id}",
+              "source_ref": "account-portal.md#administration"
+            }
+          ],
+          "outcomes": ["Tài khoản đã vô hiệu không thể tạo phiên đăng nhập mới"],
+          "alternate_flows": ["Huỷ xác nhận giữ nguyên trạng thái tài khoản"],
+          "exceptions": ["Tài khoản đã bị người khác cập nhật trước đó"],
+          "business_rules": ["Chỉ quản trị viên có quyền mới được vô hiệu tài khoản"],
+          "dependencies": ["Dịch vụ định danh", "Nhật ký kiểm toán"],
+          "sanity_checks": [
+            "Đúng quản trị viên có thể vô hiệu tài khoản đang hoạt động",
+            "Người không có quyền không thể vô hiệu tài khoản",
+            "Tài khoản đã vô hiệu không thể đăng nhập lại",
+            "Lưu đúng người thao tác và thời gian thay đổi"
+          ],
+          "unresolved": ["Thời điểm thu hồi các phiên đang hoạt động"]
         }
+      ]
+    }
+  ],
+  "flow_links": [
+    {
+      "from_flow": "FLOW-002",
+      "to_flow": "FLOW-001",
+      "label": "Chặn đăng nhập sau khi vô hiệu",
+      "condition": "Tài khoản chuyển sang Đã vô hiệu",
+      "data_handoff": "Trạng thái tài khoản mới",
+      "sanity_impact": "Luồng đăng nhập phải từ chối tạo phiên mới"
+    }
+  ],
+  "sanity_journeys": [
+    {
+      "id": "SANITY-001",
+      "name": "Đăng nhập vào cổng tài khoản",
+      "preconditions": [
+        "Có tài khoản đang hoạt động",
+        "Dịch vụ định danh hoạt động"
+      ],
+      "flow_sequence": [
+        {
+          "flow_id": "FLOW-001",
+          "transition_condition": "Người dùng nhập email và mật khẩu hợp lệ",
+          "checkpoint": "Phiên được tạo và người dùng vào đúng trang tổng quan"
+        }
+      ],
+      "expected_results": [
+        "Người dùng đăng nhập thành công",
+        "Thông tin không hợp lệ không tạo phiên"
+      ]
+    },
+    {
+      "id": "SANITY-002",
+      "name": "Vô hiệu tài khoản và kiểm tra chặn đăng nhập",
+      "preconditions": [
+        "Có quản trị viên đúng quyền",
+        "Có tài khoản người dùng đang hoạt động"
+      ],
+      "flow_sequence": [
+        {
+          "flow_id": "FLOW-002",
+          "transition_condition": "Quản trị viên xác nhận vô hiệu",
+          "checkpoint": "Tài khoản chuyển Đã vô hiệu và lưu nhật ký thay đổi"
+        },
+        {
+          "flow_id": "FLOW-001",
+          "transition_condition": "Người dùng thử đăng nhập lại",
+          "checkpoint": "Hệ thống từ chối đăng nhập và không tạo phiên mới"
+        }
+      ],
+      "expected_results": [
+        "Tài khoản bị vô hiệu đúng quyền",
+        "Luồng đăng nhập nhận trạng thái mới và chặn truy cập"
       ]
     }
   ],

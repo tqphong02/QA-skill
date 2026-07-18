@@ -1,6 +1,6 @@
 ---
 name: business-analysis
-description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a business flow map, editable XMind file, requirement gap analysis, ambiguity review, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces Vietnamese business flow and Q&A deliverables from one hidden validated JSON source
+description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a connected tester-facing sanity flow, editable XMind business map, prerequisites, related functions, requirement gap analysis, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces Vietnamese sanity journeys with real XMind relationship arrows and matching Q&A deliverables from one hidden validated JSON source
 ---
 
 # Business Analysis
@@ -14,9 +14,11 @@ Convert first, reason once, render deterministically
 3. Read the converted Markdown, not the binary document, and preserve source heading or requirement references
 4. Review all 18 areas in [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md)
 5. Build one structured JSON using [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md) and keep its human-readable content in Vietnamese
-6. Never turn an observed behavior or inference into a confirmed business rule
-7. Run `scripts/generate.sh` to create XMind and both Q&A formats
-8. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success
+6. Define entry state, exit state, sanity checks and explicit cross-flow links for every testable system flow
+7. Build at least one end-to-end `sanity_journeys` path with preparation conditions, ordered functions, transition conditions, checkpoints and final results
+8. Never turn an observed behavior or inference into a confirmed business rule
+9. Run `scripts/generate.sh` to create XMind and both Q&A formats
+10. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success
 
 Do not write testcases in this skill. Hand the confirmed Markdown and Q&A answers to `testcase-template` later
 
@@ -45,6 +47,15 @@ Record only what the source supports:
 - Side effects, API, data and third-party integration
 - UI/UX, accessibility and non-functional expectations
 - Acceptance criteria and testability
+
+For every flow, also record:
+
+- Entry state and exit state
+- Preconditions that must be prepared before sanity testing
+- Ordered system processing steps and state changes
+- Minimum sanity checks that prove the flow still works
+- Upstream and downstream functions through top-level `flow_links`
+- Tester execution paths through top-level `sanity_journeys`
 
 Mark each fact `verified`, `inferred` or `unresolved` with a source reference
 
@@ -89,11 +100,13 @@ Outputs:
 
 The XMind file is generated with the official `xmindmark` package and remains editable in XMind
 
+The XMind is a tester-facing sanity map, not a document dump. It must show the end-to-end system sequence, prerequisites, entry and exit states, mandatory sanity checks, related functions and real relationship arrows between linked flows. Keep detailed Q&A and review coverage in Markdown and Excel only
+
 ### 6. Read back
 
 - Open Q&A Markdown and verify question count, priority and nontechnical readability
 - Open Excel and verify the same Question IDs and content
-- Run `node scripts/render-xmind.mjs --check <file.xmind>`
+- Run `node scripts/render-xmind.mjs --check <file.xmind> <analysis.json>` and verify journey and relationship counts
 - Report `BLOCKED` when conversion, review coverage, dependency or output validation fails
 
 ## Output rules
@@ -105,6 +118,10 @@ The XMind file is generated with the official `xmindmark` package and remains ed
 - Keep the internal JSON under `.business-analysis` and do not present it as a deliverable
 - Keep document paths, section codes, `source_ref` and missing-source diagnostics only in the hidden JSON, never in user-facing Markdown, Excel or XMind
 - Use plain business language so a nontechnical reader can understand every visible field
+- Keep XMind focused on sanity execution and connected system behavior, not the complete Q&A or 18-area review log
+- Every XMind flow must show prerequisites, entry state, ordered processing, exit state, mandatory sanity checks and related functions
+- Render every item in `flow_links` as a visible function-to-function section and a real XMind relationship arrow
+- Put `Kịch bản sanity end-to-end` first so a tester can follow the exact preparation, function order, transition checkpoint and final result without opening the detailed branches
 - Keep unanswered questions `Open` with an empty Answer
 - Use `Answered` only when an authority supplied the answer
 - Do not use emoji or icons

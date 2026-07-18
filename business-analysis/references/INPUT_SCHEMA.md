@@ -17,6 +17,8 @@ Store this file as `<project-output>/.business-analysis/<project-name>_Analysis_
   "executive_summary": "Short confirmed summary",
   "actors": [],
   "modules": [],
+  "flow_links": [],
+  "sanity_journeys": [],
   "cross_cutting": [],
   "review_coverage": [],
   "questions": []
@@ -58,6 +60,8 @@ Use one of:
       "actor": "Registered user",
       "status": "verified",
       "source_ref": "spec.md#login",
+      "entry_state": "Chưa xác thực",
+      "exit_state": "Đã xác thực",
       "preconditions": ["Account is active"],
       "trigger": "User submits login form",
       "steps": [
@@ -75,8 +79,60 @@ Use one of:
       "exceptions": [],
       "business_rules": [],
       "dependencies": [],
+      "sanity_checks": [
+        "Đăng nhập thành công với tài khoản hợp lệ",
+        "Phiên được tạo và người dùng vào đúng trang"
+      ],
       "unresolved": []
     }
+  ]
+}
+```
+
+## Flow link
+
+Use explicit links to describe how one function hands state or data to another function. The renderer uses each link to create a visible relationship arrow in XMind
+
+```json
+{
+  "from_flow": "FLOW-001",
+  "to_flow": "FLOW-002",
+  "label": "Tạo công việc tiếp theo",
+  "condition": "FLOW-001 hoàn tất thành công",
+  "data_handoff": "Trạng thái bản ghi và người nhận việc",
+  "sanity_impact": "FLOW-002 nhận đúng dữ liệu và đúng người có thể tiếp tục"
+}
+```
+
+Keep `label` short because it appears on the relationship arrow. For a document with one standalone flow, use an empty `flow_links` list
+
+## Sanity journey
+
+Create at least one tester-facing end-to-end path. The sequence must reference existing flow IDs
+
+```json
+{
+  "id": "SANITY-001",
+  "name": "Từ đăng nhập đến hoàn tất thao tác chính",
+  "preconditions": [
+    "Có tài khoản đang hoạt động",
+    "Dữ liệu nền đã sẵn sàng"
+  ],
+  "flow_sequence": [
+    {
+      "flow_id": "FLOW-001",
+      "transition_condition": "Đăng nhập thành công",
+      "checkpoint": "Phiên được tạo và người dùng vào đúng trang"
+    },
+    {
+      "flow_id": "FLOW-002",
+      "transition_condition": "Có phiên hợp lệ",
+      "checkpoint": "Thao tác chính lưu đúng trạng thái và dữ liệu"
+    }
+  ],
+  "expected_results": [
+    "Toàn bộ chuỗi hoàn tất không lỗi",
+    "Dữ liệu cuối cùng nhất quán với các bước trước"
   ]
 }
 ```

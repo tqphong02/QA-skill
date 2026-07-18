@@ -1,4 +1,4 @@
 interface:
   display_name: "Phân tích nghiệp vụ QA"
-  short_description: "Vẽ luồng nghiệp vụ và tạo bộ câu hỏi QA senior"
-  default_prompt: "Dùng $business-analysis để phân tích tài liệu nghiệp vụ, tạo XMind có thể chỉnh sửa cùng bộ Q&A Markdown và Excel bằng tiếng Việt"
+  short_description: "Vẽ sanity flow liên kết chức năng và tạo Q&A senior"
+  default_prompt: "Dùng $business-analysis để phân tích tài liệu, tạo XMind sanity end-to-end có điều kiện tiên quyết và liên kết chức năng, cùng bộ Q&A Markdown và Excel bằng tiếng Việt"

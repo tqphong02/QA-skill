@@ -129,7 +129,7 @@ def normalize_questions(items):
 
 
 def validate(data):
-    for field in ["project", "scope", "analysis_date", "source_markdown", "review_coverage", "modules", "questions"]:
+    for field in ["project", "scope", "analysis_date", "source_markdown", "review_coverage", "modules", "questions", "flow_links", "sanity_journeys"]:
         if field not in data or data[field] in (None, ""):
             fail(f"Missing required field: {field}")
     if not isinstance(data["source_markdown"], list) or not data["source_markdown"]:
@@ -152,6 +152,10 @@ def validate(data):
             fail(f"{area}.notes is required for {status}")
     if not isinstance(data["modules"], list):
         fail("modules must be a list")
+    if not isinstance(data["flow_links"], list):
+        fail("flow_links must be a list")
+    if not isinstance(data["sanity_journeys"], list) or not data["sanity_journeys"]:
+        fail("sanity_journeys must be a non-empty list")
     reject_secrets(data)
     return normalize_questions(data["questions"])
 
