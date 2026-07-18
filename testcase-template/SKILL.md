@@ -1,6 +1,6 @@
 ---
 name: testcase-template
-description: Use when generating structured test case documents (Excel/CSV/MD) with consistent columns, shared keys, and review-ready formatting. Not for exploratory testing notes or bug reports.
+description: Generate or review structured testcase documents with an AI-readable Markdown testcase companion created before the Excel workbook. Keep Markdown and Excel testcase IDs/content synchronized from one JSON source. Use the existing UI and functional flow by default. Enable the optional API flow only when explicitly requested. Not for exploratory testing notes or bug reports.
 ---
 
 # Test Case Template
@@ -17,12 +17,15 @@ Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi t
 
 Áp dụng nguyên thứ tự này cho mọi model:
 
-1. Đọc requirement/AC và liệt kê requirement ID trước khi viết case
-2. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
-3. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
-4. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
-5. Chạy `scripts/gen-testcases.py`; không tự tạo cột hoặc viết workbook thủ công
-6. Đọc lại workbook và kiểm tra số case, Scenario Name grouping, cột I-M trống và format nội dung
+1. Chọn mode trước khi viết: mặc định dùng flow UI/FUNCTION hiện tại; chỉ dùng API mode khi user yêu cầu rõ viết testcase API hoặc viết testcase cho endpoint, OpenAPI/Swagger, Postman hay curl; chỉ nhắc đến artifact API thì chưa đủ để đổi mode
+2. Nếu API mode có file nguồn, chạy `scripts/import-api-spec.py` trước; không tự đọc rồi chép endpoint thủ công
+3. Kiểm tra `review_required`; nếu còn item thì dừng Excel generation và lấy expected còn thiếu từ user hoặc tài liệu
+4. Đọc requirement/AC và liệt kê requirement ID trước khi viết case
+5. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
+6. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
+7. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
+8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>.md` trước `<output>.xlsx`
+9. Đọc lại Markdown trước rồi đối chiếu Excel: số case, Scenario/Testcase ID và nội dung design phải khớp; cột I-M chỉ có ở Excel và để trống
 
 Nếu expected chưa có trong requirement, dừng case đó ở trạng thái cần làm rõ; không tự bịa business rule.
 
@@ -48,6 +51,8 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
       └─ Cases — type order
 ```
 **Cùng feature có ở cả 2 phần** (UI test hiển thị, Functional test logic).
+
+**API mode là tùy chọn**: chỉ khi user yêu cầu testcase API, đọc [references/api-testcases.md](references/api-testcases.md). API case vẫn nằm trong `1.2. FUNCTION`, dùng `kind=api` và giữ nguyên các cột B-M. Nếu user không yêu cầu API thì không đọc reference này và tiếp tục flow hiện tại với `kind=ui` hoặc `kind=function`.
 
 **Quy tắc 1 scenario = 1 nhóm chức năng cụ thể** (KHÔNG gộp nhiều field/behavior):
 - Tách scenario khi khác **field/input** (email validation ≠ password validation → 2 scenario)
@@ -92,20 +97,36 @@ Ví dụ SAI vs ĐÚNG cho trang login:
 - `scenario_name` (string) — tên nhóm chức năng, **SHARED** cho nhiều case cùng scenario
 - `scenario_id` (string) — mã scenario, vd `SCN-LOG-001`
 - Mỗi case có `type` (1 trong 8) + `req` (trace về AC) - BẮT BUỘC
+- Riêng API mode, mỗi case thêm object `api`; xem [examples/sample-api-input.json](examples/sample-api-input.json). Không có object `api` thì generator dùng nguyên `pre_condition`, `procedure`, `expected` như hiện tại
 
 ### 5. Chạy script gen
+
+Nếu user yêu cầu API testcase từ file hoặc folder nguồn, import trước:
+
+```bash
+python3 scripts/import-api-spec.py api-file output-api.json \
+  --project-code CODE --project-name "Project Name"
+```
+
+Chỉ chạy bước Excel khi command trả exit code `0` và `review_required` trống. Với endpoint/curl không khai báo response status, user có thể xác nhận rồi truyền `--default-success-status 200`; không tự thêm option này nếu chưa được xác nhận.
+
 ```bash
 python3 scripts/gen-testcases.py input.json output.xlsx
 ```
-→ Script copy template → update Cover từ JSON → clear sample rows (chỉ giữ groups khai báo trong JSON) → **xóa hẳn dòng mẫu không dùng** → ghi section/group/case rows theo type order → hardcode test case ID (vd `[BCP-01]`, `[BCP-02]`) → save.
+→ Script tạo `output.md` đầy đủ trước → copy template → update Cover từ JSON → cleanup → ghi section/group/case rows → hardcode cùng Testcase ID → save `output.xlsx`.
+
+Markdown là bản AI đọc để hiểu testcase mà không cần parse Excel. Đọc [references/markdown-testcases.md](references/markdown-testcases.md) và không chỉnh hai file độc lập.
+
+Với API mode, generator chỉ ánh xạ object `api` vào F/G/H. Testcase thường không có object `api` nên giữ nguyên đường chạy và cách đặt row height hiện tại.
 
 ### Output cleanup (auto)
 
 Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers mẫu** (REGISTER, LOGIN, HOME, BOOKING, PROFILE, SETTING, NOTIFICATION, DASHBOARD) làm reference cho AI biết cấu trúc + padding rows từ Excel. Khi sinh file output, script tự động:
 
 1. **Dynamic whitelist**: chỉ giữ group header nào khai báo trong `JSON sections[].groups[].name`. Group mẫu không dùng → xóa hẳn.
-2. **Delete rows**: dòng trống nào còn sót (group bị bỏ + sample case rows) → `ws.delete_rows()` xóa hoàn toàn, không giữ fill color / row height.
-3. **STT liên tục**: `[CODE-UI-NN]` cho UI (1-4), `[CODE-NN]` cho Functional (5-30) trong cùng file.
+2. **Dynamic group**: tự tạo group/tag chưa có sẵn trong template và cấp đủ dòng cho toàn bộ case
+3. **Delete rows**: dòng trống nào còn sót (group bị bỏ + sample case rows) → `ws.delete_rows()` xóa hoàn toàn, không giữ fill color / row height.
+4. **STT liên tục**: `[CODE-UI-NN]` cho UI (1-4), `[CODE-NN]` cho Functional (5-30) trong cùng file.
 
 **Kết quả**: file output gọn, chỉ chứa dữ liệu thật của dự án hiện tại (vd demo project với 1 group LOGIN × 2 sections → file ~43 rows thay vì 657 rows như template).
 
@@ -144,6 +165,14 @@ Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover
 | Cột I-M bị fill sẵn data | Script apply sai style | Verify branch trong `gen-testcases.py` chỉ apply style, không fill value |
 | Description bắt đầu bằng `[STT]` hoặc `[Type]` | Format manual bị vi phạm | AI phải reformat lại trước khi ghi JSON |
 | Expected result mơ hồ ("hệ thống hoạt động đúng") | Không đo được | Hỏi user để biết expected cụ thể |
+| Tạo thêm cột Method/Endpoint/Status | Phá format testcase hiện tại | Đưa dữ liệu API vào F/G/H theo reference API |
+| Tự bật API mode cho testcase thường | Làm thay đổi cấu hình hiện tại | Chỉ bật khi user yêu cầu API rõ ràng |
+| API case chỉ kiểm tra status code | Thiếu contract và business effect | Kiểm tra body/schema/headers/side-effect khi requirement có định nghĩa |
+| Ghi token, cookie hoặc API key thật | Rò rỉ credential vào workbook | Dùng placeholder như `<valid_token>` |
+| Tự đặt status 200 cho endpoint không có response contract | Bịa expected result | Để importer ghi `review_required` rồi hỏi user hoặc đọc thêm tài liệu |
+| Đọc Swagger thủ công và bỏ sót endpoint | Không deterministic, model yếu dễ sai | Luôn chạy `scripts/import-api-spec.py` |
+| Chỉ tạo Excel, không có Markdown testcase | AI lần sau phải parse workbook lại | Luôn dùng generator để tạo Markdown trước Excel |
+| Markdown và Excel lệch ID/nội dung | Hai artifact được sửa độc lập | Sửa JSON source rồi regenerate cả hai |
 
 ## Common mistakes
 
@@ -159,7 +188,7 @@ Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover
 
 - **Nhiều case CÙNG scenario có thể cùng `scenario_name`** (chia sẻ tên nhóm chức năng). Đừng duplicate tên cho mỗi case. **NHƯNG** không gộp case của field/behavior khác vào cùng scenario — tách ra (xem Process step 2).
 
-- **Khi git clone về máy mới**: chạy `pip install openpyxl` trước (script cần). API key config 1 lần ở `config/api_keys.json` (gitignored) — dùng chung cho cả 3 skill.
+- **Khi git clone về máy mới**: chạy `pip install openpyxl PyYAML` trước. `PyYAML` cần cho Swagger/OpenAPI YAML. API key config 1 lần ở `config/api_keys.json` (gitignored) — dùng chung cho cả 3 skill.
 
 - **Cấu hình key**: 1 file config chung `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill. Xem [README.md](../README.md) mục "API Keys".
 
@@ -167,9 +196,13 @@ Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover
 
 - [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), 1 file dùng chung
 - [examples/sample-input.json](examples/sample-input.json) — ví dụ JSON input hoàn chỉnh
+- [examples/sample-api-input.json](examples/sample-api-input.json) — ví dụ tùy chọn chỉ dùng khi user yêu cầu testcase API
 - [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)
+- [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer OpenAPI/Swagger/Postman/JSON/curl/source endpoint
 - [references/template-schema.md](references/template-schema.md) — 4 sheet chi tiết (Cover, Test cases_App, Dropdown Keys, Report)
 - [references/test-types.md](references/test-types.md) — 8 loại test case + ví dụ
+- [references/api-testcases.md](references/api-testcases.md) — mapping và coverage chỉ cho API mode
+- [references/markdown-testcases.md](references/markdown-testcases.md) — contract Markdown tạo trước Excel và read order cho AI
 - [references/plane-integration.md](references/plane-integration.md) — fetch AC từ Plane API
 - Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)
 - Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)

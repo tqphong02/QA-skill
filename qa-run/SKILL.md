@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Use when planning or executing browser QA on an existing project, including ticket retest, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence capture, and release sign-off. Every ticket retest automatically runs RETEST_PLUS. Not for writing new automation scripts (use playwright-pom-automation) or creating test case documents (use testcase-template).
+description: Plan or execute browser QA on an existing project, including app baseline discovery to learn business flows and logic, ticket retest, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence capture, release sign-off, and persistent business-flow knowledge handoff. Read the app guide then matching feature guide before testing and update affected guides after every run. Every ticket retest automatically runs RETEST_PLUS. Not for writing new automation scripts or creating testcase documents.
 ---
 
 # QA Run
@@ -16,18 +16,27 @@ Engine dùng chung ở `~/.claude/skills/qa-run/`. **Dữ liệu lấy theo thư
 
 Áp dụng nguyên thứ tự sau cho mọi model, đặc biệt model nhanh hoặc context nhỏ:
 
-1. Phân loại yêu cầu trước khi mở browser: `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC` hoặc `AUTOMATION_BUILD`
-2. Với `RETEST_TICKET`, đọc ticket qua `plane-qa`, sau đó tạo ledger đủ 6 dòng: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
-3. Ghi test contract gồm `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition`
-4. Chạy CLI/script cho flow rõ và lặp lại; chỉ dùng browser agent/MCP cho nhánh tương tác chưa hiểu
-5. Cập nhật verdict/evidence vào ledger ngay sau mỗi lớp; không kết luận nếu còn dòng chưa có verdict hoặc lý do `BLOCKED/PARTIAL`
-6. Tách verdict ticket gốc khỏi bug mới rồi áp dụng state map cố định qua `plane-qa`
+1. Phân loại yêu cầu trước khi mở browser: `APP_BASELINE_DISCOVERY`, `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC` hoặc `AUTOMATION_BUILD`
+2. Resolve `<project-root>/qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md`; nếu có thì đọc trước browser action và kiểm tra environment, ngày verify, confidence, coverage gap
+3. Với `RETEST_TICKET`, đọc ticket qua `plane-qa`, sau đó tạo ledger đủ 6 dòng: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
+4. Ghi test contract gồm `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` và knowledge đã reuse
+5. Chạy CLI/script cho flow rõ và lặp lại; chỉ dùng browser agent/MCP cho nhánh tương tác chưa hiểu
+6. Cập nhật verdict/evidence vào ledger ngay sau mỗi lớp; không kết luận nếu còn dòng chưa có verdict hoặc lý do `BLOCKED/PARTIAL`
+7. Tách verdict ticket gốc khỏi bug mới rồi áp dụng state map cố định qua `plane-qa`
+8. Sau mọi run, merge knowledge còn đúng và chạy `scripts/write-business-guide.mjs`; baseline ghi app guide và feature guide, retest chỉ cập nhật phần đã chạm; read-back bằng `--check` trước khi kết luận hoàn tất
 
 State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
 
 Không suy đoán PASS khi thiếu evidence. Không dừng sau happy path. Không đổi ticket gốc thành FAILED vì một bug mới khác root cause.
 
 Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và giữ ledger trên disk hoặc trong working notes; không tải toàn bộ snapshot, ảnh hoặc mọi reference vào context.
+
+## Knowledge scope decision
+
+- `APP_BASELINE_DISCOVERY`: dùng khi user yêu cầu test/khám phá tổng thể web app, bootstrap project chưa có `app-business-guide.md`, hoặc user yêu cầu refresh guide. Lập module map trước rồi đi qua flow business chính có thể truy cập, role/state/input/side-effect/integration/UI/UX và coverage gap
+- `RETEST_TICKET`: không quét lại toàn app. Đọc app guide để biết dependency, đọc feature guide để biết flow chi tiết, rồi chạy RETEST_PLUS cho ticket và impacted area. Nếu thiếu guide, chỉ discovery đủ để hiểu feature hiện tại rồi tạo guide
+- `SANITY_REGRESSION` và `EXPLORATORY_ADHOC`: reuse guide hiện có và mở rộng knowledge đúng phần scope đã kiểm tra
+- Không gọi baseline là exhaustive nếu chưa đi qua đủ module, role, state hoặc data. Ghi `covered`, `partial`, `blocked` hoặc `not_covered` trong `coverage_map`
 
 ## The trap this skill exists to prevent
 
@@ -37,6 +46,12 @@ Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và
 
 ### 1. Hiểu ngữ cảnh trước (Nguyên tắc #1)
 "Thông minh" = **không click mù**. AI phải đọc & hiểu logic trước, rồi mới poke. Thứ tự BẮT BUỘC:
+
+#### Bước 0 — Đọc business guide đã lưu
+- Đọc [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md)
+- Đọc `qa-knowledge/app-business-guide.md` trước nếu có, sau đó đọc đúng `<feature-slug>-business-guide.md`
+- Reuse flow, role/data, route/API, state transition và reusable assets còn đúng
+- Không đọc guide của feature khác và không bỏ verification chỉ vì guide cũ ghi PASS
 
 #### Bước A — Đọc requirement / spec / AC (NẾU có)
 - Spec/PRD/ticket/AC (file local, URL, hoặc user paste)
@@ -91,7 +106,7 @@ Một dòng: *"Khám phá <feature> tìm lỗi về <rủi ro>; account <role>; 
 #### Tăng thông minh
 1. **Heuristic checklist theo loại feature** - Form/Table/Filter/Auth/Modal/Async/Data
 2. **Cross-verify (KHÔNG chỉ tin snapshot)** - DOM + network + console ≥ 2 nguồn
-3. **Pattern memory** - đọc `FINDINGS.md` + `evidence/` cũ trước
+3. **Pattern memory** - đọc business guide khớp feature trước, sau đó mới đọc `FINDINGS.md` + evidence liên quan khi cần
 4. **Parallel agent fan-out** - 3-5 agent probe 1 lúc (chỉ khi user opt-in)
 5. **Charter với risk taxonomy** - H/M/L ưu tiên probe trước
 
@@ -116,6 +131,8 @@ Xem `TESTING-TECHNIQUES.md` để biết chi tiết + coverage matrix.
 
 ### 6. RETEST_PLUS workflow (khi user đưa ticket hoặc yêu cầu retest)
 Đây là case hay gặp nhất: *"Dev báo fix xong rồi, retest giúp ticket này"* → user chỉ paste URL.
+
+RETEST_PLUS dùng app/feature guide để giảm khám phá lặp lại và không tự chạy full-app baseline. Chỉ mở rộng discovery khi ticket chạm vùng chưa có knowledge hoặc guide đã stale.
 
 #### Bước 0 — Xác nhận scope
 - Nếu user đã nói rõ "retest #X" / "verify fix #X" → thẳng bước 1
@@ -164,6 +181,8 @@ Adjacent area check trong các lớp trên:
 **Verdict:** PASS (nếu tất cả AC chính PASS) / FAILED (nếu ≥1 AC chính FAILED)
 ```
 - Ghi `FINDINGS.md` theo format chuẩn (`report/REPORT-TEMPLATE.md`)
+- Merge knowledge đã xác nhận theo `references/KNOWLEDGE_HANDOFF.md`; baseline ghi `app-business-guide.md` và feature guide đã khám phá sâu, retest cập nhật feature guide và chỉ sửa app guide khi có module/dependency/coverage mới
+- Chạy `node scripts/write-business-guide.mjs --check <guide.md>` và đọc lại guide trước khi bàn giao
 - Nếu FAILED → comment evidence và kéo ticket gốc về In Progress
 - Nếu PASS → comment evidence và kéo ticket gốc sang Done
 - Nếu BLOCKED → giữ nguyên trạng thái
@@ -185,6 +204,8 @@ Rồi (chạy TỪ thư mục đó để data ghi vào đúng dự án) — dùn
 
 #### 1. Khám phá rộng (mặc định: HIỂU trước → LÁI sau)
 Xem @Bước A-D ở trên.
+
+Với `APP_BASELINE_DISCOVERY`, lập coverage ledger theo module và đi qua entry point, happy flow, role/permission, state/persistence, validation/boundary, side effect/integration, API/network và UI/UX có thể quan sát. Mọi module phát hiện được phải có trạng thái `covered`, `partial`, `blocked` hoặc `not_covered` cùng reason/evidence trước khi dừng.
 
 #### 2. Đào sâu 1 nghi vấn
 **Trước khi đào**: re-load lại bản đồ logic (Nguyên tắc #1 Bước B) cho khu vực nghi vấn.
@@ -359,6 +380,10 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
 
 - **Skip teardown** — khi poke app production với side-effect (DB, queue, mail), wrap trong `withRevert()` để cleanup.
 
+- **Không ghi business guide sau run** — AI lần sau phải khám phá lại từ đầu. Luôn merge knowledge còn đúng, ghi guide và validate read-back.
+
+- **Tin guide cũ tuyệt đối** — environment/version có thể đổi. Kiểm tra ngày verify, source và confidence rồi re-verify phần nằm trong scope hiện tại.
+
 - **Verdict gộp "tổng thể OK"** — che giấu AC failed riêng lẻ. PHẢI chấm PASS/FAILED từng AC.
 
 ## References
@@ -381,6 +406,8 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
 
 ### Reference docs
 - [references/UI-BUG-CATALOG.md](references/UI-BUG-CATALOG.md) — 4 lỗi UI hay gặp nhất
+- [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) — protocol đọc trước, merge và ghi business guide sau run
+- [scripts/write-business-guide.mjs](scripts/write-business-guide.mjs) — renderer/validator deterministic cho business guide
 - [report/REPORT-TEMPLATE.md](report/REPORT-TEMPLATE.md) — format FINDINGS.md
 - [TESTING-TECHNIQUES.md](TESTING-TECHNIQUES.md) — 12 kỹ thuật testing chi tiết
 - [GUIDE.md](GUIDE.md) — hướng dẫn setup engine

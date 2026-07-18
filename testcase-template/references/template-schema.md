@@ -2,6 +2,8 @@
 
 > **Khi nào đọc file này**: Khi cần biết chi tiết về schema của từng sheet trong template (Cover metadata, Test cases_App columns, Report module codes). Tham chiếu `@references/template-schema.md` trong SKILL.md.
 
+Mỗi workbook được generate cùng một file Markdown cùng basename. Markdown chứa toàn bộ testcase design và được tạo trước Excel; 4 sheet dưới đây vẫn là cấu trúc riêng của artifact Excel
+
 ## Sheet `Cover` — metadata project
 
 | Cell | Ý nghĩa | Fill từ |
@@ -69,6 +71,10 @@ Cho project khác: edit trực tiếp Report sheet để thay module codes.
 |---|---|---|---|---|
 | **Phần 1 — UI** | `1.1. USER INTERFACE` | `"ui"` | Xanh nhạt (light blue) | `[CODE-UI-NN]` |
 | **Phần 2 — Functional** | `1.2. FUNCTION` | `"function"` | Xanh lá (green) | `[CODE-NN]` |
+
+Khi user yêu cầu testcase API rõ ràng, phần `1.2. FUNCTION` được dùng với `kind: "api"` và vẫn sinh ID `[CODE-NN]`. Không tạo section hoặc cột API riêng. Xem [api-testcases.md](api-testcases.md)
+
+Group từ tag OpenAPI/Swagger có thể chưa tồn tại trong template. Generator tự thêm group mới và đủ data rows dưới đúng section; không map tag lạ vào LOGIN/HOME mặc định
 
 **Quy tắc**:
 - Luôn có cả 2 phần, UI trước Functional

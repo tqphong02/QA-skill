@@ -1,6 +1,6 @@
 ---
 trigger: model_decision
-description: Use when generating structured test case documents with consistent columns and shared keys.
+description: Use when generating structured test case documents with consistent columns and shared keys, including API testcases only when explicitly requested.
 ---
 
 # Test Case Template
@@ -11,6 +11,9 @@ Load the full skill body when the trigger matches:
 ## Khi nào áp dụng
 - Sinh test case document (Excel / CSV / MD)
 - Cần cột nhất quán + key dùng chung
+- Chỉ bật API mode khi user yêu cầu viết testcase API hoặc viết testcase cho endpoint, OpenAPI/Swagger, Postman hay curl; chỉ nhắc tới artifact API thì không đổi mode
+- Khi API mode có file nguồn, chạy `testcase-template/scripts/import-api-spec.py` và chỉ gen Excel khi `review_required` trống
+- Generator phải tạo testcase Markdown cùng basename trước Excel; AI lần sau đọc Markdown trước và chỉ mở Excel cho execution/format
 
 ## Không dùng
 - Ghi chú exploratory

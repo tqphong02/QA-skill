@@ -328,7 +328,7 @@ install_python_deps() {
   fi
 
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl google-auth google-auth-oauthlib google-api-python-client"
+    log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl PyYAML google-auth google-auth-oauthlib google-api-python-client"
     return 0
   fi
 
@@ -338,8 +338,8 @@ install_python_deps() {
 
   # Retry without --break-system-packages nếu user tự cấu hình PEP 668 với override
   if "${pip_cmd[@]}" "markitdown[all]" 2>&1 | tail -3 \
-     && ("$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3 \
-         || "$py_bin" -m pip install --user --quiet --only-binary=:all: --break-system-packages openpyxl google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3); then
+     && ("$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl PyYAML google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3 \
+         || "$py_bin" -m pip install --user --quiet --only-binary=:all: --break-system-packages openpyxl PyYAML google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3); then
     log_ok "Python deps OK"
   else
     log_warn "pip install fail. Thử:"
@@ -421,10 +421,10 @@ verify_installation() {
   # 2. Python deps smoke
   if [[ -n "$py_bin" ]]; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-      log_dry "$py_bin -c 'import openpyxl, markitdown'"
+      log_dry "$py_bin -c 'import openpyxl, markitdown, yaml'"
     else
-      if "$py_bin" -c "import openpyxl; import markitdown" 2>/dev/null; then
-        log_ok "Python deps (openpyxl + markitdown)"
+      if "$py_bin" -c "import openpyxl; import markitdown; import yaml" 2>/dev/null; then
+        log_ok "Python deps (openpyxl + markitdown + PyYAML)"
       else
         log_warn "Python deps thiếu — chạy lại không --skip-deps"
       fi

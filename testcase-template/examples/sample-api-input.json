@@ -1,0 +1,111 @@
+{
+  "project": {
+    "name": "API Sample",
+    "code": "API",
+    "device": "API",
+    "version": "v1",
+    "priority": "High",
+    "test_date": "2026-07-18",
+    "author": "QA Team",
+    "reviewer": "Lead QA",
+    "description": "Kiểm thử API đăng nhập",
+    "objective": "Xác minh contract và hành vi xác thực của API đăng nhập"
+  },
+  "source_document": "OpenAPI authentication specification",
+  "requirements": [
+    {
+      "id": "AC-API-1",
+      "text": "API trả access token khi credentials hợp lệ"
+    },
+    {
+      "id": "AC-API-2",
+      "text": "API từ chối password không hợp lệ"
+    }
+  ],
+  "sections": [
+    {
+      "title": "1.1. USER INTERFACE",
+      "kind": "ui",
+      "groups": [
+        {
+          "name": "LOGIN",
+          "scenarios": []
+        }
+      ]
+    },
+    {
+      "title": "1.2. FUNCTION",
+      "kind": "api",
+      "groups": [
+        {
+          "name": "LOGIN",
+          "scenarios": [
+            {
+              "scenario_id": "SCN-API-AUTH-001",
+              "requirement": "AC-API-1",
+              "scenario_name": "API đăng nhập thành công",
+              "cases": [
+                {
+                  "type": "happy",
+                  "req": "AC-API-1",
+                  "description": "Xác minh rằng API trả access token khi credentials hợp lệ",
+                  "pre_condition": "Có tài khoản QA đang active",
+                  "priority": "High",
+                  "api": {
+                    "method": "POST",
+                    "endpoint": "/api/v1/auth/login",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "email": "qa+api@example.com",
+                      "password": "<valid_password>"
+                    },
+                    "expected_status": 200,
+                    "expected_headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "expected_schema": [
+                      "access_token",
+                      "token_type",
+                      "user"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-API-AUTH-002",
+              "requirement": "AC-API-2",
+              "scenario_name": "API từ chối password không hợp lệ",
+              "cases": [
+                {
+                  "type": "negative",
+                  "req": "AC-API-2",
+                  "description": "Xác minh rằng API từ chối password không hợp lệ",
+                  "pre_condition": "Có tài khoản QA đang active",
+                  "priority": "High",
+                  "api": {
+                    "method": "POST",
+                    "endpoint": "/api/v1/auth/login",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "body": {
+                      "email": "qa+api@example.com",
+                      "password": "<invalid_password>"
+                    },
+                    "expected_status": 401,
+                    "expected_schema": [
+                      "detail"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

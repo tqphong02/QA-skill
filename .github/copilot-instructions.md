@@ -7,8 +7,13 @@ Hard requirements:
 - Load the exact matched `SKILL.md` before searching project files
 - Plane ticket retest order is `plane-qa doctor/read → qa-run RETEST_PLUS → plane-qa comment/state`
 - RETEST_PLUS includes Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, and UI/UX
+- General app exploration uses `APP_BASELINE_DISCOVERY` and writes `qa-knowledge/app-business-guide.md` with a `coverage_map`; ticket retest reads it but does not repeat the full baseline
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`
 - Drive private CRUD uses `google-drive-qa` and the configured Drive MCP, followed by read-back verification
 - Testcase generation uses `testcase-template` and its generator without inventing columns
+- API testcase mode is opt-in only when the user explicitly asks to write API testcases or testcases for an endpoint, OpenAPI/Swagger, Postman collection, or curl request; merely mentioning an API artifact does not switch modes
+- For API testcase files, run `testcase-template/scripts/import-api-spec.py` first and do not generate Excel while `review_required` is non-empty
+- Testcase generation must write the complete same-basename Markdown before Excel; future agents read Markdown first
+- Browser QA reads the matching `qa-knowledge/*-business-guide.md` before testing and rewrites/validates it with `write-business-guide.mjs` after every run
 - Plane comments, testcase prose, and human-readable Drive CRUD content have no terminal `.` and no emoji/icon
 - Never guess a workspace, target ID, expected result, permission, or successful mutation

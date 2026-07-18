@@ -19,14 +19,16 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Retest <Plane URL>` | plane-qa → qa-run → plane-qa | Doctor đúng workspace, chạy đủ RETEST_PLUS, comment ngắn, state theo verdict |
 | `Retest failed ticket ABC-1` | plane-qa + qa-run | FAILED, comment Actual/Expected, kéo `In Progress` |
 | `Retest pass ticket ABC-1` | plane-qa + qa-run | PASS, comment Result/Conclusion, kéo `Done` |
-| `Test feature này không có doc/testcase` | qa-run | Suy ra assumption từ UI/network, vẫn chạy exploratory/ad-hoc/UI/UX, không đoán business rule |
-| `Viết testcase login` | testcase-template | Tách scenario theo field/behavior/AC, giữ schema, không dấu chấm cuối, không icon |
+| `Test feature này không có doc/testcase` | qa-run | Đọc guide khớp feature nếu có, vẫn chạy exploratory/ad-hoc/UI/UX, cập nhật business guide sau run |
+| `Khám phá tổng thể web app này` | qa-run | Chạy APP_BASELINE_DISCOVERY, tạo app-business-guide.md với coverage_map và feature guide cho vùng đã khám phá sâu |
+| `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
+| `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |
 | `Update Google Sheet <URL>` | google-drive-qa | Resolve exact ID, dùng Drive MCP, update đúng range, read-back |
 | `Log bug mới lên Plane <URL>` | plane-qa | Doctor URL workspace, dry-run, tạo ở `Todo`, read-back |
 
 ## Pass criteria cho một model
 
-Model đạt compatibility khi cả bảy case trên đều:
+Model đạt compatibility khi tất cả case trên đều:
 
 - Chọn đúng skill và đúng thứ tự
 - Không tìm implementation khác khi canonical skill đã có

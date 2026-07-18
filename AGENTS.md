@@ -17,8 +17,8 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 |---|---|---|
 | Plane URL, ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| Sanity, regression, exploratory, ad-hoc, UI/UX | `qa-run/SKILL.md` | Tạo test contract và coverage ledger |
-| Viết/sửa/review testcase, Scenario ID/Name | `testcase-template/SKILL.md` | Đọc schema và requirement |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX | `qa-run/SKILL.md` | Đọc app guide rồi feature guide; baseline map business flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | Drive, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
@@ -80,6 +80,9 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Mọi yêu cầu retest ticket tự chạy RETEST_PLUS gồm retest flow gốc, sanity, impacted regression, exploratory, ad-hoc và UI/UX
 - Tối ưu token (scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
+- Đọc `qa-knowledge/<feature>-business-guide.md` trước browser action nếu có
+- Sau mọi run, ghi và validate business guide bằng `scripts/write-business-guide.mjs`
+- Khi khám phá tổng thể hoặc bootstrap app, tạo `qa-knowledge/app-business-guide.md` với module coverage map; retest không lặp lại full-app baseline
 
 ### Nguyên tắc cốt lõi
 > Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
@@ -91,6 +94,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ### Khi nào áp dụng
 - Sinh test case document (Excel / CSV / MD)
 - Cần cột nhất quán + key dùng chung
+- Sinh testcase API khi user yêu cầu rõ viết testcase API hoặc viết testcase cho endpoint, OpenAPI/Swagger, Postman hay curl
 
 ### Không dùng
 - Ghi chú exploratory
@@ -101,6 +105,9 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Key dùng chung giữa 3 skill (config từ `../config/api_keys.json`)
 - Cleanup output tự động trước khi giao
 - Không đặt dấu `.` cuối nội dung testcase và không chèn emoji/icon
+- Giữ flow hiện tại làm mặc định; chỉ đọc `references/api-testcases.md` và tạo object `api` khi user yêu cầu viết testcase API rõ ràng; chỉ nhắc tới artifact API thì không đổi mode
+- Với API file, luôn chạy `scripts/import-api-spec.py`; chỉ chạy Excel khi `review_required` trống
+- Generator phải tạo testcase Markdown đầy đủ trước Excel; lần sau đọc Markdown thay vì parse Excel
 
 ### Nguyên tắc cốt lõi
 > Cùng một bộ cột — không sáng tạo cột mới.

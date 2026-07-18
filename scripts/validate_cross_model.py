@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import ast
+import json
 import sys
 
 
@@ -18,6 +19,11 @@ REQUIRED = {
         "RETEST_PLUS",
         "google-drive-qa/SKILL.md",
         "plane-qa/SKILL.md",
+        "import-api-spec.py",
+        "review_required",
+        "write-business-guide.mjs",
+        "Markdown trước Excel",
+        "app-business-guide.md",
     ],
     "GEMINI.md": [
         "Cross-model deterministic mode",
@@ -25,29 +31,50 @@ REQUIRED = {
         "RETEST_PLUS",
         "google-drive-qa/SKILL.md",
         "plane-qa/SKILL.md",
+        "import-api-spec.py",
+        "review_required",
+        "write-business-guide.mjs",
+        "Markdown trước Excel",
+        "APP_BASELINE_DISCOVERY",
     ],
     ".github/copilot-instructions.md": [
         "RETEST_PLUS",
         "PASS moves to `Done`",
         "Drive MCP",
         "no terminal `.` and no emoji/icon",
+        "import-api-spec.py",
+        "same-basename Markdown before Excel",
+        "write-business-guide.mjs",
+        "app-business-guide.md",
     ],
     "MODEL-COMPATIBILITY.md": [
         "Retest <Plane URL>",
         "Test feature này không có doc/testcase",
         "Update Google Sheet <URL>",
         "Static check",
+        "Viết testcase API từ swagger.json",
+        "Tạo Markdown testcase đầy đủ trước Excel",
     ],
     "qa-run/SKILL.md": [
         "Cross-model hard gates",
         "Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX",
         "PASS → Done",
         "FAILED → In Progress",
+        "references/KNOWLEDGE_HANDOFF.md",
+        "scripts/write-business-guide.mjs",
+        "qa-knowledge/",
+        "APP_BASELINE_DISCOVERY",
+        "coverage_map",
     ],
     "testcase-template/SKILL.md": [
         "Cross-model hard gates",
         "Không đặt dấu `.`",
         "Không chèn emoji/icon",
+        "chỉ dùng API mode khi user yêu cầu rõ viết testcase API",
+        "references/api-testcases.md",
+        "scripts/import-api-spec.py",
+        "references/markdown-testcases.md",
+        "tạo `<output>.md` trước `<output>.xlsx`",
     ],
     "plane-qa/SKILL.md": [
         "Cross-model hard gates",
@@ -67,12 +94,61 @@ REQUIRED = {
     ],
     "testcase-template/scripts/gen-testcases.py": [
         "def human_text",
+        "def render_api_case",
         "ICON_RE",
+        "SENSITIVE_HEADER_NAMES",
+        "SENSITIVE_PAYLOAD_KEYS",
+        "expected_status",
         "rstrip('.')",
+        "def ensure_group_capacity",
+        "def write_testcase_markdown",
+        "Generated Markdown first",
+    ],
+    "testcase-template/scripts/import-api-spec.py": [
+        "def extract_openapi",
+        "def extract_postman",
+        "def extract_generic",
+        "def extract_text",
+        "review_required",
+        "default-success-status",
+    ],
+    "testcase-template/references/api-testcases.md": [
+        "Đọc file này chỉ khi user yêu cầu rõ viết testcase API",
+        "Không tạo phần thứ ba",
+        "Không đưa token, password, cookie hoặc API key thật",
+    ],
+    "testcase-template/references/markdown-testcases.md": [
+        "Mỗi lần generate Excel, tạo Markdown",
+        "Testcase ID giống Excel",
+        "Không mở Excel chỉ để hiểu testcase design",
+    ],
+    "qa-run/references/KNOWLEDGE_HANDOFF.md": [
+        "qa-knowledge/<feature-slug>-business-guide.md",
+        "Trước khi test",
+        "Sau khi test",
+        "verified",
+        "inferred",
+        "unresolved",
+        "app-business-guide.md",
+        "coverage_map",
+    ],
+    "qa-run/scripts/write-business-guide.mjs": [
+        "BUSINESS GUIDE WRITTEN",
+        "BUSINESS GUIDE PASS",
+        "Latest QA run",
+        "qa-knowledge",
+        "merge_confirmed",
+        "app guide requires a non-empty coverage_map",
+    ],
+    "testcase-template/examples/sample-api-input.json": [
+        '"kind": "api"',
+        '"expected_status": 200',
+        '"password": "<valid_password>"',
     ],
     "scripts/setup_lib.sh": [
         '"plane-qa"',
         '"google-drive-qa"',
+        "PyYAML",
     ],
 }
 
@@ -96,6 +172,7 @@ def main():
         "google-drive-qa/scripts/drive_auth_doctor.py",
         "google-drive-qa/scripts/drive_upload.py",
         "testcase-template/scripts/gen-testcases.py",
+        "testcase-template/scripts/import-api-spec.py",
     ):
         path = ROOT / relative
         if path.is_file():
@@ -103,6 +180,16 @@ def main():
                 ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             except SyntaxError as exc:
                 failures.append(f"{relative}: syntax error: {exc}")
+
+    for relative in (
+        "testcase-template/examples/sample-input.json",
+        "testcase-template/examples/sample-api-input.json",
+    ):
+        path = ROOT / relative
+        try:
+            json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            failures.append(f"{relative}: invalid JSON: {exc}")
 
     if failures:
         print("CROSS-MODEL CONTRACT FAILED")

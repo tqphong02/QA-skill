@@ -13,6 +13,7 @@ Load the full skill body when the trigger matches:
 - Chọn kỹ thuật test
 - Chạy sanity / regression
 - Retest ticket tự chạy RETEST_PLUS gồm Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
+- Đọc `app-business-guide.md` rồi guide khớp feature trước browser action; dùng `APP_BASELINE_DISCOVERY` cho lần khám phá tổng thể, còn retest không lặp lại full-app baseline
 
 ## Không dùng
 - Viết script automation mới (→ `playwright-pom-automation`)
