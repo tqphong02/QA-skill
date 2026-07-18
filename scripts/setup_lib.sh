@@ -328,18 +328,18 @@ install_python_deps() {
   fi
 
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl"
+    log_dry "${pip_cmd[*]} 'markitdown[all]' openpyxl google-auth google-auth-oauthlib google-api-python-client"
     return 0
   fi
 
   local py_ver
   py_ver=$("$py_bin" -c 'import sys;print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")')
-  log_step "pip install markitdown[all] + openpyxl (Python $py_ver$([ -n "$pip_break" ] && echo " + $pip_break"))"
+  log_step "pip install QA-skill Python dependencies (Python $py_ver$([ -n "$pip_break" ] && echo " + $pip_break"))"
 
   # Retry without --break-system-packages nếu user tự cấu hình PEP 668 với override
   if "${pip_cmd[@]}" "markitdown[all]" 2>&1 | tail -3 \
-     && ("$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl 2>&1 | tail -3 \
-         || "$py_bin" -m pip install --user --quiet --only-binary=:all: --break-system-packages openpyxl 2>&1 | tail -3); then
+     && ("$py_bin" -m pip install --user --quiet --only-binary=:all: openpyxl google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3 \
+         || "$py_bin" -m pip install --user --quiet --only-binary=:all: --break-system-packages openpyxl google-auth google-auth-oauthlib google-api-python-client 2>&1 | tail -3); then
     log_ok "Python deps OK"
   else
     log_warn "pip install fail. Thử:"
@@ -474,7 +474,7 @@ print_summary() {
   cat <<EOF
 
 Next steps:
-  1. Mở agent mới và kiểm tra — sẽ thấy 6 skill đã load
+  1. Mở AI coding agent mới và kiểm tra 6 skill đã load
   2. Test doc-to-md:      ~/.claude/skills/doc-to-md/scripts/convert.sh <file.pdf>
   3. Test qa-run:         cd <project>/qa && node ~/.claude/skills/qa-run/scripts/login.mjs
 

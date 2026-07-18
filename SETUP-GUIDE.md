@@ -5,6 +5,8 @@
 > - `testcase-template/`
 > - `playwright-pom-automation/`
 > - `doc-to-md/` (MarkItDown, Python ≥3.10)
+> - `plane-qa/`
+> - `google-drive-qa/`
 
 ---
 

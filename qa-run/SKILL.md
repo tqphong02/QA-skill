@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Use when planning or executing a QA cycle on an existing project — picking test techniques, running sanity/regression, handling flaky tests, or producing a release sign-off. Not for writing new automation scripts (use playwright-pom-automation) or creating test case documents (use testcase-template).
+description: Use when planning or executing browser QA on an existing project, including ticket retest, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence capture, and release sign-off. Every ticket retest automatically runs RETEST_PLUS. Not for writing new automation scripts (use playwright-pom-automation) or creating test case documents (use testcase-template).
 ---
 
 # QA Run
@@ -11,6 +11,23 @@ Engine dùng chung ở `~/.claude/skills/qa-run/`. **Dữ liệu lấy theo thư
 
 > **Khi nào dùng**: khám phá lỗi mới, verify lại bug, poke UI/API ad-hoc trên 1 web app, sanity/risk-based khi cần chạy lặp, regression (bộ TC cố định) đặt ở instance dự án.
 > **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI.
+
+## Cross-model hard gates
+
+Áp dụng nguyên thứ tự sau cho mọi model, đặc biệt model nhanh hoặc context nhỏ:
+
+1. Phân loại yêu cầu trước khi mở browser: `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC` hoặc `AUTOMATION_BUILD`
+2. Với `RETEST_TICKET`, đọc ticket qua `plane-qa`, sau đó tạo ledger đủ 6 dòng: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
+3. Ghi test contract gồm `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition`
+4. Chạy CLI/script cho flow rõ và lặp lại; chỉ dùng browser agent/MCP cho nhánh tương tác chưa hiểu
+5. Cập nhật verdict/evidence vào ledger ngay sau mỗi lớp; không kết luận nếu còn dòng chưa có verdict hoặc lý do `BLOCKED/PARTIAL`
+6. Tách verdict ticket gốc khỏi bug mới rồi áp dụng state map cố định qua `plane-qa`
+
+State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
+
+Không suy đoán PASS khi thiếu evidence. Không dừng sau happy path. Không đổi ticket gốc thành FAILED vì một bug mới khác root cause.
+
+Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và giữ ledger trên disk hoặc trong working notes; không tải toàn bộ snapshot, ảnh hoặc mọi reference vào context.
 
 ## The trap this skill exists to prevent
 
@@ -97,7 +114,7 @@ Xem `TESTING-TECHNIQUES.md` để biết chi tiết + coverage matrix.
 
 12 kỹ thuật: Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
 
-### 6. Sanity retest workflow (khi user chỉ đưa 1 link ticket)
+### 6. RETEST_PLUS workflow (khi user đưa ticket hoặc yêu cầu retest)
 Đây là case hay gặp nhất: *"Dev báo fix xong rồi, retest giúp ticket này"* → user chỉ paste URL.
 
 #### Bước 0 — Xác nhận scope
@@ -120,9 +137,17 @@ Với mỗi AC:
 2. Thực hiện đúng repro steps (KHÔNG tự ý thêm bước lạ)
 3. Snapshot sau mỗi bước → so với "Expected" trong AC
 4. Verify cả network response (nếu AC liên quan persist/tính toán)
-5. Chấm PASS/FAIL từng AC — KHÔNG gộp "tổng thể OK"
+5. Chấm PASS/FAILED từng AC — KHÔNG gộp "tổng thể OK"
 
-#### Bước 4 — Adjacent area check (BẮT BUỘC)
+#### Bước 4 — RETEST_PLUS coverage (BẮT BUỘC)
+- Retest đúng flow gốc
+- Sanity happy path chính của module
+- Impacted regression theo vùng fix và dependency
+- Exploratory gồm boundary, negative, alternate sequence, refresh/retry
+- Ad-hoc gồm control lân cận, cancel/reopen, double action, navigation/session phù hợp
+- UI/UX gồm overlap, clipping, overflow, modal/dropdown/popup, viewport, loading/error/focus
+
+Adjacent area check trong các lớp trên:
 - Click vào các nút/tab/list liên quan → snapshot → có lỗi mới không?
 - Tạo 1 record bằng flow khác (vd import file thay vì form) → có dùng chung validation không?
 - Refresh/back giữa chừng flow → state có bẩn không?
@@ -131,15 +156,18 @@ Với mỗi AC:
 
 #### Bước 5 — Verdict + report
 ```
-## <✅/❌> #<id> — <tên ngắn> — <PASS/FAIL>
+## <✅/❌> #<id> — <tên ngắn> — <PASS/FAILED>
 **Nguồn requirement:** <URL ticket đã fetch>
 **AC1 (<mô tả>):** PASS  — <evidence 1 dòng>
-**AC2 (<mô tả>):** FAIL  — <quan sát sai lệch>
+**AC2 (<mô tả>):** FAILED  — <quan sát sai lệch>
 **Adjacent:** PASS — <note>
-**Verdict:** PASS (nếu tất cả AC chính PASS) / FAIL (nếu ≥1 AC chính FAIL)
+**Verdict:** PASS (nếu tất cả AC chính PASS) / FAILED (nếu ≥1 AC chính FAILED)
 ```
 - Ghi `FINDINGS.md` theo format chuẩn (`report/REPORT-TEMPLATE.md`)
-- Nếu FAIL → mở bug Plane (section 4)
+- Nếu FAILED → comment evidence và kéo ticket gốc về In Progress
+- Nếu PASS → comment evidence và kéo ticket gốc sang Done
+- Nếu BLOCKED → giữ nguyên trạng thái
+- Bug khác root cause → mở bug mới ở Todo
 
 ### 7. Quy trình cho 1 dự án
 
@@ -275,6 +303,14 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
 | Snapshot full page mỗi lần | Payload lớn, chậm | Scope snapshot: chỉ phần tử tương tác |
 | Ảnh trong bug Plane hiển thị broken | Dùng base64 data URI thay vì URL asset | Upload qua `issues/{id}/issue-attachments/` rồi embed URL |
 
+## Output format
+
+- Comment Plane và testcase prose không có dấu `.` cuối câu và không chèn emoji/icon
+- Giữ nguyên ID, URL, filename, formula, code, decimal number và machine-readable value
+- Comment PASS chỉ có Result + Conclusion + ảnh inline
+- Comment FAILED chỉ thêm Actual + Expected
+- Comment BLOCKED chỉ thêm Blocker
+
 ## Common mistakes
 
 - **Fallback Google Antigravity** nếu KHÔNG còn Claude Code + Playwright MCP:
@@ -311,7 +347,7 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
     - Gemini-in-Chrome của Antigravity **KHÔNG** tự share với playwright headless → phải login lại bằng `login.mjs`
     - Prompt khác model: Gemini 3 hiểu workflow này nếu prompt rõ
 
-- **Click mù không đọc spec** — AI sẽ sinh ra verdict sai (PASS nhầm FAIL hoặc ngược lại). BẮT BUỘC đi qua Bước A-D.
+- **Click mù không đọc spec** — AI sẽ sinh ra verdict sai (PASS nhầm FAILED hoặc ngược lại). BẮT BUỘC đi qua Bước A-D.
 
 - **Skip adjacent area check** — fix function đôi khi vỡ UI ở chỗ khác. Bước 4 là BẮT BUỘC.
 
@@ -323,7 +359,7 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
 
 - **Skip teardown** — khi poke app production với side-effect (DB, queue, mail), wrap trong `withRevert()` để cleanup.
 
-- **Verdict gộp "tổng thể OK"** — che giấu AC fail riêng lẻ. PHẢI chấm PASS/FAIL từng AC.
+- **Verdict gộp "tổng thể OK"** — che giấu AC failed riêng lẻ. PHẢI chấm PASS/FAILED từng AC.
 
 ## References
 

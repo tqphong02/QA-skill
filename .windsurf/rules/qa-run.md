@@ -12,6 +12,7 @@ Load the full skill body when the trigger matches:
 - Lên kế hoạch / thực thi chu trình QA
 - Chọn kỹ thuật test
 - Chạy sanity / regression
+- Retest ticket tự chạy RETEST_PLUS gồm Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
 
 ## Không dùng
 - Viết script automation mới (→ `playwright-pom-automation`)

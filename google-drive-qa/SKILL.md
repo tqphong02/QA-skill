@@ -9,6 +9,19 @@ Use this skill as the stable workflow layer. A skill does not itself grant Drive
 
 If `ACCOUNT-PROFILE.md` exists beside this file, read it before selecting the Google account, OAuth credential path, MCP route, or fallback CLI. Create it from `ACCOUNT-PROFILE.example.md`; it is local routing metadata and must never contain credential values or be committed.
 
+## Cross-model hard gates
+
+Use these gates literally on every model:
+
+1. Parse an exact Drive URL or ID before searching by name
+2. Read `references/ROUTING.md` and `references/CRUD.md`
+3. Use the `google-drive` MCP for private Drive and native Docs, Sheets, or Slides CRUD
+4. Resolve one exact object before a write; stop for ambiguity instead of selecting the first search result
+5. Perform only the requested CRUD operation
+6. Read the affected object back and verify its ID, name, parent/location, and changed content or permission
+
+Never substitute web search or a local same-named file for private Drive content. Never test deletion on real data.
+
 ## Route the request
 
 1. Read [references/ROUTING.md](references/ROUTING.md).
@@ -36,5 +49,7 @@ If `ACCOUNT-PROFILE.md` exists beside this file, read it before selecting the Go
 - Identify the source file by name and link or ID.
 - Preserve exact ticket IDs, testcase IDs, verdicts, counts, and evidence links.
 - Distinguish source facts from inferences.
+- For human-readable content created or updated through Drive CRUD, do not end sentences, list items, or testcase cells with `.` and do not insert emoji or icons.
+- Preserve identifiers, URLs, filenames, folder names, sheet/tab names, formulas, code, numeric values, JSON keys, and API fields exactly; the prose-format rule must not mutate machine-readable data.
 - Never overwrite a Drive file merely because a same-named file exists. Confirm replace/update semantics first.
 - Treat create, upload, update, move, rename, copy, permission, and delete operations as external writes. Resolve the exact target first and follow the confirmation rules in [references/CRUD.md](references/CRUD.md).

@@ -5,7 +5,41 @@ Mirror of ./<skill>/SKILL.md — keep in sync.
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
+Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
+
+## Cross-model deterministic mode
+
+Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc biệt model nhanh hoặc context nhỏ như Gemini Flash/Pro. Không được bỏ bước vì model nghĩ rằng đã hiểu yêu cầu.
+
+### Router cố định
+
+| Tín hiệu yêu cầu | Skill phải đọc | Hành động đầu tiên |
+|---|---|---|
+| Plane URL, ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor |
+| Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
+| Sanity, regression, exploratory, ad-hoc, UI/UX | `qa-run/SKILL.md` | Tạo test contract và coverage ledger |
+| Viết/sửa/review testcase, Scenario ID/Name | `testcase-template/SKILL.md` | Đọc schema và requirement |
+| Drive, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP |
+| Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
+| Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
+
+### Hard gates
+
+1. Chỉ đọc các skill match router và reference mà skill yêu cầu; không tìm implementation khác
+2. Trước mutation, ghi execution contract gồm `Target`, `Operation`, `Required inputs`, `Write action`, `Verification`
+3. Dùng script canonical/dry-run nếu skill có cung cấp; không tự chế lại API payload
+4. Sau mutation, đọc lại object và đối chiếu ID, content, evidence, state hoặc permission
+5. Nếu thiếu target, expected, role/data hoặc quyền truy cập thì ghi đúng phần thiếu hay `BLOCKED`; không đoán
+
+### Invariant bắt buộc
+
+- Retest ticket luôn chạy đủ Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
+- PASS → `Done`
+- FAILED → `In Progress`
+- BLOCKED → giữ nguyên trạng thái
+- Bug mới → `Todo`
+- Comment Plane, testcase prose và nội dung người đọc thấy được tạo/sửa qua Drive CRUD không có dấu `.` cuối câu và không có emoji/icon
+- Giữ nguyên ID, URL, filename, sheet/tab name, formula, code, decimal number và machine-readable value
 
 ## Playwright POM Automation
 
@@ -43,6 +77,7 @@ Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều 
 
 ### Phải làm
 - Phân tầng Sanity → Smoke → Regression (không full regression mỗi cycle)
+- Mọi yêu cầu retest ticket tự chạy RETEST_PLUS gồm retest flow gốc, sanity, impacted regression, exploratory, ad-hoc và UI/UX
 - Tối ưu token (scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 
@@ -65,6 +100,7 @@ Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều 
 - Dùng schema cột cố định (xem template `assets/Template.xlsx`)
 - Key dùng chung giữa 3 skill (config từ `../config/api_keys.json`)
 - Cleanup output tự động trước khi giao
+- Không đặt dấu `.` cuối nội dung testcase và không chèn emoji/icon
 
 ### Nguyên tắc cốt lõi
 > Cùng một bộ cột — không sáng tạo cột mới.
@@ -97,11 +133,13 @@ Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều 
 - Đọc hoặc CRUD ticket Plane ở một hay nhiều workspace
 - Log bug theo format chuẩn, comment PASS/FAILED/BLOCKED và upload evidence inline
 - Viết daily report hoặc test report trên Plane
+- Đổi trạng thái và đính evidence theo kết quả retest
 
 ### Phải làm
 - Parse workspace/project/ticket từ URL trước khi dùng cấu hình mặc định
 - Chạy `scripts/doctor.sh` trước live read/write
-- Bug mới vào `Todo`; retest `FAILED` phải comment evidence rồi chuyển `In Progress`
+- Dùng `post-result.py` cho PASS/FAILED/BLOCKED rồi read-back comment và state
+- PASS → `Done`; FAILED → `In Progress`; BLOCKED giữ nguyên; bug mới → `Todo`
 - Không nhận hoặc lưu mật khẩu; chỉ dùng Personal API Key từ environment
 
 Đọc chi tiết: [`plane-qa/SKILL.md`](plane-qa/SKILL.md)
@@ -116,12 +154,14 @@ Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều 
 ### Phải làm
 - Ưu tiên `google-drive` MCP và native tool theo loại file
 - Resolve chính xác file/folder trước write; xác nhận thao tác destructive theo `references/CRUD.md`
+- Read-back ID, name, parent/location và changed content/permission sau write
+- Không dùng web search thay cho private Drive
 - Không commit OAuth client secret, access token hoặc refresh token
 
 Đọc chi tiết: [`google-drive-qa/SKILL.md`](google-drive-qa/SKILL.md)
 
 ## Cài đặt & cấu hình chung
 
-- **AI API key**: lưu trong `config/api_keys.json` (gitignored) hoặc environment. Plane key và Google OAuth phải dùng environment/local credential riêng, không commit.
+- **API key**: 1 file config chung `config/api_keys.json` (gitignored) cho helper AI. Plane và Drive dùng environment/MCP credential riêng; không commit secret. Xem [`README.md`](README.md) mục "API Keys" và `scripts/ai_provider.py`.
 - **Clone**: `git clone git@github.com:tqphong02/QA-skill.git` rồi copy vào `~/.claude/skills/`.
 - **Setup chi tiết**: xem [`SETUP-GUIDE.md`](SETUP-GUIDE.md).

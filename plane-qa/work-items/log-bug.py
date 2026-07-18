@@ -49,7 +49,9 @@ def load_cfg():
 CFG = load_cfg()
 BASE = f"{CFG['PLANE_BASE_URL']}/api/{CFG.get('PLANE_API_VERSION','v1')}"
 SLUG = CFG["PLANE_WORKSPACE_SLUG"]
-KEY  = CFG.get("PLANE_API_KEY", "")
+_KEY_SUFFIX = re.sub(r"[^A-Za-z0-9]+", "_", SLUG).strip("_").upper()
+KEY  = os.environ.get(f"PLANE_API_KEY_{_KEY_SUFFIX}") if _KEY_SUFFIX else ""
+KEY  = KEY or os.environ.get("PLANE_API_KEY") or CFG.get("PLANE_API_KEY", "")
 
 def key_env_name(slug):
     suffix = re.sub(r"[^A-Za-z0-9]+", "_", slug).strip("_").upper()
@@ -263,6 +265,8 @@ def main():
     pid   = url_pid or spec.get("project_id", DEFAULTS["project_id"])
     if not pid:
         raise SystemExit("Plane project ID is missing. Supply url or project_id in the JSON input.")
+    if not dry and not SLUG:
+        raise SystemExit("Plane workspace is missing. Supply a Plane URL or PLANE_WORKSPACE_SLUG.")
     CFG['default_pid'] = pid  # dùng cho build URL
     assg  = spec.get("assignees", DEFAULTS["assignees"])
     state_name = "Todo"

@@ -44,6 +44,14 @@ Use the configured `google-drive` MCP. Prefer the native tool for the object typ
 3. For native Docs, Sheets, or Slides content, use its specialized tool; use Drive tools for rename, move, copy, permissions, or whole-file deletion.
 4. After a write, read the affected object back and report its ID, name, location, and changed field or content.
 
+## Human-readable content format
+
+- Apply this rule to prose created or updated in Docs, Sheets, Slides, text files, testcase sheets, comments, descriptions, and QA reports.
+- Do not end a sentence, list item, heading value, or testcase cell with `.`.
+- Do not insert emoji or icons.
+- Keep testcase ID, scenario ID, ticket ID, URLs, filenames, folder names, sheet/tab names, formulas, code, decimal numbers, JSON keys, API fields, and other machine-readable values unchanged.
+- When updating existing content, change only the requested scope; do not mechanically remove periods or icons from untouched historical content.
+
 ## Confirmation and safety
 
 - Read, list, search, and download are read-only and do not need confirmation.

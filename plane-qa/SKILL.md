@@ -9,6 +9,19 @@ Use the bundled CLI and scripts in this directory. Resolve every path relative t
 
 If `ACCOUNT-PROFILE.md` exists beside this file, read it before choosing a default account, workspace, project, or credential environment-variable name. Create it from `ACCOUNT-PROFILE.example.md`; it is local routing metadata and must never contain credential values or be committed.
 
+## Cross-model hard gates
+
+Use these gates literally on every model. Do not compress, reorder, or infer around them:
+
+1. Resolve the exact target from the supplied URL; only use configured defaults when no URL was supplied
+2. Run `scripts/doctor.sh` before every live read or write
+3. Read the matching format reference before drafting content
+4. Run the canonical script in dry-run mode when it supports `--dry-run`
+5. Perform the explicitly requested write
+6. Read back the ticket or comment and verify workspace, ticket reference, content, evidence count, and state
+
+Use this state map without interpretation: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`. If a named state cannot be resolved, stop and report `BLOCKED`; never choose a similar-looking state.
+
 ## Route the request
 
 1. For any live Plane read or write, run `bash scripts/doctor.sh --url '<Plane URL>'` when the user supplied a URL. Otherwise run `bash scripts/doctor.sh`.
@@ -52,9 +65,12 @@ Prefer `comments/post-result.py` for retest comments because it validates the ve
 - Keep title, status, priority, assignees, ticket URL, description sections, comments, and evidence distinct.
 - Do not invent missing Expected, Actual, testcase IDs, assignees, or evidence.
 - Never include passwords, API keys, cookies, or OAuth tokens in a ticket or report.
-- Use Vietnamese with diacritics for content. Do not add emoji or decorative icons to Plane content.
+- Use Vietnamese with diacritics for content. Do not add emoji or icons to Plane content.
+- Do not end human-readable sentences or list items with `.`. Preserve identifiers, URLs, filenames, numeric values, and machine-readable fields exactly.
 - Standardize retest verdicts as exactly `PASS`, `FAILED`, or `BLOCKED`; never mix `FAIL` and `FAILED`.
+- Keep retest comments concise: PASS contains only Result + Conclusion + inline images; FAILED adds only Actual + Expected; BLOCKED adds only Blocker. Never include Environment, Steps, Observed, Check, an Evidence text label, evidence filenames, internal suite names, browser mode, job IDs, or coverage narration unless the user explicitly asks.
 - Create every new bug in `Todo`.
+- After a retest result of `PASS`, post the evidence comment and move the ticket to `Done`.
 - After a retest result of `FAILED`, post the evidence comment and move the ticket to `In Progress`.
-- Do not change state automatically for PASS or BLOCKED until another explicit workflow rule is provided.
+- Do not change state automatically for BLOCKED.
 - Prefer a supplied Plane URL over the configured default workspace. Never post to the default workspace when a URL identifies another workspace.

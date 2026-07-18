@@ -14,9 +14,21 @@
 #   # dùng HTML thô cho text: --html "<p><strong>Kết quả</strong></p>"
 #   # xoá 1 comment test:     --delete <comment_id> --ref PROJ-1
 # ============================================================
-import sys, os
+import sys, os, re
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.inline_image import Client
+
+
+ICON_RE = re.compile(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]")
+
+
+def normalize_comment(value, raw_html=False):
+    value = str(value).strip()
+    if ICON_RE.search(value):
+        raise ValueError("Nội dung comment không được chứa emoji hoặc icon")
+    if raw_html:
+        return re.sub(r"\.(\s*</(?:p|li|h[1-6])>)", r"\1", value, flags=re.IGNORECASE)
+    return value.rstrip(".").rstrip()
 
 
 def parse(argv):
@@ -55,8 +67,11 @@ def main():
         c.delete_comment(pid, iid, a["delete"])
         print(f"Đã xoá comment {a['delete']}"); return
 
-    text = a.get("html") or a.get("text", "")
     raw = "html" in a
+    try:
+        text = normalize_comment(a.get("html") or a.get("text", ""), raw_html=raw)
+    except ValueError as exc:
+        print(f"COMMENT FORMAT ERROR: {exc}"); sys.exit(1)
     imgs = [x for x in a["img"]]
     miss = [x for x in imgs if not os.path.exists(x)]
     if miss:

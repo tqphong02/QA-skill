@@ -14,6 +14,11 @@
 - Upload a new file by default. Do not replace a same-named Drive file without explicit approval.
 - Return the uploaded file name, ID, and view link.
 
+## Content format
+
+- For report prose or testcase content created or updated through Drive CRUD, do not end sentences, list items, or testcase cells with `.` and do not insert emoji or icons.
+- Preserve IDs, links, filenames, sheet/tab names, formulas, code, numeric values, and machine-readable fields exactly.
+
 ## Secrets
 
 Before upload, check that the report does not include passwords, API keys, cookies, OAuth tokens, service-account JSON, or private `.env` contents.

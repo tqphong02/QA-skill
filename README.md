@@ -1,6 +1,6 @@
 # QA-skill
 
-Bộ 6 skill cho **QA team**, dùng được với Claude Code, Codex và các AI coding agent hỗ trợ `SKILL.md` (MIT).
+Bộ skill QA đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
 ## 6 skill
 
@@ -12,6 +12,18 @@ Bộ 6 skill cho **QA team**, dùng được với Claude Code, Codex và các A
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
 | [plane-qa](./plane-qa/SKILL.md) | CRUD ticket Plane đa workspace, log bug, comment retest và evidence inline | ticket/comment Plane |
 | [google-drive-qa](./google-drive-qa/SKILL.md) | CRUD Drive, Docs, Sheets, Slides và permissions qua MCP | file/folder/report trên Drive |
+
+## Cross-model compatibility
+
+Mọi agent đọc router và hard gate trong [AGENTS.md](./AGENTS.md). Gemini/Antigravity đọc bản mirror [GEMINI.md](./GEMINI.md).
+
+Kiểm tra contract trước khi dùng hoặc push:
+
+```bash
+python3 scripts/validate_cross_model.py
+```
+
+Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-COMPATIBILITY.md).
 
 ## Cài đặt (máy mới)
 

@@ -13,6 +13,19 @@ Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi t
 > **KHÁC** `qa-run` (live exploratory) và `playwright-pom-automation` (code automation `.spec.ts`): skill này = document test case Excel (manual test design).
 > **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI. Member khi git clone code về chạy được ngay với project bất kỳ.
 
+## Cross-model hard gates
+
+Áp dụng nguyên thứ tự này cho mọi model:
+
+1. Đọc requirement/AC và liệt kê requirement ID trước khi viết case
+2. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
+3. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
+4. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
+5. Chạy `scripts/gen-testcases.py`; không tự tạo cột hoặc viết workbook thủ công
+6. Đọc lại workbook và kiểm tra số case, Scenario Name grouping, cột I-M trống và format nội dung
+
+Nếu expected chưa có trong requirement, dừng case đó ở trạng thái cần làm rõ; không tự bịa business rule.
+
 ## The trap this skill exists to prevent
 
 **Freeform columns per author** — each tester invents their own column set, breaking cross-project aggregation and review tooling. Skill enforces a single shared template so test cases from different projects can be queried, compared, and rolled up.
@@ -110,6 +123,13 @@ Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers m
 | I-M | **TRỐNG** | Tester điền khi execution |
 
 **Quan trọng**: Cột I, J, K, L, M để trống. Script chỉ apply style, KHÔNG fill value. Tester tự điền khi chạy test thực tế.
+
+### Human-readable format
+
+- Không đặt dấu `.` ở cuối Scenario Name, Description, Pre-condition, Procedure hoặc Expected Results
+- Không chèn emoji/icon vào nội dung testcase
+- Giữ nguyên Scenario ID, Testcase ID, requirement ID, URL, filename, formula, code và số thập phân
+- Generator tự validate icon và tự bỏ dấu chấm cuối từng dòng prose
 
 ### Template structure chi tiết
 

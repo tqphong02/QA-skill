@@ -26,7 +26,7 @@ Logic:
   - Section Functional có anchor_row cho công thức test case ID [BCP-NN]
   - STT liên tục trong toàn bộ file
 """
-import sys, json, shutil, datetime, os
+import sys, json, shutil, datetime, os, re
 from copy import copy
 import openpyxl
 from openpyxl.styles import Alignment
@@ -45,6 +45,17 @@ TYPE_LABEL = {
     'ui': 'UI',
     'additional': 'Additional (out-of-spec)',
 }
+ICON_RE = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+
+
+def human_text(value, field='content'):
+    """Normalize testcase prose while preserving internal punctuation and numbers."""
+    if value is None:
+        return ''
+    text = str(value).strip()
+    if ICON_RE.search(text):
+        raise ValueError(f'{field} must not contain emoji or icons')
+    return '\n'.join(line.rstrip().rstrip('.').rstrip() for line in text.splitlines())
 
 def type_rank(t):
     t = (t or 'happy').lower().strip()
@@ -235,17 +246,17 @@ def main():
     project_code = p.get('code', '')
     if not project_code:
         print("  ⚠️  CẢNH BÁO: project.code chưa có trong JSON. Test case ID sẽ trống prefix (vd '[NN]' thay vì '[BCP-NN]').")
-    safe_set(cover, 'B3', p.get('name', ''))
+    safe_set(cover, 'B3', human_text(p.get('name', ''), 'project.name'))
     safe_set(cover, 'C3', project_code)
-    safe_set(cover, 'D3', p.get('device', ''))
+    safe_set(cover, 'D3', human_text(p.get('device', ''), 'project.device'))
     safe_set(cover, 'E3', p.get('priority', 'Medium'))
-    safe_set(cover, 'B5', p.get('description', ''))
+    safe_set(cover, 'B5', human_text(p.get('description', ''), 'project.description'))
     safe_set(cover, 'D5', p.get('version', ''))
     d = parse_date(p.get('test_date'))
     if d: safe_set(cover, 'E5', d)
-    safe_set(cover, 'B7', p.get('objective', ''))
-    safe_set(cover, 'D7', p.get('author', ''))
-    safe_set(cover, 'E7', p.get('reviewer', ''))
+    safe_set(cover, 'B7', human_text(p.get('objective', ''), 'project.objective'))
+    safe_set(cover, 'D7', human_text(p.get('author', ''), 'project.author'))
+    safe_set(cover, 'E7', human_text(p.get('reviewer', ''), 'project.reviewer'))
 
     # 5. Write test cases vào đúng vị trí group trong template
     sections_in = data.get('sections', [])
@@ -267,23 +278,23 @@ def main():
             for sc in grp.get('scenarios', []):
                 sid = sc.get('scenario_id', '')
                 # Scenario name (shared cho tất cả case trong scenario này)
-                sc_name = sc.get('scenario_name') or sc.get('name') or grp_name
+                sc_name = human_text(sc.get('scenario_name') or sc.get('name') or grp_name, 'scenario_name')
                 cases = sorted(sc.get('cases', []), key=lambda c: type_rank(c.get('type')))
                 for case in cases:
                     stt_counter += 1
                     all_data_ranges.append(current_row)
                     ctype = case.get('type', 'happy')
                     # Description: KHÔNG prefix [STT N][TYPE] - ghi dạng manual "Xác minh rằng..."
-                    desc = case.get('description', '')
+                    desc = human_text(case.get('description', ''), 'description')
                     req = case.get('req') or sc.get('requirement', '')
                     note = f"Ref: {req}" if req else ("Ref: (out-of-spec)" if ctype == 'additional' else "")
                     vals = {
                         2: sid,                      # B: Scenario ID
                         3: sc_name,                  # C: Scenario Name (tên nhóm chức năng - shared)
                         5: desc,                     # E: Description (manual "Xác minh rằng...")
-                        6: case.get('pre_condition', ''),  # F: Pre-condition
-                        7: case.get('procedure', ''),      # G: Procedure
-                        8: case.get('expected', ''),       # H: Expected Results
+                        6: human_text(case.get('pre_condition', ''), 'pre_condition'),  # F: Pre-condition
+                        7: human_text(case.get('procedure', ''), 'procedure'),      # G: Procedure
+                        8: human_text(case.get('expected', ''), 'expected'),       # H: Expected Results
                         # Cột I (Results), J (Priority), K (Date), L (Tester), M (Notes) - KHÔNG fill, để tester điền sau
                     }
                     for col, v in vals.items():

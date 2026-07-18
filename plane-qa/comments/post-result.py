@@ -5,6 +5,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,7 +13,8 @@ from utils.inline_image import Client
 
 
 VERDICTS = {"PASS", "FAILED", "BLOCKED"}
-STATE_TRANSITIONS = {"FAILED": "In Progress"}
+STATE_TRANSITIONS = {"PASS": "Done", "FAILED": "In Progress"}
+ICON_RE = re.compile(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]")
 
 
 def items(value):
@@ -21,12 +23,17 @@ def items(value):
     return value if isinstance(value, list) else [value]
 
 
+def clean_sentence(value):
+    """Normalize human-readable comment text to the team style."""
+    return str(value).strip().rstrip(".").rstrip()
+
+
 def section(label, values, ordered=False):
     values = items(values)
     if not values:
         return ""
     tag = "ol" if ordered else "ul"
-    body = "".join(f"<li>{html.escape(str(value))}</li>" for value in values)
+    body = "".join(f"<li>{html.escape(clean_sentence(value))}</li>" for value in values)
     return f"<p><strong>{label}:</strong></p><{tag}>{body}</{tag}>"
 
 
@@ -38,11 +45,19 @@ def validate(spec):
     targets = [name for name in ("ref", "url") if str(spec.get(name, "")).strip()]
     if len(targets) != 1:
         errors.append("provide exactly one target: ref or url")
-    for field in ("steps", "observed", "checks", "conclusion", "evidence"):
+    for field in ("conclusion", "evidence"):
         if not items(spec.get(field)):
             errors.append(f"missing required field: {field}")
-    if verdict == "FAILED" and not items(spec.get("expected")):
-        errors.append("FAILED requires expected")
+    if verdict == "FAILED":
+        if not items(spec.get("actual") or spec.get("observed")):
+            errors.append("FAILED requires actual")
+        if not items(spec.get("expected")):
+            errors.append("FAILED requires expected")
+    if verdict == "BLOCKED" and not items(spec.get("blocker") or spec.get("observed")):
+        errors.append("BLOCKED requires blocker")
+    human_fields = ("conclusion", "actual", "observed", "expected", "blocker")
+    if any(ICON_RE.search(str(value)) for field in human_fields for value in items(spec.get(field))):
+        errors.append("comment content must not contain emoji or icons")
     missing = [path for path in items(spec.get("evidence")) if not os.path.isfile(path)]
     if missing:
         errors.append(f"missing evidence files: {missing}")
@@ -52,14 +67,12 @@ def validate(spec):
 def build_html(spec):
     verdict = str(spec["result"]).upper()
     parts = [f"<p><strong>Result:</strong> {verdict}</p>"]
-    parts.append(section("Environment", spec.get("environment")))
-    parts.append(section("Steps", spec.get("steps"), ordered=True))
-    parts.append(section("Observed", spec.get("observed")))
     if verdict == "FAILED":
+        parts.append(section("Actual", spec.get("actual") or spec.get("observed")))
         parts.append(section("Expected", spec.get("expected")))
-    parts.append(section("Check", spec.get("checks")))
+    elif verdict == "BLOCKED":
+        parts.append(section("Blocker", spec.get("blocker") or spec.get("observed")))
     parts.append(section("Conclusion", spec.get("conclusion")))
-    parts.append(section("Evidence", [os.path.basename(p) for p in items(spec.get("evidence"))]))
     return "".join(part for part in parts if part)
 
 
