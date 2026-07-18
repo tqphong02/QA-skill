@@ -24,6 +24,7 @@ REQUIRED = {
         "write-business-guide.mjs",
         "Markdown trước Excel",
         "app-business-guide.md",
+        "business-analysis/SKILL.md",
     ],
     "GEMINI.md": [
         "Cross-model deterministic mode",
@@ -36,6 +37,7 @@ REQUIRED = {
         "write-business-guide.mjs",
         "Markdown trước Excel",
         "APP_BASELINE_DISCOVERY",
+        "business-analysis/SKILL.md",
     ],
     ".github/copilot-instructions.md": [
         "RETEST_PLUS",
@@ -46,6 +48,7 @@ REQUIRED = {
         "same-basename Markdown before Excel",
         "write-business-guide.mjs",
         "app-business-guide.md",
+        "18 areas",
     ],
     "MODEL-COMPATIBILITY.md": [
         "Retest <Plane URL>",
@@ -54,6 +57,7 @@ REQUIRED = {
         "Static check",
         "Viết testcase API từ swagger.json",
         "Tạo Markdown testcase đầy đủ trước Excel",
+        "business flow XMind",
     ],
     "qa-run/SKILL.md": [
         "Cross-model hard gates",
@@ -140,6 +144,36 @@ REQUIRED = {
         "merge_confirmed",
         "app guide requires a non-empty coverage_map",
     ],
+    "business-analysis/SKILL.md": [
+        "doc-to-md/scripts/convert.sh",
+        "18 areas",
+        "business-flow.xmind",
+        "business-qa.md",
+        "business-qa.xlsx",
+        "scripts/generate.sh",
+    ],
+    "business-analysis/references/SENIOR_REVIEW_CHECKLIST.md": [
+        "Scope and actors",
+        "Security and privacy",
+        "Concurrency and idempotency",
+        "Testability and acceptance criteria",
+    ],
+    "business-analysis/scripts/render-qa.py": [
+        "REVIEW_AREAS",
+        "QUESTION_HEADERS",
+        "Question ID mismatch",
+        "must not contain a real credential",
+    ],
+    "business-analysis/scripts/render-xmind.mjs": [
+        "parseXMindMarkToXMindFile",
+        "Business modules",
+        "XMIND PASS",
+    ],
+    "business-analysis/examples/sample-analysis.json": [
+        "\"review_coverage\"",
+        "\"QA-001\"",
+        "\"questions\"",
+    ],
     "testcase-template/examples/sample-api-input.json": [
         '"kind": "api"',
         '"expected_status": 200',
@@ -173,6 +207,7 @@ def main():
         "google-drive-qa/scripts/drive_upload.py",
         "testcase-template/scripts/gen-testcases.py",
         "testcase-template/scripts/import-api-spec.py",
+        "business-analysis/scripts/render-qa.py",
     ):
         path = ROOT / relative
         if path.is_file():
@@ -184,6 +219,8 @@ def main():
     for relative in (
         "testcase-template/examples/sample-input.json",
         "testcase-template/examples/sample-api-input.json",
+        "business-analysis/examples/sample-analysis.json",
+        "business-analysis/package.json",
     ):
         path = ROOT / relative
         try:

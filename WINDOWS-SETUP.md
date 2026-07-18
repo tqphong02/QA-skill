@@ -164,26 +164,26 @@ git clone https://github.com/tqphong02/QA-skill.git
 
 ---
 
-## D. Copy 3 skill vào `~/.claude/skills/`
+## D. Copy 7 skill vào `~/.claude/skills/`
 
 ### Git Bash
 ```bash
 mkdir -p ~/.claude/skills
 
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   cp -R "$s" "$HOME/.claude/skills/"
 done
 
 # Verify
 ls ~/.claude/skills/
-# → phải thấy 3 folder + các skill khác (nếu có)
+# → phải thấy 7 skill
 ```
 
 ### PowerShell
 ```powershell
 New-Item -ItemType Directory -Path "$HOME\.claude\skills" -Force
 
-foreach ($s in @("qa-run", "testcase-template", "playwright-pom-automation")) {
+foreach ($s in @("qa-run", "testcase-template", "playwright-pom-automation", "doc-to-md", "business-analysis", "plane-qa", "google-drive-qa")) {
   Copy-Item -Path $s -Destination "$HOME\.claude\skills\" -Recurse -Force
 }
 
@@ -194,18 +194,22 @@ Get-ChildItem "$HOME\.claude\skills\"
 
 ---
 
-## E. Cài dependencies (chỉ cho qa-run)
+## E. Cài dependencies cho qa-run và business-analysis
 
 ### Git Bash
 ```bash
 cd ~/.claude/skills/qa-run
 npm install
+cd ~/.claude/skills/business-analysis
+npm install --omit=dev
 ```
 
 ### PowerShell
 ```powershell
 cd $HOME\.claude\skills\qa-run
 npm install
+cd $HOME\.claude\skills\business-analysis
+npm install --omit=dev
 ```
 
 Lần đầu chạy có thể cài **Playwright browsers** (~300MB):
@@ -371,7 +375,7 @@ cd ~/projects/QA-skill
 git pull
 
 # Re-copy vào ~/.claude/skills/
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   cp -R "./$s/." "$HOME/.claude/skills/$s/"
 done
 
@@ -382,7 +386,7 @@ cd ~/.claude/skills/qa-run && npm install
 Hoặc dùng symlink (auto-sync, **chỉ khi bạn hiểu rủi ro**):
 ```bash
 # Backup trước
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   if [ -d "$HOME/.claude/skills/$s" ] && [ ! -L "$HOME/.claude/skills/$s" ]; then
     mv "$HOME/.claude/skills/$s" "$HOME/.claude/skills/${s}.bak"
   fi

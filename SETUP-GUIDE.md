@@ -1,10 +1,11 @@
-# SETUP-GUIDE — Push 6 skill lên GitHub → clone máy khác chạy
+# SETUP-GUIDE — Push 7 skill lên GitHub → clone máy khác chạy
 
-> Hướng dẫn này dành cho **6 skill** trong `~/.claude/skills/`:
+> Hướng dẫn này dành cho **7 skill** trong `~/.claude/skills/`:
 > - `qa-run/` (engine + 2 helper mới)
 > - `testcase-template/`
 > - `playwright-pom-automation/`
 > - `doc-to-md/` (MarkItDown, Python ≥3.10)
+> - `business-analysis/` (XMind + Q&A Markdown/Excel)
 > - `plane-qa/`
 > - `google-drive-qa/`
 
@@ -23,8 +24,8 @@ cd ~/projects/qa-skill
 Script sẽ tự động:
 1. Detect OS (macOS / Linux / WSL)
 2. Check Python ≥3.10 + Node ≥20 (warning nếu thiếu, không abort)
-3. Copy 6 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
-4. Cài `npm install` cho qa-run + playwright-pom-automation
+3. Copy 7 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
+4. Cài `npm install` cho qa-run + playwright-pom-automation + business-analysis
 5. Cài `pip install markitdown[all] + openpyxl` (dùng prebuilt wheel)
 6. Auto-detect AI provider (Antigravity / Copilot Pro / Claude Code / standalone)
 7. Tạo `config/api_keys.json` từ template (nếu standalone)
@@ -81,7 +82,7 @@ mkdir -p ~/projects/qa-skills
 cd ~/projects/qa-skills
 
 # Copy 3 skill vào (KHÔNG copy node_modules, .env, evidence, auth.json)
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   rsync -a --exclude='node_modules' --exclude='.DS_Store' \
     --exclude='.env' --exclude='auth.json' --exclude='evidence' \
     "$HOME/.claude/skills/$s/" "./$s/"
@@ -90,7 +91,7 @@ done
 
 > Nếu muốn dùng symlink (cho phép sửa 1 chỗ, 2 bên sync):
 > ```bash
-> for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+> for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
 >   ln -s "$HOME/.claude/skills/$s" "./$s"
 > done
 > ```
@@ -212,7 +213,7 @@ ls
 mkdir -p ~/.claude/skills
 
 # Copy 3 skill
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   if [ -d "$HOME/.claude/skills/$s" ]; then
     echo "⚠️  $s đã tồn tại — backup trước:"
     mv "$HOME/.claude/skills/$s" "$HOME/.claude/skills/${s}.bak.$(date +%s)"
@@ -472,7 +473,7 @@ git push
 cd ~/projects/mds-qa-skills
 git pull
 # Sau đó copy lại vào ~/.claude/skills/:
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   cp -R "./$s/." "$HOME/.claude/skills/$s/"
 done
 ```
@@ -481,7 +482,7 @@ Hoặc dùng symlink (auto-sync, nhưng cẩn thận `.gitignore`):
 
 ```bash
 # Trên máy B, lần đầu setup:
-for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
   rm -rf "$HOME/.claude/skills/$s"
   ln -s "$HOME/projects/mds-qa-skills/$s" "$HOME/.claude/skills/$s"
 done

@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-6 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, plane-qa, google-drive-qa
+7 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, business-analysis, plane-qa, google-drive-qa
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
+Repo này phân phối 7 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
 
 ## Cross-model deterministic mode
 
@@ -22,6 +22,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 | Drive, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
+| Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
 
 ### Hard gates
 
@@ -30,6 +31,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 3. Dùng script canonical/dry-run nếu skill có cung cấp; không tự chế lại API payload
 4. Sau mutation, đọc lại object và đối chiếu ID, content, evidence, state hoặc permission
 5. Nếu thiếu target, expected, role/data hoặc quyền truy cập thì ghi đúng phần thiếu hay `BLOCKED`; không đoán
+6. Với business analysis, không sinh testcase trước khi Q&A quan trọng được trả lời hoặc assumption được đánh dấu rõ
 
 ### Invariant bắt buộc
 
@@ -40,6 +42,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Bug mới → `Todo`
 - Comment Plane, testcase prose và nội dung người đọc thấy được tạo/sửa qua Drive CRUD không có dấu `.` cuối câu và không có emoji/icon
 - Giữ nguyên ID, URL, filename, sheet/tab name, formula, code, decimal number và machine-readable value
+- Business analysis phải sinh `.xmind`, Q&A Markdown và Q&A Excel từ cùng một JSON; Question ID giữa hai Q&A phải khớp
 
 ## Playwright POM Automation
 
@@ -133,6 +136,21 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 > Convert đúng cấu trúc — không retype thủ công từ PDF.
 
 Đọc chi tiết: [`.claude/skills/doc-to-md/SKILL.md`](doc-to-md/SKILL.md)
+
+## Business Analysis
+
+### Khi nào áp dụng
+- Đọc BRD/SRS/FRS hoặc business document để dựng flow hệ thống
+- Tạo file XMind editable và Q&A Markdown/Excel
+- Tìm ambiguity, contradiction, missing rule hoặc expected result khó kiểm thử
+
+### Phải làm
+- Chạy `doc-to-md` trước nếu nguồn chưa là Markdown
+- Review đủ 18 vùng trong senior fullstack QA/QC checklist
+- Tạo một analysis JSON rồi chạy `business-analysis/scripts/generate.sh`
+- Read-back `.xmind`, Q&A Markdown và Q&A Excel trước khi bàn giao
+
+Đọc chi tiết: [`business-analysis/SKILL.md`](business-analysis/SKILL.md)
 
 ## Plane QA
 

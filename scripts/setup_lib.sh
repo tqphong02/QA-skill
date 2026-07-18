@@ -40,8 +40,8 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup toàn bộ 6 QA skill (qa-run, testcase-template, playwright-pom-automation,
-doc-to-md, plane-qa, google-drive-qa) + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
+Setup toàn bộ 7 QA skill (qa-run, testcase-template, playwright-pom-automation,
+doc-to-md, business-analysis, plane-qa, google-drive-qa) + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
 deps + auto-detect AI provider + verify.
 
 Options:
@@ -95,7 +95,7 @@ check_python() {
 warn_if_python_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
-    log_warn "Python 3 NOT found. doc-to-md + testcase-template sẽ KHÔNG chạy được."
+    log_warn "Python 3 NOT found. doc-to-md + testcase-template + business-analysis sẽ KHÔNG chạy được."
     local os
     os=$(detect_os)
     case "$os" in
@@ -135,7 +135,7 @@ check_node() {
 warn_if_node_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
-    log_warn "Node.js NOT found. qa-run sẽ KHÔNG chạy được."
+    log_warn "Node.js NOT found. qa-run + business-analysis sẽ KHÔNG chạy được."
     local os
     os=$(detect_os)
     case "$os" in
@@ -153,7 +153,7 @@ warn_if_node_too_old() {
   local major
   major=$(echo "$v" | cut -d. -f1)
   if [[ "$major" -lt 20 ]]; then
-    log_warn "Node $v found (< 20). qa-run cần >= 20."
+    log_warn "Node $v found (< 20). qa-run + business-analysis cần >= 20."
     log_warn "  'brew install node@20' hoặc 'nvm install 20'"
     return 1
   fi
@@ -162,7 +162,7 @@ warn_if_node_too_old() {
 }
 
 # ==== Skills resolution ====
-DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "plane-qa" "google-drive-qa")
+DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "plane-qa" "google-drive-qa")
 
 resolve_skill_list() {
   local only="$1"
@@ -283,7 +283,7 @@ install_node_deps() {
   fi
   for skill in "${skills[@]}"; do
     local skill_path="$SKILLS_DIR/$skill"
-    if [[ -f "$skill_path/package.json" ]]; then
+    if [[ -f "$skill_path/package.json" ]] || { [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ -f "$REPO_DIR/$skill/package.json" ]]; }; then
       if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         log_dry "cd $skill_path && npm install --no-audit --no-fund"
       else
@@ -474,7 +474,7 @@ print_summary() {
   cat <<EOF
 
 Next steps:
-  1. Mở AI coding agent mới và kiểm tra 6 skill đã load
+  1. Mở AI coding agent mới và kiểm tra 7 skill đã load
   2. Test doc-to-md:      ~/.claude/skills/doc-to-md/scripts/convert.sh <file.pdf>
   3. Test qa-run:         cd <project>/qa && node ~/.claude/skills/qa-run/scripts/login.mjs
 

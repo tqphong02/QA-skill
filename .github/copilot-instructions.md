@@ -11,6 +11,7 @@ Hard requirements:
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`
 - Drive private CRUD uses `google-drive-qa` and the configured Drive MCP, followed by read-back verification
 - Testcase generation uses `testcase-template` and its generator without inventing columns
+- Business document analysis uses `doc-to-md` first when needed, then `business-analysis`; review all 18 areas and generate matching XMind, Q&A Markdown, and Q&A Excel from one JSON source
 - API testcase mode is opt-in only when the user explicitly asks to write API testcases or testcases for an endpoint, OpenAPI/Swagger, Postman collection, or curl request; merely mentioning an API artifact does not switch modes
 - For API testcase files, run `testcase-template/scripts/import-api-spec.py` first and do not generate Excel while `review_required` is non-empty
 - Testcase generation must write the complete same-basename Markdown before Excel; future agents read Markdown first

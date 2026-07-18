@@ -118,7 +118,7 @@ else
 fi
 
 # ==== Step 5: Copy skills ====
-log_step "Copying 6 QA skills"
+log_step "Copying ${#SKILLS[@]} QA skills"
 for skill in "${SKILLS[@]}"; do
   copy_skill "$skill" || log_warn "Skill $skill bị skip hoặc fail"
 done

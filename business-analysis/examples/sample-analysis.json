@@ -1,0 +1,144 @@
+{
+  "project": "Account Portal",
+  "scope": "Login and account disable behavior",
+  "analysis_date": "2026-07-18",
+  "source_markdown": ["docs/account-portal.md"],
+  "executive_summary": "Registered users can log in and administrators can disable accounts, but session revocation is unclear",
+  "actors": [
+    {
+      "name": "Registered user",
+      "responsibilities": ["Sign in to the portal"],
+      "permissions": ["View own profile"],
+      "status": "verified",
+      "source_ref": "account-portal.md#login"
+    },
+    {
+      "name": "Administrator",
+      "responsibilities": ["Manage account status"],
+      "permissions": ["Disable user account"],
+      "status": "verified",
+      "source_ref": "account-portal.md#administration"
+    }
+  ],
+  "modules": [
+    {
+      "name": "Authentication",
+      "purpose": "Create an authenticated session",
+      "status": "verified",
+      "source_ref": "account-portal.md#login",
+      "flows": [
+        {
+          "id": "FLOW-001",
+          "name": "Login with valid credentials",
+          "actor": "Registered user",
+          "status": "verified",
+          "source_ref": "account-portal.md#login",
+          "preconditions": ["Account is active"],
+          "trigger": "User submits the login form",
+          "steps": [
+            {
+              "id": "S1",
+              "action": "Enter valid email and password",
+              "system_response": "Validate credentials and account status",
+              "state_change": "Authenticated session is created",
+              "api_data": "POST /login",
+              "source_ref": "account-portal.md#login"
+            }
+          ],
+          "outcomes": ["User reaches the dashboard"],
+          "alternate_flows": ["Invalid credentials return an authentication error"],
+          "exceptions": [],
+          "business_rules": ["Disabled accounts cannot create a new session"],
+          "dependencies": ["Identity service"],
+          "unresolved": ["Existing session behavior after account disable"]
+        }
+      ]
+    }
+  ],
+  "cross_cutting": [
+    {
+      "name": "Audit trail",
+      "details": ["Account status changes should identify actor and time"],
+      "status": "inferred",
+      "source_ref": "Missing from source"
+    }
+  ],
+  "review_coverage": [
+    {"area": "Scope and actors", "status": "checked", "notes": "Actors are defined", "source_ref": "account-portal.md#scope", "question_ids": []},
+    {"area": "Entry and preconditions", "status": "checked", "notes": "Active account precondition is defined", "source_ref": "account-portal.md#login", "question_ids": []},
+    {"area": "Happy flow", "status": "checked", "notes": "Login success flow is defined", "source_ref": "account-portal.md#login", "question_ids": []},
+    {"area": "Alternate and exception flow", "status": "checked", "notes": "Invalid credential behavior is defined", "source_ref": "account-portal.md#login", "question_ids": []},
+    {"area": "Business rules", "status": "checked", "notes": "Disabled account login rule is defined", "source_ref": "account-portal.md#administration", "question_ids": []},
+    {"area": "States and transitions", "status": "checked", "notes": "Existing session transition is unclear", "source_ref": "account-portal.md#administration", "question_ids": ["QA-001"]},
+    {"area": "Roles and permissions", "status": "checked", "notes": "User and administrator roles are defined", "source_ref": "account-portal.md#roles", "question_ids": []},
+    {"area": "Input and validation", "status": "checked", "notes": "Credential validation is defined", "source_ref": "account-portal.md#login", "question_ids": []},
+    {"area": "Data lifecycle and persistence", "status": "checked", "notes": "Session persistence after disable is unclear", "source_ref": "Missing from source", "question_ids": ["QA-001"]},
+    {"area": "API and integration", "status": "checked", "notes": "Identity service dependency is identified", "source_ref": "account-portal.md#integration", "question_ids": []},
+    {"area": "Error handling and recovery", "status": "checked", "notes": "Authentication error is defined", "source_ref": "account-portal.md#login", "question_ids": []},
+    {"area": "Concurrency and idempotency", "status": "blocked", "notes": "Concurrent account update behavior is missing", "source_ref": "Missing from source", "question_ids": ["QA-002"]},
+    {"area": "Security and privacy", "status": "checked", "notes": "Session revocation is a security gap", "source_ref": "Missing from source", "question_ids": ["QA-001"]},
+    {"area": "Performance and capacity", "status": "not_applicable", "notes": "No performance scope was requested for this review", "source_ref": "Review scope", "question_ids": []},
+    {"area": "UI UX and accessibility", "status": "blocked", "notes": "No UI behavior or design source was provided", "source_ref": "Missing from source", "question_ids": ["QA-003"]},
+    {"area": "Audit logging and observability", "status": "checked", "notes": "Audit ownership is unclear", "source_ref": "Missing from source", "question_ids": ["QA-004"]},
+    {"area": "Compatibility and migration", "status": "not_applicable", "notes": "No migration is in scope", "source_ref": "Review scope", "question_ids": []},
+    {"area": "Testability and acceptance criteria", "status": "checked", "notes": "Session revocation expected result needs confirmation", "source_ref": "Missing from source", "question_ids": ["QA-001"]}
+  ],
+  "questions": [
+    {
+      "id": "QA-001",
+      "category": "Security and privacy",
+      "module_flow": "Administration / Disable account",
+      "source_ref": "account-portal.md#administration",
+      "ambiguity_gap": "The document does not define active session behavior after disable",
+      "risk": "A disabled user may retain access",
+      "question": "Should all active sessions be revoked immediately when an account is disabled?",
+      "proposed_assumption": "Revoke all active sessions immediately",
+      "owner": "PO",
+      "priority": "P0",
+      "status": "Open",
+      "answer": ""
+    },
+    {
+      "id": "QA-002",
+      "category": "Concurrency and idempotency",
+      "module_flow": "Administration / Update account status",
+      "source_ref": "Missing from source",
+      "ambiguity_gap": "Concurrent status updates are not defined",
+      "risk": "Last write may silently overwrite an administrator decision",
+      "question": "How should the system handle two administrators updating the same account status concurrently?",
+      "proposed_assumption": "Reject stale updates using record version",
+      "owner": "Architect",
+      "priority": "P1",
+      "status": "Open",
+      "answer": ""
+    },
+    {
+      "id": "QA-003",
+      "category": "UI UX and accessibility",
+      "module_flow": "Login",
+      "source_ref": "Missing from source",
+      "ambiguity_gap": "Loading, error and keyboard behavior are not defined",
+      "risk": "The UI may be inaccessible or allow repeated submit",
+      "question": "What loading, error and keyboard focus behavior is required during login submission?",
+      "proposed_assumption": "Disable submit during request and focus the first error",
+      "owner": "Designer",
+      "priority": "P1",
+      "status": "Open",
+      "answer": ""
+    },
+    {
+      "id": "QA-004",
+      "category": "Audit logging and observability",
+      "module_flow": "Administration / Disable account",
+      "source_ref": "Missing from source",
+      "ambiguity_gap": "Audit fields and retention are not defined",
+      "risk": "Account status changes cannot be investigated",
+      "question": "Which actor, reason, timestamp and retention fields must be recorded for account status changes?",
+      "proposed_assumption": "Record actor ID, reason, old state, new state and timestamp",
+      "owner": "PO",
+      "priority": "P1",
+      "status": "Open",
+      "answer": ""
+    }
+  ]
+}
