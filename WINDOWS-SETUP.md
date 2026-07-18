@@ -170,7 +170,7 @@ git clone https://github.com/tqphong02/QA-skill.git
 ```bash
 mkdir -p ~/.claude/skills
 
-for s in qa-run testcase-template playwright-pom-automation; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
   cp -R "$s" "$HOME/.claude/skills/"
 done
 
@@ -371,7 +371,7 @@ cd ~/projects/QA-skill
 git pull
 
 # Re-copy vào ~/.claude/skills/
-for s in qa-run testcase-template playwright-pom-automation; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
   cp -R "./$s/." "$HOME/.claude/skills/$s/"
 done
 
@@ -382,7 +382,7 @@ cd ~/.claude/skills/qa-run && npm install
 Hoặc dùng symlink (auto-sync, **chỉ khi bạn hiểu rủi ro**):
 ```bash
 # Backup trước
-for s in qa-run testcase-template playwright-pom-automation; do
+for s in qa-run testcase-template playwright-pom-automation doc-to-md plane-qa google-drive-qa; do
   if [ -d "$HOME/.claude/skills/$s" ] && [ ! -L "$HOME/.claude/skills/$s" ]; then
     mv "$HOME/.claude/skills/$s" "$HOME/.claude/skills/${s}.bak"
   fi

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Google Drive QA"
+  short_description: "CRUD file và báo cáo QA trên Google Drive"
+  default_prompt: "Use $google-drive-qa to safely perform the requested Google Drive CRUD operation."

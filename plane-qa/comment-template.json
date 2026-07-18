@@ -1,0 +1,28 @@
+{
+  "ref": "PROJ-150",
+  "result": "PASS",
+  "environment": [
+    "UAT build 2026.07.18",
+    "Chrome 126"
+  ],
+  "steps": [
+    "Đăng nhập UAT bằng tài khoản QA",
+    "Mở chức năng cần retest và thực hiện lại các bước của ticket",
+    "Quan sát kết quả trên giao diện"
+  ],
+  "observed": [
+    "Chức năng hoạt động đúng và không còn xuất hiện lỗi cũ"
+  ],
+  "expected": [],
+  "checks": [
+    "Luồng chính: Đạt",
+    "Dữ liệu hiển thị: Đạt"
+  ],
+  "conclusion": [
+    "Bug đã được sửa và kết quả đúng kỳ vọng"
+  ],
+  "evidence": [
+    "evidence/retest-step-1.png",
+    "evidence/retest-result.png"
+  ]
+}

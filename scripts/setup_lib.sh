@@ -29,7 +29,7 @@ print_banner() {
 
   ┌──────────────────────────────────────────┐
   │      QA-skill setup (1 lệnh setup)       │
-  │   qa-run · testcase · pom · doc-to-md    │
+  │  QA · Plane · Drive · Testcase · POM     │
   └──────────────────────────────────────────┘
 EOF
   printf '%s\n\n' "$C_RST"
@@ -40,8 +40,8 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup toàn bộ 4 QA skill (qa-run, testcase-template, playwright-pom-automation,
-doc-to-md) + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
+Setup toàn bộ 6 QA skill (qa-run, testcase-template, playwright-pom-automation,
+doc-to-md, plane-qa, google-drive-qa) + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
 deps + auto-detect AI provider + verify.
 
 Options:
@@ -162,7 +162,7 @@ warn_if_node_too_old() {
 }
 
 # ==== Skills resolution ====
-DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md")
+DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "plane-qa" "google-drive-qa")
 
 resolve_skill_list() {
   local only="$1"
@@ -474,7 +474,7 @@ print_summary() {
   cat <<EOF
 
 Next steps:
-  1. Mở Claude Code mới, gõ /skills — sẽ thấy 4 skill đã load
+  1. Mở agent mới và kiểm tra — sẽ thấy 6 skill đã load
   2. Test doc-to-md:      ~/.claude/skills/doc-to-md/scripts/convert.sh <file.pdf>
   3. Test qa-run:         cd <project>/qa && node ~/.claude/skills/qa-run/scripts/login.mjs
 

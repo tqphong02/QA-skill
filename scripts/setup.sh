@@ -2,7 +2,7 @@
 # setup.sh — One-command bootstrap cho QA-skill.
 #
 # Clone về → chạy 1 lệnh → setup đủ:
-#   • Copy 4 skill vào ~/.claude/skills/ (hoặc SKILLS_DIR nếu override)
+#   • Copy 6 skill vào ~/.claude/skills/ (hoặc SKILLS_DIR nếu override)
 #   • Cài Node deps (qa-run + playwright-pom-automation)
 #   • Cài Python deps (markitdown[all] + openpyxl) dùng prebuilt wheel
 #   • Auto-detect AI env (Antigravity / Copilot / Claude Code / standalone)
@@ -118,7 +118,7 @@ else
 fi
 
 # ==== Step 5: Copy skills ====
-log_step "Copying skills (qa-run, testcase-template, playwright-pom-automation, doc-to-md)"
+log_step "Copying 6 QA skills"
 for skill in "${SKILLS[@]}"; do
   copy_skill "$skill" || log_warn "Skill $skill bị skip hoặc fail"
 done

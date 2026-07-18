@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-4 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md
+6 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, plane-qa, google-drive-qa
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 4 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
+Repo này phân phối 6 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
 
 ## Playwright POM Automation
 
@@ -91,8 +91,37 @@ Repo này phân phối 4 skill Quality Engineering (QE) dùng chung cho nhiều 
 
 Đọc chi tiết: [`.claude/skills/doc-to-md/SKILL.md`](doc-to-md/SKILL.md)
 
+## Plane QA
+
+### Khi nào áp dụng
+- Đọc hoặc CRUD ticket Plane ở một hay nhiều workspace
+- Log bug theo format chuẩn, comment PASS/FAILED/BLOCKED và upload evidence inline
+- Viết daily report hoặc test report trên Plane
+
+### Phải làm
+- Parse workspace/project/ticket từ URL trước khi dùng cấu hình mặc định
+- Chạy `scripts/doctor.sh` trước live read/write
+- Bug mới vào `Todo`; retest `FAILED` phải comment evidence rồi chuyển `In Progress`
+- Không nhận hoặc lưu mật khẩu; chỉ dùng Personal API Key từ environment
+
+Đọc chi tiết: [`plane-qa/SKILL.md`](plane-qa/SKILL.md)
+
+## Google Drive QA
+
+### Khi nào áp dụng
+- CRUD file/folder Drive, Docs, Sheets, Slides hoặc permissions
+- Đọc, lưu hoặc archive report/evidence QA trên Google Drive
+- Khôi phục luồng khi OAuth/MCP hết quyền hoặc không được load
+
+### Phải làm
+- Ưu tiên `google-drive` MCP và native tool theo loại file
+- Resolve chính xác file/folder trước write; xác nhận thao tác destructive theo `references/CRUD.md`
+- Không commit OAuth client secret, access token hoặc refresh token
+
+Đọc chi tiết: [`google-drive-qa/SKILL.md`](google-drive-qa/SKILL.md)
+
 ## Cài đặt & cấu hình chung
 
-- **API key**: 1 file config chung `config/api_keys.json` (gitignored), dùng cho cả 4 skill. Xem [`README.md`](README.md) mục "API Keys" và `scripts/ai_provider.py`.
+- **AI API key**: lưu trong `config/api_keys.json` (gitignored) hoặc environment. Plane key và Google OAuth phải dùng environment/local credential riêng, không commit.
 - **Clone**: `git clone git@github.com:tqphong02/QA-skill.git` rồi copy vào `~/.claude/skills/`.
 - **Setup chi tiết**: xem [`SETUP-GUIDE.md`](SETUP-GUIDE.md).

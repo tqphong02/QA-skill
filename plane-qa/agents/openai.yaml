@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plane QA"
+  short_description: "Đọc và quản lý bug, report QA trên Plane"
+  default_prompt: "Use $plane-qa to read or manage the requested Plane QA ticket or report."

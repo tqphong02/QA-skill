@@ -25,6 +25,7 @@ config/api_keys.json
 auth.json
 *service-account*.json
 *credentials*.json
+**/ACCOUNT-PROFILE.md
 
 # Test output (không bao giờ commit evidence/screenshots)
 evidence/
