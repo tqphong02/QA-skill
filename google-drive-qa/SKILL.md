@@ -28,8 +28,9 @@ Never substitute web search or a local same-named file for private Drive content
 2. Read [references/CRUD.md](references/CRUD.md) for every Drive create, read, update, delete, permission, or native Google file request.
 3. For private Drive access, use the configured `google-drive` MCP. Never use public web search as a substitute.
 4. For a local file upload fallback, run `python3 scripts/drive_auth_doctor.py --refresh`, then use `python3 scripts/drive_upload.py <file> <folder_id>`.
-5. For an authentication error, read [references/AUTH.md](references/AUTH.md) and report the exact failing layer: MCP unavailable, OAuth credential missing, access token expired, refresh revoked, scope insufficient, or object permission denied.
-6. Read [references/REPORTS.md](references/REPORTS.md) before summarizing or uploading QA reports.
+5. For first-time Google Cloud and OAuth setup, read [references/GOOGLE_CLOUD_OAUTH_SETUP.md](references/GOOGLE_CLOUD_OAUTH_SETUP.md) and follow its account-type branch without storing credentials in the repository.
+6. For an authentication error, read [references/AUTH.md](references/AUTH.md) and report the exact failing layer: MCP unavailable, OAuth credential missing, access token expired, refresh revoked, scope insufficient, or object permission denied.
+7. Read [references/REPORTS.md](references/REPORTS.md) before summarizing or uploading QA reports.
 
 ## MCP rules
 

@@ -36,9 +36,9 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Test mobile app trên Android và iOS` | mobile-qa | Chốt device matrix, lifecycle và capability Appium trước execution |
 | `Tạo JMeter JMX cho API` | jmeter-qa + performance-qa | Tạo workload contract, generate JMX, validate bằng JMeter thật trước load |
 | `GitHub MCP đã có skill nhưng không dùng được` | github-mcp-qa | Chạy doctor và phân biệt skill, config, auth, loaded tools và repository permission |
-| `Cài toàn bộ skill cho Codex` | installer | Chạy `setup.sh --agent=codex`, cài vào Codex skill home rồi mở phiên mới |
-| `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity`, kiểm tra `/skills`, `/mcp` và không ghi credential vào repo |
-| `Cài skill trên Windows` | installer | Dùng `setup.ps1 -Agent <host>`, Git Bash hoặc WSL và đúng home directory của host |
+| `Cài skill core cho Codex` | installer | Chạy `setup.sh --agent=codex --profile=core`, cài 9 skill thường dùng rồi mở phiên mới |
+| `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity --profile=full`, kiểm tra skill và MCP, không ghi credential vào repo |
+| `Cài skill trên Windows` | installer | Dùng `setup.ps1 -Agent <host> -Profile core`, Git Bash hoặc WSL và đúng home directory của host |
 
 ## Pass criteria cho một model
 

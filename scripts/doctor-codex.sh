@@ -7,6 +7,7 @@ REPO_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/setup_lib.sh"
 
 SKILLS_DIR="${SKILLS_DIR:-${CODEX_HOME:-$HOME/.codex}/skills}"
+PROFILE=$(resolve_profile "${QA_SKILL_PROFILE:-core}") || exit 2
 failures=0
 
 if command -v codex >/dev/null 2>&1; then
@@ -16,14 +17,14 @@ else
   failures=$((failures + 1))
 fi
 
-for skill in "${DEFAULT_SKILLS[@]}"; do
+while IFS= read -r skill; do
   if [[ -f "$SKILLS_DIR/$skill/SKILL.md" ]]; then
     printf 'PASS skill=%s\n' "$skill"
   else
     printf 'FAILED skill_missing=%s expected=%s\n' "$skill" "$SKILLS_DIR/$skill/SKILL.md"
     failures=$((failures + 1))
   fi
-done
+done < <(print_profile_skills "$PROFILE")
 
 if command -v codex >/dev/null 2>&1; then
   if codex mcp list >/dev/null 2>&1; then

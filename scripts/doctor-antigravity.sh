@@ -9,6 +9,7 @@ source "$SCRIPT_DIR/setup_lib.sh"
 SKILLS_DIR="${SKILLS_DIR:-$HOME/.gemini/config/skills}"
 WORKSPACE_CONFIG="${ANTIGRAVITY_WORKSPACE_MCP_CONFIG:-$REPO_DIR/.agents/mcp_config.json}"
 GLOBAL_CONFIG="${ANTIGRAVITY_GLOBAL_MCP_CONFIG:-$HOME/.gemini/config/mcp_config.json}"
+PROFILE=$(resolve_profile "${QA_SKILL_PROFILE:-core}") || exit 2
 ALLOW_MISSING_RUNTIME=0
 [[ "${1:-}" == "--allow-missing-runtime" ]] && ALLOW_MISSING_RUNTIME=1
 failures=0
@@ -39,14 +40,14 @@ else
   failures=$((failures + 1))
 fi
 
-for skill in "${DEFAULT_SKILLS[@]}"; do
+while IFS= read -r skill; do
   if [[ -f "$SKILLS_DIR/$skill/SKILL.md" ]]; then
     printf 'PASS skill=%s\n' "$skill"
   else
     printf 'FAILED skill_missing=%s expected=%s\n' "$skill" "$SKILLS_DIR/$skill/SKILL.md"
     failures=$((failures + 1))
   fi
-done
+done < <(print_profile_skills "$PROFILE")
 
 config_found=0
 for config in "$WORKSPACE_CONFIG" "$GLOBAL_CONFIG"; do

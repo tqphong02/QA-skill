@@ -1,6 +1,6 @@
 # Setup QA-skill trên máy mới
 
-Repository phân phối 16 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `DEFAULT_SKILLS`.
+Repository phân phối 16 skill. Profile `core` cài 9 skill thường dùng và là mặc định; profile `full` cài đủ 16 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
 
 ## 1. Yêu cầu
 
@@ -27,7 +27,7 @@ Không clone credential, `.env`, OAuth token, browser profile, evidence hoặc d
 ### Claude Code
 
 ```bash
-./scripts/setup.sh --agent=claude --yes
+./scripts/setup.sh --agent=claude --profile=core --yes
 ```
 
 Target là `~/.claude/skills`
@@ -37,6 +37,7 @@ Target là `~/.claude/skills`
 ```bash
 ./scripts/setup.sh \
   --agent=codex \
+  --profile=core \
   --yes
 ```
 
@@ -47,7 +48,7 @@ Target là `${CODEX_HOME:-$HOME/.codex}/skills`
 ### Google Antigravity
 
 ```bash
-./scripts/setup.sh --agent=antigravity --yes
+./scripts/setup.sh --agent=antigravity --profile=core --yes
 ```
 
 Target global của Antigravity IDE là `~/.gemini/config/skills`. Mở phiên mới rồi chạy `/skills`
@@ -57,9 +58,19 @@ Repository có `.agents/mcp_config.json` làm workspace MCP template. Mọi serv
 ### Windows PowerShell
 
 ```powershell
-.\scripts\setup.ps1 -Agent codex -Yes
-.\scripts\setup.ps1 -Agent antigravity -Yes
-.\scripts\setup.ps1 -Agent claude -Yes
+.\scripts\setup.ps1 -Agent codex -Profile core -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
+.\scripts\setup.ps1 -Agent claude -Profile core -Yes
+
+Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa` và `github-mcp-qa`
+
+Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa` và `jmeter-qa`
+
+```bash
+./scripts/setup.sh --agent=antigravity --profile=full --yes
+```
+
+Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 7 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
 ```
 
 PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
@@ -76,7 +87,7 @@ PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` k
 ### Dry-run
 
 ```bash
-./scripts/setup.sh --agent=antigravity --dry-run
+./scripts/setup.sh --agent=antigravity --profile=core --dry-run
 ```
 
 ## 4. Cài dependency
@@ -101,7 +112,9 @@ MCP credential luôn thuộc máy và account người dùng, không thuộc rep
 
 ### Google Drive
 
-Làm theo `google-drive-qa/references/AUTH.md`, sau đó chạy Drive doctor và một read-only smoke test.
+Lần đầu, làm theo `google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md` để tạo Google Cloud project, bật API, chọn Audience, thêm scope và tạo OAuth Desktop client
+
+Khi credential đã tồn tại nhưng auth lỗi, làm theo `google-drive-qa/references/AUTH.md`, sau đó chạy Drive doctor và một read-only smoke test
 
 ### GitHub, Chrome DevTools, k6, Postman và Database read-only
 

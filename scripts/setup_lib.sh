@@ -40,11 +40,12 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup toàn bộ 16 QA, Security Engineering và MCP integration skill. Dùng --agent để chọn đúng AI host; --skills-dir chỉ dùng khi cần override có chủ đích.
+Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 16 skill.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
   --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
+  --profile=<name>      core hoặc full; mặc định core
   --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
   --agent=<name>        codex, antigravity hoặc claude; auto chỉ chạy khi detect đúng một host
   --skills-dir=<path>   Override thư mục discovery do --agent chọn
@@ -54,14 +55,16 @@ Options:
 
 Environment variables:
   QA_SKILL_AGENT        Giá trị mặc định cho --agent
+  QA_SKILL_PROFILE      Giá trị mặc định cho --profile
   SKILLS_DIR            Override thư mục discovery
   SKIP_DEPS=1           Tương đương --skip-deps
   NO_COLOR=1            Tắt màu
 
 Examples:
-  ./scripts/setup.sh --agent=codex --yes
-  ./scripts/setup.sh --agent=antigravity --yes
-  ./scripts/setup.sh --agent=claude --yes
+  ./scripts/setup.sh --agent=codex --profile=core --yes
+  ./scripts/setup.sh --agent=antigravity --profile=core --yes
+  ./scripts/setup.sh --agent=claude --profile=core --yes
+  ./scripts/setup.sh --agent=antigravity --profile=full --yes
   ./scripts/setup.sh --agent=codex --skip-deps --yes
   ./scripts/setup.sh --agent=antigravity --dry-run
   ./scripts/setup.sh --agent=claude --only=doc-to-md --yes
@@ -80,7 +83,7 @@ resolve_target_agent() {
     auto)
       local detected=()
       command -v codex >/dev/null 2>&1 && detected+=(codex)
-      if command -v agy >/dev/null 2>&1 || [[ -d "/Applications/Antigravity.app" ]]; then
+      if command -v agy >/dev/null 2>&1 || [[ -d "/Applications/Antigravity IDE.app" ]] || [[ -d "/Applications/Antigravity.app" ]]; then
         detected+=(antigravity)
       fi
       command -v claude >/dev/null 2>&1 && detected+=(claude)
@@ -217,12 +220,38 @@ warn_if_node_too_old() {
 }
 
 # ==== Skills resolution ====
-DEFAULT_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "jmeter-qa" "github-mcp-qa")
+CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa")
+SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "jmeter-qa")
+FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
+DEFAULT_SKILLS=("${CORE_SKILLS[@]}")
+
+resolve_profile() {
+  local requested="${1:-core}"
+  case "$requested" in
+    core|full)
+      printf '%s\n' "$requested"
+      ;;
+    *)
+      log_err "Profile không hỗ trợ: $requested"
+      log_err "Giá trị hợp lệ: core, full"
+      return 1
+      ;;
+  esac
+}
+
+print_profile_skills() {
+  case "$1" in
+    core) printf '%s\n' "${CORE_SKILLS[@]}" ;;
+    full) printf '%s\n' "${FULL_SKILLS[@]}" ;;
+    *) log_err "Không resolve được profile: $1"; return 1 ;;
+  esac
+}
 
 resolve_skill_list() {
   local only="$1"
+  local profile="${2:-core}"
   if [[ -z "$only" ]]; then
-    printf '%s\n' "${DEFAULT_SKILLS[@]}"
+    print_profile_skills "$profile"
     return 0
   fi
   local IFS=','
@@ -240,6 +269,43 @@ resolve_skill_list() {
     return 1
   fi
   printf '%s\n' "${valid[@]}"
+}
+
+sync_profile_visibility() {
+  local profile="$1"
+  local only="${2:-}"
+  [[ "$profile" == "core" ]] || return 0
+  [[ -z "$only" ]] || return 0
+
+  local stash_dir
+  stash_dir="$(dirname "$SKILLS_DIR")/qa-skill-disabled"
+  local stamp
+  stamp=$(date '+%Y%m%d%H%M%S')
+  local moved=0
+
+  for skill in "${SPECIALIZED_SKILLS[@]}"; do
+    local src="$SKILLS_DIR/$skill"
+    [[ -e "$src" ]] || continue
+    local dst="$stash_dir/${skill}-${stamp}"
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      log_dry "move $src → $dst"
+      moved=$((moved + 1))
+      continue
+    fi
+    mkdir -p "$stash_dir"
+    if mv "$src" "$dst"; then
+      log_ok "disabled $skill → $dst"
+      moved=$((moved + 1))
+    else
+      log_err "Không disable được $skill"
+      return 1
+    fi
+  done
+
+  if [[ "$moved" -gt 0 ]]; then
+    log_info "  Profile core đã đưa $moved skill chuyên sâu ra ngoài discovery"
+    log_info "  Chạy --profile=full để cài lại khi cần"
+  fi
 }
 
 # ==== Copy skill (with excludes) ====
@@ -309,10 +375,13 @@ resolve_skill_conflict() {
     b|B)
       local ts
       ts=$(date +%Y%m%d-%H%M%S)
-      local bak="${dst}.bak.$ts"
+      local backup_root
+      backup_root="$(dirname "$SKILLS_DIR")/qa-skill-backups/$ts"
+      local bak="$backup_root/$(basename "$dst")"
       if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         log_dry "mv $dst $bak"
       else
+        mkdir -p "$backup_root"
         mv "$dst" "$bak"
         log_info "  → backed up to $bak"
       fi
@@ -406,7 +475,7 @@ install_python_deps() {
 
 # ==== AI env detect (mirror ai_provider.py:detect_environment) ====
 detect_ai_env() {
-  if [[ -n "${ANTIGRAVITY_API_KEY:-}" ]] || [[ -d "/Applications/Antigravity.app" ]]; then
+  if [[ -n "${ANTIGRAVITY_API_KEY:-}" ]] || [[ -d "/Applications/Antigravity IDE.app" ]] || [[ -d "/Applications/Antigravity.app" ]]; then
     echo "antigravity"
   elif [[ -n "${COPILOT_PRO:-}" ]] || [[ -n "${GITHUB_COPILOT_TOKEN:-}" ]]; then
     echo "copilot_pro"
@@ -431,7 +500,9 @@ setup_ai_config() {
   case "$env_type" in
     antigravity)
       log_ok "Antigravity detected — không cần API key"
-      if [[ -d "/Applications/Antigravity.app" ]]; then
+      if [[ -d "/Applications/Antigravity IDE.app" ]]; then
+        log_info "  (via /Applications/Antigravity IDE.app)"
+      elif [[ -d "/Applications/Antigravity.app" ]]; then
         log_info "  (via /Applications/Antigravity.app)"
       else
         log_info "  (via \$ANTIGRAVITY_API_KEY)"
@@ -513,6 +584,7 @@ print_plan() {
   log_step "Plan"
   log_info "  Repo:           $REPO_DIR"
   log_info "  Agent:          ${TARGET_AGENT:-custom}"
+  log_info "  Profile:        ${PROFILE:-core}$([[ -n ${ONLY_SKILLS:-} ]] && echo ' (--only override)' || true)"
   log_info "  Skills dir:     $SKILLS_DIR"
   log_info "  Skills to setup: $*"
   log_info "  Skip deps:       $([[ ${SKIP_DEPS:-0} -eq 1 ]] && echo yes || echo no)"

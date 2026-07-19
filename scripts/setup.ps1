@@ -2,6 +2,8 @@
 param(
     [ValidateSet("codex", "antigravity", "claude")]
     [string]$Agent,
+    [ValidateSet("core", "full")]
+    [string]$Profile = "core",
     [string]$Only = "",
     [switch]$SkipDeps,
     [switch]$DryRun,
@@ -29,7 +31,7 @@ if (-not $bashCandidates) {
 
 $bash = $bashCandidates[0]
 $repoPosix = $repoDir.Replace("\", "/")
-$arguments = @("--agent=$Agent")
+$arguments = @("--agent=$Agent", "--profile=$Profile")
 if ($Only) { $arguments += "--only=$Only" }
 if ($SkipDeps) { $arguments += "--skip-deps" }
 if ($DryRun) { $arguments += "--dry-run" }

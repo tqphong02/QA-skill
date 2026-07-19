@@ -149,7 +149,20 @@ REQUIRED = {
     "google-drive-qa/SKILL.md": [
         "Cross-model hard gates",
         "google-drive` MCP",
+        "references/GOOGLE_CLOUD_OAUTH_SETUP.md",
         "Read the affected object back",
+    ],
+    "google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md": [
+        "Google Auth Platform",
+        "`Internal`",
+        "`External`",
+        "`Desktop app`",
+        "https://www.googleapis.com/auth/drive",
+        "drive,documents,spreadsheets,presentations",
+        "~/.config/google-drive-mcp/gcp-oauth.keys.json",
+        "Antigravity IDE",
+        "Kiểm tra read-only",
+        "Testing tạo refresh token có thể hết hạn sau 7 ngày",
     ],
     "testcase-template/scripts/gen-testcases.py": [
         "def human_text",
@@ -343,13 +356,18 @@ REQUIRED = {
     ],
     "scripts/setup.sh": [
         "--agent",
+        "--profile",
+        "sync_profile_visibility",
         "resolve_target_agent",
         "resolve_skills_dir",
+        "resolve_profile",
     ],
     "scripts/setup.ps1": [
         'ValidateSet("codex", "antigravity", "claude")',
+        'ValidateSet("core", "full")',
         "Git\\bin\\bash.exe",
         '"--agent=$Agent"',
+        '"--profile=$Profile"',
     ],
     "scripts/doctor-codex.sh": [
         "${CODEX_HOME:-$HOME/.codex}/skills",

@@ -47,13 +47,16 @@ git clone git@github.com:tqphong02/QA-skill.git
 cd QA-skill
 
 # 2a. Codex
-./scripts/setup.sh --agent=codex --yes
+./scripts/setup.sh --agent=codex --profile=core --yes
 
 # 2b. Antigravity
-./scripts/setup.sh --agent=antigravity --yes
+./scripts/setup.sh --agent=antigravity --profile=core --yes
 
 # 2c. Claude Code
-./scripts/setup.sh --agent=claude --yes
+./scripts/setup.sh --agent=claude --profile=core --yes
+
+# Cài đủ 16 skill chuyên sâu khi cần
+./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # 3. Export Plane API key trước khi mở agent
 export PLANE_API_KEY="plane_pat_xxx"
@@ -76,12 +79,15 @@ bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
 Windows PowerShell:
 
 ```powershell
-.\scripts\setup.ps1 -Agent codex -Yes
-.\scripts\setup.ps1 -Agent antigravity -Yes
-.\scripts\setup.ps1 -Agent claude -Yes
+.\scripts\setup.ps1 -Agent codex -Profile core -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
+.\scripts\setup.ps1 -Agent claude -Profile core -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile full -Yes
 ```
 
 Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `plane-qa/ACCOUNT-PROFILE.example.md` và `google-drive-qa/ACCOUNT-PROFILE.example.md`.
+
+Google Drive MCP lần đầu cần cấu hình Google Cloud project, APIs, Audience, scopes và OAuth Desktop client theo [GOOGLE_CLOUD_OAUTH_SETUP.md](./google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md)
 
 Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) và [WINDOWS-SETUP.md](./WINDOWS-SETUP.md). GitHub MCP có guide riêng cho [Codex](./github-mcp-qa/references/codex-github-mcp-vi.md) và [Antigravity](./github-mcp-qa/references/antigravity-github-mcp-vi.md)
 

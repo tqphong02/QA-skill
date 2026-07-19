@@ -1,5 +1,7 @@
 # Google Drive authentication recovery
 
+For first-time Google Cloud project, API, consent screen, scope, Desktop client, Codex, Antigravity, macOS, Linux, and Windows setup, follow [GOOGLE_CLOUD_OAUTH_SETUP.md](GOOGLE_CLOUD_OAUTH_SETUP.md) before using this recovery guide
+
 ## MCP authentication
 
 Symptoms include `authorization required`, `not connected`, or no `google-drive` MCP tools in the session.
@@ -11,6 +13,8 @@ Symptoms include `authorization required`, `not connected`, or no `google-drive`
 5. Retry the exact file or folder request.
 
 The skill cannot repair MCP OAuth by editing Markdown files.
+
+If an External OAuth app remains in `Testing`, Google can expire its refresh token after 7 days. Use `Internal` for users in the same Google Workspace organization or complete the appropriate production and verification process for stable External use
 
 For Antigravity, enable the credential-free `google-drive` template entry only after the OAuth credential path and scopes are supplied through the local host environment. Never commit the OAuth client JSON or generated tokens
 

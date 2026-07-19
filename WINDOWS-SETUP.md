@@ -31,25 +31,33 @@ Không copy `.env`, PAT, OAuth credential, database DSN, browser profile hoặc 
 Codex:
 
 ```powershell
-.\scripts\setup.ps1 -Agent codex -Yes
+.\scripts\setup.ps1 -Agent codex -Profile core -Yes
 ```
 
 Antigravity:
 
 ```powershell
-.\scripts\setup.ps1 -Agent antigravity -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
 ```
 
 Claude Code:
 
 ```powershell
-.\scripts\setup.ps1 -Agent claude -Yes
+.\scripts\setup.ps1 -Agent claude -Profile core -Yes
 ```
 
 Dry-run:
 
 ```powershell
-.\scripts\setup.ps1 -Agent antigravity -DryRun -SkipDeps -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile core -DryRun -SkipDeps -Yes
+
+`-Profile core` cài 9 skill thường dùng và là mặc định. `-Profile full` cài đủ 16 skill
+
+Khi chuyển từ full về core, installer chuyển skill chuyên sâu sang `qa-skill-disabled` ngoài discovery thay vì xóa
+
+```powershell
+.\scripts\setup.ps1 -Agent antigravity -Profile full -Yes
+```
 ```
 
 Target mặc định:
@@ -105,7 +113,7 @@ Không trộn `node_modules` giữa Windows và WSL
 
 ```powershell
 git pull --ff-only
-.\scripts\setup.ps1 -Agent antigravity -Yes
+.\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
 ```
 
 Installer backup skill cũ trước khi copy bản mới

@@ -2,7 +2,7 @@
 # setup.sh — One-command bootstrap cho QA-skill.
 #
 # Clone về → chạy 1 lệnh → setup đủ:
-#   • Copy 16 skill vào đúng thư mục discovery của Codex, Antigravity hoặc Claude
+#   • Copy profile core hoặc full vào đúng thư mục discovery của Codex, Antigravity hoặc Claude
 #   • Cài Node deps (qa-run + playwright-pom-automation)
 #   • Cài Python deps (markitdown[all] + openpyxl) dùng prebuilt wheel
 #   • Auto-detect AI env (Antigravity / Copilot / Claude Code / standalone)
@@ -41,6 +41,7 @@ source "$SCRIPT_DIR/setup_lib.sh"
 
 # ==== Defaults ====
 TARGET_AGENT="${QA_SKILL_AGENT:-auto}"
+PROFILE="${QA_SKILL_PROFILE:-core}"
 SKILLS_DIR="${SKILLS_DIR:-}"
 SKIP_DEPS="${SKIP_DEPS:-0}"
 DRY_RUN="${DRY_RUN:-0}"
@@ -53,6 +54,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-deps)       SKIP_DEPS=1; shift ;;
     --dry-run)         DRY_RUN=1; shift ;;
+    --profile=*)       PROFILE="${1#*=}"; shift ;;
+    --profile)         PROFILE="${2:-}"; shift 2 ;;
     --only=*)          ONLY_SKILLS="${1#*=}"; shift ;;
     --only)            ONLY_SKILLS="${2:-}"; shift 2 ;;
     --agent=*)         TARGET_AGENT="${1#*=}"; shift ;;
@@ -67,6 +70,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 TARGET_AGENT=$(resolve_target_agent "$TARGET_AGENT") || exit 1
+PROFILE=$(resolve_profile "$PROFILE") || exit 1
 if [[ -z "$SKILLS_DIR" ]]; then
   SKILLS_DIR=$(resolve_skills_dir "$TARGET_AGENT") || exit 1
 fi
@@ -97,7 +101,7 @@ log_step "OS detected: $OS_TYPE"
 SKILLS=()
 while IFS= read -r line; do
   SKILLS+=("$line")
-done < <(resolve_skill_list "$ONLY_SKILLS") || exit 1
+done < <(resolve_skill_list "$ONLY_SKILLS" "$PROFILE") || exit 1
 if [[ ${#SKILLS[@]} -eq 0 ]]; then
   log_err "Không có skill nào để setup"; exit 1
 fi
@@ -126,6 +130,7 @@ else
 fi
 
 # ==== Step 5: Copy skills ====
+sync_profile_visibility "$PROFILE" "$ONLY_SKILLS"
 log_step "Copying ${#SKILLS[@]} QA skills"
 for skill in "${SKILLS[@]}"; do
   copy_skill "$skill" || log_warn "Skill $skill bị skip hoặc fail"
