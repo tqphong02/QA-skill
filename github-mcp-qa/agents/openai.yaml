@@ -1,0 +1,13 @@
+interface:
+  display_name: "GitHub MCP QA"
+  short_description: "GitHub, Actions và CI/CD cho QA"
+  default_prompt: "Use $github-mcp-qa to configure or operate GitHub repositories and CI/CD with verified permissions."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "Official GitHub MCP server with all toolsets"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/x/all"
+policy:
+  allow_implicit_invocation: true

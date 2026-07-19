@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 8 skill
+## 16 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -14,6 +14,14 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [pentest-run](./pentest-run/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |
 | [plane-qa](./plane-qa/SKILL.md) | CRUD ticket Plane đa workspace, log bug, comment retest và evidence inline | ticket/comment Plane |
 | [google-drive-qa](./google-drive-qa/SKILL.md) | CRUD Drive, Docs, Sheets, Slides và permissions qua MCP | file/folder/report trên Drive |
+| [data-quality-qa](./data-quality-qa/SKILL.md) | Database, ETL/ELT, reconciliation, lineage và schema drift | data-quality evidence |
+| [ai-quality-qa](./ai-quality-qa/SKILL.md) | LLM, RAG, agent, structured output, safety và regression | eval dataset + report |
+| [accessibility-qa](./accessibility-qa/SKILL.md) | WCAG 2.2, axe, keyboard và screen reader | accessibility evidence |
+| [performance-qa](./performance-qa/SKILL.md) | Baseline, k6/JMeter workload, threshold và bottleneck | performance report |
+| [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
+| [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, device matrix và Appium | mobile QA evidence |
+| [jmeter-qa](./jmeter-qa/SKILL.md) | Sinh và kiểm tra JMeter project có thể import | `.jmx` |
+| [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)
 
@@ -50,11 +58,14 @@ codex mcp add google-drive \
   --env GOOGLE_DRIVE_OAUTH_CREDENTIALS="$HOME/.config/google-drive-mcp/gcp-oauth.keys.json" \
   --env GOOGLE_DRIVE_MCP_SCOPES="drive,drive.file,documents,spreadsheets,presentations" \
   -- npx -y @piotr-agier/google-drive-mcp
+
+# 6. GitHub MCP chính chủ: mỗi người clone tự login account của mình
+"$HOME/.claude/skills/github-mcp-qa/scripts/install-codex.sh" --login
 ```
 
 Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `plane-qa/ACCOUNT-PROFILE.example.md` và `google-drive-qa/ACCOUNT-PROFILE.example.md`.
 
-Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) để biết chi tiết (git config, troubleshooting, bảo mật).
+Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) để biết chi tiết chung. Hướng dẫn GitHub MCP từng bước bằng tiếng Việt nằm tại [github-mcp-qa/references/codex-github-mcp-vi.md](./github-mcp-qa/references/codex-github-mcp-vi.md).
 
 ## API Keys (cho AI models)
 

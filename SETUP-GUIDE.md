@@ -1,6 +1,8 @@
-# SETUP-GUIDE — Push 7 skill lên GitHub → clone máy khác chạy
+# SETUP-GUIDE — Push 16 skill lên GitHub → clone máy khác chạy
 
-> Hướng dẫn này dành cho **7 skill** trong `~/.claude/skills/`:
+> Hướng dẫn này dành cho **16 skill** trong repository. Danh sách canonical nằm trong `scripts/setup_lib.sh` (`DEFAULT_SKILLS`). GitHub MCP có hướng dẫn riêng tại [`github-mcp-qa/references/codex-github-mcp-vi.md`](github-mcp-qa/references/codex-github-mcp-vi.md).
+>
+> Các skill nền tảng:
 > - `qa-run/` (engine + 2 helper mới)
 > - `testcase-template/`
 > - `playwright-pom-automation/`
@@ -8,6 +10,8 @@
 > - `business-analysis/` (XMind + Q&A Markdown/Excel)
 > - `plane-qa/`
 > - `google-drive-qa/`
+> - `data-quality-qa/`, `ai-quality-qa/`, `accessibility-qa/`, `performance-qa/`
+> - `api-contract-qa/`, `mobile-qa/`, `jmeter-qa/`, `github-mcp-qa/`
 
 ---
 
@@ -24,7 +28,7 @@ cd ~/projects/qa-skill
 Script sẽ tự động:
 1. Detect OS (macOS / Linux / WSL)
 2. Check Python ≥3.10 + Node ≥20 (warning nếu thiếu, không abort)
-3. Copy 7 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
+3. Copy 16 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
 4. Cài `npm install` cho qa-run + playwright-pom-automation + business-analysis
 5. Cài `pip install markitdown[all] + openpyxl` (dùng prebuilt wheel)
 6. Auto-detect AI provider (Antigravity / Copilot Pro / Claude Code / standalone)

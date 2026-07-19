@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-8 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, business-analysis, pentest-run, plane-qa, google-drive-qa
+16 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 8 skill Quality Engineering (QE) và Security Engineering dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
+Repo này phân phối 16 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
 
 ## Cross-model deterministic mode
 
@@ -24,6 +24,14 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
 | Pentest được ủy quyền, security assessment, bug bounty, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor trước request mạng |
+| GitHub MCP, repository API, PR, Issues, Actions, CI/CD, OAuth/PAT hoặc đổi account MCP | `github-mcp-qa/SKILL.md` | Phân biệt MCP auth với Git SSH rồi chạy doctor |
+| Database, ETL/ELT, reconciliation, lineage, freshness hoặc schema drift | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary |
+| LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
+| WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
+| Latency, load, stress, spike, soak, k6 hoặc bottleneck | `performance-qa/SKILL.md` | Xác nhận workload contract và stop condition |
+| OpenAPI, Swagger, Postman, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
+| Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
+| Tạo/import/chạy JMeter `.jmx` | `jmeter-qa/SKILL.md` + `performance-qa/SKILL.md` | Tạo workload contract rồi generate JMX |
 
 ### Hard gates
 
@@ -207,6 +215,21 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Không commit OAuth client secret, access token hoặc refresh token
 
 Đọc chi tiết: [`google-drive-qa/SKILL.md`](google-drive-qa/SKILL.md)
+
+## GitHub MCP QA
+
+### Khi nào áp dụng
+- Cài hoặc chẩn đoán GitHub MCP cho Codex
+- Quản lý repository, PR, Issues hoặc Actions CI/CD qua GitHub API
+- Đổi account MCP cá nhân/công ty mà vẫn giữ Git SSH riêng
+
+### Phải làm
+- Dùng endpoint chính chủ `https://api.githubcopilot.com/mcp/x/all`
+- Không commit OAuth credential hoặc PAT
+- Phân biệt Git SSH với MCP OAuth/PAT
+- Xác nhận account, repository và branch trước write; read-back sau mutation
+
+Đọc chi tiết: [`github-mcp-qa/SKILL.md`](github-mcp-qa/SKILL.md)
 
 ## Cài đặt & cấu hình chung
 
