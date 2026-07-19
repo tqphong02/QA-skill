@@ -12,11 +12,26 @@ GLOBAL_CONFIG="${ANTIGRAVITY_GLOBAL_MCP_CONFIG:-$HOME/.gemini/config/mcp_config.
 ALLOW_MISSING_RUNTIME=0
 [[ "${1:-}" == "--allow-missing-runtime" ]] && ALLOW_MISSING_RUNTIME=1
 failures=0
+runtime_surface=""
 
 if command -v agy >/dev/null 2>&1; then
   printf 'PASS runtime agy=%s\n' "$(command -v agy)"
+  runtime_surface="cli"
+elif command -v antigravity >/dev/null 2>&1; then
+  printf 'PASS runtime antigravity=%s\n' "$(command -v antigravity)"
+  runtime_surface="cli"
+elif [[ -d "/Applications/Antigravity IDE.app" ]]; then
+  printf '%s\n' 'PASS runtime=/Applications/Antigravity IDE.app'
+  runtime_surface="ide"
 elif [[ -d "/Applications/Antigravity.app" ]]; then
-  printf '%s\n' 'PASS runtime Antigravity.app'
+  printf '%s\n' 'PASS runtime=/Applications/Antigravity.app'
+  runtime_surface="ide"
+elif [[ -d "$HOME/Applications/Antigravity IDE.app" ]]; then
+  printf 'PASS runtime=%s\n' "$HOME/Applications/Antigravity IDE.app"
+  runtime_surface="ide"
+elif [[ -d "$HOME/Applications/Antigravity.app" ]]; then
+  printf 'PASS runtime=%s\n' "$HOME/Applications/Antigravity.app"
+  runtime_surface="ide"
 elif [[ "$ALLOW_MISSING_RUNTIME" -eq 1 ]]; then
   printf '%s\n' 'BLOCKED runtime_missing antigravity live_slash_test_unavailable'
 else
@@ -50,5 +65,9 @@ if [[ "$config_found" -eq 0 ]]; then
   failures=$((failures + 1))
 fi
 
-printf '%s\n' 'MANUAL mở Antigravity trong workspace đích, chạy /skills rồi /mcp và thực hiện smoke test read-only'
+if [[ "$runtime_surface" == "ide" ]]; then
+  printf '%s\n' 'MANUAL Quit và mở lại Antigravity IDE, vào Agent ... > Customizations > Skills và MCP, rồi thực hiện smoke test read-only trong conversation mới'
+else
+  printf '%s\n' 'MANUAL mở Antigravity CLI trong workspace đích, chạy /skills rồi /mcp và thực hiện smoke test read-only'
+fi
 [[ "$failures" -eq 0 ]]
