@@ -1,6 +1,6 @@
 ---
 name: business-analysis
-description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a connected tester-facing sanity flow, editable XMind business map, prerequisites, related functions, requirement gap analysis, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces Vietnamese sanity journeys with real XMind relationship arrows and matching Q&A deliverables from one hidden validated JSON source
+description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a connected system flow, editable XMind business map, prerequisites, related functions, requirement gap analysis, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces a Vietnamese business flow with real XMind relationship arrows and matching Q&A deliverables from one hidden validated JSON source
 ---
 
 # Business Analysis
@@ -14,8 +14,8 @@ Convert first, reason once, render deterministically
 3. Read the converted Markdown, not the binary document, and preserve source heading or requirement references
 4. Review all 18 areas in [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md)
 5. Build one structured JSON using [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md) and keep its human-readable content in Vietnamese
-6. Define entry state, exit state, sanity checks and explicit cross-flow links for every testable system flow
-7. Build at least one end-to-end `sanity_journeys` path with preparation conditions, ordered functions, transition conditions, checkpoints and final results
+6. Define entry state, exit state, required business outcomes and explicit cross-flow links for every system flow
+7. Build at least one end-to-end path in the internal `sanity_journeys` field with preparation conditions, ordered functions, transition conditions, business control points and final results
 8. Never turn an observed behavior or inference into a confirmed business rule
 9. Run `scripts/generate.sh` to create XMind and both Q&A formats
 10. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success
@@ -51,11 +51,11 @@ Record only what the source supports:
 For every flow, also record:
 
 - Entry state and exit state
-- Preconditions that must be prepared before sanity testing
+- Preconditions that must be prepared before executing the business flow
 - Ordered system processing steps and state changes
-- Minimum sanity checks that prove the flow still works
+- Minimum business outcomes that prove the flow completed correctly
 - Upstream and downstream functions through top-level `flow_links`
-- Tester execution paths through top-level `sanity_journeys`
+- End-to-end execution paths through the internal `sanity_journeys` field
 
 Mark each fact `verified`, `inferred` or `unresolved` with a source reference
 
@@ -100,7 +100,9 @@ Outputs:
 
 The XMind file is generated with the official `xmindmark` package and remains editable in XMind
 
-The XMind is a tester-facing sanity map, not a document dump. It must show the end-to-end system sequence, prerequisites, entry and exit states, mandatory sanity checks, related functions and real relationship arrows between linked flows. Keep detailed Q&A and review coverage in Markdown and Excel only
+The XMind is a business and system flow map, not a document dump or test report. It must show the end-to-end system sequence, prerequisites, entry and exit states, required business outcomes, related functions and real relationship arrows between linked flows. Keep detailed Q&A and review coverage in Markdown and Excel only
+
+The XMind must use exactly one `Luồng hệ thống` sheet so readers see the end-to-end journey and its functions on the same canvas. Render each internal journey path as a horizontal lane under the shared root. Every lane step is the real system function, not a separate summary node. Keep prerequisites, states, business control points, required outcomes and related functions folded under that same function node
 
 ### 6. Read back
 
@@ -118,10 +120,17 @@ The XMind is a tester-facing sanity map, not a document dump. It must show the e
 - Keep the internal JSON under `.business-analysis` and do not present it as a deliverable
 - Keep document paths, section codes, `source_ref` and missing-source diagnostics only in the hidden JSON, never in user-facing Markdown, Excel or XMind
 - Use plain business language so a nontechnical reader can understand every visible field
-- Keep XMind focused on sanity execution and connected system behavior, not the complete Q&A or 18-area review log
-- Every XMind flow must show prerequisites, entry state, ordered processing, exit state, mandatory sanity checks and related functions
+- Keep XMind focused on business flow and connected system behavior, not testing terminology, the complete Q&A or the 18-area review log
+- Every XMind flow must show prerequisites, entry state, ordered processing, exit state, required business outcomes and related functions
 - Render every item in `flow_links` as a visible function-to-function section and a real XMind relationship arrow
-- Put `Kịch bản sanity end-to-end` first so a tester can follow the exact preparation, function order, transition checkpoint and final result without opening the detailed branches
+- Create exactly one `Luồng hệ thống` sheet containing every business journey and every function
+- Render each internal `sanity_journeys` path as a horizontal business lane on the shared canvas
+- Show preparation conditions, every ordered function and final result in the same lane
+- Put transition conditions, business control points, entry and exit states, prerequisites, required outcomes and related functions under the matching function node
+- Fold function detail branches by default so the connected flow remains compact and readable
+- Render both journey transitions and every `flow_links` item as real relationship arrows on the same sheet
+- Never move function relationships or detailed function context to separate sheets
+- Keep the legacy JSON keys `sanity_journeys` and `sanity_checks` internal only and never render those names, `SANITY-*` IDs or testing terms in XMind
 - Keep unanswered questions `Open` with an empty Answer
 - Use `Answered` only when an authority supplied the answer
 - Do not use emoji or icons

@@ -24,6 +24,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
 | `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |
 | `Đọc BRD này, vẽ business flow XMind và tạo Q&A` | doc-to-md → business-analysis | Convert Markdown trước, review đủ 18 vùng, sinh `.xmind`, Q&A `.md` và `.xlsx` có ID khớp |
+| `Pentest target này, tôi có quyền kiểm tra` | pentest-run | Tạo engagement contract, chạy doctor, passive trước, xin duyệt trước Level 2, chỉ confirm finding có control comparison |
 | `Update Google Sheet <URL>` | google-drive-qa | Resolve exact ID, dùng Drive MCP, update đúng range, read-back |
 | `Log bug mới lên Plane <URL>` | plane-qa | Doctor URL workspace, dry-run, tạo ở `Todo`, read-back |
 

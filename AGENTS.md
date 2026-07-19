@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-7 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, business-analysis, plane-qa, google-drive-qa
+8 skills: playwright-pom-automation, qa-run, testcase-template, doc-to-md, business-analysis, pentest-run, plane-qa, google-drive-qa
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 7 skill Quality Engineering (QE) dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
+Repo này phân phối 8 skill Quality Engineering (QE) và Security Engineering dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này được đọc tự động bởi **OpenAI Codex CLI** và các tool khác cũng đọc chuẩn `AGENTS.md`.
 
 ## Cross-model deterministic mode
 
@@ -23,6 +23,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
+| Pentest được ủy quyền, security assessment, bug bounty, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor trước request mạng |
 
 ### Hard gates
 
@@ -32,6 +33,8 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 4. Sau mutation, đọc lại object và đối chiếu ID, content, evidence, state hoặc permission
 5. Nếu thiếu target, expected, role/data hoặc quyền truy cập thì ghi đúng phần thiếu hay `BLOCKED`; không đoán
 6. Với business analysis, không sinh testcase trước khi Q&A quan trọng được trả lời hoặc assumption được đánh dấu rõ
+7. Với pentest, phải có `.pentest/engagement.md`, target, authorization, exclusions và rate limit trước request mạng; Level 2 hoặc Level 3 phải xin duyệt ngay trước khi chạy
+8. Source pentest đã clone chỉ là `source_available`; chỉ chạy tool khi doctor xác nhận executable và dependency là `available`
 
 ### Invariant bắt buộc
 
@@ -43,6 +46,9 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Comment Plane, testcase prose và nội dung người đọc thấy được tạo/sửa qua Drive CRUD không có dấu `.` cuối câu và không có emoji/icon
 - Giữ nguyên ID, URL, filename, sheet/tab name, formula, code, decimal number và machine-readable value
 - Business analysis phải sinh `.xmind`, Q&A Markdown và Q&A Excel từ cùng một JSON; Question ID giữa hai Q&A phải khớp
+- Pentest scanner alert luôn là `Candidate` cho đến khi có reproduction evidence và control comparison
+- Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
+- Không xem `source_available` là tool đã cài hoặc được phép chạy
 
 ## Playwright POM Automation
 
@@ -151,6 +157,23 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Read-back `.xmind`, Q&A Markdown và Q&A Excel trước khi bàn giao
 
 Đọc chi tiết: [`business-analysis/SKILL.md`](business-analysis/SKILL.md)
+
+## Pentest Run
+
+### Khi nào áp dụng
+- Pentest hoặc bug bounty có ủy quyền rõ ràng
+- Recon, kiểm tra phân quyền, injection, race condition hoặc container security
+- Phân tích Burp traffic hoặc binary được cung cấp
+
+### Phải làm
+- Tạo hoặc đọc `.pentest/engagement.md`
+- Chạy `pentest-run/scripts/doctor.sh` trước request mạng
+- Phân biệt source `source_available` với executable `available`
+- Bắt đầu từ passive hoặc low-impact discovery
+- Xin duyệt ngay trước state-changing, exploit validation, concurrency hoặc high-volume action
+- Chỉ xác nhận finding khi có evidence tái hiện và control comparison
+
+Đọc chi tiết: [`pentest-run/SKILL.md`](pentest-run/SKILL.md)
 
 ## Plane QA
 

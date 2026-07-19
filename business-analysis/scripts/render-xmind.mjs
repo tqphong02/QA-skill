@@ -5,6 +5,8 @@ import { parseXMindMarkToXMindFile } from 'xmindmark'
 import JSZip from 'jszip'
 
 const ICON_RE = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u
+const TIMELINE_HORIZONTAL = 'org.xmind.ui.timeline.horizontal'
+const LOGIC_RIGHT = 'org.xmind.ui.logic.right'
 
 function fail(message) {
   console.error(message)
@@ -15,16 +17,6 @@ function clean(value, field = 'content') {
   const text = String(value ?? '').replace(/\s+/g, ' ').trim().replace(/\.+$/, '')
   if (ICON_RE.test(text)) fail(`${field} must not contain emoji or icons`)
   return text.replace(/^[-*#]+\s*/, '').replace(/[<>]/g, '') || 'Chưa xác định'
-}
-
-const STATUS_VI = {
-  verified: 'Đã xác nhận', inferred: 'Suy luận', unresolved: 'Chưa làm rõ',
-  checked: 'Đã review', blocked: 'Bị chặn', not_applicable: 'Không áp dụng',
-  Open: 'Mở', Answered: 'Đã trả lời', Blocked: 'Bị chặn', Cancelled: 'Đã huỷ',
-}
-
-function viStatus(value) {
-  return STATUS_VI[value] || clean(value)
 }
 
 function add(lines, level, value, field) {
@@ -57,30 +49,7 @@ function collectFlows(data) {
 function normalizeLinks(data, flows) {
   const known = new Set(flows.map(item => item.id))
   const links = Array.isArray(data.flow_links) ? data.flow_links : []
-  const valid = links.filter(link => known.has(link.from_flow) && known.has(link.to_flow))
-  if (valid.length || flows.length < 2) return valid
-  return flows.slice(0, -1).map((item, index) => ({
-    from_flow: item.id,
-    to_flow: flows[index + 1].id,
-    label: 'Chuyển sang luồng tiếp theo',
-    condition: 'Luồng trước hoàn tất thành công',
-    data_handoff: 'Trạng thái và dữ liệu nghiệp vụ liên quan',
-    sanity_impact: 'Luồng sau nhận đúng dữ liệu và có thể tiếp tục',
-  }))
-}
-
-function relationshipMarkers(links) {
-  const sources = new Map()
-  const targets = new Map()
-  links.forEach((link, index) => {
-    const marker = String(index + 1)
-    const label = clean(link.label || link.condition || 'Liên kết nghiệp vụ', `flow_links[${index}].label`)
-    if (!sources.has(link.from_flow)) sources.set(link.from_flow, [])
-    if (!targets.has(link.to_flow)) targets.set(link.to_flow, [])
-    sources.get(link.from_flow).push(`[^${marker}](${label})`)
-    targets.get(link.to_flow).push(`[${marker}]`)
-  })
-  return { sources, targets }
+  return links.filter(link => known.has(link.from_flow) && known.has(link.to_flow))
 }
 
 function deriveSanityChecks(flow) {
@@ -92,94 +61,171 @@ function deriveSanityChecks(flow) {
   return checks.length ? checks : ['Luồng hoàn tất với đúng trạng thái và dữ liệu mong đợi']
 }
 
-function buildXMindMark(data) {
-  const flows = collectFlows(data)
-  const flowById = new Map(flows.map(item => [item.id, item]))
-  const links = normalizeLinks(data, flows)
-  const { sources, targets } = relationshipMarkers(links)
-  const lines = [`${clean(data.project, 'project')} — Bản đồ Sanity`]
-  listBranch(lines, 0, 'Phạm vi', [data.scope], 'scope')
-
-  add(lines, 0, 'Kịch bản sanity end-to-end', 'sanity_journeys')
-  for (const [journeyIndex, journey] of (data.sanity_journeys || []).entries()) {
-    add(lines, 1, `${journey.id || `SANITY-${journeyIndex + 1}`} ${journey.name}`, `sanity_journeys[${journeyIndex}]`)
-    listBranch(lines, 2, 'Điều kiện chuẩn bị', journey.preconditions, 'sanity_journey.preconditions')
-    add(lines, 2, 'Thứ tự thực hiện', 'sanity_journey.flow_sequence')
-    for (const [sequenceIndex, sequence] of (journey.flow_sequence || []).entries()) {
-      const linkedFlow = flowById.get(sequence.flow_id)
-      const flowName = linkedFlow
-        ? `${linkedFlow.module.name} — ${linkedFlow.flow.name}`
-        : sequence.flow_id
-      add(lines, 3, `${String(sequenceIndex + 1).padStart(2, '0')} ${flowName}`, 'sanity_journey.sequence')
-      add(lines, 4, `Điều kiện chuyển bước: ${sequence.transition_condition || 'Bước trước hoàn tất thành công'}`, 'sanity_journey.transition_condition')
-      add(lines, 4, `Điểm cần kiểm tra: ${sequence.checkpoint || 'Trạng thái và dữ liệu đầu ra đúng'}`, 'sanity_journey.checkpoint')
-    }
-    listBranch(lines, 2, 'Kết quả cuối', journey.expected_results, 'sanity_journey.expected_results')
-  }
-
-  add(lines, 0, 'Chi tiết và liên kết chức năng', 'system_flow')
-  for (const [index, item] of flows.entries()) {
-    const { id, module, flow } = item
-    const markers = [...(targets.get(id) || []), ...(sources.get(id) || [])]
-    addMarked(
-      lines,
-      1,
-      `${String(index + 1).padStart(2, '0')} ${module.name} — ${flow.name} [${viStatus(flow.status || 'unresolved')}]`,
-      `flows[${index}]`,
-      markers,
-    )
-    add(lines, 2, `Vai trò thực hiện: ${flow.actor || 'Chưa xác định'}`, 'flow.actor')
-    add(lines, 2, `Trạng thái vào: ${flow.entry_state || 'Chưa xác định'}`, 'flow.entry_state')
-    listBranch(lines, 2, 'Điều kiện tiên quyết', flow.preconditions, 'flow.preconditions')
-    add(lines, 2, `Điểm bắt đầu: ${flow.trigger || 'Chưa xác định'}`, 'flow.trigger')
-    add(lines, 2, 'Trình tự hệ thống', 'flow.steps')
-    for (const [stepIndex, step] of (flow.steps || []).entries()) {
-      add(lines, 3, `${String(stepIndex + 1).padStart(2, '0')} ${step.action}`, 'flow.step.action')
-      add(lines, 4, `Hệ thống xử lý: ${step.system_response || 'Chưa xác định'}`, 'flow.step.system_response')
-      if (step.state_change) add(lines, 4, `Chuyển trạng thái: ${step.state_change}`, 'flow.step.state_change')
-    }
-    add(lines, 2, `Trạng thái ra: ${flow.exit_state || 'Chưa xác định'}`, 'flow.exit_state')
-    listBranch(lines, 2, 'Kết quả phải đạt', flow.outcomes, 'flow.outcomes')
-    listBranch(lines, 2, 'Sanity bắt buộc', flow.sanity_checks || deriveSanityChecks(flow), 'flow.sanity_checks')
-    const linkedNames = links
-      .filter(link => link.from_flow === id || link.to_flow === id)
-      .map(link => {
-        const otherId = link.from_flow === id ? link.to_flow : link.from_flow
-        const other = flowById.get(otherId)
-        return other ? `${other.module.name} — ${other.flow.name}` : otherId
-      })
-    listBranch(lines, 2, 'Chức năng liên quan', [...new Set([...(flow.dependencies || []), ...linkedNames])], 'flow.related')
-    listBranch(lines, 2, 'Điểm chưa rõ ảnh hưởng test', flow.unresolved, 'flow.unresolved')
-  }
-
-  add(lines, 0, 'Liên kết giữa các chức năng', 'flow_links')
-  for (const [index, link] of links.entries()) {
-    const from = flowById.get(link.from_flow)
-    const to = flowById.get(link.to_flow)
-    const fromName = from ? `${from.module.name} — ${from.flow.name}` : link.from_flow
-    const toName = to ? `${to.module.name} — ${to.flow.name}` : link.to_flow
-    add(lines, 1, `${fromName} → ${toName}`, `flow_links[${index}]`)
-    add(lines, 2, `Điều kiện chuyển tiếp: ${link.condition || 'Luồng trước hoàn tất thành công'}`, 'flow_link.condition')
-    add(lines, 2, `Dữ liệu bàn giao: ${link.data_handoff || 'Trạng thái và dữ liệu nghiệp vụ liên quan'}`, 'flow_link.data_handoff')
-    add(lines, 2, `Cần sanity: ${link.sanity_impact || 'Luồng sau nhận đúng dữ liệu và có thể tiếp tục'}`, 'flow_link.sanity_impact')
-  }
-
-  add(lines, 0, 'Điều kiện dùng chung', 'cross_cutting')
-  for (const [index, item] of (data.cross_cutting || []).entries()) {
-    add(lines, 1, item.name, `cross_cutting[${index}]`)
-    listBranch(lines, 2, 'Điều kiện cần kiểm tra', item.details, `cross_cutting[${index}].details`)
-  }
-
-  add(lines, 0, 'Vai trò tham gia sanity', 'actors')
-  for (const [index, actor] of (data.actors || []).entries()) {
-    add(lines, 1, actor.name, `actors[${index}]`)
-    listBranch(lines, 2, 'Trách nhiệm chính', actor.responsibilities, `actors[${index}].responsibilities`)
-    listBranch(lines, 2, 'Quyền cần kiểm tra', actor.permissions, `actors[${index}].permissions`)
-  }
-  return `${lines.join('\n')}\n`
+function addMarker(markers, key, marker) {
+  if (!markers.has(key)) markers.set(key, [])
+  markers.get(key).push(marker)
 }
 
-async function checkXMind(filePath, analysisPath) {
+function relatedFunctionNames(flowId, flow, links, flowById) {
+  const linkedNames = links
+    .filter(link => link.from_flow === flowId || link.to_flow === flowId)
+    .map(link => {
+      const otherId = link.from_flow === flowId ? link.to_flow : link.from_flow
+      const other = flowById.get(otherId)
+      return other ? `${other.module.name} — ${other.flow.name}` : otherId
+    })
+  return [...new Set([...(flow.dependencies || []), ...linkedNames])]
+}
+
+function addFlowDetails(lines, level, node, links, flowById) {
+  const { linked, transitionCondition, checkpoint } = node
+  if (transitionCondition) add(lines, level, `Điều kiện chuyển bước: ${transitionCondition}`, 'journey.transition_condition')
+  if (checkpoint) add(lines, level, `Điểm kiểm soát nghiệp vụ: ${checkpoint}`, 'journey.checkpoint')
+  add(lines, level, `Trạng thái vào: ${linked.flow.entry_state || 'Chưa xác định'}`, 'flow.entry_state')
+  add(lines, level, `Trạng thái ra: ${linked.flow.exit_state || 'Chưa xác định'}`, 'flow.exit_state')
+  listBranch(lines, level, 'Điều kiện tiên quyết', linked.flow.preconditions, 'flow.preconditions')
+  listBranch(lines, level, 'Kết quả cần bảo đảm', linked.flow.sanity_checks || deriveSanityChecks(linked.flow), 'flow.sanity_checks')
+  listBranch(lines, level, 'Chức năng liên quan', relatedFunctionNames(linked.id, linked.flow, links, flowById), 'flow.related')
+}
+
+function buildUnifiedMark(data, flows, links) {
+  const flowById = new Map(flows.map(item => [item.id, item]))
+  const markers = new Map()
+  const flowOccurrences = new Map()
+  const usedFlowIds = new Set()
+  const foldTitles = new Set()
+  foldTitles.add('Điều kiện chuẩn bị')
+  foldTitles.add('Kết quả cuối')
+  let relationshipIndex = 0
+
+  const journeys = (data.sanity_journeys || []).map((journey, journeyIndex) => {
+    const journeyId = journey.id || `SANITY-${journeyIndex + 1}`
+    const prepKey = `${journeyId}:prep`
+    const resultKey = `${journeyId}:result`
+    const steps = (journey.flow_sequence || []).map((item, stepIndex) => {
+      const linked = flowById.get(item.flow_id)
+      if (!linked) fail(`Unknown flow in ${journeyId}: ${item.flow_id}`)
+      usedFlowIds.add(linked.id)
+      const key = `${journeyId}:step:${stepIndex}`
+      const title = `${String(stepIndex + 1).padStart(2, '0')} ${linked.module.name} — ${linked.flow.name}`
+      const node = {
+        key,
+        title,
+        linked,
+        transitionCondition: item.transition_condition || 'Bước trước hoàn tất thành công',
+        checkpoint: item.checkpoint || 'Trạng thái và dữ liệu đầu ra đúng',
+      }
+      if (!flowOccurrences.has(linked.id)) flowOccurrences.set(linked.id, [])
+      flowOccurrences.get(linked.id).push(node)
+      foldTitles.add(title)
+      return node
+    })
+    const chain = [prepKey, ...steps.map(step => step.key), resultKey]
+    if (steps.length) {
+      for (let index = 0; index < chain.length - 1; index += 1) {
+        relationshipIndex += 1
+        const label = index === 0 ? 'Bắt đầu' : index === chain.length - 2 ? 'Hoàn tất' : 'Tiếp theo'
+        addMarker(markers, chain[index], `[^${relationshipIndex}](${label})`)
+        addMarker(markers, chain[index + 1], `[${relationshipIndex}]`)
+      }
+    }
+    const visibleTitle = `Luồng nghiệp vụ ${String(journeyIndex + 1).padStart(2, '0')} — ${clean(journey.name)}`
+    return { journey, journeyId, visibleTitle, prepKey, resultKey, steps }
+  })
+
+  const extraFlows = flows
+    .filter(item => !usedFlowIds.has(item.id))
+    .map((linked, index) => {
+      const key = `extra:${linked.id}`
+      const title = `${String(index + 1).padStart(2, '0')} ${linked.module.name} — ${linked.flow.name}`
+      const node = { key, title, linked }
+      flowOccurrences.set(linked.id, [node])
+      foldTitles.add(title)
+      return node
+    })
+
+  links.forEach((link, index) => {
+    const source = flowOccurrences.get(link.from_flow)?.[0]
+    const target = flowOccurrences.get(link.to_flow)?.[0]
+    if (!source || !target) fail(`Cannot place flow link ${link.from_flow} -> ${link.to_flow}`)
+    relationshipIndex += 1
+    const label = clean(link.label || link.condition || 'Liên kết nghiệp vụ', `flow_links[${index}].label`)
+    addMarker(markers, source.key, `[^${relationshipIndex}](${label})`)
+    addMarker(markers, target.key, `[${relationshipIndex}]`)
+  })
+
+  const lines = [`${clean(data.project, 'project')} — Luồng hệ thống`]
+  journeys.forEach(({ journey, visibleTitle, prepKey, resultKey, steps }, journeyIndex) => {
+    add(lines, 0, visibleTitle, `sanity_journeys[${journeyIndex}].name`)
+    addMarked(lines, 1, 'Điều kiện chuẩn bị', 'journey.preconditions', markers.get(prepKey) || [])
+    const preconditions = Array.isArray(journey.preconditions) ? journey.preconditions : []
+    if (!preconditions.length) add(lines, 2, 'Chưa xác định', 'journey.preconditions')
+    preconditions.forEach((item, index) => add(lines, 2, item, `journey.preconditions[${index}]`))
+    steps.forEach(node => {
+      addMarked(lines, 1, node.title, 'journey.sequence', markers.get(node.key) || [])
+      addFlowDetails(lines, 2, node, links, flowById)
+    })
+    addMarked(lines, 1, 'Kết quả cuối', 'journey.expected_results', markers.get(resultKey) || [])
+    const results = Array.isArray(journey.expected_results) ? journey.expected_results : []
+    if (!results.length) add(lines, 2, 'Chưa xác định', 'journey.expected_results')
+    results.forEach((item, index) => add(lines, 2, item, `journey.expected_results[${index}]`))
+  })
+
+  if (extraFlows.length) {
+    add(lines, 0, 'Chức năng bổ sung chưa nằm trong luồng nghiệp vụ chính', 'extra_flows')
+    extraFlows.forEach(node => {
+      addMarked(lines, 1, node.title, 'extra_flow', markers.get(node.key) || [])
+      addFlowDetails(lines, 2, node, links, flowById)
+    })
+  }
+
+  return {
+    mark: `${lines.join('\n')}\n`,
+    journeyTitles: journeys.map(item => item.visibleTitle),
+    foldTitles,
+  }
+}
+
+function safeSheetTitle(value, fallback) {
+  const title = clean(value).replace(/[\\/?*:[\]]/g, ' ').trim()
+  return (title || fallback).slice(0, 31)
+}
+
+function walkTopics(topic, callback) {
+  callback(topic)
+  for (const child of topic.children?.attached || []) walkTopics(child, callback)
+}
+
+async function sheetFromMark(mark, title, journeyTitles, foldTitles) {
+  const arrayBuffer = await parseXMindMarkToXMindFile(mark)
+  const zip = await JSZip.loadAsync(Buffer.from(arrayBuffer))
+  const sheets = JSON.parse(await zip.file('content.json').async('string'))
+  const sheet = sheets[0]
+  sheet.title = safeSheetTitle(title, 'Luồng hệ thống')
+  sheet.rootTopic.structureClass = LOGIC_RIGHT
+  const journeySet = new Set(journeyTitles)
+  walkTopics(sheet.rootTopic, topic => {
+    if (journeySet.has(topic.title)) topic.structureClass = TIMELINE_HORIZONTAL
+    if (foldTitles.has(String(topic.title || '').trim())) topic.branch = 'folded'
+  })
+  return sheet
+}
+
+async function buildWorkbook(data) {
+  const flows = collectFlows(data)
+  const links = normalizeLinks(data, flows)
+  const unified = buildUnifiedMark(data, flows, links)
+  const sheet = await sheetFromMark(unified.mark, 'Luồng hệ thống', unified.journeyTitles, unified.foldTitles)
+  const sheets = [sheet]
+
+  const output = new JSZip()
+  output.file('content.json', JSON.stringify(sheets))
+  output.file('manifest.json', JSON.stringify({ 'file-entries': { 'content.json': {}, 'metadata.json': {} } }))
+  output.file('metadata.json', JSON.stringify({}))
+  return output.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } })
+}
+
+async function readSheets(filePath) {
   if (!fs.existsSync(filePath)) fail(`XMind file not found: ${filePath}`)
   const content = fs.readFileSync(filePath)
   if (content.length < 200 || content[0] !== 0x50 || content[1] !== 0x4b) {
@@ -188,33 +234,41 @@ async function checkXMind(filePath, analysisPath) {
   const zip = await JSZip.loadAsync(content)
   const contentFile = zip.file('content.json')
   if (!contentFile) fail(`XMind content.json is missing: ${filePath}`)
-  const sheets = JSON.parse(await contentFile.async('string'))
-  const sheet = sheets[0]
-  const topTopics = sheet?.rootTopic?.children?.attached || []
-  const topTitles = new Set(topTopics.map(topic => topic.title))
-  for (const required of ['Kịch bản sanity end-to-end', 'Chi tiết và liên kết chức năng', 'Liên kết giữa các chức năng']) {
-    if (!topTitles.has(required)) fail(`XMind is missing required branch: ${required}`)
+  return JSON.parse(await contentFile.async('string'))
+}
+
+async function checkXMind(filePath, analysisPath) {
+  const sheets = await readSheets(filePath)
+  if (!sheets.length) fail(`XMind has no sheet: ${filePath}`)
+  if (sheets.length !== 1) fail(`XMind must contain one unified business flow sheet`)
+  if (/sanity/i.test(JSON.stringify(sheets))) fail(`XMind user-facing content must not contain test terminology such as sanity`)
+  if (sheets[0]?.rootTopic?.structureClass !== LOGIC_RIGHT) {
+    fail(`Unified XMind root must use logic-right layout for horizontal journey lanes`)
   }
+
   if (analysisPath) {
     const analysis = JSON.parse(fs.readFileSync(analysisPath, 'utf8'))
-    const expectedLinks = (analysis.flow_links || []).length
     const expectedJourneys = (analysis.sanity_journeys || []).length
-    const actualLinks = (sheet.relationships || []).length
-    const journeyBranch = topTopics.find(topic => topic.title === 'Kịch bản sanity end-to-end')
-    const actualJourneys = journeyBranch?.children?.attached?.length || 0
-    if (actualLinks !== expectedLinks) {
-      fail(`XMind relationship mismatch: expected=${expectedLinks}; actual=${actualLinks}`)
+    const topLevelTopics = sheets[0].rootTopic.children?.attached || []
+    const journeyTopics = topLevelTopics.slice(0, expectedJourneys)
+    if (journeyTopics.length !== expectedJourneys) fail(`XMind business journey count does not match input`)
+    for (const [index, topic] of journeyTopics.entries()) {
+      if (topic.structureClass !== TIMELINE_HORIZONTAL) fail(`Business journey ${index + 1} is not a horizontal lane`)
     }
-    if (actualJourneys !== expectedJourneys) {
-      fail(`XMind sanity journey mismatch: expected=${expectedJourneys}; actual=${actualJourneys}`)
+    const expectedJourneyRelationships = (analysis.sanity_journeys || [])
+      .reduce((total, journey) => total + ((journey.flow_sequence || []).length ? journey.flow_sequence.length + 1 : 0), 0)
+    const expectedRelationships = expectedJourneyRelationships + (analysis.flow_links || []).length
+    const actualRelationships = (sheets[0].relationships || []).length
+    if (actualRelationships !== expectedRelationships) {
+      fail(`Unified XMind relationship mismatch: expected=${expectedRelationships}; actual=${actualRelationships}`)
     }
   }
-  console.log(`XMIND PASS: ${path.resolve(filePath)}`)
+  console.log(`XMIND PASS: ${path.resolve(filePath)} with ${sheets.length} sheets`)
 }
 
 const args = process.argv.slice(2)
 if (args[0] === '--check') {
-  if (!args[1]) fail('Usage: render-xmind.mjs --check <file.xmind>')
+  if (!args[1]) fail('Usage: render-xmind.mjs --check <file.xmind> [analysis.json]')
   await checkXMind(path.resolve(args[1]), args[2] ? path.resolve(args[2]) : undefined)
   process.exit(0)
 }
@@ -226,9 +280,8 @@ const data = JSON.parse(fs.readFileSync(inputPath, 'utf8'))
 for (const field of ['project', 'scope', 'source_markdown', 'review_coverage', 'modules', 'questions', 'flow_links', 'sanity_journeys']) {
   if (data[field] === undefined || data[field] === null) fail(`Missing required field: ${field}`)
 }
-const xmindmark = buildXMindMark(data)
-const arrayBuffer = await parseXMindMarkToXMindFile(xmindmark)
+const buffer = await buildWorkbook(data)
 fs.mkdirSync(path.dirname(outputPath), { recursive: true })
-fs.writeFileSync(outputPath, Buffer.from(arrayBuffer))
+fs.writeFileSync(outputPath, buffer)
 await checkXMind(outputPath, inputPath)
 console.log(`XMIND WRITTEN: ${outputPath}`)

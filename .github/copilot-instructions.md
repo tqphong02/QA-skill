@@ -12,6 +12,9 @@ Hard requirements:
 - Drive private CRUD uses `google-drive-qa` and the configured Drive MCP, followed by read-back verification
 - Testcase generation uses `testcase-template` and its generator without inventing columns
 - Business document analysis uses `doc-to-md` first when needed, then `business-analysis`; review all 18 areas and generate matching XMind, Q&A Markdown, and Q&A Excel from one JSON source
+- Authorized pentest work uses `pentest-run`; create `.pentest/engagement.md`, run its doctor and resolve scope, authorization, exclusions and rate limits before any network request
+- Treat scanner alerts as `Candidate` until deterministic reproduction and a control comparison confirm them; request approval immediately before Level 2 or Level 3 actions
+- Never enable `/yolo` outside an explicitly authorized isolated lab
 - API testcase mode is opt-in only when the user explicitly asks to write API testcases or testcases for an endpoint, OpenAPI/Swagger, Postman collection, or curl request; merely mentioning an API artifact does not switch modes
 - For API testcase files, run `testcase-template/scripts/import-api-spec.py` first and do not generate Excel while `review_required` is non-empty
 - Testcase generation must write the complete same-basename Markdown before Excel; future agents read Markdown first
