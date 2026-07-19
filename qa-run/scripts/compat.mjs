@@ -3,7 +3,7 @@
 // giữa các browser engine + device emulation.
 //
 // CÁCH DÙNG:
-//   node ~/.claude/skills/qa-run/scripts/compat.mjs <path> [engines] [devices]
+//   node <skill-root>/scripts/compat.mjs <path> [engines] [devices]
 //   node compat.mjs /dashboard chromium,firefox,webkit iphone-12,ipad-11
 //
 // Mặc định: engines = chromium,firefox,webkit ; devices = (empty)

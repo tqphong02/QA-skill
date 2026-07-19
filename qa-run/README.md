@@ -20,16 +20,16 @@ Skill QA **exploratory/ad-hoc** bằng AI lái UI (MCP Playwright) + script npm 
 
 ## 🚀 Quickstart
 ```bash
-cd ~/.claude/skills/qa-run && npm install      # 1 lần cho cả máy
+cd <skill-root> && npm install      # 1 lần cho cả máy
 
 cd /path/to/MyProject/qa                        # thư mục QA của dự án
-cp ~/.claude/skills/qa-run/.env.example .env    # điền QA_BASE_URL/EMAIL/PASSWORD (+ PLANE_*)
-node ~/.claude/skills/qa-run/scripts/login.mjs  # → auth.json + evidence/ ở đây
+cp <skill-root>/.env.example .env    # điền QA_BASE_URL/EMAIL/PASSWORD (+ PLANE_*)
+node <skill-root>/scripts/login.mjs  # → auth.json + evidence/ ở đây
 ```
 
 ## 📁 Cấu trúc (engine — KHÔNG chứa data dự án)
 ```
-~/.claude/skills/qa-run/
+<skill-root>/
 ├── GUIDE.md · SKILL.md · TESTING-TECHNIQUES.md · README.md
 ├── references/UI-BUG-CATALOG.md
 ├── lib/        # driver / ui / assert (engine Node thuần, portable)

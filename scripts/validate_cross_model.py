@@ -4,10 +4,30 @@
 from pathlib import Path
 import ast
 import json
+import re
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+SKILLS = (
+    "accessibility-qa",
+    "ai-quality-qa",
+    "api-contract-qa",
+    "business-analysis",
+    "data-quality-qa",
+    "doc-to-md",
+    "github-mcp-qa",
+    "google-drive-qa",
+    "jmeter-qa",
+    "mobile-qa",
+    "pentest-run",
+    "performance-qa",
+    "plane-qa",
+    "playwright-pom-automation",
+    "qa-run",
+    "testcase-template",
+)
 
 REQUIRED = {
     "AGENTS.md": [
@@ -27,6 +47,9 @@ REQUIRED = {
         "business-analysis/SKILL.md",
         "pentest-run/SKILL.md",
         ".pentest/engagement.md",
+        "Chrome DevTools MCP",
+        "Postman MCP",
+        "mcp_not_configured",
     ],
     "GEMINI.md": [
         "Cross-model deterministic mode",
@@ -42,6 +65,9 @@ REQUIRED = {
         "business-analysis/SKILL.md",
         "pentest-run/SKILL.md",
         ".pentest/engagement.md",
+        "Chrome DevTools MCP",
+        "Postman MCP",
+        "mcp_not_configured",
     ],
     ".github/copilot-instructions.md": [
         "RETEST_PLUS",
@@ -55,6 +81,8 @@ REQUIRED = {
         "18 areas",
         "pentest-run",
         "control comparison",
+        "Chrome DevTools or k6 MCP",
+        "exact failing layer",
     ],
     "MODEL-COMPATIBILITY.md": [
         "Retest <Plane URL>",
@@ -65,6 +93,14 @@ REQUIRED = {
         "Tạo Markdown testcase đầy đủ trước Excel",
         "business flow XMind",
         "Pentest target này",
+        "Kết nối Chrome DevTools MCP",
+        "Kết nối Postman MCP",
+        "Kết nối database MCP",
+        "Audit accessibility trang login",
+        "Đánh giá chatbot RAG",
+        "Test mobile app trên Android và iOS",
+        "Tạo JMeter JMX cho API",
+        "GitHub MCP đã có skill nhưng không dùng được",
     ],
     "PENTEST-RUN-GUIDE.md": [
         "Engagement contract bắt buộc",
@@ -266,8 +302,117 @@ REQUIRED = {
         '"google-drive-qa"',
         '"pentest-run"',
         "PyYAML",
+        "resolve_target_agent",
+        "resolve_skills_dir",
+        "${CODEX_HOME:-$HOME/.codex}/skills",
+        "$HOME/.gemini/config/skills",
+    ],
+    "performance-qa/SKILL.md": [
+        "references/MCP_SETUP.md",
+        "MCP configuration as separate from load authorization",
+    ],
+    "performance-qa/references/MCP_SETUP.md": [
+        "chrome-devtools-mcp@latest",
+        "k6 x mcp",
+        "doctor-stack.sh",
+    ],
+    "api-contract-qa/SKILL.md": [
+        "references/POSTMAN_MCP.md",
+        "doctor-stack.sh postman",
+    ],
+    "api-contract-qa/references/POSTMAN_MCP.md": [
+        "https://mcp.postman.com/minimal",
+        "codex mcp login postman",
+        "mcp_not_loaded",
+    ],
+    "data-quality-qa/SKILL.md": [
+        "references/DATABASE_MCP.md",
+        "proof of read-only access",
+    ],
+    "data-quality-qa/references/DATABASE_MCP.md": [
+        "DBHub",
+        "readonly = true",
+        "mongodb-mcp-server@latest --readOnly",
+        "read-only account",
+    ],
+    "github-mcp-qa/scripts/doctor-stack.sh": [
+        "mcp_not_configured",
+        "runtime_missing",
+        "--agent",
+        "MANUAL",
+    ],
+    "scripts/setup.sh": [
+        "--agent",
+        "resolve_target_agent",
+        "resolve_skills_dir",
+    ],
+    "scripts/setup.ps1": [
+        'ValidateSet("codex", "antigravity", "claude")',
+        "Git\\bin\\bash.exe",
+        '"--agent=$Agent"',
+    ],
+    "scripts/doctor-codex.sh": [
+        "${CODEX_HOME:-$HOME/.codex}/skills",
+        "codex mcp list",
+        "MANUAL",
+    ],
+    "scripts/doctor-antigravity.sh": [
+        "$HOME/.gemini/config/skills",
+        ".agents/mcp_config.json",
+        "/skills rồi /mcp",
+    ],
+    "github-mcp-qa/scripts/doctor-codex.sh": [
+        "https://api.githubcopilot.com/mcp/",
+        "mcp_not_configured",
+    ],
+    "github-mcp-qa/scripts/doctor-antigravity.sh": [
+        ".agents/mcp_config.json",
+        'server.get("disabled", False)',
+        "MANUAL run /mcp",
+    ],
+    "github-mcp-qa/references/antigravity-github-mcp-vi.md": [
+        "~/.gemini/config/mcp_config.json",
+        ".agents/mcp_config.json",
+        '"disabled": false',
+        "/mcp",
+    ],
+    "WINDOWS-SETUP.md": [
+        "setup.ps1 -Agent codex",
+        "setup.ps1 -Agent antigravity",
+        "%USERPROFILE%\\.codex\\skills",
+        "%USERPROFILE%\\.gemini\\config\\skills",
+    ],
+    "doc-to-md/scripts/convert.sh": [
+        '"${1:-}"',
+        "sys.argv[1]",
+        "sys.argv[2]",
+    ],
+    "playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js": [
+        "PERFORMANCE_CONTRACT",
+        "K6_LOAD_APPROVED",
+        "target: 1",
+        "authorization_reference",
+        "abort_conditions",
+    ],
+    "playwright-pom-automation/assets/templates/package.json": [
+        '"@axe-core/playwright"',
     ],
 }
+
+LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+
+
+def validate_local_links(path, failures):
+    text = path.read_text(encoding="utf-8")
+    for raw_target in LINK_PATTERN.findall(text):
+        target = raw_target.strip().strip("<>").split("#", 1)[0]
+        if not target or target.startswith(("http://", "https://", "mailto:")):
+            continue
+        if "<" in target or "${" in target:
+            continue
+        resolved = (path.parent / target).resolve()
+        if not resolved.exists():
+            failures.append(f"{path.relative_to(ROOT)}: broken local link {raw_target!r}")
 
 
 def main():
@@ -281,6 +426,31 @@ def main():
         for needle in needles:
             if needle not in text:
                 failures.append(f"{relative}: missing contract token {needle!r}")
+
+    for skill in SKILLS:
+        for relative in (
+            Path(skill) / "SKILL.md",
+            Path(skill) / "agents" / "openai.yaml",
+            Path(".cursor/rules") / f"{skill}.mdc",
+            Path(".windsurf/rules") / f"{skill}.md",
+        ):
+            if not (ROOT / relative).is_file():
+                failures.append(f"missing cross-model packaging: {relative}")
+
+    link_files = [
+        *sorted((ROOT / ".cursor/rules").glob("*.mdc")),
+        *sorted((ROOT / ".windsurf/rules").glob("*.md")),
+        ROOT / "README.md",
+        ROOT / "SETUP-GUIDE.md",
+        ROOT / "github-mcp-qa/references/qa-mcp-stack-vi.md",
+        ROOT / "performance-qa/references/MCP_SETUP.md",
+        ROOT / "api-contract-qa/references/POSTMAN_MCP.md",
+        ROOT / "data-quality-qa/references/DATABASE_MCP.md",
+        ROOT / "playwright-pom-automation/assets/templates/tests/README.md",
+    ]
+    for path in link_files:
+        if path.is_file():
+            validate_local_links(path, failures)
 
     for relative in (
         "plane-qa/comments/post-result.py",
@@ -304,12 +474,40 @@ def main():
         "testcase-template/examples/sample-api-input.json",
         "business-analysis/examples/sample-analysis.json",
         "business-analysis/package.json",
+        ".agents/mcp_config.json",
     ):
         path = ROOT / relative
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             failures.append(f"{relative}: invalid JSON: {exc}")
+
+    mcp_template = json.loads((ROOT / ".agents/mcp_config.json").read_text(encoding="utf-8"))
+    for name, server in mcp_template.get("mcpServers", {}).items():
+        if server.get("disabled") is not True:
+            failures.append(f".agents/mcp_config.json: {name} must default to disabled")
+        serialized = json.dumps(server).lower()
+        if any(token in serialized for token in ("bearer ", "github_pat_", "plane_pat_", "password")):
+            failures.append(f".agents/mcp_config.json: possible credential in {name}")
+
+    forbidden_paths = ("/Users/" + "user", "/Users/" + "<user>")
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or ".git" in path.parts or "node_modules" in path.parts:
+            continue
+        if path == Path(__file__).resolve():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for forbidden in forbidden_paths:
+            if forbidden in text:
+                failures.append(f"{path.relative_to(ROOT)}: non-portable path {forbidden!r}")
+
+    for skill in SKILLS:
+        text = (ROOT / skill / "SKILL.md").read_text(encoding="utf-8")
+        if "Use when Codex" in text or "Codex needs" in text or "Codex receives" in text:
+            failures.append(f"{skill}/SKILL.md: description is not agent-neutral")
 
     if failures:
         print("CROSS-MODEL CONTRACT FAILED")

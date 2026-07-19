@@ -6,7 +6,7 @@ description: Use when scaffolding or extending a Playwright + Page Object Model 
 # Playwright POM Automation
 
 Load the full skill body when the trigger matches:
-- Skill file: [`playwright-pom-automation/SKILL.md`](../playwright-pom-automation/SKILL.md)
+- Skill file: [`playwright-pom-automation/SKILL.md`](../../playwright-pom-automation/SKILL.md)
 
 ## Khi nào áp dụng
 - Scaffold dự án Playwright mới

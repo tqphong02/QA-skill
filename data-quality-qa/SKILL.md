@@ -1,6 +1,6 @@
 ---
 name: data-quality-qa
-description: Validate database, ingestion, ETL/ELT, lakehouse, export, reconciliation, schema drift, data lineage, freshness, completeness, accuracy, uniqueness, idempotency, and source-to-target behavior. Use when Codex needs to test data pipelines, compare datasets, diagnose incorrect or missing records, verify Postgres/MySQL/Spark/Delta flows, or produce data-quality evidence for QA-MDS and OneBrain.
+description: Validate database, ingestion, ETL/ELT, lakehouse, export, reconciliation, schema drift, data lineage, freshness, completeness, accuracy, uniqueness, idempotency, and source-to-target behavior. Use when an AI coding agent needs to test data pipelines, compare datasets, diagnose incorrect or missing records, verify Postgres/MySQL/Spark/Delta flows, connect or diagnose a database read-only MCP, or produce data-quality evidence for QA-MDS and OneBrain.
 ---
 
 # Data Quality QA
@@ -25,6 +25,8 @@ Run evidence-led data validation without modifying production data.
 - Use dbt tests or dbt MCP only when dbt is actually present; start with discovery and compile/read operations before commands that can materialize data
 - Use project-native Spark/Delta tools for OneBrain rather than introducing dbt only for QA
 - Use browser QA only to trigger or observe a pipeline; validate persisted data through the data layer
+
+Read [references/DATABASE_MCP.md](references/DATABASE_MCP.md) before configuring any database MCP. Never accept a normal application account as proof of read-only access. Run `../github-mcp-qa/scripts/doctor-stack.sh database-readonly` after configuration.
 
 Read [references/CHECK_MATRIX.md](references/CHECK_MATRIX.md) when designing coverage or reconciling an ingestion flow.
 

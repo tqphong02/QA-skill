@@ -1,7 +1,11 @@
 // Tier 2 — k6 load test (chạy NGOÀI suite Playwright, job CI riêng).
 // Cài k6:  brew install k6  (mac) / xem docs k6 cho Linux/Windows
-// Chạy:    k6 run tests/performance/k6-load-test.js
-//          k6 run -e BASE_URL=https://staging.example.com tests/performance/k6-load-test.js
+// Baseline an toàn một user:
+//   k6 run -e BASE_URL=https://staging.example.com tests/performance/k6-load-test.js
+// Load đã được duyệt:
+//   k6 run -e BASE_URL=https://staging.example.com \
+//     -e PERFORMANCE_CONTRACT=tests/performance/performance-contract.json \
+//     -e K6_LOAD_APPROVED=true tests/performance/k6-load-test.js
 //
 // Mục đích: load/stress test, nhiều virtual user, kiểm SLA (p95/p99).
 import http from 'k6/http';
@@ -12,21 +16,55 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 const errorRate = new Rate('errors');
 const latency = new Trend('page_latency_ms');
 
+function fail(message) {
+  throw new Error(`K6 GUARDRAIL: ${message}`);
+}
+
+function loadContract() {
+  const path = __ENV.PERFORMANCE_CONTRACT;
+  if (!path) return null;
+
+  try {
+    return JSON.parse(open(path));
+  } catch (error) {
+    fail(`không đọc được performance contract tại ${path}: ${error.message}`);
+  }
+}
+
+const contract = loadContract();
+const stages = contract?.workload?.stages || [{ duration: '30s', target: 1 }];
+const maxVus = Math.max(...stages.map((stage) => Number(stage.target || 0)));
+const baseUrl = __ENV.BASE_URL || contract?.target;
+
+if (!baseUrl || !/^https?:\/\//.test(baseUrl)) {
+  fail('phải truyền BASE_URL hoặc target URL hợp lệ trong performance contract');
+}
+
+if (maxVus > 1) {
+  if (!contract) fail('load lớn hơn một user bắt buộc có PERFORMANCE_CONTRACT');
+  if (__ENV.K6_LOAD_APPROVED !== 'true') {
+    fail('load lớn hơn một user bắt buộc có K6_LOAD_APPROVED=true sau khi được duyệt');
+  }
+  if (!contract.authorization_reference || /ticket or written approval/i.test(contract.authorization_reference)) {
+    fail('performance contract thiếu authorization_reference thật');
+  }
+  if (!Array.isArray(contract.abort_conditions) || contract.abort_conditions.length === 0) {
+    fail('performance contract thiếu abort_conditions');
+  }
+}
+
+const p95 = Number(contract?.thresholds?.p95_ms || 1000);
+const allowedErrorRate = Number(contract?.thresholds?.error_rate ?? 0.01);
+
 export const options = {
-  // Ramp profile: 0 → 20 → 50 → 0 VUs. Đổi cho stress/soak tuỳ nhu cầu.
-  stages: [
-    { duration: '30s', target: 20 }, // ramp-up
-    { duration: '1m', target: 50 }, // giữ ở target (50 VUs)
-    { duration: '30s', target: 0 }, // ramp-down
-  ],
-  // SLA thresholds — k6 exit non-zero nếu breach → CI fail.
+  stages,
   thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1000'], // 95% < 500ms, 99% < 1s
-    http_req_failed: ['rate<0.01'], // error rate < 1%
+    http_req_duration: [`p(95)<${p95}`],
+    http_req_failed: [`rate<${allowedErrorRate}`],
   },
 };
 
-const BASE = __ENV.BASE_URL || 'http://localhost:3000';
+const BASE = baseUrl.replace(/\/$/, '');
 
 export default function () {
   group('Homepage load', () => {

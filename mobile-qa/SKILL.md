@@ -1,6 +1,6 @@
 ---
 name: mobile-qa
-description: Plan and execute Android and iOS QA across apps, simulators, emulators, and real devices with Appium, platform-native tooling, device matrices, gestures, permissions, interruptions, accessibility, networking, lifecycle, and evidence. Use when Codex receives an APK, AAB, IPA, mobile build, Appium request, Android/iOS bug, or real-device regression scope.
+description: Plan and execute Android and iOS QA across apps, simulators, emulators, and real devices with Appium, platform-native tooling, device matrices, gestures, permissions, interruptions, accessibility, networking, lifecycle, and evidence. Use when an AI coding agent receives an APK, AAB, IPA, mobile build, Appium request, Android/iOS bug, or real-device regression scope.
 ---
 
 # Mobile QA

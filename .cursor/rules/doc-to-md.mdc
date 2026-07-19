@@ -7,7 +7,7 @@ alwaysApply: false
 # Doc to MD
 
 When the user's request matches the triggers above, load the full skill body:
-- Skill file: [`doc-to-md/SKILL.md`](../doc-to-md/SKILL.md)
+- Skill file: [`doc-to-md/SKILL.md`](../../doc-to-md/SKILL.md)
 
 ## Khi nào áp dụng
 - Convert PDF / DOCX / PPTX / HTML sang Markdown

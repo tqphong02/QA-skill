@@ -12,14 +12,14 @@
 ## 🚀 Setup (1 lần)
 
 ```bash
-cd ~/.claude/skills/qa-run && npm install     # cài playwright cho engine
+cd <skill-root> && npm install     # cài playwright cho engine
 ```
 
 Cho mỗi dự án, trong thư mục QA (vd `MyProject/qa/`):
 ```bash
-cp ~/.claude/skills/qa-run/.env.example .env
+cp <skill-root>/.env.example .env
 # điền: QA_BASE_URL, QA_EMAIL, QA_PASSWORD  (+ PLANE_* nếu log bug Plane)
-node ~/.claude/skills/qa-run/scripts/login.mjs  # → tạo auth.json + evidence/ ở thư mục này
+node <skill-root>/scripts/login.mjs  # → tạo auth.json + evidence/ ở thư mục này
 ```
 
 Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong **thư mục dự án** — KHÔNG đụng skill.
@@ -51,13 +51,13 @@ Bạn paste URL ticket → AI tự `WebFetch` → trích AC → verify từng AC
 
 ```bash
 # Auto-scan UX metric (overflow/truncation/touch/overlap/CLS/latency/a11y)
-node ~/.claude/skills/qa-run/scripts/ux-health.mjs /dashboard "button#save,a.delete"
+node <skill-root>/scripts/ux-health.mjs /dashboard "button#save,a.delete"
 
 # Spam test: click N lần, đếm API call (phải = 1, >1 = bug thiếu guard)
-node ~/.claude/skills/qa-run/scripts/ux-health.mjs /dashboard --spam "button:has-text('Sync')" "/api/sync" 5
+node <skill-root>/scripts/ux-health.mjs /dashboard --spam "button:has-text('Sync')" "/api/sync" 5
 
 # Cross-browser/device
-node ~/.claude/skills/qa-run/scripts/compat.mjs /login chromium,firefox,webkit iphone-12,ipad-11
+node <skill-root>/scripts/compat.mjs /login chromium,firefox,webkit iphone-12,ipad-11
 ```
 
 10 category bug UI trong `references/UI-BUG-CATALOG.md`.
@@ -130,7 +130,7 @@ Chi tiết: `SKILL.md` §🔁. Skill cũng dùng được với Cursor/Cline/Aid
 
 ## 📁 Cấu trúc skill
 ```
-~/.claude/skills/qa-run/
+<skill-root>/
 ├── SKILL.md                      # AI instructions (model-facing)
 ├── GUIDE.md                      # ← bạn đang đọc (human-facing)
 ├── TESTING-TECHNIQUES.md         # 12 kỹ thuật + coverage matrix

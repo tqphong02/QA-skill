@@ -1,0 +1,47 @@
+{
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--headless=true",
+        "--isolated=true",
+        "--no-performance-crux",
+        "--no-usage-statistics"
+      ],
+      "disabled": true
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headless",
+        "--snapshot-mode",
+        "none",
+        "--image-responses",
+        "omit"
+      ],
+      "disabled": true
+    },
+    "k6": {
+      "command": "k6",
+      "args": ["x", "mcp"],
+      "disabled": true
+    },
+    "postman": {
+      "serverUrl": "https://mcp.postman.com/minimal",
+      "disabled": true
+    },
+    "github": {
+      "serverUrl": "https://api.githubcopilot.com/mcp/",
+      "disabled": true
+    },
+    "google-drive": {
+      "command": "npx",
+      "args": ["-y", "@piotr-agier/google-drive-mcp"],
+      "disabled": true
+    }
+  }
+}

@@ -6,7 +6,7 @@ description: Use when converting PDF/DOCX/PPTX/HTML documents to Markdown.
 # Doc to MD
 
 Load the full skill body when the trigger matches:
-- Skill file: [`doc-to-md/SKILL.md`](../doc-to-md/SKILL.md)
+- Skill file: [`doc-to-md/SKILL.md`](../../doc-to-md/SKILL.md)
 
 ## Khi nào áp dụng
 - Convert PDF / DOCX / PPTX / HTML sang Markdown

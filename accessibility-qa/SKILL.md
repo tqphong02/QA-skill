@@ -1,6 +1,6 @@
 ---
 name: accessibility-qa
-description: Audit web accessibility with WCAG 2.2, axe-core, Playwright, keyboard-only navigation, focus management, zoom, reflow, contrast, semantics, forms, dynamic content, and screen-reader checks. Use when Codex needs an accessibility baseline, regression, evidence, remediation report, or accessible user-flow verification for a web application.
+description: Audit web accessibility with WCAG 2.2, axe-core, Playwright, keyboard-only navigation, focus management, zoom, reflow, contrast, semantics, forms, dynamic content, and screen-reader checks. Use when an AI coding agent needs an accessibility baseline, regression, evidence, remediation report, or accessible user-flow verification for a web application.
 ---
 
 # Accessibility QA

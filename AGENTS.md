@@ -25,11 +25,11 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
 | Pentest được ủy quyền, security assessment, bug bounty, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor trước request mạng |
 | GitHub MCP, repository API, PR, Issues, Actions, CI/CD, OAuth/PAT hoặc đổi account MCP | `github-mcp-qa/SKILL.md` | Phân biệt MCP auth với Git SSH rồi chạy doctor |
-| Database, ETL/ELT, reconciliation, lineage, freshness hoặc schema drift | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary |
+| Database, ETL/ELT, reconciliation, lineage, freshness, schema drift hoặc Database read-only MCP | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary thật ở DB role |
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
 | WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
-| Latency, load, stress, spike, soak, k6 hoặc bottleneck | `performance-qa/SKILL.md` | Xác nhận workload contract và stop condition |
-| OpenAPI, Swagger, Postman, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
+| Latency, load, stress, spike, soak, k6, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Xác nhận workload contract và stop condition |
+| OpenAPI, Swagger, Postman, Postman MCP, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
 | Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
 | Tạo/import/chạy JMeter `.jmx` | `jmeter-qa/SKILL.md` + `performance-qa/SKILL.md` | Tạo workload contract rồi generate JMX |
 
@@ -43,6 +43,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 6. Với business analysis, không sinh testcase trước khi Q&A quan trọng được trả lời hoặc assumption được đánh dấu rõ
 7. Với pentest, phải có `.pentest/engagement.md`, target, authorization, exclusions và rate limit trước request mạng; Level 2 hoặc Level 3 phải xin duyệt ngay trước khi chạy
 8. Source pentest đã clone chỉ là `source_available`; chỉ chạy tool khi doctor xác nhận executable và dependency là `available`
+9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
 
 ### Invariant bắt buộc
 
@@ -78,7 +79,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ### Nguyên tắc cốt lõi
 > Mọi selector phải đi qua Page Object — không viết `page.locator()` trực tiếp trong spec.
 
-Đọc chi tiết: [`.claude/skills/playwright-pom-automation/SKILL.md`](playwright-pom-automation/SKILL.md)
+Đọc chi tiết: [`playwright-pom-automation/SKILL.md`](playwright-pom-automation/SKILL.md)
 
 ## QA Run
 
@@ -104,7 +105,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ### Nguyên tắc cốt lõi
 > Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
 
-Đọc chi tiết: [`.claude/skills/qa-run/SKILL.md`](qa-run/SKILL.md)
+Đọc chi tiết: [`qa-run/SKILL.md`](qa-run/SKILL.md)
 
 ## Test Case Template
 
@@ -129,7 +130,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ### Nguyên tắc cốt lõi
 > Cùng một bộ cột — không sáng tạo cột mới.
 
-Đọc chi tiết: [`.claude/skills/testcase-template/SKILL.md`](testcase-template/SKILL.md)
+Đọc chi tiết: [`testcase-template/SKILL.md`](testcase-template/SKILL.md)
 
 ## Doc to MD
 
@@ -149,7 +150,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ### Nguyên tắc cốt lõi
 > Convert đúng cấu trúc — không retype thủ công từ PDF.
 
-Đọc chi tiết: [`.claude/skills/doc-to-md/SKILL.md`](doc-to-md/SKILL.md)
+Đọc chi tiết: [`doc-to-md/SKILL.md`](doc-to-md/SKILL.md)
 
 ## Business Analysis
 
@@ -219,7 +220,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ## GitHub MCP QA
 
 ### Khi nào áp dụng
-- Cài hoặc chẩn đoán GitHub MCP cho Codex
+- Cài hoặc chẩn đoán GitHub MCP cho active host
 - Quản lý repository, PR, Issues hoặc Actions CI/CD qua GitHub API
 - Đổi account MCP cá nhân/công ty mà vẫn giữ Git SSH riêng
 
@@ -234,5 +235,5 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 ## Cài đặt & cấu hình chung
 
 - **API key**: 1 file config chung `config/api_keys.json` (gitignored) cho helper AI. Plane và Drive dùng environment/MCP credential riêng; không commit secret. Xem [`README.md`](README.md) mục "API Keys" và `scripts/ai_provider.py`.
-- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git` rồi copy vào `~/.claude/skills/`.
+- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git` rồi chạy `./scripts/setup.sh --agent=<host> --yes`
 - **Setup chi tiết**: xem [`SETUP-GUIDE.md`](SETUP-GUIDE.md).

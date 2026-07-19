@@ -47,34 +47,36 @@ codex --version
 codex mcp list
 ```
 
-## 3. Cài bằng OAuth
+## 3. Cài bằng PAT an toàn
 
 ### macOS, Linux và WSL
+
+Codex hiện có thể gặp lỗi dynamic client registration với GitHub OAuth. Mặc định dùng fine-grained PAT từ environment variable, không ghi token vào repository hoặc command argument
+
+```bash
+read -s "GITHUB_PAT_TOKEN?Paste GitHub PAT rồi nhấn Enter: "
+export GITHUB_PAT_TOKEN
+echo
+```
 
 Xem trước hành động:
 
 ```bash
-./github-mcp-qa/scripts/install-codex.sh --dry-run --login
+./github-mcp-qa/scripts/install-codex.sh --dry-run
 ```
 
-Cấu hình và mở đăng nhập OAuth:
+Cấu hình:
 
 ```bash
-./github-mcp-qa/scripts/install-codex.sh --login
+./github-mcp-qa/scripts/install-codex.sh
 ```
 
-Trong trình duyệt:
-
-1. Kiểm tra đúng GitHub account cá nhân hoặc công ty
-2. Đọc các scope GitHub yêu cầu
-3. Chỉ approve organization cần dùng
-4. Hoàn tất rồi quay lại Terminal
+Mở Codex từ cùng Terminal để process kế thừa `GITHUB_PAT_TOKEN`
 
 ### Windows PowerShell
 
 ```powershell
-codex mcp add github --url https://api.githubcopilot.com/mcp/x/all
-codex mcp login github
+codex mcp add github --url https://api.githubcopilot.com/mcp/ --bearer-token-env-var GITHUB_PAT_TOKEN
 codex mcp get github
 ```
 
@@ -91,7 +93,7 @@ Kết quả cần có:
 
 - Server tên `github`
 - Transport `streamable_http`
-- URL `https://api.githubcopilot.com/mcp/x/all`
+- URL `https://api.githubcopilot.com/mcp/`
 - Auth không báo thiếu đăng nhập
 
 Khởi động lại Codex hoặc mở thread mới. Thử yêu cầu chỉ đọc trước:
@@ -131,10 +133,12 @@ PAT phù hợp với CI, môi trường không mở được browser, hoặc má
 Không paste token vào chat, Git config, `config.toml`, source code, hoặc file trong repository. Đặt token vào secret manager hoặc environment variable của phiên làm việc:
 
 ```bash
-export GITHUB_MCP_PAT="github_pat_xxx"
+read -s "GITHUB_MCP_PAT?Paste GitHub PAT rồi nhấn Enter: "
+export GITHUB_MCP_PAT
+echo
 codex mcp remove github
 codex mcp add github \
-  --url https://api.githubcopilot.com/mcp/x/all \
+  --url https://api.githubcopilot.com/mcp/ \
   --bearer-token-env-var GITHUB_MCP_PAT
 codex mcp get github
 ```
@@ -242,4 +246,4 @@ Kiểm tra account đang login, OAuth scope/PAT permission, SSO authorization, r
 codex mcp get github
 ```
 
-URL phải kết thúc bằng `/mcp/x/all`. Nếu khác, chạy script với `--replace`.
+URL phải là `/mcp/` hoặc một endpoint `/mcp/x/<toolset>` có chủ đích. Nếu khác, chạy script với `--replace`

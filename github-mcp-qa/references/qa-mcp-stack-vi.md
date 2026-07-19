@@ -1,38 +1,79 @@
-# MCP stack đề xuất cho QA/QC
+# Kết nối MCP cho QA/QC
 
 ## Mục lục
 
-1. Stack đề xuất
-2. Quy tắc bật MCP
-3. Ranh giới an toàn
+1. Phân biệt skill và MCP
+2. Kiểm tra trạng thái
+3. Stack đề xuất
+4. Trình tự kết nối
+5. Ranh giới an toàn
 
-## 1. Stack đề xuất
+## 1. Phân biệt skill và MCP
 
-| MCP | Dùng chính | Trạng thái trong QA-skill |
+- Skill cung cấp routing, quy trình, hard gate và format bằng Markdown
+- MCP server cung cấp tool runtime và có vòng đời cấu hình hoặc xác thực riêng
+- CLI như `k6`, `newman` hoặc `psql` là runner độc lập, không tự trở thành MCP
+- `quick_validate.py` chỉ xác nhận cấu trúc skill, không chứng minh MCP đã cài, đã login hoặc tool đã được nạp
+
+Không báo `MCP không truy cập được` chỉ vì tool chưa xuất hiện trong phiên hiện tại. Phải xác định đúng một trong các lớp: `skill_missing`, `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded`, `permission_denied` hoặc `ready`.
+
+## 2. Kiểm tra trạng thái
+
+Chạy từ repository:
+
+```bash
+bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
+codex mcp list
+
+bash github-mcp-qa/scripts/doctor-stack.sh --agent=antigravity
+# Sau đó chạy /mcp trong Antigravity
+```
+
+Sau khi thêm hoặc đổi MCP, mở phiên host mới rồi chạy smoke test read-only. `codex mcp list` hoặc Antigravity `/mcp` chỉ chứng minh cấu hình được host nhìn thấy; smoke test mới chứng minh server, auth và tool hoạt động
+
+## 3. Stack đề xuất
+
+| MCP | Skill sở hữu workflow | Trạng thái hoàn chỉnh khi |
 |---|---|---|
-| GitHub MCP | Repository, PR, Issues, Actions CI/CD, security | Đã đóng gói qua `github-mcp-qa` |
-| Chrome DevTools MCP | Network, console, trace, Lighthouse, frontend diagnosis | Nên bổ sung kế tiếp |
-| k6 MCP | Sinh/chạy/đọc kết quả k6 performance test | Kết hợp `performance-qa`; cần workload guardrail |
-| Postman MCP | Collection, environment, API collaboration và run | Kết hợp `api-contract-qa`; không commit secret environment |
-| Database read-only MCP | Query và evidence data quality | Kết hợp `data-quality-qa`; phải dùng DB role read-only thật |
-| Slack MCP | Nhận context, thông báo CI/bug/report | Cài sau cùng; write/send cần xác nhận và workspace admin policy |
+| GitHub MCP | `github-mcp-qa` | cấu hình đúng endpoint, OAuth/PAT hợp lệ, đọc được repository đã chọn |
+| Chrome DevTools MCP | `performance-qa` | server khởi động, mở được isolated Chrome, đọc console/network read-only |
+| k6 MCP | `performance-qa` | `k6 x mcp` chạy được; load vẫn bị chặn bởi workload contract |
+| Postman MCP | `api-contract-qa` | OAuth/API key hợp lệ, liệt kê được workspace read-only |
+| Database read-only MCP | `data-quality-qa` | DB role thật chỉ có quyền đọc, MCP readonly, row limit và query timeout đều bật |
 
-JMeter không cần MCP để tạo project. Dùng `jmeter-qa` sinh `.jmx`, import vào JMeter GUI, review rồi chạy.
+Playwright đã đủ cho browser flow và UI automation. Chỉ bật Chrome DevTools khi cần network waterfall, console diagnosis, trace, Lighthouse hoặc Core Web Vitals để tránh nạp tool không cần thiết.
 
-## 2. Quy tắc bật MCP
+## 4. Trình tự kết nối
 
-- Chỉ bật MCP cần cho task hiện tại để giảm tool schema và nhầm lẫn lựa chọn
-- Ưu tiên MCP chính chủ hoặc do vendor duy trì
-- Pin package/version khi dùng trong team hoặc CI
-- Ghi rõ owner, auth mode, data scope, write capability, timeout, và cách revoke
+### GitHub
+
+```bash
+bash github-mcp-qa/scripts/install-codex.sh
+bash github-mcp-qa/scripts/doctor-codex.sh
+bash github-mcp-qa/scripts/doctor-antigravity.sh
+```
+
+OAuth/PAT của MCP độc lập với Git SSH. Chọn [guide Codex](codex-github-mcp-vi.md) hoặc [guide Antigravity](antigravity-github-mcp-vi.md) theo active host
+
+### Chrome DevTools và k6
+
+Đọc [performance-qa/references/MCP_SETUP.md](../../performance-qa/references/MCP_SETUP.md) rồi cấu hình từng server. Không bật k6 cho một browser QA thông thường.
+
+### Postman
+
+Đọc [api-contract-qa/references/POSTMAN_MCP.md](../../api-contract-qa/references/POSTMAN_MCP.md). Bắt đầu bằng endpoint `minimal`; chỉ dùng `full` khi cần quản lý collection, mock hoặc monitor.
+
+### Database read-only
+
+Đọc [data-quality-qa/references/DATABASE_MCP.md](../../data-quality-qa/references/DATABASE_MCP.md). Không paste DSN hoặc password vào prompt, repository hay command history.
+
+## 5. Ranh giới an toàn
+
+- Chỉ bật MCP cần cho task hiện tại để giảm tool schema và nhầm routing
+- Ưu tiên server do vendor hoặc dự án chính chủ duy trì
+- Pin version khi dùng trong team hoặc CI
 - Chạy read-only smoke test trước write test
-- Giữ credential ở máy người dùng, environment, keychain, vault, hoặc secret manager
-
-## 3. Ranh giới an toàn
-
-- Database: enforce read-only ở DB user/role; prompt `read-only` không phải security boundary
-- k6/JMeter: xác nhận target, authorization, rate, concurrency, duration, và stop condition trước load
-- Postman: tách environment template khỏi secret values
-- Slack: đọc channel đúng workspace; xác nhận trước gửi, sửa, xóa, hoặc upload
-- GitHub: xác nhận account/repository/branch trước mutation; destructive và security setting cần xác nhận ngay trước thao tác
-- Chrome DevTools: không thu thập cookie, token, PII, hoặc session ngoài target được phép
+- GitHub, Postman và database phải xác nhận đúng account, workspace hoặc database trước mutation
+- Database phải enforce read-only tại DB user hoặc role; prompt và cờ MCP chỉ là lớp bảo vệ bổ sung
+- k6/JMeter phải có target, authorization, rate, concurrency, duration, monitoring và abort condition trước load
+- Chrome DevTools dùng profile isolated và không đọc cookie, token, PII hoặc session ngoài target được phép

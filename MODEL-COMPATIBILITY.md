@@ -27,6 +27,18 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Pentest target này, tôi có quyền kiểm tra` | pentest-run | Tạo engagement contract, chạy doctor, passive trước, xin duyệt trước Level 2, chỉ confirm finding có control comparison |
 | `Update Google Sheet <URL>` | google-drive-qa | Resolve exact ID, dùng Drive MCP, update đúng range, read-back |
 | `Log bug mới lên Plane <URL>` | plane-qa | Doctor URL workspace, dry-run, tạo ở `Todo`, read-back |
+| `Kết nối Chrome DevTools MCP` | performance-qa | Dùng package chính chủ, isolated profile, doctor rồi smoke test read-only |
+| `Kết nối k6 MCP và chạy load` | performance-qa | Cấu hình MCP nhưng vẫn bắt đầu một user; load cần contract, approval và abort condition |
+| `Kết nối Postman MCP` | api-contract-qa | Dùng remote endpoint chính chủ, OAuth, mở phiên mới rồi liệt kê workspace read-only |
+| `Kết nối database MCP` | data-quality-qa | Không chọn connector khi chưa biết engine; DB role thật phải read-only, có row limit và timeout |
+| `Audit accessibility trang login` | accessibility-qa | Chạy axe ở state đúng rồi kiểm keyboard, focus, zoom và manual gaps |
+| `Đánh giá chatbot RAG` | ai-quality-qa | Xác định golden dataset, groundedness, tool-call và safety metric trước run |
+| `Test mobile app trên Android và iOS` | mobile-qa | Chốt device matrix, lifecycle và capability Appium trước execution |
+| `Tạo JMeter JMX cho API` | jmeter-qa + performance-qa | Tạo workload contract, generate JMX, validate bằng JMeter thật trước load |
+| `GitHub MCP đã có skill nhưng không dùng được` | github-mcp-qa | Chạy doctor và phân biệt skill, config, auth, loaded tools và repository permission |
+| `Cài toàn bộ skill cho Codex` | installer | Chạy `setup.sh --agent=codex`, cài vào Codex skill home rồi mở phiên mới |
+| `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity`, kiểm tra `/skills`, `/mcp` và không ghi credential vào repo |
+| `Cài skill trên Windows` | installer | Dùng `setup.ps1 -Agent <host>`, Git Bash hoặc WSL và đúng home directory của host |
 
 ## Pass criteria cho một model
 

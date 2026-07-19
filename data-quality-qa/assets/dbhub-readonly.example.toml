@@ -1,0 +1,14 @@
+[[sources]]
+id = "qa-readonly"
+dsn = "${QA_DB_READONLY_DSN}"
+connection_timeout = 15
+
+[[tools]]
+name = "execute_sql"
+source = "qa-readonly"
+readonly = true
+max_rows = 100
+
+[[tools]]
+name = "search_objects"
+source = "qa-readonly"

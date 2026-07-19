@@ -6,7 +6,7 @@ description: Use when planning or running a QA cycle, choosing techniques, or si
 # QA Run
 
 Load the full skill body when the trigger matches:
-- Skill file: [`qa-run/SKILL.md`](../qa-run/SKILL.md)
+- Skill file: [`qa-run/SKILL.md`](../../qa-run/SKILL.md)
 
 ## Khi nào áp dụng
 - Lên kế hoạch / thực thi chu trình QA

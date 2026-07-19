@@ -6,7 +6,7 @@ description: Use when generating structured test case documents with consistent 
 # Test Case Template
 
 Load the full skill body when the trigger matches:
-- Skill file: [`testcase-template/SKILL.md`](../testcase-template/SKILL.md)
+- Skill file: [`testcase-template/SKILL.md`](../../testcase-template/SKILL.md)
 
 ## Khi nào áp dụng
 - Sinh test case document (Excel / CSV / MD)

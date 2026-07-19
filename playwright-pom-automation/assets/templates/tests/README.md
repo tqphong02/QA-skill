@@ -32,9 +32,10 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 - `tests/api/example.api.spec.ts` — CRUD lifecycle (`@api`)
 - `tests/functional/example.functional.spec.ts` — business flow span UI + API (`@functional`)
 - `tests/performance/k6-load-test.js` — k6 load test (Tier 2)
+- `tests/performance/performance-contract.example.json` — workload, approval, threshold và abort condition cho k6 load lớn hơn một user
 
 ## 🔗 Reference
 
-- **[references/ui-testing.md](../references/ui-testing.md)** — POM pattern, locator priority, spec convention
-- **[references/api-testing.md](../references/api-testing.md)** — request-level + zod schema + auth fixture
-- **[references/performance-testing.md](../references/performance-testing.md)** — Tier 1 Playwright + Tier 2 k6 escalation
+- **[references/ui-testing.md](../../../references/ui-testing.md)** — POM pattern, locator priority, spec convention
+- **[references/api-testing.md](../../../references/api-testing.md)** — request-level + zod schema + auth fixture
+- **[references/performance-testing.md](../../../references/performance-testing.md)** — Tier 1 Playwright + Tier 2 k6 escalation

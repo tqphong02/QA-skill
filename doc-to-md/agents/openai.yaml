@@ -1,0 +1,4 @@
+interface:
+  display_name: "Document to Markdown"
+  short_description: "Chuyển tài liệu sang Markdown có cấu trúc"
+  default_prompt: "Use $doc-to-md to convert this document into structured Markdown."

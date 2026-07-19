@@ -1,6 +1,6 @@
 ---
 name: performance-qa
-description: Design and execute safe web, API, service, and data-pipeline performance baselines; define SLIs and thresholds; analyze frontend traces and Core Web Vitals; generate k6 or JMeter workloads; identify bottlenecks; and produce reproducible performance evidence. Use for latency, throughput, concurrency, load, stress, spike, soak, scalability, or performance regression requests.
+description: Design and execute safe web, API, service, and data-pipeline performance baselines; define SLIs and thresholds; analyze frontend traces and Core Web Vitals; generate k6 or JMeter workloads; identify bottlenecks; and produce reproducible performance evidence. Use for latency, throughput, concurrency, load, stress, spike, soak, scalability, performance regression, Chrome DevTools MCP, or k6 MCP installation and diagnosis.
 ---
 
 # Performance QA
@@ -19,12 +19,15 @@ Select the smallest tool that answers the performance question. Load tests are s
 
 Read [references/TOOL_ROUTING.md](references/TOOL_ROUTING.md) before choosing a runner. Start each engagement from [assets/performance-contract.example.json](assets/performance-contract.example.json).
 
+Read [references/MCP_SETUP.md](references/MCP_SETUP.md) before installing or diagnosing Chrome DevTools MCP or k6 MCP. Run `../github-mcp-qa/scripts/doctor-stack.sh chrome-devtools k6` after configuration.
+
 ## Tool routing
 
 - Use Playwright timing for one-user browser smoke and navigation timing
 - Use Chrome DevTools MCP for frontend trace, network waterfall, LCP, INP, CLS, long tasks, and runtime bottlenecks
 - Reuse `../playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js` for k6 API load; do not create a competing k6 framework
 - Use k6 MCP when available for authoring, validation, and controlled execution
+- Treat MCP configuration as separate from load authorization; an available k6 tool never bypasses the workload contract or approval gate
 - Route a requested importable `.jmx` project to `jmeter-qa`
 - Use Grafana MCP in read-only mode only when the project already exposes relevant metrics and logs
 

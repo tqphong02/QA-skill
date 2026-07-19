@@ -26,26 +26,29 @@ Check extension `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.jpg`, `.png`. Scri
 **Cách 1 — dùng script trực tiếp:**
 ```bash
 # Convert PDF sang MD (output tự động = input.md)
-~/.claude/skills/doc-to-md/scripts/convert.sh /path/to/file.pdf
+bash <skill-root>/scripts/convert.sh /path/to/file.pdf
 
 # Convert với output file cụ thể
-~/.claude/skills/doc-to-md/scripts/convert.sh /path/to/file.docx /tmp/output.md
+bash <skill-root>/scripts/convert.sh /path/to/file.docx /tmp/output.md
 
 # Convert Excel
-~/.claude/skills/doc-to-md/scripts/convert.sh /path/to/data.xlsx /tmp/data.md
+bash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md
 ```
+
+Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. Không giả định skill nằm trong `.claude`, `.codex`, `.gemini` hoặc một home directory cụ thể
 
 **Cách 2 — AI tự detect và convert** (khi user upload file trong chat):
 1. Detect file type (PDF, DOCX, ...)
-2. Chạy `~/.claude/skills/doc-to-md/scripts/convert.sh <file>`
+2. Chạy `bash <skill-root>/scripts/convert.sh <file>`
 3. Đọc file MD output thay vì file gốc
 4. Phân tích nội dung và trả lời
 
 **Ví dụ AI workflow**:
 ```python
-import subprocess, os
+import os, subprocess
+skill_root = os.environ['DOC_TO_MD_SKILL_DIR']
 result = subprocess.run(
-    ['bash', os.path.expanduser('~/.claude/skills/doc-to-md/scripts/convert.sh'),
+    ['bash', os.path.join(skill_root, 'scripts', 'convert.sh'),
      '/path/to/spec.pdf', '/tmp/spec.md'],
     capture_output=True, text=True
 )
@@ -83,13 +86,13 @@ Optional dependencies cho từng format:
 
 ### 5. Example
 
-**Convert PDF spec:**
+**Convert tài liệu:**
 ```bash
-$ ~/.claude/skills/doc-to-md/scripts/convert.sh ~/Documents/QA-MDS/BCP-AI/BCP_AI_SRS.docx
-🔄 Converting: ~/Documents/QA-MDS/BCP-AI/BCP_AI_SRS.docx → /Users/user/Documents/QA-MDS/BCP-AI/BCP_AI_SRS.md
+$ bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx
+🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS.md
 📦 Installing MarkItDown...
 🔄 Converting...
-✅ Done: BCP_AI_SRS.md (45,231 bytes, 1,247 lines)
+✅ Done: FRS.md (45,231 bytes, 1,247 lines)
 ```
 
 **AI dùng sau khi convert:**

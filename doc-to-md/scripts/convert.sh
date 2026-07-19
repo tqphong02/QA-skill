@@ -9,9 +9,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Default output
-INPUT="$1"
-if [ -z "$INPUT" ]; then
+# Validate arguments before reading positional parameters because `set -u`
+# treats an omitted `$1` as an error
+if [ "$#" -lt 1 ] || [ -z "${1:-}" ]; then
   echo "Usage: $0 <input_file> [output_file]"
   echo ""
   echo "Supported formats: PDF, DOCX, PPTX, XLSX, HTML, JPG/PNG, MP3, etc."
@@ -21,6 +21,9 @@ if [ -z "$INPUT" ]; then
   echo "  $0 spec.docx output.md   # → output.md"
   exit 1
 fi
+
+# Default output
+INPUT="$1"
 
 if [ ! -f "$INPUT" ]; then
   echo "❌ File not found: $INPUT"
@@ -69,14 +72,19 @@ fi
 
 echo "🔄 Converting: $INPUT → $OUTPUT (using $PYTHON_BIN)"
 
-# Use the MarkItDown Python API
-"$PYTHON_BIN" -c "
+# Pass paths as argv instead of interpolating them into Python source so names
+# containing quotes, spaces, backslashes, or Unicode remain safe
+"$PYTHON_BIN" - "$INPUT" "$OUTPUT" <<'PY' 2>&1
+from pathlib import Path
+import sys
+
 from markitdown import MarkItDown
-md = MarkItDown()
-result = md.convert('$INPUT')
-with open('$OUTPUT', 'w', encoding='utf-8') as f:
-    f.write(result.text_content)
-" 2>&1
+
+input_path = sys.argv[1]
+output_path = Path(sys.argv[2])
+result = MarkItDown().convert(input_path)
+output_path.write_text(result.text_content, encoding="utf-8")
+PY
 
 if [ -f "$OUTPUT" ]; then
   SIZE=$(wc -c < "$OUTPUT")

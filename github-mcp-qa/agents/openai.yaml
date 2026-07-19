@@ -8,6 +8,6 @@ dependencies:
       value: "github"
       description: "Official GitHub MCP server with all toolsets"
       transport: "streamable_http"
-      url: "https://api.githubcopilot.com/mcp/x/all"
+      url: "https://api.githubcopilot.com/mcp/"
 policy:
   allow_implicit_invocation: true

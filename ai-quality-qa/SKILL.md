@@ -1,6 +1,6 @@
 ---
 name: ai-quality-qa
-description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, extraction, and generative AI features for correctness, groundedness, safety, structured-output validity, regression, latency, reliability, and cost. Use when Codex needs to design golden datasets, run repeatable AI evaluations, compare prompts or models, inspect LangSmith-style traces, or produce evidence for OneBrain AI behavior.
+description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, extraction, and generative AI features for correctness, groundedness, safety, structured-output validity, regression, latency, reliability, and cost. Use when an AI coding agent needs to design golden datasets, run repeatable AI evaluations, compare prompts or models, inspect LangSmith-style traces, or produce evidence for OneBrain AI behavior.
 ---
 
 # AI Quality QA

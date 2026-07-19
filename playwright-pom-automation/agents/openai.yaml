@@ -1,0 +1,4 @@
+interface:
+  display_name: "Playwright POM Automation"
+  short_description: "Tạo automation Playwright theo Page Object Model"
+  default_prompt: "Use $playwright-pom-automation to build maintainable Playwright tests with Page Object Model."

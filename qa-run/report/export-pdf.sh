@@ -7,7 +7,7 @@
 # Usage:
 #   ./export-pdf.sh <report.md> [output.pdf]
 # Example:
-#   .claude/skills/automation-test/scripts/export-pdf.sh \
+#   <skill-root>/scripts/export-pdf.sh \
 #     docs/automation-test/ingestion-testcases.md
 #
 # Prereqs: pandoc + weasyprint on PATH (brew install pandoc weasyprint).

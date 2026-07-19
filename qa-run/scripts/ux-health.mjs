@@ -3,7 +3,7 @@
 // "giật", "click không ăn", "chậm", hoặc khi exploratory thấy khu vực đáng nghi.
 //
 // CÁCH DÙNG:
-//   node ~/.claude/skills/qa-run/scripts/ux-health.mjs <path> [sel1,sel2,...] [waitMs]
+//   node <skill-root>/scripts/ux-health.mjs <path> [sel1,sel2,...] [waitMs]
 //   node ux-health.mjs /dashboard "button#save,a[data-action=delete]"
 //
 // ĐO:

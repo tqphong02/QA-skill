@@ -1,496 +1,178 @@
-# SETUP-GUIDE — Push 16 skill lên GitHub → clone máy khác chạy
+# Setup QA-skill trên máy mới
 
-> Hướng dẫn này dành cho **16 skill** trong repository. Danh sách canonical nằm trong `scripts/setup_lib.sh` (`DEFAULT_SKILLS`). GitHub MCP có hướng dẫn riêng tại [`github-mcp-qa/references/codex-github-mcp-vi.md`](github-mcp-qa/references/codex-github-mcp-vi.md).
->
-> Các skill nền tảng:
-> - `qa-run/` (engine + 2 helper mới)
-> - `testcase-template/`
-> - `playwright-pom-automation/`
-> - `doc-to-md/` (MarkItDown, Python ≥3.10)
-> - `business-analysis/` (XMind + Q&A Markdown/Excel)
-> - `plane-qa/`
-> - `google-drive-qa/`
-> - `data-quality-qa/`, `ai-quality-qa/`, `accessibility-qa/`, `performance-qa/`
-> - `api-contract-qa/`, `mobile-qa/`, `jmeter-qa/`, `github-mcp-qa/`
+Repository phân phối 16 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `DEFAULT_SKILLS`.
 
----
+## 1. Yêu cầu
 
-## ⚡ Quick start — chạy 1 lệnh duy nhất (Recommended)
+- Git
+- Bash trên macOS, Linux, WSL hoặc Git Bash
+- Python 3.10+
+- Node.js và npm
+- Quyền truy cập repository
 
-Sau khi `git clone` repo, chỉ cần chạy:
+Các runner như k6, JMeter, Appium và MCP server chỉ cần cài khi task tương ứng yêu cầu.
+
+## 2. Clone repository
 
 ```bash
-git clone git@github.com:tqphong02/QA-skill.git ~/projects/qa-skill
-cd ~/projects/qa-skill
-./scripts/setup.sh
+git clone git@github.com:tqphong02/QA-skill.git
+cd QA-skill
+git status --short --branch
 ```
 
-Script sẽ tự động:
-1. Detect OS (macOS / Linux / WSL)
-2. Check Python ≥3.10 + Node ≥20 (warning nếu thiếu, không abort)
-3. Copy 16 skill vào `~/.claude/skills/` (auto-backup nếu xung đột)
-4. Cài `npm install` cho qa-run + playwright-pom-automation + business-analysis
-5. Cài `pip install markitdown[all] + openpyxl` (dùng prebuilt wheel)
-6. Auto-detect AI provider (Antigravity / Copilot Pro / Claude Code / standalone)
-7. Tạo `config/api_keys.json` từ template (nếu standalone)
-8. Verify end-to-end + in next-steps
+Không clone credential, `.env`, OAuth token, browser profile, evidence hoặc database config vào repository.
 
-**Flags hữu ích:**
-- `--skip-deps` — chỉ copy skills + setup AI config, bỏ qua npm/pip
-- `--dry-run` — xem plan trước, không mutate filesystem
-- `--only=doc-to-md,qa-run` — chỉ setup 1 hoặc vài skill
-- `--yes` / `-y` — non-interactive (auto backup khi xung đột)
-- `--help` — xem đầy đủ options
+## 3. Cài skill cho từng agent
 
-**Hướng dẫn bên dưới (phần A, B, C, D, E, G) là FALLBACK** dành cho:
-- User muốn hiểu chi tiết từng bước
-- Máy không thể chạy script (vd CI/CD, container)
-- Cần debug khi setup fail
-
-Phần còn lại của file này vẫn giữ nguyên để tham khảo — nhưng **`./scripts/setup.sh` đã tự động hóa tất cả**.
-
----
-
-## Tổng quan flow
-
-```
-MÁY A (hiện tại)                          MÁY B (mới)
-─────────────────                         ─────────────
-~/.claude/skills/                          ~/.claude/skills/
-├── qa-run/                                ├── qa-run/  ← git clone
-├── testcase-template/                     ├── testcase-template/  ← git clone
-└── playwright-pom-automation/             └── playwright-pom-automation/  ← git clone
-       │                                          │
-       └─→ git init, commit, push ─→ GitHub ─→ git clone + setup
-```
-
----
-
-## A. Trên MÁY A (push)
-
-### A.1 Kiểm tra secret đã sạch (đã chạy)
-
-✅ KHÔNG có API key, password, token hardcoded trong 3 skill. Chỉ có `.env.example` (template) và script `fetch-plane-issue.sh` (đọc env từ file).
-
-### A.2 Chuẩn bị folder tách biệt (KHUYẾN NGHỊ)
-
-**Không nên** init git ngay tại `~/.claude/skills/` vì:
-- Folder này có nhiều skill khác (playwright-pom-automation là skill global, có thể có skill khác cùng tồn tại).
-- Dễ lỡ commit file cá nhân (auth.json, .env).
-
-**Nên** tạo folder mới chỉ chứa 3 skill cần push:
+### Claude Code
 
 ```bash
-# Tạo folder tách biệt
-mkdir -p ~/projects/qa-skills
-cd ~/projects/qa-skills
-
-# Copy 3 skill vào (KHÔNG copy node_modules, .env, evidence, auth.json)
-for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
-  rsync -a --exclude='node_modules' --exclude='.DS_Store' \
-    --exclude='.env' --exclude='auth.json' --exclude='evidence' \
-    "$HOME/.claude/skills/$s/" "./$s/"
-done
+./scripts/setup.sh --agent=claude --yes
 ```
 
-> Nếu muốn dùng symlink (cho phép sửa 1 chỗ, 2 bên sync):
-> ```bash
-> for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
->   ln -s "$HOME/.claude/skills/$s" "./$s"
-> done
-> ```
-> ⚠️ Symlink dễ commit nhầm nếu quên `.gitignore` rule.
+Target là `~/.claude/skills`
 
-### A.3 Tạo `.gitignore` (ĐÃ TẠO SẴN)
-
-File `.gitignore` đã có sẵn trong:
-- `~/.claude/skills/qa-run/.gitignore` (sẵn)
-- `~/.claude/skills/testcase-template/.gitignore` (vừa tạo)
-- `~/.claude/skills/playwright-pom-automation/.gitignore` (vừa tạo)
-
-Đã loại: `node_modules/`, `.env`, `auth.json`, `evidence/`, `.DS_Store`, IDE files, test outputs.
-
-### A.4 Tạo file LICENSE (khuyến nghị)
+### OpenAI Codex
 
 ```bash
-cd ~/projects/qa-skills
-# MIT License
-cat > LICENSE <<'EOF'
-MIT License
-
-Copyright (c) 2026 MDS Team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, ...
-EOF
+./scripts/setup.sh \
+  --agent=codex \
+  --yes
 ```
 
-### A.5 Init git + commit + push
+Sau khi cài, mở phiên Codex mới. Skill tồn tại trong repository không có nghĩa là Codex đã discover được skill đó.
+
+Target là `${CODEX_HOME:-$HOME/.codex}/skills`
+
+### Google Antigravity
 
 ```bash
-cd ~/projects/qa-skills
-
-# Khởi tạo git
-git init
-git branch -M main
-
-# Cấu hình user (nếu máy mới chưa có)
-git config user.email "you@example.com"
-git config user.name "Your Name"
-
-# Verify chỉ có 3 skill trong repo
-ls -la
-# Phải thấy: qa-run/  testcase-template/  playwright-pom-automation/  LICENSE  .gitignore (nếu có top-level)
-
-# Check KHÔNG có file nhạy cảm
-git status
-# Phải KHÔNG thấy: .env, auth.json, node_modules/, evidence/
-
-# Add + commit
-git add .
-git commit -m "Initial commit: 3 QA skills (qa-run, testcase-template, playwright-pom-automation)
-
-- qa-run: exploratory + Plane integration + 2 helper (tdata, fetch-plane-issue)
-- testcase-template: Excel template generator (Nina Studio format)
-- playwright-pom-automation: Playwright + TS + POM scaffold"
-
-# Tạo repo trên GitHub (cách tay): https://github.com/new
-# Tên gợi ý: mds-qa-skills hoặc claude-qa-toolkit
-# KHÔNG tick "Initialize with README" vì đã có local repo
-
-# Add remote + push
-git remote add origin git@github.com:YOUR_ORG/mds-qa-skills.git
-# (hoặc dùng HTTPS: git remote add origin https://github.com/YOUR_ORG/mds-qa-skills.git)
-
-git push -u origin main
+./scripts/setup.sh --agent=antigravity --yes
 ```
 
-### A.6 Verify trên GitHub
+Target global của Antigravity IDE là `~/.gemini/config/skills`. Mở phiên mới rồi chạy `/skills`
 
-Vào https://github.com/YOUR_ORG/mds-qa-skills kiểm tra:
-- ✅ 3 folder: `qa-run/`, `testcase-template/`, `playwright-pom-automation/`
-- ❌ KHÔNG thấy file `.env`, `auth.json`, `node_modules/`
-- ✅ Có `LICENSE`, `.gitignore` (per-skill)
-- ✅ Mỗi skill có `SKILL.md` ở root
+Repository có `.agents/mcp_config.json` làm workspace MCP template. Mọi server mặc định `disabled` và không chứa credential
 
----
+### Windows PowerShell
 
-## B. Trên MÁY B (clone + chạy)
+```powershell
+.\scripts\setup.ps1 -Agent codex -Yes
+.\scripts\setup.ps1 -Agent antigravity -Yes
+.\scripts\setup.ps1 -Agent claude -Yes
+```
 
-### B.1 Yêu cầu môi trường
+PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
+
+### Chỉ cài một số skill
 
 ```bash
-# Check đã có chưa
-node --version       # cần ≥ 20 (script dùng process.loadEnvFile)
+./scripts/setup.sh \
+  --agent=codex \
+  --only=qa-run,testcase-template,performance-qa \
+  --yes
+```
+
+### Dry-run
+
+```bash
+./scripts/setup.sh --agent=antigravity --dry-run
+```
+
+## 4. Cài dependency
+
+Setup mặc định cài dependency cần thiết. Dùng `--skip-deps` khi chỉ muốn cập nhật Markdown và asset:
+
+```bash
+./scripts/setup.sh --agent=codex --skip-deps --yes
+```
+
+Kiểm tra các runtime chính:
+
+```bash
+node --version
 npm --version
-git --version
-python3 --version    # cần cho script Plane
-curl --version       # cần cho fetch-plane-issue.sh
-jq --version         # optional nhưng tiện
+python3 --version
 ```
 
-Nếu thiếu:
-```bash
-# macOS
-brew install node git python3 jq
+## 5. Kết nối MCP
 
-# Ubuntu/Debian
-sudo apt install nodejs npm git python3 curl jq
+MCP credential luôn thuộc máy và account người dùng, không thuộc repository.
+
+### Google Drive
+
+Làm theo `google-drive-qa/references/AUTH.md`, sau đó chạy Drive doctor và một read-only smoke test.
+
+### GitHub, Chrome DevTools, k6, Postman và Database read-only
+
+Đọc `github-mcp-qa/references/qa-mcp-stack-vi.md`, sau đó chạy:
+
+```bash
+bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
+bash github-mcp-qa/scripts/doctor-stack.sh --agent=antigravity
 ```
 
-### B.2 Clone repo
+Hướng dẫn chi tiết:
+
+- GitHub Codex: `github-mcp-qa/references/codex-github-mcp-vi.md`
+- GitHub Antigravity: `github-mcp-qa/references/antigravity-github-mcp-vi.md`
+- Chrome DevTools và k6: `performance-qa/references/MCP_SETUP.md`
+- Postman: `api-contract-qa/references/POSTMAN_MCP.md`
+- Database read-only: `data-quality-qa/references/DATABASE_MCP.md`
+
+Sau khi thêm hoặc đổi MCP, mở phiên agent mới. Codex kiểm tra bằng `codex mcp list`; Antigravity kiểm tra bằng `/mcp`. Trạng thái `configured` không tự chứng minh auth, permission hoặc tool loading đã thành công
+
+## 6. Credential và profile local
+
+- Plane dùng Personal API Key từ environment hoặc profile local được ignore
+- Drive dùng OAuth credential local
+- GitHub dùng OAuth khi host hỗ trợ, nếu không dùng fine-grained PAT từ environment hoặc secret manager
+- Postman dùng OAuth của active host
+- Database dùng account hoặc role read-only thật
+- Không đưa password, token, cookie, PAT, OAuth secret hoặc DSN vào Markdown, prompt hay Git
+
+Kiểm tra file nhạy cảm trước commit:
 
 ```bash
-mkdir -p ~/projects
-cd ~/projects
-git clone https://github.com/YOUR_ORG/mds-qa-skills.git
-cd mds-qa-skills
-ls
-# → qa-run/  testcase-template/  playwright-pom-automation/  doc-to-md/  LICENSE
+git status --short
+git diff --check
 ```
 
-### B.3 Copy vào `~/.claude/skills/`
+## 7. Validation
 
 ```bash
-# Tạo folder nếu chưa có
-mkdir -p ~/.claude/skills
+python3 scripts/validate_cross_model.py
 
-# Copy 3 skill
-for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
-  if [ -d "$HOME/.claude/skills/$s" ]; then
-    echo "⚠️  $s đã tồn tại — backup trước:"
-    mv "$HOME/.claude/skills/$s" "$HOME/.claude/skills/${s}.bak.$(date +%s)"
-  fi
-  cp -R "./$s" "$HOME/.claude/skills/"
+for skill in */SKILL.md; do
+  python3 /path/to/skill-creator/scripts/quick_validate.py "${skill%/SKILL.md}"
 done
 ```
 
-### B.4 Cài dependencies (chỉ cho `qa-run`)
+Các smoke test theo capability:
+
+- `doc-to-md`: chạy không input phải in usage thay vì `$1: unbound variable`
+- `performance-qa`: k6 mặc định chỉ một user; load lớn hơn một user phải bị chặn khi thiếu contract hoặc approval
+- `accessibility-qa`: template package phải có `@axe-core/playwright`
+- MCP: doctor rồi smoke test read-only trong phiên agent mới
+
+## 8. Cập nhật skill
 
 ```bash
-cd ~/.claude/skills/qa-run
-npm install
-# Cài: playwright, dotenv, v.v. (xem package.json)
+cd /path/to/QA-skill
+git pull --ff-only
+./scripts/setup.sh --agent=<codex|antigravity|claude> --yes
 ```
 
-### B.5 Tạo file `.env` cho Plane API
+Giữ backup khi setup báo xung đột và không xóa thay đổi local chưa kiểm tra.
 
-`fetch-plane-issue.sh` cần 3 biến env. Cách 1 — file `.env` trong thư mục dự án test:
+## 9. Lỗi thường gặp
 
-```bash
-# Tạo folder dự án test (vd Spout)
-mkdir -p ~/Documents/QA-MDS/Spout
-cd ~/Documents/QA-MDS/Spout
-
-cat > .env <<'EOF'
-PLANE_API_KEY=plane_pat_xxx_your_own_key
-PLANE_BASE_URL=https://projects.metasolutions.ai/api/v1
-PLANE_WORKSPACE=mds-team
-QA_BASE_URL=https://your-app.example.com
-QA_EMAIL=you@example.com
-QA_PASSWORD=your_password
-EOF
-chmod 600 .env   # chỉ owner đọc được
-```
-
-**Lấy `PLANE_API_KEY`:** Vào https://projects.metasolutions.ai → Profile Settings → Personal Access Tokens → Generate.
-
-### B.6 Smoke test
-
-```bash
-# Test 1: tdata helper
-node -e "import('$HOME/.claude/skills/qa-run/lib/tdata.mjs').then(m => console.log(m.tdata('smoke', 'firstRun')))"
-# → smoke_firstrun_<14-số YYYYMMDDHHMMSS>_<4-hex>
-
-# Test 2: fetch-plane-issue.sh
-cd ~/Documents/QA-MDS/Spout
-bash ~/.claude/skills/qa-run/scripts/fetch-plane-issue.sh 9482533a-c9ca-4be6-be3f-2c74b1b54137 466 | head -20
-# → JSON của issue #466 (hoặc ❌ 401 nếu API key sai)
-
-# Test 3: verify skill auto-load
-# Mở Claude Code mới, gõ /skills (xem có 3 skill không)
-```
-
----
-
-## C. Checklist "đã chạy được"
-
-- [ ] Clone repo về máy B thành công
-- [ ] 3 folder copy vào `~/.claude/skills/`
-- [ ] `npm install` trong `qa-run/` thành công
-- [ ] File `.env` đã tạo với API key cá nhân, chmod 600
-- [ ] `node -e "...tdata..."` in ra token
-- [ ] `fetch-plane-issue.sh <pid> <seq>` trả JSON issue (không phải 401)
-- [ ] Mở Claude Code mới → gõ `/skills` thấy 3 skill
-- [ ] Trong Claude Code, nói: "Sinh test case cho ticket https://..." → AI tự fetch Plane + gen Excel
-- [ ] Trong Claude Code, nói: "Viết test cho trang login" → AI dùng pom-automation sinh spec
-
----
-
-## D. Lỗi thường gặp + cách fix
-
-| Lỗi | Nguyên nhân | Fix |
+| Triệu chứng | Lớp lỗi | Cách xử lý |
 |---|---|---|
-| `node: command not found` | Chưa cài Node | `brew install node` |
-| `Cannot find module 'playwright'` | Chưa `npm install` | `cd qa-run && npm install` |
-| `❌ Thiếu PLANE_API_KEY` | `.env` không ở cwd hoặc sai tên biến | Đảm bảo `cd ~/Documents/QA-MDS/Spout` rồi mới chạy script, file `.env` có `PLANE_API_KEY=...` |
-| `401 Unauthorized` | API key sai/expire | Rotate key ở Plane Profile |
-| `404 Not Found` | Sai `project_id` hoặc `sequence_id` | Check lại URL ticket |
-| Skill không xuất hiện trong Claude | Folder chưa đúng vị trí | Verify path là `~/.claude/skills/<name>/SKILL.md` (KHÔNG có dash ở giữa) |
-| `node: cannot find module 'tdata.mjs'` (dù import đúng path) | Sai path tuyệt đối | Dùng path đầy đủ: `import('$HOME/.claude/skills/qa-run/lib/tdata.mjs')` |
-| Push lên GitHub mà lộ auth.json | Quên `.gitignore` | `git rm --cached auth.json` rồi commit fix gitignore, **rotate key** ngay |
-
----
-
-## E. Khuyến nghị bảo mật
-
-1. **KHÔNG commit `.env`** — đã có `.gitignore` nhưng check lại bằng `git status` trước mỗi commit.
-2. **Rotate API key định kỳ** — mỗi 3-6 tháng, hoặc ngay khi nghi lộ.
-3. **Dùng SSH thay HTTPS** cho git remote (không phải nhập password mỗi push).
-4. **Cân nhắc private repo** nếu skill có code đặc thù team — public repo OK nếu không nhạy cảm.
-5. **Bận 2FA** cho tài khoản GitHub + Plane.
-6. **Audit thường xuyên**: `git log --all --full-history -- .env auth.json` xem có lỡ commit secret không.
-
----
-
-## G. Config API Key (cho AI models)
-
-Một số skill có thể dùng AI (vd testcase-template dùng AI để suggest test case). Hỗ trợ **3 cách config**, ưu tiên từ cao xuống thấp:
-
-| # | Cách | Khi nào dùng |
-|---|---|---|
-| 1 | **Env var** | Cần override nhanh (vd test key mới) |
-| 2 | **`config/api_keys.json`** (gitignored) | Cắm key 1 lần cho cả 3 skill |
-| 3 | **Auto-detect environment** | Đang dùng Copilot Pro / Antigravity / Claude Code (miễn phí) |
-
-### G.1 Trên macOS
-
-**Cách 1 — Env var (nhanh, tạm thời):**
-
-```bash
-# Thêm vào ~/.zshrc hoặc ~/.bashrc
-echo 'export ANTHROPIC_API_KEY="sk-ant-..."' >> ~/.zshrc
-echo 'export OPENAI_API_KEY="sk-..."' >> ~/.zshrc
-echo 'export GOOGLE_API_KEY="AIza..."' >> ~/.zshrc
-echo 'export PLANE_API_KEY="plane_pat_..."' >> ~/.zshrc
-source ~/.zshrc
-
-# Verify
-python3 ~/.claude/skills/scripts/ai_provider.py
-```
-
-**Cách 2 — Config file (khuyến nghị cho cả team):**
-
-```bash
-cd ~/projects/qa-skills  # hoặc nơi chứa repo qa-skill
-
-# 1. Copy template
-cp config/api_keys.example.json config/api_keys.json
-
-# 2. Edit file bằng TextEdit / VSCode / vim
-open -e config/api_keys.json
-# Hoặc
-code config/api_keys.json
-
-# 3. Paste key thật vào field tương ứng
-# Lưu file
-
-# 4. Verify
-python3 scripts/ai_provider.py
-```
-
-**Cách 3 — Auto-detect (không cần key):**
-
-| Môi trường | Detect qua |
-|---|---|
-| GitHub Copilot Pro | env `COPILOT_PRO` hoặc `GITHUB_COPILOT_TOKEN` |
-| Google Antigravity | env `ANTIGRAVITY_API_KEY` hoặc `/Applications/Antigravity.app` |
-| Claude Code CLI | env `ANTHROPIC_API_KEY` |
-
-Nếu bạn dùng 1 trong 3 môi trường trên → **không cần làm gì**, skill tự detect.
-
-### G.2 Trên Windows
-
-**Cách 1 — Env var (System Properties):**
-
-1. `Win + R` → gõ `sysdm.cpl` → Enter
-2. Tab **Advanced** → **Environment Variables...**
-3. Phần **User variables**, click **New...**:
-   - Variable name: `ANTHROPIC_API_KEY`
-   - Variable value: `sk-ant-...`
-4. Lặp lại cho `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `PLANE_API_KEY`
-5. OK → OK → restart terminal/PowerShell
-
-**Hoặc dùng PowerShell (admin):**
-
-```powershell
-[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
-[Environment]::SetEnvironmentVariable("OPENAI_API_KEY", "sk-...", "User")
-[Environment]::SetEnvironmentVariable("GOOGLE_API_KEY", "AIza...", "User")
-[Environment]::SetEnvironmentVariable("PLANE_API_KEY", "plane_pat_...", "User")
-```
-
-**Cách 2 — Config file (khuyến nghị):**
-
-```powershell
-# Mở PowerShell trong thư mục qa-skill
-cd C:\projects\qa-skills
-
-# 1. Copy template
-copy config\api_keys.example.json config\api_keys.json
-
-# 2. Mở file bằng Notepad / VSCode
-notepad config\api_keys.json
-# Hoặc
-code config\api_keys.json
-
-# 3. Paste key thật
-# Lưu file
-
-# 4. Verify
-python scripts\ai_provider.py
-```
-
-**Lưu ý Windows:**
-- Đường dẫn dùng `\` thay vì `/`
-- Script `ai_provider.py` đã test OK trên Windows (Python 3.9+)
-- Nếu `python` không nhận, thử `py` thay vì `python`
-- File `api_keys.json` phải lưu encoding **UTF-8** (không phải UTF-8 BOM)
-
-### G.3 Dùng key trong code
-
-Các skill tự động load key qua helper `scripts/ai_provider.py`:
-
-```python
-# Trong script của skill
-import sys
-sys.path.insert(0, '<đường dẫn đến>/qa-skill/scripts')
-from ai_provider import get_anthropic_client, get_openai_client, get_provider_info
-
-# Get client (None nếu user dùng Copilot Pro/Antigravity/Claude Code)
-client = get_anthropic_client()
-if client:
-    response = client.messages.create(
-        model="claude-sonnet-4-5",
-        max_tokens=1024,
-        messages=[{"role": "user", "content": "Hello"}]
-    )
-    print(response.content[0].text)
-else:
-    print("Dùng model sẵn có của môi trường (Copilot/Antigravity)")
-
-# Check status
-info = get_provider_info()
-print(info)
-# {'environment': 'antigravity', 'active_provider': 'Antigravity (Gemini - free)', ...}
-```
-
-### G.4 Get API key từ đâu
-
-| Provider | URL lấy key |
-|---|---|
-| Anthropic (Claude) | https://console.anthropic.com/ |
-| OpenAI (GPT) | https://platform.openai.com/api-keys |
-| Google (Gemini) | https://aistudio.google.com/app/apikey |
-| Plane | Plane → Profile → Personal Access Tokens |
-
-### G.5 Lưu ý bảo mật
-
-- `config/api_keys.json` đã được gitignore — **không commit** key thật
-- Đã có template `config/api_keys.example.json` (commit được, key trống)
-- Khi push lên GitHub, check `git status` trước để chắc chắn không có file nhạy cảm
-- Nếu lỡ commit key, **rotate key ngay** tại provider + dùng `git filter-branch` hoặc BFG Repo-Cleaner để xoá khỏi history
-
----
-
-## F. Cập nhật sau này
-
-```bash
-# Trên máy A — sau khi sửa skill
-cd ~/projects/qa-skills
-git add .
-git commit -m "fix(qa-run): tdata.mjs thêm helper parseTdata"
-git push
-
-# Trên máy B — pull về
-cd ~/projects/mds-qa-skills
-git pull
-# Sau đó copy lại vào ~/.claude/skills/:
-for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
-  cp -R "./$s/." "$HOME/.claude/skills/$s/"
-done
-```
-
-Hoặc dùng symlink (auto-sync, nhưng cẩn thận `.gitignore`):
-
-```bash
-# Trên máy B, lần đầu setup:
-for s in qa-run testcase-template playwright-pom-automation doc-to-md business-analysis plane-qa google-drive-qa; do
-  rm -rf "$HOME/.claude/skills/$s"
-  ln -s "$HOME/projects/mds-qa-skills/$s" "$HOME/.claude/skills/$s"
-done
-
-# Sau này chỉ cần: cd ~/projects/mds-qa-skills && git pull
-# → auto-sync vào ~/.claude/skills/ vì symlink
-```
+| Skill không xuất hiện | skill chưa được cài hoặc phiên chưa reload | kiểm tra `<skills-dir>/<name>/SKILL.md` rồi mở phiên mới |
+| Skill có nhưng không có tool | MCP chưa cấu hình hoặc chưa loaded | chạy doctor, dùng `codex mcp list` hoặc Antigravity `/mcp`, rồi mở phiên mới |
+| OAuth hết hạn | auth | login lại đúng MCP và đúng account |
+| `command not found` | runtime | cài đúng binary/package rồi chạy doctor lại |
+| `permission denied` | remote permission | xác nhận account, workspace, repository hoặc DB role |
+| Database MCP có thể write | security boundary sai | revoke quyền ở database user và bật readonly MCP trước khi tiếp tục |
+| k6 chuẩn bị chạy nhiều user | workload chưa được duyệt | dừng, hoàn thiện contract và xin approval |

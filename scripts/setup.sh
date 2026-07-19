@@ -2,14 +2,14 @@
 # setup.sh — One-command bootstrap cho QA-skill.
 #
 # Clone về → chạy 1 lệnh → setup đủ:
-#   • Copy 16 skill vào ~/.claude/skills/ (hoặc SKILLS_DIR nếu override)
+#   • Copy 16 skill vào đúng thư mục discovery của Codex, Antigravity hoặc Claude
 #   • Cài Node deps (qa-run + playwright-pom-automation)
 #   • Cài Python deps (markitdown[all] + openpyxl) dùng prebuilt wheel
 #   • Auto-detect AI env (Antigravity / Copilot / Claude Code / standalone)
 #   • Tạo config/api_keys.json từ template (nếu standalone)
 #   • Verify end-to-end
 #
-# Usage: ./scripts/setup.sh [--skip-deps] [--dry-run] [--only=<skill[,..]>] [--yes]
+# Usage: ./scripts/setup.sh --agent=codex|antigravity|claude [options]
 # Help:  ./scripts/setup.sh --help
 
 set -eo pipefail 2>/dev/null || set -eo  # Git Bash on bash 3.2 may lack pipefail
@@ -40,7 +40,8 @@ to_posix_path() {
 source "$SCRIPT_DIR/setup_lib.sh"
 
 # ==== Defaults ====
-SKILLS_DIR="${SKILLS_DIR:-$HOME/.claude/skills}"
+TARGET_AGENT="${QA_SKILL_AGENT:-auto}"
+SKILLS_DIR="${SKILLS_DIR:-}"
 SKIP_DEPS="${SKIP_DEPS:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 ONLY_SKILLS=""
@@ -54,6 +55,8 @@ while [[ $# -gt 0 ]]; do
     --dry-run)         DRY_RUN=1; shift ;;
     --only=*)          ONLY_SKILLS="${1#*=}"; shift ;;
     --only)            ONLY_SKILLS="${2:-}"; shift 2 ;;
+    --agent=*)         TARGET_AGENT="${1#*=}"; shift ;;
+    --agent)           TARGET_AGENT="${2:-}"; shift 2 ;;
     --skills-dir=*)    SKILLS_DIR="${1#*=}"; shift ;;
     --skills-dir)      SKILLS_DIR="${2:-}"; shift 2 ;;
     --yes|-y)          YES=1; shift ;;
@@ -62,6 +65,11 @@ while [[ $# -gt 0 ]]; do
     *)                 log_err "Unknown flag: $1"; echo "  Try: $0 --help"; exit 1 ;;
   esac
 done
+
+TARGET_AGENT=$(resolve_target_agent "$TARGET_AGENT") || exit 1
+if [[ -z "$SKILLS_DIR" ]]; then
+  SKILLS_DIR=$(resolve_skills_dir "$TARGET_AGENT") || exit 1
+fi
 
 # ==== Trap ====
 trap 'rc=$?; if [[ $rc -ne 0 ]] && [[ $rc -ne 1 ]]; then log_err "Setup failed (exit=$rc, line=$LINENO). Try --dry-run để debug."; fi' EXIT

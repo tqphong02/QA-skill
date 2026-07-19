@@ -7,7 +7,7 @@ description: Plan or execute browser QA on an existing project, including app ba
 
 **Core principle:** Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
 
-Engine dùng chung ở `~/.claude/skills/qa-run/`. **Dữ liệu lấy theo thư mục bạn chạy lệnh** (cwd hoặc `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` đều nằm trong thư mục dự án đang test — KHÔNG đụng vào skill. Một skill, mọi project.
+Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. **Dữ liệu lấy theo thư mục bạn chạy lệnh** (cwd hoặc `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` đều nằm trong thư mục dự án đang test — KHÔNG đụng vào skill. Không giả định engine nằm trong `.claude`, `.codex`, `.gemini` hoặc home directory cụ thể
 
 > **Khi nào dùng**: khám phá lỗi mới, verify lại bug, poke UI/API ad-hoc trên 1 web app, sanity/risk-based khi cần chạy lặp, regression (bộ TC cố định) đặt ở instance dự án.
 > **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI.
@@ -220,9 +220,11 @@ Với `APP_BASELINE_DISCOVERY`, lập coverage ledger theo module và đi qua en
 **Cách 2** (cần chạy lặp / CI) — viết script ngắn:
 ```js
 // MyProject/qa/probe-x.mjs  — chỉ viết khi cần CHẠY LẶP (risk-based / sanity / regression)
-import { browser, snap, shot, BASE } from '/Users/<user>/.claude/skills/qa-run/lib/driver.mjs';
-import { recordNet, waitForStable, withRevert } from '/Users/<user>/.claude/skills/qa-run/lib/ui.mjs';
-import { eq, check, summary } from '/Users/<user>/.claude/skills/qa-run/lib/assert.mjs';
+const skillRoot = process.env.QA_RUN_SKILL_DIR;
+if (!skillRoot) throw new Error('QA_RUN_SKILL_DIR is required');
+const { browser, snap, shot, BASE } = await import(`${skillRoot}/lib/driver.mjs`);
+const { recordNet, waitForStable, withRevert } = await import(`${skillRoot}/lib/ui.mjs`);
+const { eq, check, summary } = await import(`${skillRoot}/lib/assert.mjs`);
 const { b, page } = await browser();
 const net = recordNet(page, /api\/v1/i, { withBody:true });
 await page.goto(BASE + '/path');
@@ -316,7 +318,7 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
 |---|---|---|
 | `Không tìm thấy .env` | cwd sai | `cd ~/Documents/QA-MDS/<project>` trước khi chạy |
 | `401 Unauthorized` (Plane) | API key sai/expire | Rotate key ở Plane Profile |
-| Skill không xuất hiện | Folder sai vị trí | Verify path là `~/.claude/skills/<name>/SKILL.md` |
+| Skill không xuất hiện | Folder sai vị trí | Chạy `scripts/doctor-agent.sh --agent=<host>` từ repository rồi mở phiên agent mới |
 | AI click mù không hiểu | Skip Bước A-D | BẮT BUỘC đọc spec trước |
 | Push lên GitHub mà lộ auth.json | Quên `.gitignore` | `git rm --cached auth.json` + rotate key |
 | Tự tạo data rác không cleanup | DB pollution, ảnh hưởng test khác | Bọc `withRevert()` hoặc dùng `afterAll` |
@@ -359,7 +361,7 @@ Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer,
   - **Workflow trên Antigravity:**
     1. Mở Antigravity IDE → mở thư mục dự án (vd `MyProject/qa/`)
     2. Agent (Gemini) tự dùng **Gemini-in-Chrome** để navigate/click/snapshot/probe API
-    3. Khi cần batch/regression → agent chạy `node ~/.claude/skills/qa-run/scripts/sweep.mjs`
+    3. Khi cần batch/regression → agent chạy `node <skill-root>/scripts/sweep.mjs`
     4. Khi log bug → agent chạy `node log-bug.mjs ...` (script portable)
     5. Verdict + report theo cùng format (`report/REPORT-TEMPLATE.md`)
 

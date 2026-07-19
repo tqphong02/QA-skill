@@ -7,7 +7,7 @@ alwaysApply: false
 # Playwright POM Automation
 
 When the user's request matches the triggers above, load the full skill body:
-- Skill file: [`playwright-pom-automation/SKILL.md`](../playwright-pom-automation/SKILL.md)
+- Skill file: [`playwright-pom-automation/SKILL.md`](../../playwright-pom-automation/SKILL.md)
 
 ## Khi nào áp dụng
 - Scaffold dự án Playwright mới

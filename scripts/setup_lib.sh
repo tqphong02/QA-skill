@@ -40,29 +40,85 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup toàn bộ 16 QA, Security Engineering và MCP integration skill + AI config. Mặc định: copy skills vào ~/.claude/skills/ + cài npm/pip
-deps + auto-detect AI provider + verify.
+Setup toàn bộ 16 QA, Security Engineering và MCP integration skill. Dùng --agent để chọn đúng AI host; --skills-dir chỉ dùng khi cần override có chủ đích.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
   --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
   --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
-  --skills-dir=<path>   Đổi target install (default: ~/.claude/skills/)
+  --agent=<name>        codex, antigravity hoặc claude; auto chỉ chạy khi detect đúng một host
+  --skills-dir=<path>   Override thư mục discovery do --agent chọn
   --yes / -y            Non-interactive (default = backup khi xung đột)
   --no-color            Tắt màu output
   --help / -h           In trợ giúp này
 
 Environment variables:
-  SKILLS_DIR            Override ~/.claude/skills
+  QA_SKILL_AGENT        Giá trị mặc định cho --agent
+  SKILLS_DIR            Override thư mục discovery
   SKIP_DEPS=1           Tương đương --skip-deps
   NO_COLOR=1            Tắt màu
 
 Examples:
-  ./scripts/setup.sh                            # Setup đầy đủ, interactive
-  ./scripts/setup.sh --skip-deps --yes          # Nhanh, không cài deps
-  ./scripts/setup.sh --dry-run                  # Chỉ in plan
-  ./scripts/setup.sh --only=doc-to-md --yes     # Chỉ setup 1 skill
+  ./scripts/setup.sh --agent=codex --yes
+  ./scripts/setup.sh --agent=antigravity --yes
+  ./scripts/setup.sh --agent=claude --yes
+  ./scripts/setup.sh --agent=codex --skip-deps --yes
+  ./scripts/setup.sh --agent=antigravity --dry-run
+  ./scripts/setup.sh --agent=claude --only=doc-to-md --yes
+  ./scripts/setup.sh --agent=codex --skills-dir=/custom/path --yes
 EOF
+}
+
+# ==== Agent target resolution ====
+resolve_target_agent() {
+  local requested="${1:-auto}"
+  case "$requested" in
+    codex|antigravity|claude)
+      printf '%s\n' "$requested"
+      return 0
+      ;;
+    auto)
+      local detected=()
+      command -v codex >/dev/null 2>&1 && detected+=(codex)
+      if command -v agy >/dev/null 2>&1 || [[ -d "/Applications/Antigravity.app" ]]; then
+        detected+=(antigravity)
+      fi
+      command -v claude >/dev/null 2>&1 && detected+=(claude)
+      if [[ ${#detected[@]} -eq 1 ]]; then
+        printf '%s\n' "${detected[0]}"
+        return 0
+      fi
+      if [[ ${#detected[@]} -eq 0 ]]; then
+        log_err "Không detect được AI host; dùng --agent=codex|antigravity|claude"
+      else
+        log_err "Detect nhiều AI host: ${detected[*]}; phải chọn --agent rõ ràng"
+      fi
+      return 1
+      ;;
+    *)
+      log_err "Agent không hỗ trợ: $requested"
+      log_err "Giá trị hợp lệ: codex, antigravity, claude, auto"
+      return 1
+      ;;
+  esac
+}
+
+resolve_skills_dir() {
+  case "$1" in
+    codex)
+      printf '%s\n' "${CODEX_HOME:-$HOME/.codex}/skills"
+      ;;
+    antigravity)
+      printf '%s\n' "$HOME/.gemini/config/skills"
+      ;;
+    claude)
+      printf '%s\n' "$HOME/.claude/skills"
+      ;;
+    *)
+      log_err "Không resolve được skills dir cho agent: $1"
+      return 1
+      ;;
+  esac
 }
 
 # ==== OS detect ====
@@ -363,6 +419,11 @@ detect_ai_env() {
 
 # ==== Setup AI config ====
 setup_ai_config() {
+  if [[ -n "${TARGET_AGENT:-}" ]] && [[ "$TARGET_AGENT" != "auto" ]]; then
+    log_step "AI host: $TARGET_AGENT"
+    log_ok "Dùng model và authentication của $TARGET_AGENT; không tạo API key thay mặt người dùng"
+    return 0
+  fi
   local env_type
   env_type=$(detect_ai_env)
   log_step "AI provider detect: $env_type"
@@ -409,7 +470,7 @@ verify_installation() {
   for py in python3.11 python3.12 python3.10 python3; do
     command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
   done
-  if [[ -n "$py_bin" ]] && [[ -f "$REPO_DIR/scripts/ai_provider.py" ]]; then
+  if [[ -n "$py_bin" ]] && [[ -f "$REPO_DIR/scripts/ai_provider.py" ]] && [[ -z "${TARGET_AGENT:-}" || "$TARGET_AGENT" == "auto" ]]; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
       log_dry "$py_bin $REPO_DIR/scripts/ai_provider.py"
     else
@@ -451,6 +512,7 @@ verify_installation() {
 print_plan() {
   log_step "Plan"
   log_info "  Repo:           $REPO_DIR"
+  log_info "  Agent:          ${TARGET_AGENT:-custom}"
   log_info "  Skills dir:     $SKILLS_DIR"
   log_info "  Skills to setup: $*"
   log_info "  Skip deps:       $([[ ${SKIP_DEPS:-0} -eq 1 ]] && echo yes || echo no)"
@@ -467,16 +529,29 @@ print_summary() {
   for skill in "${skills[@]}"; do
     local path="$SKILLS_DIR/$skill"
     local status="MISSING"
-    [[ -f "$path/SKILL.md" ]] && status="OK"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      status="PLANNED"
+    elif [[ -f "$path/SKILL.md" ]]; then
+      status="OK"
+    fi
     printf '  %-30s %s [%s]\n' "$skill" "$path" "$status"
   done
   cat <<EOF
 
 Next steps:
-  1. Mở AI coding agent mới và kiểm tra ${#skills[@]} skill đã chọn
-  2. Test doc-to-md:      ~/.claude/skills/doc-to-md/scripts/convert.sh <file.pdf>
-  3. Test qa-run:         cd <project>/qa && node ~/.claude/skills/qa-run/scripts/login.mjs
-  4. GitHub MCP (Codex):  ./github-mcp-qa/scripts/install-codex.sh --login
+  1. Mở $TARGET_AGENT mới và kiểm tra ${#skills[@]} skill đã chọn
+  2. Test doc-to-md:      $SKILLS_DIR/doc-to-md/scripts/convert.sh <file.pdf>
+  3. Test qa-run:         cd <project>/qa && node $SKILLS_DIR/qa-run/scripts/login.mjs
+  4. Agent doctor:        bash $REPO_DIR/scripts/doctor-agent.sh --agent=$TARGET_AGENT
+EOF
+
+  if [[ "$TARGET_AGENT" == "codex" || "$TARGET_AGENT" == "antigravity" ]]; then
+    printf '  5. QA MCP stack:        bash %s/github-mcp-qa/scripts/doctor-stack.sh --agent=%s\n' "$SKILLS_DIR" "$TARGET_AGENT"
+  else
+    printf '%s\n' '  5. MCP:                 cấu hình và kiểm tra bằng MCP manager của Claude'
+  fi
+
+  cat <<EOF
 
 Cập nhật skill sau này: git pull trong repo, rồi chạy lại ./scripts/setup.sh
 (chỉ skill nào có file thay đổi sẽ được backup + copy lại).

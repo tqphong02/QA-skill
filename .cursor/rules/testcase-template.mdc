@@ -7,7 +7,7 @@ alwaysApply: false
 # Test Case Template
 
 When the user's request matches the triggers above, load the full skill body:
-- Skill file: [`testcase-template/SKILL.md`](../testcase-template/SKILL.md)
+- Skill file: [`testcase-template/SKILL.md`](../../testcase-template/SKILL.md)
 
 ## Khi nào áp dụng
 - Sinh test case document (Excel / CSV / MD)

@@ -4,13 +4,15 @@
 
 Symptoms include `authorization required`, `not connected`, or no `google-drive` MCP tools in the session.
 
-1. Confirm the `google-drive` MCP is configured and enabled with `codex mcp get google-drive`.
+1. Confirm the `google-drive` MCP is configured and enabled with `codex mcp get google-drive` or Antigravity `/mcp`.
 2. Confirm `GOOGLE_DRIVE_OAUTH_CREDENTIALS` points to a local Desktop OAuth client JSON and `GOOGLE_DRIVE_MCP_SCOPES` includes the requested Drive, Docs, Sheets, or Slides scope.
 3. Complete OAuth consent when the MCP requests it.
-4. Start a new thread or restart Codex if the tool list does not refresh.
+4. Start a new thread or restart the active host if the tool list does not refresh.
 5. Retry the exact file or folder request.
 
 The skill cannot repair MCP OAuth by editing Markdown files.
+
+For Antigravity, enable the credential-free `google-drive` template entry only after the OAuth credential path and scopes are supplied through the local host environment. Never commit the OAuth client JSON or generated tokens
 
 ## Local uploader authentication
 

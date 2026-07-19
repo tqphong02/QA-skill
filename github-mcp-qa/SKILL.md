@@ -1,11 +1,11 @@
 ---
 name: github-mcp-qa
-description: Configure and operate GitHub's official MCP server for repository, Git, pull request, issue, Actions CI/CD, code-quality, and security QA workflows. Use when Codex needs to install or diagnose GitHub MCP, authenticate with OAuth or PAT, switch personal/company accounts, inspect or change GitHub resources, create or monitor CI pipelines, or distinguish GitHub API authentication from local Git SSH authentication.
+description: Configure and operate GitHub's official MCP server for repository, Git, pull request, issue, Actions CI/CD, code-quality, and security QA workflows across Codex, Antigravity, and Claude. Use when an AI coding agent needs to install or diagnose GitHub MCP, authenticate with OAuth or PAT, switch personal/company accounts, inspect or change GitHub resources, create or monitor CI pipelines, or distinguish GitHub API authentication from local Git SSH authentication.
 ---
 
 # GitHub MCP QA
 
-Use the official remote endpoint `https://api.githubcopilot.com/mcp/x/all` when full GitHub toolsets are required. Keep authentication local to each user; never place OAuth credentials or PAT values in this repository.
+Use the official remote endpoint `https://api.githubcopilot.com/mcp/` for all GitHub toolsets or a scoped `/x/<toolset>` endpoint when fewer tools are sufficient. Keep authentication local to each user; never place OAuth credentials or PAT values in this repository.
 
 ## Route the operation
 
@@ -20,7 +20,10 @@ Do not claim that an SSH key authenticates GitHub MCP. SSH and MCP/API authentic
 
 ## Install and diagnose
 
-Read [references/codex-github-mcp-vi.md](references/codex-github-mcp-vi.md) for the complete Vietnamese clone, setup, login, account-switching, PAT, and troubleshooting flow.
+Select the guide for the active host:
+
+- Codex: read [references/codex-github-mcp-vi.md](references/codex-github-mcp-vi.md)
+- Antigravity: read [references/antigravity-github-mcp-vi.md](references/antigravity-github-mcp-vi.md)
 
 For macOS, Linux, or WSL, configure the server with:
 
@@ -28,7 +31,7 @@ For macOS, Linux, or WSL, configure the server with:
 ./github-mcp-qa/scripts/install-codex.sh --login
 ```
 
-Use `--dry-run` before mutation or omit `--login` when the user only wants configuration without opening OAuth. Run [scripts/doctor.sh](scripts/doctor.sh) after setup.
+Use `--dry-run` before mutation. Codex defaults to PAT from `GITHUB_PAT_TOKEN`; use `--login` only when that Codex version can complete GitHub OAuth. Run the host-specific doctor after setup.
 
 ## Execute GitHub work
 
@@ -51,11 +54,13 @@ Use `--dry-run` before mutation or omit `--login` when the user only wants confi
 
 ## Authentication boundaries
 
-- Prefer OAuth for interactive users because scopes can be approved through GitHub
+- Prefer OAuth only when the active host supports the GitHub OAuth flow; otherwise use a fine-grained PAT from an environment variable or secret manager
 - Use a fine-grained PAT only when OAuth is unavailable; store it in an environment variable or secret manager
 - Treat `x/all` as all MCP toolsets, not unlimited GitHub account permission
 - Respect organization SSO, GitHub App, PAT, branch-protection, ruleset, and Actions policies
-- Logout before changing the MCP identity: `codex mcp logout github`
+- Clear the active host OAuth session or change the PAT environment when switching MCP identity
 - Keep personal and company Git identities isolated with separate SSH keys and host aliases
 
 Read [references/qa-mcp-stack-vi.md](references/qa-mcp-stack-vi.md) when selecting GitHub MCP alongside Chrome DevTools, k6, Postman, database read-only, and Slack.
+
+When the user asks which QA MCP servers are connected or reports that a skill exists but its tool is missing, run `scripts/doctor-stack.sh --agent=<host>` before suggesting installation. Do not treat a configured server as loaded until a new host session exposes its tools and a read-only smoke test succeeds.

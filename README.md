@@ -25,6 +25,8 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)
 
+Hướng dẫn phân biệt skill với MCP và kết nối QA MCP stack: [qa-mcp-stack-vi.md](./github-mcp-qa/references/qa-mcp-stack-vi.md)
+
 ## Cross-model compatibility
 
 Mọi agent đọc router và hard gate trong [AGENTS.md](./AGENTS.md). Gemini/Antigravity đọc bản mirror [GEMINI.md](./GEMINI.md).
@@ -44,28 +46,44 @@ Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-
 git clone git@github.com:tqphong02/QA-skill.git
 cd QA-skill
 
-# 2. Cài tất cả skill
-./scripts/setup.sh --yes
+# 2a. Codex
+./scripts/setup.sh --agent=codex --yes
 
-# 3. Cài deps cho qa-run
-cd ~/.claude/skills/qa-run && npm install
+# 2b. Antigravity
+./scripts/setup.sh --agent=antigravity --yes
 
-# 4. Export Plane API key trước khi mở agent
+# 2c. Claude Code
+./scripts/setup.sh --agent=claude --yes
+
+# 3. Export Plane API key trước khi mở agent
 export PLANE_API_KEY="plane_pat_xxx"
 
-# 5. Google Drive MCP: dùng OAuth Desktop credential đã có
+# 4. Google Drive MCP: dùng OAuth Desktop credential đã có
 codex mcp add google-drive \
   --env GOOGLE_DRIVE_OAUTH_CREDENTIALS="$HOME/.config/google-drive-mcp/gcp-oauth.keys.json" \
   --env GOOGLE_DRIVE_MCP_SCOPES="drive,drive.file,documents,spreadsheets,presentations" \
   -- npx -y @piotr-agier/google-drive-mcp
 
-# 6. GitHub MCP chính chủ: mỗi người clone tự login account của mình
-"$HOME/.claude/skills/github-mcp-qa/scripts/install-codex.sh" --login
+# 5. GitHub MCP cho Codex dùng PAT từ environment, không ghi token vào repo
+# Export GITHUB_PAT_TOKEN bằng secret manager hoặc terminal hiện tại trước bước này
+bash github-mcp-qa/scripts/install-codex.sh
+
+# 6. Kiểm tra host và QA MCP stack
+bash scripts/doctor-agent.sh --agent=codex
+bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
+```
+
+Windows PowerShell:
+
+```powershell
+.\scripts\setup.ps1 -Agent codex -Yes
+.\scripts\setup.ps1 -Agent antigravity -Yes
+.\scripts\setup.ps1 -Agent claude -Yes
 ```
 
 Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `plane-qa/ACCOUNT-PROFILE.example.md` và `google-drive-qa/ACCOUNT-PROFILE.example.md`.
 
-Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) để biết chi tiết chung. Hướng dẫn GitHub MCP từng bước bằng tiếng Việt nằm tại [github-mcp-qa/references/codex-github-mcp-vi.md](./github-mcp-qa/references/codex-github-mcp-vi.md).
+Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) và [WINDOWS-SETUP.md](./WINDOWS-SETUP.md). GitHub MCP có guide riêng cho [Codex](./github-mcp-qa/references/codex-github-mcp-vi.md) và [Antigravity](./github-mcp-qa/references/antigravity-github-mcp-vi.md)
 
 ## API Keys (cho AI models)
 

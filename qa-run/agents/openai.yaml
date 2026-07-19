@@ -1,0 +1,4 @@
+interface:
+  display_name: "QA Run"
+  short_description: "Chạy browser QA và lưu business knowledge"
+  default_prompt: "Use $qa-run to execute the requested browser QA scope and update its business guide."

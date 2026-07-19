@@ -1,6 +1,6 @@
 ---
 name: api-contract-qa
-description: Validate REST, OpenAPI, Swagger, Postman, GraphQL, gRPC, and webhook contracts against running implementations; check schema, status, headers, authentication, pagination, idempotency, compatibility, negative behavior, and evidence. Use when Codex needs API contract testing, implementation-versus-spec verification, breaking-change review, deterministic API regression, or API quality reporting rather than only writing testcase documents.
+description: Validate REST, OpenAPI, Swagger, Postman, GraphQL, gRPC, and webhook contracts against running implementations; check schema, status, headers, authentication, pagination, idempotency, compatibility, negative behavior, and evidence. Use when an AI coding agent needs API contract testing, implementation-versus-spec verification, breaking-change review, deterministic API regression, API quality reporting, or Postman MCP installation and diagnosis rather than only writing testcase documents.
 ---
 
 # API Contract QA
@@ -18,6 +18,8 @@ Verify both the specification and the observable implementation. A valid OpenAPI
 7. Clean up every created resource and verify deletion or rollback
 
 Read [references/CONTRACT_MATRIX.md](references/CONTRACT_MATRIX.md) when designing endpoint coverage.
+
+Read [references/POSTMAN_MCP.md](references/POSTMAN_MCP.md) before installing, authenticating, or diagnosing Postman MCP. Run `../github-mcp-qa/scripts/doctor-stack.sh postman` after configuration.
 
 ## Tool routing
 

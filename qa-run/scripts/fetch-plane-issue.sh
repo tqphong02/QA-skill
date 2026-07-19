@@ -9,7 +9,7 @@
 #
 # Output: JSON đầy đủ của issue (name, description_html, state, priority, assignees, comments).
 #
-# Env cần có (đặt trong .env của project đang test, hoặc ~/.claude/skills/qa-run/config.env):
+# Env cần có (đặt trong .env của project đang test, hoặc config.env cạnh skill):
 #   PLANE_API_KEY=plane_pat_xxx
 #   PLANE_BASE_URL=https://projects.metasolutions.ai/api/v1
 #   PLANE_WORKSPACE=mds-team
@@ -21,6 +21,9 @@
 #   SAVE_OUT=path   # ghi JSON ra file thay vì stdout
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_CONFIG="$SCRIPT_DIR/../config.env"
 
 # --- Load .env (thử project trước, fallback skill global) ---
 # Python parse theo RFC dotenv (quote, escape) → in "export KEY=value" →
@@ -48,15 +51,15 @@ PYEOF
 ENV_FILE=""
 if [ -f "./.env" ]; then
   ENV_FILE="./.env"
-elif [ -f "$HOME/.claude/skills/qa-run/config.env" ]; then
-  ENV_FILE="$HOME/.claude/skills/qa-run/config.env"
+elif [ -f "$SKILL_CONFIG" ]; then
+  ENV_FILE="$SKILL_CONFIG"
 fi
 if [ -n "$ENV_FILE" ]; then
   eval "$(load_env_file "$ENV_FILE")"
 fi
 
 # --- Check required env ---
-: "${PLANE_API_KEY:?❌ Thiếu PLANE_API_KEY. Set trong .env hoặc ~/.claude/skills/qa-run/config.env}"
+: "${PLANE_API_KEY:?❌ Thiếu PLANE_API_KEY. Set trong .env hoặc config.env cạnh skill}"
 : "${PLANE_BASE_URL:?❌ Thiếu PLANE_BASE_URL. VD: https://projects.metasolutions.ai/api/v1}"
 : "${PLANE_WORKSPACE:?❌ Thiếu PLANE_WORKSPACE. VD: mds-team}"
 

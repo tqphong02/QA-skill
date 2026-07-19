@@ -50,7 +50,7 @@
 **Khi nào:** câu hỏi đơn lẻ, không cần kế hoạch ("trang này còn load không?", "nút này bấm ra gì?").
 **Cách làm:** 1 lệnh, không dựng probe.
 ```bash
-node ~/.claude/skills/qa-run/scripts/explore.mjs /master-calendar cal-now
+node <skill-root>/scripts/explore.mjs /master-calendar cal-now
 ```
 **Clean rule:** đừng over-build. Nếu phát sinh >1 câu hỏi → nâng lên exploratory.
 
@@ -65,8 +65,8 @@ node ~/.claude/skills/qa-run/scripts/explore.mjs /master-calendar cal-now
 - *Error-guessing* — đoán chỗ dễ vỡ (double-click, back/refresh giữa chừng, đổi tab rồi quay lại, mạng chậm).
 - *CRUD tour* — tạo→đọc→sửa→xoá, kiểm tính nhất quán.
 ```bash
-node ~/.claude/skills/qa-run/scripts/sweep.mjs        # feature tour: bắt HTTP≥400 + console error toàn site
-node ~/.claude/skills/qa-run/scripts/api-health.mjs   # tour API: 4xx/5xx
+node <skill-root>/scripts/sweep.mjs        # feature tour: bắt HTTP≥400 + console error toàn site
+node <skill-root>/scripts/api-health.mjs   # tour API: 4xx/5xx
 # nghi vấn nào → 1 probe sâu (driver + ui + assert)
 ```
 **Ghi nhận LIVE → `FINDINGS.md`:** Quan sát → Expected → Evidence:<png> → Severity. Gom theo root-cause.
@@ -238,7 +238,7 @@ check('Negative: thiếu title → block submit', !net.some(c => c.url.includes(
 # Cài firefox/webkit 1 lần:
 npx playwright install firefox webkit
 # Chạy matrix engine × device:
-node ~/.claude/skills/qa-run/scripts/compat.mjs /dashboard chromium,firefox,webkit iphone-12,ipad-11
+node <skill-root>/scripts/compat.mjs /dashboard chromium,firefox,webkit iphone-12,ipad-11
 ```
 → In matrix (nav status / load time / errors mỗi combo) + screenshot `evidence/compat-*.png`. **So sánh screenshot bằng mắt** để bắt layout/render diff giữa browser.
 

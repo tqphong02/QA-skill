@@ -7,7 +7,7 @@ alwaysApply: false
 # QA Run
 
 When the user's request matches the triggers above, load the full skill body:
-- Skill file: [`qa-run/SKILL.md`](../qa-run/SKILL.md)
+- Skill file: [`qa-run/SKILL.md`](../../qa-run/SKILL.md)
 
 ## Khi nào áp dụng
 - Lên kế hoạch / thực thi chu trình QA
