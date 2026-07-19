@@ -1,0 +1,4 @@
+interface:
+  display_name: "Performance QA"
+  short_description: "Baseline UI and API performance with safe load"
+  default_prompt: "Use $performance-qa to create a safe performance baseline and threshold report."

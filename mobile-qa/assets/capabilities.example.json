@@ -1,0 +1,18 @@
+{
+  "android": {
+    "platformName": "Android",
+    "appium:automationName": "UiAutomator2",
+    "appium:deviceName": "Android Emulator",
+    "appium:app": "/absolute/path/to/app.apk",
+    "appium:noReset": false,
+    "appium:newCommandTimeout": 120
+  },
+  "ios": {
+    "platformName": "iOS",
+    "appium:automationName": "XCUITest",
+    "appium:deviceName": "iPhone Simulator",
+    "appium:app": "/absolute/path/to/app.app",
+    "appium:noReset": false,
+    "appium:newCommandTimeout": 120
+  }
+}

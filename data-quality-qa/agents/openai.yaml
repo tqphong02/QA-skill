@@ -1,0 +1,4 @@
+interface:
+  display_name: "Data Quality QA"
+  short_description: "Validate pipelines, reconciliation, and lineage"
+  default_prompt: "Use $data-quality-qa to validate this data pipeline and produce reconciliation evidence."

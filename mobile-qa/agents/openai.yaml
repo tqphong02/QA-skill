@@ -1,0 +1,4 @@
+interface:
+  display_name: "Mobile QA"
+  short_description: "Test Android and iOS across device matrices"
+  default_prompt: "Use $mobile-qa to plan and execute this Android or iOS test run."
