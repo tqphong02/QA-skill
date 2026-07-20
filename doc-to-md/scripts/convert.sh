@@ -17,8 +17,8 @@ if [ "$#" -lt 1 ] || [ -z "${1:-}" ]; then
   echo "Supported formats: PDF, DOCX, PPTX, XLSX, HTML, JPG/PNG, MP3, etc."
   echo ""
   echo "Examples:"
-  echo "  $0 spec.pdf              # → spec.md"
-  echo "  $0 spec.docx output.md   # → output.md"
+  echo "  $0 spec.pdf              # → spec_DD-MM-YYYY.md"
+  echo "  $0 spec.docx output.md   # → output_DD-MM-YYYY.md"
   exit 1
 fi
 
@@ -30,7 +30,27 @@ if [ ! -f "$INPUT" ]; then
   exit 1
 fi
 
-OUTPUT="${2:-${INPUT%.*}.md}"
+REQUESTED_OUTPUT="${2:-${INPUT%.*}.md}"
+ARTIFACT_DATE="${QA_ARTIFACT_DATE:-$(TZ=Asia/Ho_Chi_Minh date +%d-%m-%Y)}"
+
+if [[ ! "$ARTIFACT_DATE" =~ ^[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
+  echo "❌ QA_ARTIFACT_DATE must use DD-MM-YYYY: $ARTIFACT_DATE"
+  exit 1
+fi
+
+if [ "${QA_PRESERVE_EXACT_FILENAME:-0}" = "1" ]; then
+  OUTPUT="$REQUESTED_OUTPUT"
+else
+  OUTPUT_DIR="$(dirname "$REQUESTED_OUTPUT")"
+  OUTPUT_FILE="$(basename "$REQUESTED_OUTPUT")"
+  OUTPUT_EXT="${OUTPUT_FILE##*.}"
+  OUTPUT_STEM="${OUTPUT_FILE%.*}"
+  if [[ "$OUTPUT_STEM" =~ _[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
+    OUTPUT="$REQUESTED_OUTPUT"
+  else
+    OUTPUT="$OUTPUT_DIR/${OUTPUT_STEM}_${ARTIFACT_DATE}.${OUTPUT_EXT}"
+  fi
+fi
 
 # Find Python 3.10+ (MarkItDown requires 3.10+)
 # Allow override via env var: PYTHON_BIN=/path/to/python3.11 bash convert.sh ...

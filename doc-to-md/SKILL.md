@@ -1,16 +1,26 @@
 ---
 name: doc-to-md
-description: Use when converting PDF/DOCX/PPTX/HTML documents to Markdown for ingestion into other QA skills (testcase-template, qa-run). Not for editing Markdown files or scraping web pages.
+description: Convert local filesystem or chat-uploaded PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, JSON, XML, or ZIP files to Markdown for ingestion into other QA skills. Use only when the source already exists as a local file path. Do not use for Google Drive URLs, IDs, Docs, Sheets, Slides, or other remote Drive objects; keep those sources on the google-drive MCP route unless the user explicitly requested a local download or export first. Not for editing Markdown files or scraping web pages.
 ---
 
 # Doc to MD
 
-**Core principle:** Convert đúng cấu trúc — không retype thủ công từ PDF.
+**Core principle:** Chỉ convert file local đúng cấu trúc — không retype thủ công từ PDF và không kéo nguồn Drive về local chỉ để convert.
 
 Dùng **MarkItDown** của Microsoft (open-source MIT) để convert PDF, DOCX, PPTX, XLSX, HTML, ảnh (JPG/PNG với OCR) sang Markdown. File được xử lý 100% local (privacy), không upload cloud. **API key**: KHÔNG cần key cho MarkItDown.
 
 > **Khi nào dùng**: User upload file tài liệu (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) và muốn AI đọc hiểu nội dung.
 > **Mục đích**: PDF/DOCX gốc khó cho AI parse trực tiếp. Convert sang Markdown trước → AI đọc MD dễ dàng hơn, hiểu sâu hơn.
+
+## Source boundary
+
+1. Require a real local filesystem path before running `convert.sh`.
+2. Treat a chat-uploaded file materialized as a local path as local input.
+3. Treat a Google Drive URL, Drive ID, Google Docs URL, Google Sheets URL, Google Slides URL, or object resolved through Drive MCP as a remote Drive source.
+4. For a remote Drive source, stop this skill and route the request to `google-drive-qa`; consume the in-place MCP content directly.
+5. Do not download, export, or copy a Drive source locally merely to make it eligible for this skill.
+6. Allow conversion after a Drive download or export only when the user explicitly requested that local artifact.
+7. For mixed sources, convert only the local files and leave Drive objects on the MCP route.
 
 ## The trap this skill exists to prevent
 
@@ -19,16 +29,16 @@ Dùng **MarkItDown** của Microsoft (open-source MIT) để convert PDF, DOCX, 
 ## Process
 
 ### 1. Detect file format
-Check extension `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.jpg`, `.png`. Script `convert.sh` auto-detects from extension — no need to specify format.
+Verify that the input is an existing local path, then check extension `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.jpg`, `.png`. Script `convert.sh` auto-detects from extension — no need to specify format. If the input is a Drive URL or ID, do not run the converter.
 
 ### 2. Run converter
 
 **Cách 1 — dùng script trực tiếp:**
 ```bash
-# Convert PDF sang MD (output tự động = input.md)
+# Convert PDF sang MD (output tự động = input_DD-MM-YYYY.md)
 bash <skill-root>/scripts/convert.sh /path/to/file.pdf
 
-# Convert với output file cụ thể
+# Convert với output base cụ thể; script vẫn thêm date
 bash <skill-root>/scripts/convert.sh /path/to/file.docx /tmp/output.md
 
 # Convert Excel
@@ -36,6 +46,8 @@ bash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md
 ```
 
 Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. Không giả định skill nằm trong `.claude`, `.codex`, `.gemini` hoặc một home directory cụ thể
+
+Mọi Markdown mới dùng hậu tố `_DD-MM-YYYY` theo ngày `Asia/Ho_Chi_Minh`, ví dụ `FRS_20-07-2026.md`. Không thêm date lần hai nếu basename đã có đúng suffix. Không rename file cũ. Nếu user yêu cầu giữ nguyên filename chính xác, chạy với `QA_PRESERVE_EXACT_FILENAME=1`.
 
 **Cách 2 — AI tự detect và convert** (khi user upload file trong chat):
 1. Detect file type (PDF, DOCX, ...)
@@ -88,11 +100,11 @@ Optional dependencies cho từng format:
 
 **Convert tài liệu:**
 ```bash
-$ bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx
-🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS.md
+$ QA_ARTIFACT_DATE=20-07-2026 bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx
+🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS_20-07-2026.md
 📦 Installing MarkItDown...
 🔄 Converting...
-✅ Done: FRS.md (45,231 bytes, 1,247 lines)
+✅ Done: FRS_20-07-2026.md (45,231 bytes, 1,247 lines)
 ```
 
 **AI dùng sau khi convert:**
@@ -126,6 +138,8 @@ with open('BCP_AI_SRS.md') as f:
   - Hoặc Conda: `conda install -c conda-forge markitdown`
 
 - **Retype thủ công thay vì convert** — mất table structure, sinh typo, tốn thời gian. Luôn chạy convert.sh trước.
+
+- **Download Drive object rồi convert khi user chỉ yêu cầu đọc/phân tích** — sai source route và tạo snapshot local không cần thiết. Dùng `google-drive` MCP đọc in-place; chỉ convert khi user yêu cầu rõ bản local.
 
 - **Upload file lên cloud service khác** — MarkItDown xử lý local, privacy được bảo toàn. Đừng upload trừ khi user yêu cầu rõ.
 

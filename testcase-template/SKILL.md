@@ -24,7 +24,7 @@ Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi t
 5. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
 6. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
 7. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
-8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>.md` trước `<output>.xlsx`
+8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>_<DD-MM-YYYY>.md` trước `<output>_<DD-MM-YYYY>.xlsx` với cùng ngày `Asia/Ho_Chi_Minh`
 9. Đọc lại Markdown trước rồi đối chiếu Excel: số case, Scenario/Testcase ID và nội dung design phải khớp; cột I-M chỉ có ở Excel và để trống
 
 Nếu expected chưa có trong requirement, dừng case đó ở trạng thái cần làm rõ; không tự bịa business rule.
@@ -111,9 +111,17 @@ python3 scripts/import-api-spec.py api-file output-api.json \
 Chỉ chạy bước Excel khi command trả exit code `0` và `review_required` trống. Với endpoint/curl không khai báo response status, user có thể xác nhận rồi truyền `--default-success-status 200`; không tự thêm option này nếu chưa được xác nhận.
 
 ```bash
-python3 scripts/gen-testcases.py input.json output.xlsx
+python3 scripts/gen-testcases.py input.json OneBrain_Testcases.xlsx
 ```
-→ Script tạo `output.md` đầy đủ trước → copy template → update Cover từ JSON → cleanup → ghi section/group/case rows → hardcode cùng Testcase ID → save `output.xlsx`.
+→ Script tự sinh `OneBrain_Testcases_<DD-MM-YYYY>.md` trước → copy template → update Cover từ JSON → cleanup → ghi section/group/case rows → hardcode cùng Testcase ID → save `OneBrain_Testcases_<DD-MM-YYYY>.xlsx`.
+
+### Artifact filename date
+
+- Append the `Asia/Ho_Chi_Minh` creation date immediately before the extension as `_DD-MM-YYYY`, for example `OneBrain_Testcases_20-07-2026.xlsx`
+- Use the same date for the Markdown and Excel companions
+- Do not append a second date when the requested basename already ends in `_DD-MM-YYYY`
+- Do not rename existing artifacts
+- When the user supplies an exact filename that must remain unchanged, set `QA_PRESERVE_EXACT_FILENAME=1` for the generator
 
 Markdown là bản AI đọc để hiểu testcase mà không cần parse Excel. Đọc [references/markdown-testcases.md](references/markdown-testcases.md) và không chỉnh hai file độc lập.
 
@@ -150,6 +158,7 @@ Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers m
 - Không đặt dấu `.` ở cuối Scenario Name, Description, Pre-condition, Procedure hoặc Expected Results
 - Không chèn emoji/icon vào nội dung testcase
 - Giữ nguyên Scenario ID, Testcase ID, requirement ID, URL, filename, formula, code và số thập phân
+- Tên Markdown và Excel mới phải cùng basename có hậu tố `_DD-MM-YYYY`
 - Generator tự validate icon và tự bỏ dấu chấm cuối từng dòng prose
 
 ### Template structure chi tiết

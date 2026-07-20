@@ -49,6 +49,7 @@ TYPE_LABEL = {
     'additional': 'Additional (out-of-spec)',
 }
 ICON_RE = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
+DATE_SUFFIX_RE = re.compile(r'_\d{2}-\d{2}-\d{4}$')
 PLACEHOLDER_RE = re.compile(r'<[^<>]+>')
 ALLOWED_HTTP_METHODS = {'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'}
 SENSITIVE_HEADER_NAMES = {
@@ -58,6 +59,25 @@ SENSITIVE_PAYLOAD_KEYS = {
     'password', 'token', 'access_token', 'refresh_token', 'api_key', 'apikey',
     'client_secret', 'secret'
 }
+
+
+def dated_artifact_path(output_path):
+    """Append one Asia/Ho_Chi_Minh creation date before the extension."""
+    if os.environ.get('QA_PRESERVE_EXACT_FILENAME') == '1':
+        return output_path
+    root, extension = os.path.splitext(output_path)
+    if DATE_SUFFIX_RE.search(root):
+        return output_path
+    artifact_date = os.environ.get('QA_ARTIFACT_DATE') or datetime.datetime.now(
+        datetime.timezone(datetime.timedelta(hours=7))
+    ).strftime('%d-%m-%Y')
+    try:
+        datetime.datetime.strptime(artifact_date, '%d-%m-%Y')
+    except ValueError as exc:
+        raise ValueError(
+            f'QA_ARTIFACT_DATE must use DD-MM-YYYY, got {artifact_date}'
+        ) from exc
+    return f'{root}_{artifact_date}{extension}'
 
 
 def human_text(value, field='content'):
@@ -421,7 +441,10 @@ def main():
     if len(sys.argv) < 3:
         print("Cách dùng: gen-testcases.py <input.json> <output.xlsx> [template.xlsx]")
         sys.exit(1)
-    inp_path, out_path = sys.argv[1], sys.argv[2]
+    inp_path, requested_out_path = sys.argv[1], sys.argv[2]
+    out_path = dated_artifact_path(requested_out_path)
+    if out_path != requested_out_path:
+        print(f"  Dated output: {requested_out_path} -> {out_path}")
     # Ưu tiên CLI arg, nếu không có thì dùng Template.xlsx (template chung cho mọi project)
     cli_template = sys.argv[3] if len(sys.argv) > 3 else None
     tmpl = get_template_path(specified_path=cli_template)
