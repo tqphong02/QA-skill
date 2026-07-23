@@ -23,6 +23,31 @@ Intent Router → Run Planner & Dependency Graph → Manifest Initializer (run-m
   → Result Normalizer → Idempotent Exporters → Cleanup & Orphan Verification → Knowledge Delta Update → Manifest Finalizer
 ```
 
+## REPO_BUSINESS_DISCOVERY (Static Source Code Analysis Pipeline)
+
+Kích hoạt khi user yêu cầu: `Phân tích repo này`, `Học business flow từ source code`, `Quét logic hệ thống`, `Cập nhật knowledge từ repository`, `Tạo business guide từ code`.
+
+```bash
+# Phân tích một repo
+node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode full
+
+# Chỉ cập nhật phần thay đổi
+node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode incremental
+
+# Phân tích nhiều repo cùng lúc
+node scripts/repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
+```
+
+Output: `qa-knowledge/repositories/<repo-name>/` gồm:
+- `repo-metadata.json` — loại repo, framework, modules, commit
+- `symbol-index.json` — class, function, enum, route, decorator, validation
+- `architecture-map.json` — Module → Controller/Service/Repository + integrations
+- `api-contracts.json` — endpoint, method, auth, roles
+- `business-rules.json` — rule có ruleId, category, condition, failureResult, confidence
+- `business-guide.md` *(Phase 3)* — guide tổng hợp 18 sections
+
+Khi có `system-business-guide.md` tại `qa-knowledge/merged/`, `qa-run` và `business-analysis` đọc từ đó để enriched context.
+
 ## Cross-model hard gates
 
 Áp dụng nguyên thứ tự sau cho mọi model, đặc biệt model nhanh hoặc context nhỏ:

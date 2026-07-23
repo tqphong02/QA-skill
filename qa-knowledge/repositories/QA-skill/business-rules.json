@@ -1,0 +1,504 @@
+{
+  "tool": "business-rule-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "extractedAt": "2026-07-23T15:30:49.463Z",
+  "totalRules": 54,
+  "summaryByCategory": {
+    "existence_check": 16,
+    "input_validation": 13,
+    "state_transition": 6,
+    "permission": 4,
+    "financial": 1,
+    "uniqueness": 4,
+    "rate_limit": 3,
+    "feature_flag": 7
+  },
+  "rules": [
+    {
+      "ruleId": "EXISTENCE_CHECK_AD5336",
+      "module": "performance",
+      "category": "existence_check",
+      "condition": "if (!path) return null;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js:25",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_65679D",
+      "module": "performance",
+      "category": "input_validation",
+      "condition": "const maxVus = Math.max(...stages.map((stage) => Number(stage.target || 0)));",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js:36",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_7FA6C4",
+      "module": "performance",
+      "category": "state_transition",
+      "condition": "'status 200': (r) => r.status === 200,",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js:75",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_8EA4D8",
+      "module": "lib",
+      "category": "existence_check",
+      "condition": "if (!m) return null;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/lib/tdata.mjs:61",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_DC7EBD",
+      "module": "lib",
+      "category": "state_transition",
+      "condition": "* ... thao tác ... // rồi assert net.find(c => c.status===200 && /updated_addons\":\\[\\]/.test(c.body))",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/lib/ui.mjs:11",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_87F20B",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!root) return [];",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/attack-surface.mjs:211",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_1B1C8B",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!inp) return null;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/attack-surface.mjs:256",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_071CA8",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (SKIP_DESTR) return;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/attack-surface.mjs:335",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_954786",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/business-flow-builder.mjs:127",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_B468C6",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "const handlerContent = lines.slice(i, Math.min(i + 80, lines.length)).join('\\n');",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/business-flow-builder.mjs:133",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_1C0C40",
+      "module": "scripts",
+      "category": "permission",
+      "condition": "/throw.*(?:ForbiddenException|UnauthorizedException|AccessDeniedException)/,",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:48",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_61E987",
+      "module": "scripts",
+      "category": "permission",
+      "condition": "/hasPermission|checkPermission|assertPermission/i,",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:51",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_B06D4E",
+      "module": "scripts",
+      "category": "financial",
+      "condition": "/Insufficient|insufficient_funds|balance.*not.*enough/i,",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:64",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_83BF4D",
+      "module": "scripts",
+      "category": "state_transition",
+      "condition": "/throw.*InvalidStatusTransition|cannot.*status/i,",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:78",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_B95A29",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "/throw.*(?:NotFoundException|NotFoundError|EntityNotFound)/,",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:90",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_38EC2D",
+      "module": "scripts",
+      "category": "uniqueness",
+      "condition": "/ConflictException|DuplicateException|already.*exist|is.*taken/i,",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:103",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_58EC27",
+      "module": "scripts",
+      "category": "uniqueness",
+      "condition": "/UNIQUE.*constraint|unique.*violation/i,",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:104",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "RATE_LIMIT_5BA9F4",
+      "module": "scripts",
+      "category": "rate_limit",
+      "condition": "// Rate limit / throttle",
+      "failureResult": "Tạm khóa do vượt giới hạn request",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:111",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "RATE_LIMIT_B419A9",
+      "module": "scripts",
+      "category": "rate_limit",
+      "condition": "/@Throttle|RateLimit|TooManyRequests|throttle/i,",
+      "failureResult": "Tạm khóa do vượt giới hạn request",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:116",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "RATE_LIMIT_5357EF",
+      "module": "scripts",
+      "category": "rate_limit",
+      "condition": "/retry.*attempt|maxRetries|retryCount/i,",
+      "failureResult": "Tạm khóa do vượt giới hạn request",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:117",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_F72382",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "/@IsNotEmpty|@IsEmail|@IsNumber|@Min\\(|@Max\\(|@Length\\(|@IsString|@IsEnum/,",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:129",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_7C3DE5",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "category: 'feature_flag',",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:140",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_048660",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "/featureFlag|feature_flag|isEnabled|isFeatureEnabled|FEATURE_/i,",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/business-rule-extractor.mjs:143",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_2F18F9",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!launcher) return { engine: engineName, device: deviceName, error: 'engine không hỗ trợ' };",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/compat.mjs:52",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_1D12D6",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "const chunks = Array.from({ length: Math.min(WORKERS, moduleKeys.length) }, () => []);",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/execute-sheet.mjs:227",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_C83377",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "featureFlags: typeof window.featureFlags !== 'undefined' ? Object.keys(window.featureFlags || {}).slice(0, 20) : [],",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/extract-flow.mjs:156",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "UNIQUENESS_2F3B2A",
+      "module": "scripts",
+      "category": "uniqueness",
+      "condition": "// If guide already exists, add merge fields",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/scripts/extract-flow.mjs:538",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_B53A99",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "const FEATURE_NAME = getArg('--feature', '');",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/generate-checklist.mjs:40",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_F81C81",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "const slug = FEATURE_NAME ? slugify(FEATURE_NAME) : slugify(URL_PATH);",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/generate-checklist.mjs:263",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_488549",
+      "module": "scripts",
+      "category": "state_transition",
+      "condition": "// --steps \"1. Mở /events|2. Chọn Status=Pending\" \\",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/scripts/log-bug.mjs:20",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_F9934E",
+      "module": "scripts",
+      "category": "state_transition",
+      "condition": "// --reason \"Filter Status=Pending trả 0 thay vì 6, AC #1 fail\" \\",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/scripts/log-bug.mjs:28",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_AB5E87",
+      "module": "scripts",
+      "category": "permission",
+      "condition": "* - @UseGuards() với RolesGuard / JwtAuthGuard",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/scripts/permission-matrix-extractor.mjs:7",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_258954",
+      "module": "scripts",
+      "category": "permission",
+      "condition": "* - hasRole, hasPermission, canActivate checks",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/scripts/permission-matrix-extractor.mjs:10",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_376E2A",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/permission-matrix-extractor.mjs:84",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_C8D92F",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "for (let j = i + 1; j < Math.min(i + 20, lines.length); j++) {",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/permission-matrix-extractor.mjs:118",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_DC1761",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (hasFrontend) return 'frontend';",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/repo-fingerprint.mjs:102",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_13361F",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (hasBackend) return 'backend';",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/repo-fingerprint.mjs:103",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_7B5E2D",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "for (let j = i + 1; j < Math.min(i + 50, lines.length); j++) {",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/source-indexer.mjs:68",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_1FB2F3",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "for (let j = i + 1; j < Math.min(i + 30, lines.length); j++) {",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/state-machine-extractor.mjs:69",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_357FFE",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "const context = lines.slice(Math.max(0, i - 5), i).join(' ');",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/state-machine-extractor.mjs:93",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_52E5EC",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (KNOW_DIR) return KNOW_DIR;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/traceability-matrix-generator.mjs:29",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_4809F2",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (REPO_NAME) return path.join(DATA_DIR, 'qa-knowledge', 'repositories', REPO_NAME);",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/traceability-matrix-generator.mjs:30",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_F6E94E",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!rules) return [];",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/traceability-matrix-generator.mjs:41",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_534B1A",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!endpoints) return [];",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/traceability-matrix-generator.mjs:50",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_7021F2",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!entities) return [];",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/traceability-matrix-generator.mjs:58",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_F7EC6C",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "const ltMax = longTasks.length ? Math.max(...longTasks) : 0;",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/ux-health.mjs:115",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_9406AD",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!node) return null;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ux-health.mjs:157",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_5810E5",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "if (r.width > VW * 0.5) headerH = Math.max(headerH, r.bottom); // header-ish (rộng > nửa viewport)",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/ux-health.mjs:208",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "INPUT_VALIDATION_0DC338",
+      "module": "scripts",
+      "category": "input_validation",
+      "condition": "if (r.width > VW * 0.5) h = Math.max(h, r.height);",
+      "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
+      "source": "qa-run/scripts/ux-health.mjs:235",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_0AA102",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!el) return null;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ux-health.mjs:259",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_6EFA3A",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "* 6. featureFlagHash",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/validate-knowledge.mjs:12",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "FEATURE_FLAG_8E8193",
+      "module": "scripts",
+      "category": "feature_flag",
+      "condition": "featureFlagHash: computeHash(mapData.feature_flags || {}),",
+      "failureResult": "Tính năng chưa được bật / Feature disabled",
+      "source": "qa-run/scripts/validate-knowledge.mjs:66",
+      "confidence": "inferred"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_D50CE5",
+      "module": "unit",
+      "category": "state_transition",
+      "condition": "if (existing && (existing.status === 'SUCCESS' || existing.status === 'PROCESSING')) {",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/tests/unit/idempotency.spec.mjs:16",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_016015",
+      "module": "unit",
+      "category": "uniqueness",
+      "condition": "return { ok: false, reason: `Already in state ${existing.status}` };",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/tests/unit/idempotency.spec.mjs:17",
+      "confidence": "verified"
+    }
+  ]
+}
