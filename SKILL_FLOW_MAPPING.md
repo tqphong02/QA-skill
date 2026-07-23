@@ -243,3 +243,48 @@ Update QA Knowledge:
   ├─► Cập nhật system-business-guide.md & ui-business-guide.md
   └─► Đánh dấu STALE trên các testcases liên quan → Tự động sinh lại Testcase Excel/Markdown chuẩn nhất
 ```
+
+---
+
+## 🧠 8. Cơ chế Caching Memory & Phân tích Tiêu thụ Token (Token Optimization)
+
+### 💡 Nguyên lý Caching Memory cho AI Agent
+Sau khi chạy bất kỳ sub-pipeline nào của `qa-run` (`REPO_BUSINESS_DISCOVERY`, `UI_BUSINESS_RECONCILIATION`, hay `APP_BASELINE_DISCOVERY`), toàn bộ thông tin tính năng, API contracts, state transitions và rules sẽ được lưu tự động vào `qa-knowledge/`.
+
+Lần làm việc tiếp theo:
+- **KHÔNG đọc lại toàn bộ đống Source Code / Raw PDF / Full HTML DOM** (~100,000+ Tokens).
+- **CHỈ ĐỌC file Memory ngắn gọn trong `qa-knowledge/`** (`system-business-guide.md` hoặc `ui-business-guide.md` ~1,500 - 2,500 Tokens).
+- 👉 **Tiết kiệm tới ~98% Token tiêu thụ** cho mỗi lần retest hoặc thiết kế testcase mới.
+
+---
+
+### 🚨 Phân loại Luồng theo Mức độ Tiêu thụ Token
+
+#### 🔴 Các Luồng Tốn Token Nhiều Nhất (High Token Cost — Cần Hạn chế / Cache lại)
+1. **Phân tích Source Code trực tiếp bằng AI Prompt** (không qua AST script): Đưa hàng chục nghìn dòng code vào context window (`~80,000 - 150,000 Tokens/lần`).
+2. **Đưa Raw Full HTML DOM / Full Screenshot vào AI Vision**: Gửi toàn bộ cây DOM chưa lọc hoặc ảnh full màn hình 4K (`~30,000 - 60,000 Tokens/lần`).
+3. **Parse PDF / DOCX chưa qua `doc-to-md`**: Nạp file nhị phân lớn hoặc văn bản chưa qua lọc định dạng (`~20,000 - 50,000 Tokens/lần`).
+4. **Full-App Baseline Re-discovery**: Quét lại toàn bộ ứng dụng nhiều lần trong các lần retest nhỏ (`~50,000 Tokens/lần`).
+
+#### 🟢 Các Luồng Siêu Tiết kiệm Token / Không tốn Token (Low/Zero Token Cost — Khuyên dùng)
+1. **Chạy Script Trích xuất Deterministic Node.js / Python** (`0 Token`):
+   - `repo-business-discovery.mjs`: Quét AST/Regex trích xuất API & ERD tự động.
+   - `ui-business-component-extractor.mjs`: Lọc component bằng Stable Selectors (`data-testid`, `aria-label`).
+   - `execute-sheet.mjs`: Thực thi testcase trên Playwright CLI từ Sheet URL.
+2. **Đọc File Caching Memory từ `qa-knowledge/`** (`~1,500 Tokens`):
+   - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
+3. **Gửi Crop Ảnh Bằng chứng Visual (Visual Evidence Crops)** (`~500 - 1,000 Tokens`):
+   - Chỉ cắt đúng vùng component bị conflict (ví dụ: nút Approve bị ẩn/hiện sai) gửi cho AI Vision thay vì gửi full màn hình.
+4. **Q&A Fingerprint & State Hash Lookup** (`0 Token`):
+   - Dùng hash SHA-256 để tra cứu nhanh Q&A đã được BA/PO duyệt mà không cần hỏi lại AI.
+
+---
+
+### 📊 Bảng Bối cảnh Tiêu thụ Token Trước & Sau khi Caching Memory
+
+| Tác vụ QA | Chưa có Caching Memory (Raw Read) | Có Caching Memory (`qa-knowledge/`) | Tỷ lệ Tiết kiệm Token |
+|:---|:---:|:---:|:---:|
+| **Retest 1 Bug Ticket** | ~90,000 Tokens *(Đọc lại toàn bộ code & HTML)* | **~2,000 Tokens** *(Chỉ đọc guide của feature bị ảnh hưởng)* | 📉 **Tiết kiệm 97.8%** |
+| **Phân tích Mâu thuẫn UI vs BRD** | ~60,000 Tokens *(Gửi full screenshot 4K & full DOM)* | **~3,500 Tokens** *(Chỉ gửi crop component & DOM filtered)* | 📉 **Tiết kiệm 94.2%** |
+| **Sinh Testcase cho Feature mới** | ~120,000 Tokens *(Nạp lại toàn bộ file tài liệu PDF gốc)* | **~4,000 Tokens** *(Chỉ đọc system-business-guide.md)* | 📉 **Tiết kiệm 96.7%** |
+| **Thực thi Testcase hàng loạt** | ~50,000 Tokens *(AI click từng bước)* | **0 Token AI** *(Chạy hoàn toàn qua Playwright CLI script)* | 📉 **Tiết kiệm 100%** |
