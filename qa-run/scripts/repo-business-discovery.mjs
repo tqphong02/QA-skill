@@ -135,11 +135,15 @@ async function analyzeRepo(repoPath) {
     }
   }
 
+  const uaVendorDir = path.join(DATA_DIR, 'qa-run', 'vendor', 'Understand-Anything');
+  const isUABundled = fs.existsSync(uaVendorDir);
+
   console.log('\n' + '═'.repeat(60));
-  console.log(`[orchestrator] 🚀 REPO_BUSINESS_DISCOVERY`);
-  console.log(`  Repo:           ${repoPath}`);
+  console.log(`[repo-orchestrator] 🚀 REPO_BUSINESS_DISCOVERY Pipeline`);
+  console.log(`  Target Repo:    ${repoPath}`);
   console.log(`  Mode:           ${MODE}`);
   console.log(`  Analysis Mode:  ${ANALYSIS_MODE}`);
+  console.log(`  Semantic Engine: ${isUABundled ? '🟢 BUNDLED (Egonex-AI Understand-Anything)' : '⚪ AST Default'}`);
   console.log(`  Output:         ${outputDir}`);
   console.log(`  Commit:         ${currentCommit}`);
   console.log('═'.repeat(60) + '\n');

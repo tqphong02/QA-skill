@@ -47,3 +47,7 @@ qa-run/vendor/OmniParser/weights/
 *.pt
 *.onnx
 *.safetensors
+
+# Understand-Anything Build & Lock Files
+qa-run/vendor/Understand-Anything/node_modules/
+qa-run/vendor/Understand-Anything/dist/
