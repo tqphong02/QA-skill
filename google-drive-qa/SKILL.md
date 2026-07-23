@@ -26,9 +26,13 @@ Never substitute web search or a local same-named file for private Drive content
 
 1. Read [references/ROUTING.md](references/ROUTING.md).
 2. Read [references/CRUD.md](references/CRUD.md) for every Drive create, read, update, delete, permission, or native Google file request.
-3. For private Drive access, use the configured `google-drive` MCP. Never use public web search as a substitute.
-4. For a local file upload fallback, run `python3 scripts/drive_auth_doctor.py --refresh`, then use `python3 scripts/drive_upload.py <file> <folder_id>`.
-5. For first-time Google Cloud and OAuth setup, read [references/GOOGLE_CLOUD_OAUTH_SETUP.md](references/GOOGLE_CLOUD_OAUTH_SETUP.md) and follow its account-type branch without storing credentials in the repository.
+3. For private Drive access, use the configured `google-drive` MCP or the pre-built Python CLI scripts in `scripts/drive_crud.py`.
+4. For Python CLI operations without MCP, run `python3 scripts/drive_crud.py <C|R|U|D> [options]`.
+   - Read (`R`): `python3 scripts/drive_read.py <FILE_ID_OR_URL>` (exports & reads Docs, Sheets, Word, Excel, PDF directly from Cloud).
+   - Create (`C`): `python3 scripts/drive_create.py --file <path> --folder-id <id> [--convert]` (uploads or creates items; `--convert` converts Word/Excel to Doc/Sheet).
+   - Update (`U`): `python3 scripts/drive_update.py <FILE_ID_OR_URL> [--name <name>] [--move-to <folder_id>]`.
+   - Delete (`D`): `python3 scripts/drive_delete.py <FILE_ID_OR_URL> [--permanent] [--yes]`.
+5. For first-time Google Cloud and OAuth setup, read [references/GOOGLE_CLOUD_OAUTH_SETUP.md](references/GOOGLE_CLOUD_OAUTH_SETUP.md).
 6. For an authentication error, read [references/AUTH.md](references/AUTH.md) and report the exact failing layer: MCP unavailable, OAuth credential missing, access token expired, refresh revoked, scope insufficient, or object permission denied.
 7. Read [references/REPORTS.md](references/REPORTS.md) before summarizing or uploading QA reports.
 

@@ -1,10 +1,18 @@
 # Drive capability routing
 
-## Preferred route: configured Google Drive MCP
+## Preferred routes: Google Drive MCP & Python CLI CRUD
 
-Use the configured `google-drive` MCP for Drive file/folder CRUD, Google Docs, Sheets, Slides, and permissions. Resolve a supplied link to its file or folder ID and query that exact object first. If the user supplies only a name, search Drive by name and present ambiguous matches before reading or mutating.
+For Drive file/folder CRUD, Google Docs, Sheets, Slides, Word, Excel, and PDFs:
+1. **Google Drive MCP**: Use when MCP tools are active in the session.
+2. **Python CLI CRUD Suite**: Use when executing direct Cloud-native operations without downloading temporary files to local disk.
+   - Entry point: `python3 scripts/drive_crud.py <C|R|U|D> [options]`
+   - Read: `python3 scripts/drive_read.py <FILE_ID_OR_URL>`
+   - Create: `python3 scripts/drive_create.py --file <path> --folder-id <id> [--convert]`
+   - Update: `python3 scripts/drive_update.py <FILE_ID_OR_URL> [--name <new_name>] [--move-to <folder_id>]`
+   - Delete: `python3 scripts/drive_delete.py <FILE_ID_OR_URL> [--permanent] [--yes]`
 
-If no Drive tools are available in the current session, stop and report that the MCP is not loaded. A newly configured MCP may require a Codex restart or a new thread. Do not use web search, local filename search, or model memory as a substitute for private Drive content.
+If no Drive access or credentials exist, run `python3 scripts/drive_auth_doctor.py` to diagnose local OAuth credentials. Do not use web search, local filename search, or model memory as a substitute for private Drive content.
+
 
 ## Upload a local artifact
 
