@@ -23,6 +23,10 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [jmeter-qa](./jmeter-qa/SKILL.md) | Sinh và kiểm tra JMeter project có thể import | `.jmx` |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
+## 🗺️ Master Skill Architecture & Flow Diagram
+
+![QA Skill Master Architecture Flow](assets/qa-skill-architecture.png)
+
 Sơ đồ luồng & mapping chi tiết giữa các skill: [SKILL_FLOW_MAPPING.md](./SKILL_FLOW_MAPPING.md)
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)

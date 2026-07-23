@@ -24,7 +24,7 @@ Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi t
 5. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
 6. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
 7. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
-8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>_<DD-MM-YYYY>.md` trước `<output>_<DD-MM-YYYY>.xlsx` với cùng ngày `Asia/Ho_Chi_Minh`
+8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>.md` trước `<output>.xlsx` với cùng ngày `Asia/Ho_Chi_Minh`
 9. Đọc lại Markdown trước rồi đối chiếu Excel: số case, Scenario/Testcase ID và nội dung design phải khớp; cột I-M chỉ có ở Excel và để trống
 
 Nếu expected chưa có trong requirement, dừng case đó ở trạng thái cần làm rõ; không tự bịa business rule.

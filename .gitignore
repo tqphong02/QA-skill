@@ -51,3 +51,7 @@ qa-run/vendor/OmniParser/weights/
 # Understand-Anything Build & Lock Files
 qa-run/vendor/Understand-Anything/node_modules/
 qa-run/vendor/Understand-Anything/dist/
+
+# Generated Knowledge Outputs (Contains local machine paths)
+qa-knowledge/
+**/qa-knowledge/
