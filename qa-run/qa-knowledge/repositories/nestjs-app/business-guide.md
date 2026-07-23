@@ -1,8 +1,8 @@
 # Business Guide: nestjs-app
 
 > **Được sinh tự động bởi REPO_BUSINESS_DISCOVERY** — Chỉ AI đọc file này, không cần đọc JSON thô  
-> Sinh lúc: 2026-07-23T16:35:26.677Z  
-> Commit: `1f228d5` | Branch: `main`  
+> Sinh lúc: 2026-07-23T17:50:24.809Z  
+> Commit: `8648510` | Branch: `main`  
 > Nguồn: `/Users/user/QA-skill/qa-run/qa-knowledge/repositories/nestjs-app`
 
 ---
@@ -218,7 +218,7 @@ _Không có gaps đáng kể_
 
 | | |
 |:---|:---|
-| Chạy lúc | 2026-07-23T16:11:46.470Z |
+| Chạy lúc | 2026-07-23T16:35:26.768Z |
 | Thời gian | 1.1s |
 | Mode | full |
 | Commit | 1f228d5 |

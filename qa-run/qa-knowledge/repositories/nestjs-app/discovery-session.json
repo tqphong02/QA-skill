@@ -3,7 +3,7 @@
   "repoPath": "/Users/user/QA-skill/qa-run/tests/fixtures/nestjs-app",
   "mode": "full",
   "analysisMode": "deterministic",
-  "commit": "1f228d5",
+  "commit": "8648510",
   "phase1": {
     "fingerprint": true,
     "sourceIndex": true,
@@ -12,6 +12,6 @@
     "businessRules": true
   },
   "outputDir": "/Users/user/QA-skill/qa-run/qa-knowledge/repositories/nestjs-app",
-  "completedAt": "2026-07-23T16:35:26.768Z",
-  "durationSeconds": 1.1
+  "completedAt": "2026-07-23T17:50:24.905Z",
+  "durationSeconds": 1.2
 }

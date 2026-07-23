@@ -1,6 +1,6 @@
 {
   "pageSlug": "test-order-detail",
-  "generatedAt": "2026-07-23T16:35:26.353Z",
+  "generatedAt": "2026-07-23T17:50:24.667Z",
   "affectedModules": [
     "Order",
     "Payment",

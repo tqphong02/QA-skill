@@ -1,6 +1,6 @@
 # Traceability Matrix: nestjs-app
 
-> Sinh tự động bởi `traceability-matrix-generator.mjs` — 2026-07-23T16:35:26.759Z  
+> Sinh tự động bởi `traceability-matrix-generator.mjs` — 2026-07-23T17:50:24.894Z  
 > Dùng file này để đảm bảo mọi business flow đều có testcase tương ứng
 
 ---

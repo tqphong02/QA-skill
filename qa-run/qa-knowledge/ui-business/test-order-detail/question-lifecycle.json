@@ -1,7 +1,7 @@
 {
   "tool": "ui-business-qna-generator.mjs",
   "pageSlug": "test-order-detail",
-  "managedAt": "2026-07-23T16:35:26.273Z",
+  "managedAt": "2026-07-23T17:50:24.580Z",
   "totalQuestions": 12,
   "byStatus": {
     "OPEN": 6,
@@ -29,7 +29,7 @@
       ],
       "severity": "High",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.271Z",
+      "createdAt": "2026-07-23T17:50:24.577Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null
@@ -50,7 +50,7 @@
       ],
       "severity": "Medium",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.272Z",
+      "createdAt": "2026-07-23T17:50:24.579Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null
@@ -71,7 +71,7 @@
       ],
       "severity": "Low",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.272Z",
+      "createdAt": "2026-07-23T17:50:24.579Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null
@@ -92,7 +92,7 @@
       ],
       "severity": "Medium",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.272Z",
+      "createdAt": "2026-07-23T17:50:24.579Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null
@@ -113,7 +113,7 @@
       ],
       "severity": "High",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.272Z",
+      "createdAt": "2026-07-23T17:50:24.579Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null
@@ -133,7 +133,7 @@
       ],
       "severity": "High",
       "confidence": "verified",
-      "createdAt": "2026-07-23T16:35:26.272Z",
+      "createdAt": "2026-07-23T17:50:24.579Z",
       "status": "OPEN",
       "answer": null,
       "resolvedAt": null

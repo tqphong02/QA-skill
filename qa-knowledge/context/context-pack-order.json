@@ -1,12 +1,20 @@
 {
   "tool": "context-builder.mjs",
   "semanticEngine": "Egonex-AI Understand-Anything",
+  "codeSearchEngine": "⚪ AST Fallback",
   "intent": "RETEST_TICKET",
   "module": "order",
   "pageSlug": "order-detail",
   "estimatedTokens": 1850,
   "savingsPercentage": "📉 ~97.5% Token Savings vs Raw Code",
   "data": {
+    "businessFlowSteps": [
+      "1. Khởi tạo đơn hàng dạng DRAFT (POST /api/orders)",
+      "2. Điền thông tin chi tiết & chọn sản phẩm",
+      "3. Nhấn \"Submit Order\" (POST /api/orders/:id/submit)",
+      "4. Hệ thống kiểm tra điều kiện (Amount, Stock, User Role)",
+      "5. Chuyển trạng thái đơn sang SUBMITTED"
+    ],
     "relevantApis": [
       {
         "method": "GET",
@@ -112,8 +120,10 @@
         "confidence": "verified"
       }
     ],
+    "probeResultsCount": 0,
+    "probeSnippets": [],
     "hasMergedSystemGuide": true,
     "hasUiBusinessGuide": true
   },
-  "generatedAt": "2026-07-23T17:26:09.156Z"
+  "generatedAt": "2026-07-23T17:50:10.326Z"
 }

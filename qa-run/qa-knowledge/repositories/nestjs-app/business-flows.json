@@ -1,7 +1,7 @@
 {
   "tool": "business-flow-builder.mjs",
   "repoPath": "/Users/user/QA-skill/qa-run/tests/fixtures/nestjs-app",
-  "builtAt": "2026-07-23T16:35:26.188Z",
+  "builtAt": "2026-07-23T17:50:24.287Z",
   "totalFlows": 5,
   "flows": [
     {

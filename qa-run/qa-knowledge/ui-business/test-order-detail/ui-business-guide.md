@@ -1,7 +1,7 @@
 # UI Business Reconciliation: test-order-detail
 
 > **Được sinh tự động bởi UI_BUSINESS_RECONCILIATION**  
-> Sinh lúc: 2026-07-23T16:35:26.355Z  
+> Sinh lúc: 2026-07-23T17:50:24.669Z  
 > Nguồn: `/Users/user/QA-skill/qa-run/qa-knowledge/ui-business/test-order-detail`
 
 ---

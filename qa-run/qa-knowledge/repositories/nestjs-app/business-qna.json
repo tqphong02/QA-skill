@@ -1,7 +1,7 @@
 {
   "tool": "business-qna-generator.mjs",
   "repoName": "nestjs-app",
-  "generatedAt": "2026-07-23T16:35:26.591Z",
+  "generatedAt": "2026-07-23T17:50:24.720Z",
   "totalQuestions": 16,
   "byCategory": {
     "permission": 4,

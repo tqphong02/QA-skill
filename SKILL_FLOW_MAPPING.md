@@ -258,11 +258,33 @@ Lần làm việc tiếp theo:
 
 ---
 
-### 🚨 Phân loại Luồng theo Mức độ Tiêu thụ Token
+### 🚨 Phân loại & Xếp hạng 4 Luồng Tốn Token Nhiều Nhất
 
-#### 🔴 Các Luồng Tốn Token Nhiều Nhất (High Token Cost — Cần Hạn chế / Cache lại)
-1. **Phân tích Source Code trực tiếp bằng AI Prompt** (không qua AST script): Đưa hàng chục nghìn dòng code vào context window (`~80,000 - 150,000 Tokens/lần`).
-2. **Đưa Raw Full HTML DOM / Full Screenshot vào AI Vision**: Gửi toàn bộ cây DOM chưa lọc hoặc ảnh full màn hình 4K (`~30,000 - 60,000 Tokens/lần`).
+#### 🔴 Top 4 Luồng Tốn Token Nhiều Nhất (High Token Cost — Cần Hạn chế / Dùng Engine Tối ưu)
+
+| Hạng | Luồng Thao tác QA | Chi phí Chưa tối ưu (Raw Prompting) | Nguyên nhân Ngốn Token | Giải pháp Engine Tối ưu Đã Triển khai | Chi phí Sau Tối ưu (Level 0-2) | Mức Tiết kiệm |
+|:---:|:---|:---:|:---|:---|:---:|:---:|
+| 🥇 **TOP 1** | **Phân tích Source Code trực tiếp bằng AI Prompt** | **80,000 – 150,000 Tokens/lần** | Nạp hàng chục nghìn dòng code thô trực tiếp vào Context Window | **Probe CLI** (`@probelabs/probe`) + **ast-grep** + **Understand-Anything** trích xuất `context-pack.json` | **1,500 – 3,000 Tokens** | 📉 **Giảm ~98%** |
+| 🥈 **TOP 2** | **Full-App Re-discovery nhiều lần trong các Retest nhỏ** | **50,000 – 90,000 Tokens/lần** | Quét lại toàn bộ ứng dụng nhiều lần từ đầu cho mỗi ticket retest | **`incremental-discovery.mjs`** + **SCIP** chỉ quét đúng module & changed symbols bị ảnh hưởng | **1,000 – 4,000 Tokens** | 📉 **Giảm ~95%** |
+| 🥉 **TOP 3** | **Đưa Raw Full HTML DOM / Full Screenshot 4K vào AI Vision** | **30,000 – 60,000 Tokens/lần** | Gửi nguyên cây DOM thô hoặc ảnh 4K full-page cho Vision LLM API | **`dom-pruner.mjs`** (Playwright Scoped ARIA Snapshot) + **OmniParser Bounding Boxes** (0 Vision Token) | **0 – 1,000 Tokens** *(Chỉ crop vùng lỗi)* | 📉 **Giảm ~93–100%** |
+| 🏅 **TOP 4** | **Parse PDF / DOCX thô chưa qua Indexing** | **20,000 – 50,000 Tokens/lần** | Nạp file nhị phân lớn hoặc văn bản chưa qua lọc định dạng | **Docling** + **`doc-indexer.mjs`** + **SQLite FTS** chỉ trích xuất 3–5 Section liên quan tới feature | **1,500 – 4,000 Tokens** | 📉 **Giảm ~90%** |
+
+---
+
+#### 🟢 Các Luồng Siêu Tiết kiệm Token / Zero-Token (Low / 0 Token Cost — Ưu tiên Hàng đầu)
+1. **Chạy Script Trích xuất Deterministic Node.js / Python CLI (`0 Token AI`)**:
+   - `repo-business-discovery.mjs`: ast-grep & AST Scanners trích xuất API & ERD tự động.
+   - `visual-evidence-router.mjs`: Microsoft OmniParser phân tích Bounding Boxes cục bộ (`omni-parsed-boxes.json`).
+   - `execute-sheet.mjs`: Thực thi kịch bản testcase tự động qua Playwright CLI.
+2. **Đọc File Caching Memory từ `qa-knowledge/` (`~1,500 Tokens`)**:
+   - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
+3. **Targeted Visual Evidence Cropping (`~500 - 1,000 Tokens`)**:
+   - Chỉ cắt đúng vùng component bị conflict gửi cho AI Vision khi DOM audit phát hiện mâu thuẫn.
+4. **Q&A Fingerprint & State Hash Lookup (`0 Token AI`)**:
+   - Dùng hash SHA-256 để tra cứu nhanh Q&A đã được BA/PO duyệt mà không hỏi lại AI.
+
+---
+
 ### 🚨 Điều kiện Nghiệm thu Token Optimization Engine:
 - [ ] Không gửi Full DOM thô mặc định cho AI (chỉ dùng Playwright Scoped ARIA Snapshot / `dom-pruner.mjs`).
 - [ ] Không gửi toàn bộ Source Code repository cho AI (chỉ gửi Context Pack do Probe / AST-grep trích xuất).

@@ -1,7 +1,7 @@
 {
   "flowName": "test-order-detail lifecycle observed from UI",
   "pageSlug": "test-order-detail",
-  "observedAt": "2026-07-23T16:35:26.026Z",
+  "observedAt": "2026-07-23T17:50:24.320Z",
   "observedStates": [
     "DRAFT",
     "APPROVED",

@@ -1,7 +1,7 @@
 {
   "tool": "business-rule-extractor.mjs",
   "repoPath": "/Users/user/QA-skill/qa-run/tests/fixtures/nestjs-app",
-  "extractedAt": "2026-07-23T16:35:26.105Z",
+  "extractedAt": "2026-07-23T17:50:24.193Z",
   "totalRules": 13,
   "summaryByCategory": {
     "permission": 5,
