@@ -53,14 +53,34 @@ node qa-run/scripts/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xl
 node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
 ```
 
-### 🔹 Ví dụ 3: Chạy riêng 1 Module cụ thể hoặc Chạy Song Song (Parallel)
+### 🔹 Ví dụ 3: Chạy Lọc theo Module Cụ Thể
 ```bash
-# Chạy riêng module LOGIN:
+# Chỉ chạy duy nhất Module LOGIN:
 node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN"
 
-# Chạy song song 4 kịch bản cùng lúc:
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 4
+# Chỉ chạy duy nhất Module ORDER:
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER"
 ```
+
+---
+
+## ⚡ 4. Cấu Hình Chạy Đa Tiến Trình (Multi-Worker Parallel Mode)
+
+Khi file Excel có nhiều Module (ví dụ: `LOGIN`, `PRODUCT`, `CART`, `CHECKOUT`, `PROFILE`...), bạn có thể kích hoạt chế độ **Parallel Workers** để chia các module cho nhiều trình duyệt Playwright chạy đồng thời:
+
+```bash
+# Kích hoạt 4 Workers chạy song song chia theo các Module:
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 4
+
+# Kích hoạt 8 Workers cho các máy cấu hình mạnh:
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 8
+```
+
+### 🧠 Cơ chế Chia Module của Multi-Worker Engine:
+1. Script tự động gom nhóm các testcases trong Excel theo cột `Module` hoặc `Group`.
+2. Phân chia đều các nhóm Module vào `N` Workers (`Worker #1`, `Worker #2`, `Worker #3`, `Worker #4`).
+3. Các Workers mở nhiều cửa sổ trình duyệt Playwright độc lập để chạy đồng thời.
+4. Tự động ghi nhận và batch-update kết quả `Pass`/`Fail` về lại file Excel sau khi tất cả Workers hoàn thành.
 
 ---
 
