@@ -1,15 +1,15 @@
 {
   "tool": "business-rule-extractor.mjs",
   "repoPath": "/Users/user/QA-skill",
-  "extractedAt": "2026-07-23T15:30:49.463Z",
-  "totalRules": 54,
+  "extractedAt": "2026-07-23T17:24:10.244Z",
+  "totalRules": 85,
   "summaryByCategory": {
-    "existence_check": 16,
+    "existence_check": 26,
     "input_validation": 13,
-    "state_transition": 6,
-    "permission": 4,
-    "financial": 1,
-    "uniqueness": 4,
+    "state_transition": 12,
+    "permission": 9,
+    "financial": 7,
+    "uniqueness": 8,
     "rate_limit": 3,
     "feature_flag": 7
   },
@@ -102,6 +102,33 @@
       "condition": "const handlerContent = lines.slice(i, Math.min(i + 80, lines.length)).join('\\n');",
       "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
       "source": "qa-run/scripts/business-flow-builder.mjs:133",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_CA25C1",
+      "module": "scripts",
+      "category": "state_transition",
+      "condition": "* - Trả lời \"Điều kiện chuyển trạng thái là gì\" → status === PENDING (với source line)",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/scripts/business-qna-generator.mjs:7",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_3198B7",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (KNOW_DIR) return KNOW_DIR;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/business-qna-generator.mjs:40",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_303243",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (REPO_NAME) return path.join(DATA_DIR, 'qa-knowledge', 'repositories', REPO_NAME);",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/business-qna-generator.mjs:41",
       "confidence": "verified"
     },
     {
@@ -348,12 +375,12 @@
       "confidence": "verified"
     },
     {
-      "ruleId": "INPUT_VALIDATION_7B5E2D",
+      "ruleId": "INPUT_VALIDATION_E2FB1E",
       "module": "scripts",
       "category": "input_validation",
       "condition": "for (let j = i + 1; j < Math.min(i + 50, lines.length); j++) {",
       "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
-      "source": "qa-run/scripts/source-indexer.mjs:68",
+      "source": "qa-run/scripts/source-indexer.mjs:71",
       "confidence": "verified"
     },
     {
@@ -372,24 +399,6 @@
       "condition": "const context = lines.slice(Math.max(0, i - 5), i).join(' ');",
       "failureResult": "Từ chối do dữ liệu đầu vào không hợp lệ",
       "source": "qa-run/scripts/state-machine-extractor.mjs:93",
-      "confidence": "verified"
-    },
-    {
-      "ruleId": "EXISTENCE_CHECK_52E5EC",
-      "module": "scripts",
-      "category": "existence_check",
-      "condition": "if (KNOW_DIR) return KNOW_DIR;",
-      "failureResult": "Trả lỗi 404 / Not Found",
-      "source": "qa-run/scripts/traceability-matrix-generator.mjs:29",
-      "confidence": "verified"
-    },
-    {
-      "ruleId": "EXISTENCE_CHECK_4809F2",
-      "module": "scripts",
-      "category": "existence_check",
-      "condition": "if (REPO_NAME) return path.join(DATA_DIR, 'qa-knowledge', 'repositories', REPO_NAME);",
-      "failureResult": "Trả lỗi 404 / Not Found",
-      "source": "qa-run/scripts/traceability-matrix-generator.mjs:30",
       "confidence": "verified"
     },
     {
@@ -417,6 +426,69 @@
       "condition": "if (!entities) return [];",
       "failureResult": "Trả lỗi 404 / Not Found",
       "source": "qa-run/scripts/traceability-matrix-generator.mjs:58",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_28DA7C",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (testId) return `[data-testid=\"${testId}\"]`;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-business-component-extractor.mjs:60",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_0352DC",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (ariaLabel) return `[aria-label=\"${ariaLabel}\"]`;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-business-component-extractor.mjs:63",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_FC7D28",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (text) return `${defaultTag}:has-text(\"${text.slice(0, 20)}\")`;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-business-component-extractor.mjs:68",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_E741A0",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (firstClass) return `.${firstClass}`;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-business-component-extractor.mjs:72",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_B741FA",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!label) return;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-business-component-extractor.mjs:98",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_67C6D2",
+      "module": "scripts",
+      "category": "state_transition",
+      "condition": "} else if (existing && existing.status === 'REJECTED') {",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/scripts/ui-business-qna-generator.mjs:130",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_E46D1A",
+      "module": "scripts",
+      "category": "existence_check",
+      "condition": "if (!payloadStr) return payloadStr;",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/scripts/ui-runtime-transition-verifier.mjs:36",
       "confidence": "verified"
     },
     {
@@ -481,6 +553,213 @@
       "failureResult": "Tính năng chưa được bật / Feature disabled",
       "source": "qa-run/scripts/validate-knowledge.mjs:66",
       "confidence": "inferred"
+    },
+    {
+      "ruleId": "FINANCIAL_8CBD0C",
+      "module": "scripts",
+      "category": "financial",
+      "condition": "* - NEEDS_REVIEW: Insufficient evidence -> produces question, not definitive bug",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/scripts/visual-business-signal-extractor.mjs:9",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_5C595A",
+      "module": "routes.js",
+      "category": "financial",
+      "condition": "throw new Error('Insufficient permissions');",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:14",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_45D963",
+      "module": "routes.js",
+      "category": "existence_check",
+      "condition": "if (!product) return res.status(404).json({ error: 'Product not found' });",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:26",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_9E7B63",
+      "module": "routes.js",
+      "category": "existence_check",
+      "condition": "if (existing) return res.status(409).json({ error: 'Product code already exists' });",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:32",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_9E7B63",
+      "module": "routes.js",
+      "category": "uniqueness",
+      "condition": "if (existing) return res.status(409).json({ error: 'Product code already exists' });",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:32",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_1B9322",
+      "module": "routes.js",
+      "category": "financial",
+      "condition": "if (request.body.amount <= 0) {",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:27",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_2FCABE",
+      "module": "routes.js",
+      "category": "financial",
+      "condition": "throw new Error('Insufficient amount');",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:28",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_3274E6",
+      "module": "routes.js",
+      "category": "state_transition",
+      "condition": "if (invoice.status !== 'PENDING') {",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:35",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_3496B6",
+      "module": "routes.js",
+      "category": "state_transition",
+      "condition": "throw new Error('Cannot pay invoice not in PENDING status');",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:36",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_A98AC6",
+      "module": "order",
+      "category": "permission",
+      "condition": "@UseGuards(JwtAuthGuard)",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:5",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_CCB031",
+      "module": "order",
+      "category": "permission",
+      "condition": "@Roles('admin', 'manager')",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:10",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_ACEE88",
+      "module": "order",
+      "category": "permission",
+      "condition": "@Roles('admin')",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:32",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_E1AA0D",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:1",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_725239",
+      "module": "order",
+      "category": "existence_check",
+      "condition": "if (!order) throw new NotFoundException('Order not found');",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:16",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_4A6994",
+      "module": "order",
+      "category": "state_transition",
+      "condition": "throw new Error('Cannot approve order not in PENDING status');",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:23",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_F4CCD8",
+      "module": "order",
+      "category": "permission",
+      "condition": "if (!user.hasPermission('order:approve')) {",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:25",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "PERMISSION_36D207",
+      "module": "order",
+      "category": "permission",
+      "condition": "throw new ForbiddenException('Insufficient permission to approve order');",
+      "failureResult": "Từ chối truy cập / Unauthorized",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:26",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_36D207",
+      "module": "order",
+      "category": "financial",
+      "condition": "throw new ForbiddenException('Insufficient permission to approve order');",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:26",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "STATE_TRANSITION_30045F",
+      "module": "order",
+      "category": "state_transition",
+      "condition": "if (order.status === OrderStatus.COMPLETED) {",
+      "failureResult": "Không hợp lệ — sai trạng thái",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:36",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_26CCA5",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "throw new ConflictException('Cannot delete completed order');",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:37",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "EXISTENCE_CHECK_B7F8EB",
+      "module": "order",
+      "category": "existence_check",
+      "condition": "if (existing) throw new ConflictException('Order code already exists');",
+      "failureResult": "Trả lỗi 404 / Not Found",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:44",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "UNIQUENESS_B7F8EB",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "if (existing) throw new ConflictException('Order code already exists');",
+      "failureResult": "Từ chối do dữ liệu đã tồn tại",
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:44",
+      "confidence": "verified"
+    },
+    {
+      "ruleId": "FINANCIAL_B93AA4",
+      "module": "api",
+      "category": "financial",
+      "condition": "if (!amount || amount <= 0) {",
+      "failureResult": "Từ chối giao dịch do không đủ số dư",
+      "source": "qa-run/tests/fixtures/nextjs-app/pages/api/orders.js:7",
+      "confidence": "verified"
     },
     {
       "ruleId": "STATE_TRANSITION_D50CE5",

@@ -1,9 +1,191 @@
 {
   "tool": "api-contract-extractor.mjs",
   "repoPath": "/Users/user/QA-skill",
-  "extractedAt": "2026-07-23T15:30:49.354Z",
-  "totalEndpoints": 0,
+  "extractedAt": "2026-07-23T17:24:10.107Z",
+  "totalEndpoints": 17,
   "openAPISpecFound": false,
-  "summaryByModule": {},
-  "endpoints": []
+  "summaryByModule": {
+    "routes.js": 9,
+    "order": 5,
+    "app": 2,
+    "orders": 1
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/products",
+      "module": "routes.js",
+      "framework": "Express",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:20",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/products/:id",
+      "module": "routes.js",
+      "framework": "Express",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:24",
+      "confidence": "verified"
+    },
+    {
+      "method": "POST",
+      "path": "/products",
+      "module": "routes.js",
+      "framework": "Express",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:30",
+      "confidence": "verified"
+    },
+    {
+      "method": "PUT",
+      "path": "/products/:id",
+      "module": "routes.js",
+      "framework": "Express",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:37",
+      "confidence": "verified"
+    },
+    {
+      "method": "DELETE",
+      "path": "/products/:id",
+      "module": "routes.js",
+      "framework": "Express",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/express-app/src/routes.js:41",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "module": "routes.js",
+      "framework": "Fastify",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:2",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/:id",
+      "module": "routes.js",
+      "framework": "Fastify",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:6",
+      "confidence": "verified"
+    },
+    {
+      "method": "POST",
+      "path": "/invoices",
+      "module": "routes.js",
+      "framework": "Fastify",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:14",
+      "confidence": "verified"
+    },
+    {
+      "method": "PUT",
+      "path": "/invoices/:id/pay",
+      "module": "routes.js",
+      "framework": "Fastify",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/fastify-app/src/routes.js:33",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/orders",
+      "module": "order",
+      "framework": "NestJS",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:9",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/orders/:id",
+      "module": "order",
+      "framework": "NestJS",
+      "auth_required": true,
+      "roles": [
+        "admin",
+        "manager"
+      ],
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:15",
+      "confidence": "verified"
+    },
+    {
+      "method": "POST",
+      "path": "/orders",
+      "module": "order",
+      "framework": "NestJS",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:20",
+      "confidence": "verified"
+    },
+    {
+      "method": "PUT",
+      "path": "/orders/:id/approve",
+      "module": "order",
+      "framework": "NestJS",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:25",
+      "confidence": "verified"
+    },
+    {
+      "method": "DELETE",
+      "path": "/orders/:id",
+      "module": "order",
+      "framework": "NestJS",
+      "auth_required": true,
+      "roles": [
+        "admin",
+        "manager"
+      ],
+      "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:31",
+      "confidence": "verified"
+    },
+    {
+      "method": "GET",
+      "path": "/app/api/products",
+      "module": "app",
+      "framework": "Next.js (app router)",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nextjs-app/app/api/products/route.ts",
+      "confidence": "verified"
+    },
+    {
+      "method": "POST",
+      "path": "/app/api/products",
+      "module": "app",
+      "framework": "Next.js (app router)",
+      "auth_required": true,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nextjs-app/app/api/products/route.ts",
+      "confidence": "verified"
+    },
+    {
+      "method": "ANY",
+      "path": "/api/orders",
+      "module": "orders",
+      "framework": "Next.js (pages/api)",
+      "auth_required": false,
+      "roles": [],
+      "source": "qa-run/tests/fixtures/nextjs-app/pages/api/orders.js",
+      "confidence": "inferred"
+    }
+  ]
 }

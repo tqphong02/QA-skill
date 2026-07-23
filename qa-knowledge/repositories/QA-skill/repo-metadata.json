@@ -4,7 +4,7 @@
   "repoType": "unknown",
   "frameworks": [],
   "language": "JavaScript",
-  "commit": "8e138cc",
+  "commit": "841cc62",
   "branch": "main",
   "nodeVersion": "v24.16.0",
   "packageName": null,
@@ -14,8 +14,8 @@
   "hasDockerfile": false,
   "hasCIConfig": false,
   "hasOpenAPISpec": false,
-  "sourceFilesCount": 20,
+  "sourceFilesCount": 281,
   "entryPoints": [],
   "modules": [],
-  "scannedAt": "2026-07-23T15:30:48.978Z"
+  "scannedAt": "2026-07-23T17:24:09.716Z"
 }

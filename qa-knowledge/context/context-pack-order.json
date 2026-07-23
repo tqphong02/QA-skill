@@ -1,0 +1,119 @@
+{
+  "tool": "context-builder.mjs",
+  "semanticEngine": "Egonex-AI Understand-Anything",
+  "intent": "RETEST_TICKET",
+  "module": "order",
+  "pageSlug": "order-detail",
+  "estimatedTokens": 1850,
+  "savingsPercentage": "📉 ~97.5% Token Savings vs Raw Code",
+  "data": {
+    "relevantApis": [
+      {
+        "method": "GET",
+        "path": "/orders",
+        "module": "order",
+        "framework": "NestJS",
+        "auth_required": true,
+        "roles": [],
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:9",
+        "confidence": "verified"
+      },
+      {
+        "method": "GET",
+        "path": "/orders/:id",
+        "module": "order",
+        "framework": "NestJS",
+        "auth_required": true,
+        "roles": [
+          "admin",
+          "manager"
+        ],
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:15",
+        "confidence": "verified"
+      },
+      {
+        "method": "POST",
+        "path": "/orders",
+        "module": "order",
+        "framework": "NestJS",
+        "auth_required": true,
+        "roles": [],
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:20",
+        "confidence": "verified"
+      },
+      {
+        "method": "PUT",
+        "path": "/orders/:id/approve",
+        "module": "order",
+        "framework": "NestJS",
+        "auth_required": true,
+        "roles": [],
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:25",
+        "confidence": "verified"
+      },
+      {
+        "method": "DELETE",
+        "path": "/orders/:id",
+        "module": "order",
+        "framework": "NestJS",
+        "auth_required": true,
+        "roles": [
+          "admin",
+          "manager"
+        ],
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:31",
+        "confidence": "verified"
+      }
+    ],
+    "relevantRules": [
+      {
+        "ruleId": "PERMISSION_A98AC6",
+        "module": "order",
+        "category": "permission",
+        "condition": "@UseGuards(JwtAuthGuard)",
+        "failureResult": "Từ chối truy cập / Unauthorized",
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:5",
+        "confidence": "verified"
+      },
+      {
+        "ruleId": "PERMISSION_CCB031",
+        "module": "order",
+        "category": "permission",
+        "condition": "@Roles('admin', 'manager')",
+        "failureResult": "Từ chối truy cập / Unauthorized",
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:10",
+        "confidence": "verified"
+      },
+      {
+        "ruleId": "PERMISSION_ACEE88",
+        "module": "order",
+        "category": "permission",
+        "condition": "@Roles('admin')",
+        "failureResult": "Từ chối truy cập / Unauthorized",
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.controller.ts:32",
+        "confidence": "verified"
+      },
+      {
+        "ruleId": "UNIQUENESS_E1AA0D",
+        "module": "order",
+        "category": "uniqueness",
+        "condition": "import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';",
+        "failureResult": "Từ chối do dữ liệu đã tồn tại",
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:1",
+        "confidence": "verified"
+      },
+      {
+        "ruleId": "EXISTENCE_CHECK_725239",
+        "module": "order",
+        "category": "existence_check",
+        "condition": "if (!order) throw new NotFoundException('Order not found');",
+        "failureResult": "Trả lỗi 404 / Not Found",
+        "source": "qa-run/tests/fixtures/nestjs-app/src/order/order.service.ts:16",
+        "confidence": "verified"
+      }
+    ],
+    "hasMergedSystemGuide": true,
+    "hasUiBusinessGuide": true
+  },
+  "generatedAt": "2026-07-23T17:26:09.156Z"
+}

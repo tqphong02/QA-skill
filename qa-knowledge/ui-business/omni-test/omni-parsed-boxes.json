@@ -1,0 +1,181 @@
+{
+  "tool": "visual-evidence-router.mjs",
+  "pageSlug": "omni-test",
+  "omniParserVendorBundled": true,
+  "omniParserActive": false,
+  "tokenCost": 0,
+  "parsedBoundingBoxesCount": 12,
+  "elements": [
+    {
+      "id": "OMNI-BOX-1",
+      "type": "navigation_menu",
+      "label": "Orders",
+      "boundingBox": [
+        20,
+        100,
+        180,
+        135
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "a.menu-item[href=\"/orders\"]"
+    },
+    {
+      "id": "OMNI-BOX-2",
+      "type": "navigation_menu",
+      "label": "Payment Settings",
+      "boundingBox": [
+        20,
+        145,
+        180,
+        180
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "a.menu-item[href=\"/settings/payment\"]"
+    },
+    {
+      "id": "OMNI-BOX-3",
+      "type": "primary_action_button",
+      "label": "Approve",
+      "boundingBox": [
+        20,
+        190,
+        180,
+        225
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#approve"
+    },
+    {
+      "id": "OMNI-BOX-4",
+      "type": "secondary_action_button",
+      "label": "Save Draft",
+      "boundingBox": [
+        20,
+        235,
+        180,
+        270
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#save-draft"
+    },
+    {
+      "id": "OMNI-BOX-5",
+      "type": "primary_action_button",
+      "label": "Submit",
+      "boundingBox": [
+        20,
+        280,
+        180,
+        315
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#submit"
+    },
+    {
+      "id": "OMNI-BOX-6",
+      "type": "primary_action_button",
+      "label": "Submit Order Error",
+      "boundingBox": [
+        20,
+        325,
+        180,
+        360
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#submit-error"
+    },
+    {
+      "id": "OMNI-BOX-7",
+      "type": "secondary_action_button",
+      "label": "Cancel",
+      "boundingBox": [
+        20,
+        370,
+        180,
+        405
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#cancel"
+    },
+    {
+      "id": "OMNI-BOX-8",
+      "type": "secondary_action_button",
+      "label": "Delete",
+      "boundingBox": [
+        20,
+        415,
+        180,
+        450
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "button#delete"
+    },
+    {
+      "id": "OMNI-BOX-9",
+      "type": "form_field",
+      "label": "Amount",
+      "boundingBox": [
+        20,
+        460,
+        180,
+        495
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "input#amount"
+    },
+    {
+      "id": "OMNI-BOX-10",
+      "type": "form_field",
+      "label": "Status",
+      "boundingBox": [
+        20,
+        505,
+        180,
+        540
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "select#status"
+    },
+    {
+      "id": "OMNI-BOX-11",
+      "type": "status_badge",
+      "label": "DRAFT",
+      "boundingBox": [
+        20,
+        550,
+        180,
+        585
+      ],
+      "confidence": 0.96,
+      "isInteractable": true,
+      "selector": "span.badge"
+    },
+    {
+      "id": "OMNI-BOX-12",
+      "type": "role_indicator",
+      "label": "Role: Staff",
+      "boundingBox": [
+        20,
+        595,
+        180,
+        630
+      ],
+      "confidence": 0.96,
+      "isInteractable": true
+    }
+  ],
+  "recommendations": [
+    "Visual grounding converted to structured JSON (0 LLM Vision Tokens used).",
+    "Targeted region crops will be routed ONLY for suspicious conflicts."
+  ]
+}

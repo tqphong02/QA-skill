@@ -1,0 +1,50 @@
+{
+  "tool": "ui-state-explorer.mjs",
+  "pageSlug": "omni-test",
+  "exploredAt": "2026-07-23T17:15:06.532Z",
+  "limits": {
+    "maxDepth": 3,
+    "maxStates": 50,
+    "maxActionsPerState": 15,
+    "excludeIntents": {}
+  },
+  "totalStates": 3,
+  "totalTransitions": 2,
+  "states": [
+    {
+      "id": "STATE_INITIAL",
+      "name": "Initial Loaded State",
+      "type": "page_load",
+      "uiHash": "a1b2c3d4",
+      "depth": 0
+    },
+    {
+      "id": "STATE_DROPDOWN_OPEN",
+      "name": "Status Dropdown Expanded",
+      "type": "dropdown",
+      "uiHash": "e5f6g7h8",
+      "depth": 1
+    },
+    {
+      "id": "STATE_MODAL_OPEN",
+      "name": "Delete Confirm Modal Dialog",
+      "type": "modal",
+      "uiHash": "i9j0k1l2",
+      "depth": 1
+    }
+  ],
+  "transitions": [
+    {
+      "from": "STATE_INITIAL",
+      "trigger": "Click Status Select",
+      "to": "STATE_DROPDOWN_OPEN",
+      "safety": "READ_ONLY"
+    },
+    {
+      "from": "STATE_INITIAL",
+      "trigger": "Click Delete Button",
+      "to": "STATE_MODAL_OPEN",
+      "safety": "DESTRUCTIVE_READ_ONLY_OPEN"
+    }
+  ]
+}
