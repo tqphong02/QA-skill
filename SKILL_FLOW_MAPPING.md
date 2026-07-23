@@ -452,9 +452,13 @@ flowchart TD
 ## 🔗 10. Mapping Chi tiết 2 Vendor Engine Mới (OmniParser & Understand-Anything)
 
 ### 📦 1. Microsoft OmniParser (`qa-run/vendor/OmniParser`)
-- **Vai trò**: Trích xuất Bounding Boxes & Tọa độ giao diện thị giác cục bộ (Local GUI Grounding) & Phân tích Tĩnh Web UI (Static UI Audit).
+- **Vai trò**: Trích xuất Bounding Boxes & Tọa độ giao diện thị giác cục bộ (Local GUI Grounding), Phân tích Tĩnh Web UI (Static UI Audit) & **Kiểm thử UI/UX Visual (UI/UX Visual Audit)**.
 - **Mapping với Các Skill**:
-  - 🟢 **`qa-run`** (`visual-evidence-router.mjs`): Chuyển ảnh screenshot thành dữ liệu JSON cấu trúc `[x1, y1, x2, y2]`. Hỗ trợ **Static Web UI Testing** trên ảnh screenshot / trang tĩnh để tự động xuất ra file **`clarification-qna.md`** (chỉ ra các điểm mâu thuẫn giao diện, nút bấm nghi ngờ, mâu thuẫn visual hierarchy). Giảm 100% Vision Token cho các trường hợp không có mâu thuẫn layout.
+  - 🟢 **`qa-run`** (`visual-evidence-router.mjs` & `journey-audit.mjs`): Chuyển ảnh screenshot thành dữ liệu JSON cấu trúc `[x1, y1, x2, y2]`. Tự động thực hiện **UI/UX Audit**:
+    - **Visual Overlap**: Phát hiện các nút bấm, text hoặc icon bị đè/chèn lên nhau (Overlap Bounding Boxes).
+    - **Touch Target & Spacing**: Kiểm tra kích thước nút bấm có bị quá nhỏ (< 32px height) hoặc khoảng cách margin/padding không đều.
+    - **Cognitive Load Warning**: Cảnh báo khi mật độ phần tử tương tác trên 1 màn hình quá rối mắt (> 40 visual boxes).
+    - **Static Q&A Export**: Tự động xuất ra file **`clarification-qna.md`** chỉ ra mâu thuẫn Visual Hierarchy cho PO/UI-UX Designer.
   - 🟢 **`accessibility-qa`**: Đối chiếu danh sách Bounding Boxes của OmniParser với cây DOM Accessibility Tree để phát hiện nút bấm/icon có hiển thị nhưng bị thiếu thuộc tính `aria-label`.
   - 🟢 **`playwright-pom-automation`**: Định vị vị trí nút bấm / phần tử trên màn hình khi DOM bị mã hóa obfuscated hoặc vẽ qua Canvas / WebGL.
 
