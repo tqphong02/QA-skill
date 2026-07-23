@@ -1,50 +1,74 @@
-# Hướng Dẫn Thực Thi Test Case Excel Local (Dành cho Intern QA)
+# Hướng Dẫn Sử Dụng Skill Thực Thi Test Case Excel Local (Cho Intern QA)
 
-Tài liệu này hướng dẫn Intern QA cách thực thi tự động các kịch bản kiểm thử (Testcases) từ **file Excel (.xlsx) local** hoặc **Google Sheet URL** bằng Playwright CLI.
+Chào mừng bạn đến với bộ công cụ tự động hóa kiểm thử **QA Excel Execution**. Skill `qa-run` đã tích hợp đầy đủ công cụ để tự động đọc, thực thi và cập nhật kết quả kiểm thử trực tiếp từ **file Excel (.xlsx) local** trên máy cá nhân của bạn.
 
 ---
 
 ## 🛠️ 1. Môi trường Yêu cầu
 
-1. **Node.js**: Phiên bản 18+ (`node -v`).
-2. **Python 3**: Phiên bản 3.9+ (`python3 --version`).
-3. **Cài đặt thư viện Python (OpenPyXL)**:
+Đảm bảo máy tính của bạn đã cài đặt:
+1. **Node.js**: Phiên bản 18 trở lên (`node -v`).
+2. **Python 3**: Phiên bản 3.9 trở lên (`python3 --version`).
+3. **Thư viện OpenPyXL**: Cài đặt bằng câu lệnh:
    ```bash
    pip install openpyxl
    ```
-4. **Cài đặt Playwright Browser**:
+4. **Playwright Browser**: Cài đặt browser Playwright bằng lệnh:
    ```bash
    npx playwright install chromium
    ```
 
 ---
 
-## 🚀 2. Các Lệnh Thực Thi Thường Dùng
+## 📂 2. Cấu trúc Thư mục Skill `qa-run`
 
-### 🔹 Trường hợp 1: Chạy Testcase từ File Excel Local (.xlsx)
-```bash
-# Chạy tất cả testcases trong file Excel local
-node qa-run/scripts/execute-sheet.mjs --excel-file "./Template.xlsx" --sheet-name "Test cases_App"
+Skill `qa-run` hoạt động độc lập 100%, chứa sẵn tất cả các script thực thi:
 
-# Chạy riêng 1 Module cụ thể (ví dụ: LOGIN)
-node qa-run/scripts/execute-sheet.mjs --excel-file "./Template.xlsx" --module "LOGIN"
-
-# Chạy tất cả testcases dạng song song (Parallel 4 workers)
-node qa-run/scripts/execute-sheet.mjs --excel-file "./Template.xlsx" --parallel --workers 4
-```
-
-### 🔹 Trường hợp 2: Chạy Testcase từ Google Sheet URL
-```bash
-node qa-run/scripts/execute-sheet.mjs --sheet-url "https://docs.google.com/spreadsheets/d/1xxx/edit" --parallel
+```text
+qa-run/
+├── SKILL.md                          # Thông tin quy chuẩn skill
+└── scripts/
+    ├── execute-sheet.mjs             # Script điều phối chính (Node.js)
+    ├── drive_sheet_execute.py        # Script đọc/ghi file Excel local .xlsx (Python)
+    └── drive_common.py               # Thư viện phụ trợ
 ```
 
 ---
 
-## 📊 3. Kết quả Sau khi Chạy
-1. **File Excel được cập nhật tự động**:
-   - Cột `Result`: Cập nhật tự động thành `Pass` hoặc `Fail`.
-   - Cột `Date`: Ngày thực thi dạng `YYYY-MM-DD`.
+## 🚀 3. Cách Đưa Đường Dẫn (Path) File Excel Local Của Bạn Vào Lệnh
+
+Bạn có thể truyền **bất kỳ đường dẫn file Excel `.xlsx` nào trên máy tính của bạn** vào tham số `--excel-file`:
+
+### 🔹 Ví dụ 1: File Excel nằm ở bất kỳ đâu trên máy cá nhân
+```bash
+# Đường dẫn tuyệt đối trên macOS / Linux:
+node qa-run/scripts/execute-sheet.mjs --excel-file "/Users/intern/Downloads/KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+
+# Đường dẫn tuyệt đối trên Windows:
+node qa-run/scripts/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+```
+
+### 🔹 Ví dụ 2: File Excel nằm ngay trong thư mục làm việc (Đường dẫn tương đối)
+```bash
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+```
+
+### 🔹 Ví dụ 3: Chạy riêng 1 Module cụ thể hoặc Chạy Song Song (Parallel)
+```bash
+# Chạy riêng module LOGIN:
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN"
+
+# Chạy song song 4 kịch bản cùng lúc:
+node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 4
+```
+
+---
+
+## 📊 4. Kết quả Sau khi Chạy
+1. **File Excel của Intern được Cập nhật Trực tiếp**:
+   - Cột `Result`: Tự động điền `Pass` hoặc `Fail`.
+   - Cột `Date`: Ngày thực thi `YYYY-MM-DD`.
    - Cột `Tester`: Ghi nhận `AI-Agent / Playwright`.
-   - Cột `Note`: Nội dung giải thích kết quả ngắn gọn, thân thiện.
+   - Cột `Note`: Lời giải thích kết quả ngắn gọn, dễ hiểu.
 2. **Ảnh Bằng chứng Evidence**:
-   - Chụp ảnh màn hình lưu tại thư mục `evidence/`.
+   - Tự động chụp ảnh màn hình lưu tại thư mục `evidence/`.

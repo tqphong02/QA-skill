@@ -23,9 +23,12 @@
 import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const SKILL_DIR = process.env.QA_RUN_SKILL_DIR
-  || path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  || path.resolve(__dirname, '..');
 const DATA = process.env.QA_DATA_DIR || process.cwd();
 
 // Load .env from project root
@@ -35,10 +38,9 @@ const BASE = (process.env.QA_BASE_URL || '').replace(/\/$/, '');
 const EVID = path.join(DATA, 'evidence');
 fs.mkdirSync(EVID, { recursive: true });
 
-const DRIVE_PYTHON_SCRIPT = path.join(
-  path.resolve(SKILL_DIR, '..', 'google-drive-qa', 'scripts'),
-  'drive_sheet_execute.py'
-);
+const localPythonScript = path.join(__dirname, 'drive_sheet_execute.py');
+const sharedPythonScript = path.join(path.resolve(SKILL_DIR, '..', 'google-drive-qa', 'scripts'), 'drive_sheet_execute.py');
+const DRIVE_PYTHON_SCRIPT = fs.existsSync(localPythonScript) ? localPythonScript : sharedPythonScript;
 
 // ─── CLI Args ─────────────────────────────────────────────────────────────────
 
