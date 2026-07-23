@@ -163,9 +163,57 @@
 
 ---
 
-## Cách dùng catalog khi test
-1. **Exploratory 1 feature**: pick 2-3 category liên quan (vd form → §1+§3+§6; dashboard → §2+§3+§4).
-2. **Mỗi category**: rải 2-3 check từ bảng + chạy `ux-health.mjs` cho cái auto (overflow/truncation/touch/overlap/spam).
-3. **Bug tìm được**: note category trong FINDINGS → dễ sort pattern (vd "nhiều bug §1 → team quên debounce").
+## 11. Human UX & Gánh nặng nhận thức (Cognitive Friction & Flow UX)
 
-> **Priority categories** (hay vỡ nhất): §1 Action safety, §2 Overlap, §3 Overflow, §5 Responsive.
+Các lỗi khiến người dùng bị hoang mang, tốn quá nhiều thao tác hoặc dễ thao tác nhầm:
+
+| Bug | Triệu chứng | Phát hiện | Ví dụ thực tế |
+|---|---|---|---|
+| **Silent Success (Thao tác ngầm không báo)** | Bấm Save/Submit thành công nhưng không có Toast, Banner hay đổi trang | Bấm action → kiểm tra DOM xem có Feedback UI xuất hiện không | Bấm "Lưu cấu hình", giao diện đứng yên → user bấm lại 5 lần vì tưởng lag |
+| **Dead End (Đường cấm / Kẹt luồng)** | Trang báo thành công / Empty state nhưng không có đường thoát hay nút tiếp theo | Kiểm tra trang kết quả xem có CTA nào để tiếp tục công việc không | "Tạo đơn thành công" nhưng không có nút "Về danh sách" hay "In đơn", user phải tự gõ URL |
+| **Too Many Clicks (UX Friction)** | Thao tác cơ bản phải qua quá nhiều bước/modal không cần thiết | Đếm số lần click để hoàn thành 1 nghiệp vụ đơn giản | Cần duyệt 1 bản ghi phải: Click view → Scroll → Click Edit → Click Status -> Select Approved -> Click Save -> Click Back |
+| **Ambiguous CTA (Nút bấm mập mờ)** | Dùng từ chung chung "OK", "Submit", "Process", "Execute" | Inspect text nút bấm → check xem có nêu rõ hành động nghiệp vụ không | Nút ghi "Submit" thay vì "Tạo hóa đơn", "Gửi báo cáo", "Thanh toán $50" |
+| **Dark Pattern / Primary Swap** | Vị trí nút Đồng ý / Hủy hoán đổi bất ngờ giữa các popup, hoặc nút Hủy nổi bật hơn nút chính | Kiểm tra vị trí & màu sắc nút bấm giữa các modal cùng app | Popup A nút Đồng ý bên phải, Popup B nút Đồng ý bên trái → bấm nhầm |
+| **Destructive Action no Confirm** | Nút Xóa vĩnh viễn / Reset nằm sát nút Lưu và không có Dialog xác nhận | Click xóa record quan trọng → check xem có confirmation modal không | Nút "Xóa tài khoản" bấm 1 cái ăn ngay, không gõ lại tên hay xác nhận |
+| **Unsaved Changes Loss** | Đang nhập dở form → vô tình click link khác hoặc Back → mất sạch dữ liệu | Nhập form → click link ngoài → check xem có `beforeunload` warning không | Nhập form 20 trường, lỡ tay bấm Back → mất toàn bộ dữ liệu vừa nhập |
+| **Disappearing Input Context** | Modal/Form quá dài, khi cuộn xuống dưới không còn thấy title hay thông tin tổng quan | Scroll form → check header status/title có sticky không | Điền thông tin thanh toán nhưng không còn nhìn thấy tổng tiền ở đâu |
+
+---
+
+## 12. Overly Technical & Dev-centric UI (UI quá kỹ thuật / Lộ thuật ngữ Developer)
+
+Các lỗi hiển thị mang tư duy của lập trình viên, làm lộ chi tiết kỹ thuật backend làm người dùng phổ thông hoang mang:
+
+| Bug | Triệu chứng | Phát hiện | Ví dụ thực tế |
+|---|---|---|---|
+| **Raw DB/API Error Leak** | Hiển thị nguyên văn Stacktrace hoặc SQL Error cho người dùng xem | Trigger 500 error → check text hiển thị trên UI | `Internal Server Error: NullPointerException at UserService.java:142` hoặc `Key (email) already exists in table users_tbl` |
+| **Backend Jargon in Labels** | Dùng tên biến/column DB làm label giao diện | Quét DOM tìm các từ chứa underscore, camelCase hoặc thuật ngữ dev | Label ghi `is_active_flag`, `cron_expression_val`, `created_at_timestamp`, `foreign_key_id` |
+| **Exposing UUID / Raw Hashes** | Hiển thị chuỗi GUID/UUID ngoằn ngoèo cho người dùng thay vì mã thân thiện | Quét text regex `[0-9a-f]{8}-[0-9a-f]{4}...` trên bảng/detail | Bảng hiển thị `ID: 550e8400-e29b-41d4-a716-446655440000` thay vì mã đơn `HD-00123` |
+| **Unformatted Raw JSON/XML** | Hiển thị chuỗi JSON thô chưa parse lên màn hình | Quét text UI chứa `{"status":...}` hoặc `<xml>...` | Trang chi tiết hiển thị `{"code": 200, "message": "SUCCESS", "data": {...}}` |
+| **HTTP Status Code Only Error** | Báo lỗi bằng mã số HTTP khô khan mà không giải thích ngôn ngữ tự nhiên | Trigger lỗi validation/server → check text thông báo | "Lỗi 422 Unprocessable Entity" hoặc "502 Bad Gateway" mà không bảo user phải làm gì tiếp |
+| **Dev Debug Toggles Leaked** | Nút Debug, Bypass Validation, Reset Test Data trôi nổi ở UI production/UAT | Quét nút bấm chứa `Debug`, `Test`, `Bypass`, `Force`, `Dump` | Màn hình thanh toán có nút "Bypass Payment Validation (Dev only)" |
+| **Boolean Values Exposed Raw** | Hiển thị `true`/`false`, `1`/`0`, `NULL` thay vì `Có`/`Không`, `Đã kích hoạt`/`Chưa` | Quét cột trong bảng hiển thị `TRUE`, `FALSE`, `null`, `undefined` | Cột Trạng thái hiển thị `true` thay vì badge "Đang hoạt động" |
+
+---
+
+## 📊 So sánh các phương pháp kiểm thử UI/UX
+
+| Phương pháp | Bắt được | KHÔNG bắt tốt |
+|---|---|---|
+| **Accessibility snapshot** | Thiếu label, sai role, button không có tên, element không tồn tại | Lệch UI, màu sắc, spacing, overlap |
+| **DOM và CSS analysis** | Overflow, element ngoài màn hình, kích thước button, z-index | Giao diện có đẹp hay dễ hiểu không |
+| **Visual regression** | Lệch layout, mất icon, sai font, sai màu, text bị cắt | Luồng UX khó sử dụng |
+| **Axe Core** | Contrast, thiếu label, accessibility, duplicate ID | UX nghiệp vụ và thẩm mỹ |
+| **Interaction testing** | Focus, keyboard, modal, hover, scroll, loading | Đánh giá giao diện đẹp hay không |
+| **AI Vision** | Bố cục bất thường, hierarchy, UI khó nhìn | Không ổn định và tốn token |
+| **Cognitive & Human UX Audit** (§11) | Dead end, silent success, quá nhiều click, mập mờ CTA, mất data | Cấu trúc code DOM, CSS style tĩnh |
+| **Technical Leak Audit** (§12) | Lộ SQL error, stacktrace, UUID, backend jargon (`is_active_flag`, JSON thô) | Visual alignment, animation smoothness |
+
+---
+
+## Cách dùng catalog khi test
+1. **Exploratory 1 feature**: pick 2-3 category liên quan (vd form → §1+§3+§6+§11; dashboard → §2+§3+§4+§12).
+2. **Mỗi category**: rải 2-3 check từ bảng + chạy `ux-health.mjs` cho cái auto + `attack-surface.mjs` cho form/auth.
+3. **Bug tìm được**: note category trong FINDINGS → dễ sort pattern (vd "nhiều bug §12 → backend dev làm UI chưa qua designer/BA polish").
+
+> **Priority categories**: §1 Action safety, §2 Overlap, §3 Overflow, §5 Responsive, §11 Human UX, §12 Dev-centric UI.

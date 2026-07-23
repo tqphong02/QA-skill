@@ -20,6 +20,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Retest failed ticket ABC-1` | plane-qa + qa-run | FAILED, comment Actual/Expected, kéo `In Progress` |
 | `Retest pass ticket ABC-1` | plane-qa + qa-run | PASS, comment Result/Conclusion, kéo `Done` |
 | `Test feature này không có doc/testcase` | qa-run | Đọc guide khớp feature nếu có, vẫn chạy exploratory/ad-hoc/UI/UX, cập nhật business guide sau run |
+| `Chạy execution testcase toàn bộ từ <Sheet URL>` | qa-run + google-drive-qa | Đọc app-flow-map.json hiểu business logic, chạy execute-sheet.mjs --parallel --workers 4 thực thi song song UI/UX vả Functional, batch update kết quả Pass/Fail/N/A/Untest, Priority, Note chuẩn lên Sheet |
 | `Khám phá tổng thể web app này` | qa-run | Chạy APP_BASELINE_DISCOVERY, tạo app-business-guide.md với coverage_map và feature guide cho vùng đã khám phá sâu |
 | `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
 | `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |

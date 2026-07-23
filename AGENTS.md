@@ -17,7 +17,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 |---|---|---|
 | Plane URL, ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX | `qa-run/SKILL.md` | Đọc app guide rồi feature guide; baseline map business flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; chạy `execute-sheet.mjs` cho Sheet execution (dùng `--parallel` khi chạy toàn bộ), baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | Drive, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
