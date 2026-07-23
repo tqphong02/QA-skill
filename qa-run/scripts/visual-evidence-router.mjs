@@ -99,7 +99,9 @@ async function main() {
     elements: parsedBoxes,
     recommendations: [
       'Visual grounding converted to structured JSON (0 LLM Vision Tokens used).',
+      'Static Web UI Audit: Detected interactable elements mapped for Static Testing.',
       'Targeted region crops will be routed ONLY for suspicious conflicts.',
+      'Feed parsed visual boxes directly to Q&A Generator for Markdown clarification-qna.md output.',
     ],
   };
 

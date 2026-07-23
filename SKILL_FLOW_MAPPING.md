@@ -452,9 +452,9 @@ flowchart TD
 ## 🔗 10. Mapping Chi tiết 2 Vendor Engine Mới (OmniParser & Understand-Anything)
 
 ### 📦 1. Microsoft OmniParser (`qa-run/vendor/OmniParser`)
-- **Vai trò**: Trích xuất Bounding Boxes & Tọa độ giao diện thị giác cục bộ (Local GUI Grounding).
+- **Vai trò**: Trích xuất Bounding Boxes & Tọa độ giao diện thị giác cục bộ (Local GUI Grounding) & Phân tích Tĩnh Web UI (Static UI Audit).
 - **Mapping với Các Skill**:
-  - 🟢 **`qa-run`** (`visual-evidence-router.mjs`): Chuyển ảnh screenshot thành dữ liệu JSON cấu trúc `[x1, y1, x2, y2]`. Giảm 100% Vision Token cho các trường hợp không có mâu thuẫn layout.
+  - 🟢 **`qa-run`** (`visual-evidence-router.mjs`): Chuyển ảnh screenshot thành dữ liệu JSON cấu trúc `[x1, y1, x2, y2]`. Hỗ trợ **Static Web UI Testing** trên ảnh screenshot / trang tĩnh để tự động xuất ra file **`clarification-qna.md`** (chỉ ra các điểm mâu thuẫn giao diện, nút bấm nghi ngờ, mâu thuẫn visual hierarchy). Giảm 100% Vision Token cho các trường hợp không có mâu thuẫn layout.
   - 🟢 **`accessibility-qa`**: Đối chiếu danh sách Bounding Boxes của OmniParser với cây DOM Accessibility Tree để phát hiện nút bấm/icon có hiển thị nhưng bị thiếu thuộc tính `aria-label`.
   - 🟢 **`playwright-pom-automation`**: Định vị vị trí nút bấm / phần tử trên màn hình khi DOM bị mã hóa obfuscated hoặc vẽ qua Canvas / WebGL.
 
