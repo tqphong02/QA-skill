@@ -48,6 +48,31 @@ async function main() {
     rules = (rawRules.rules || rawRules || []).filter(r => (r.module || r.rule || '').toLowerCase().includes(MODULE_NAME.toLowerCase())).slice(0, 5);
   }
 
+  const stepByStepFlows = {
+    payment: [
+      '1. Chọn sản phẩm & Số lượng',
+      '2. Lưu sản phẩm vào Giỏ hàng (POST /api/cart/items)',
+      '3. Chuyển sang màn hình Checkout / Nhập địa chỉ giao hàng',
+      '4. Nhấn nút "Thanh toán" (POST /api/orders/checkout)',
+      '5. Nhận phản hồi HTTP 200 & Trạng thái đơn đổi sang SUBMITTED / PAID',
+    ],
+    order: [
+      '1. Khởi tạo đơn hàng dạng DRAFT (POST /api/orders)',
+      '2. Điền thông tin chi tiết & chọn sản phẩm',
+      '3. Nhấn "Submit Order" (POST /api/orders/:id/submit)',
+      '4. Hệ thống kiểm tra điều kiện (Amount, Stock, User Role)',
+      '5. Chuyển trạng thái đơn sang SUBMITTED',
+    ],
+  };
+
+  const currentFlow = stepByStepFlows[MODULE_NAME.toLowerCase()] || [
+    `1. Truy cập màn hình ${MODULE_NAME}`,
+    `2. Nhập thông tin dữ liệu hợp lệ`,
+    `3. Kích hoạt Action chính của ${MODULE_NAME}`,
+    `4. Hệ thống kiểm tra Business Rules & Phân quyền`,
+    `5. Hoàn tất giao dịch & Cập nhật trạng thái`,
+  ];
+
   const contextPack = {
     tool: 'context-builder.mjs',
     semanticEngine: isUABundled ? 'Egonex-AI Understand-Anything' : 'AST Default',
@@ -57,6 +82,7 @@ async function main() {
     estimatedTokens: 1850,
     savingsPercentage: '📉 ~97.5% Token Savings vs Raw Code',
     data: {
+      businessFlowSteps: currentFlow,
       relevantApis: apis,
       relevantRules: rules,
       hasMergedSystemGuide: fs.existsSync(mergedGuidePath),
