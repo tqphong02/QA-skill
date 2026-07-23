@@ -80,6 +80,9 @@ async function main() {
   // 5. Extract Visual Signals & Anomalies
   runScript('visual-business-signal-extractor.mjs', ['--page', PAGE_SLUG]);
 
+  // 5b. Route Visual Evidence via Microsoft OmniParser (Zero Vision Token Grounding)
+  runScript('visual-evidence-router.mjs', ['--page', PAGE_SLUG]);
+
   // 6. Build UI Observed Flow
   runScript('ui-observed-flow-builder.mjs', ['--page', PAGE_SLUG]);
 
