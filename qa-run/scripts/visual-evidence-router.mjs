@@ -80,14 +80,19 @@ async function main() {
     components = rawComp.components || [];
   }
 
+  const omniVendorDir = path.join(DATA_DIR, 'qa-run', 'vendor', 'OmniParser');
+  const isVendorInstalled = fs.existsSync(omniVendorDir);
+
   const isOmniActive = await checkOmniParserHealth(OMNI_URL);
-  console.log(`[visual-evidence-router] Microsoft OmniParser Local Engine: ${isOmniActive ? '🟢 ONLINE (' + OMNI_URL + ')' : '🟡 STANDBY (Using DOM Bounding-Box Grounding)'}`);
+  console.log(`[visual-evidence-router] Microsoft OmniParser Local Repo: ${isVendorInstalled ? '🟢 BUNDLED (' + omniVendorDir + ')' : '⚪ MISSING'}`);
+  console.log(`[visual-evidence-router] Microsoft OmniParser Service:    ${isOmniActive ? '🟢 ONLINE (' + OMNI_URL + ')' : '🟡 STANDBY (Using Fast Local Bounding-Box Grounding)'}`);
 
   const parsedBoxes = generateLocalVisualGrounding(components);
 
   const result = {
     tool: 'visual-evidence-router.mjs',
     pageSlug: PAGE_SLUG,
+    omniParserVendorBundled: isVendorInstalled,
     omniParserActive: isOmniActive,
     tokenCost: 0,
     parsedBoundingBoxesCount: parsedBoxes.length,
