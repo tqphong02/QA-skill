@@ -48,6 +48,26 @@ Output: `qa-knowledge/repositories/<repo-name>/` gồm:
 
 Khi có `system-business-guide.md` tại `qa-knowledge/merged/`, `qa-run` và `business-analysis` đọc từ đó để enriched context.
 
+## UI_BUSINESS_RECONCILIATION (UI vs Source/Docs/Runtime Reconciliation Pipeline)
+
+Kích hoạt khi user yêu cầu: `Từ UI suy ra flow`, `Đối chiếu UI với backend/BRD`, `Tìm mâu thuẫn UI vs Source Code`, `Sinh câu hỏi cho BA/PO/Dev từ UI`.
+
+```bash
+# Quét trang live hoặc snapshot và chạy pipeline 7 bước:
+node scripts/ui-business-reconciliation.mjs --page order-detail
+node scripts/ui-business-reconciliation.mjs --url https://app.example.com/orders/123 --page order-detail
+```
+
+Nguồn đối chiếu 5 tầng ưu tiên: **Runtime Verified → Source Code & API → BRD/SRS Docs → UI Observed → AI Inference**.
+
+Output: `qa-knowledge/ui-business/<page-slug>/` gồm:
+- `ui-components.json` — Lọc components có ý nghĩa business & intent
+- `observed-flow.json` — UI observed flow & state sequence (DRAFT → SUBMITTED → APPROVED → COMPLETED / CANCELLED)
+- `business-conflicts.json` — Báo cáo phân loại 9 kết quả (`MATCHED`, `UI_ONLY`, `DOC_ONLY`, `CODE_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, `MISSING_TRANSITION`, `PERMISSION_CONFLICT`)
+- `unresolved-rules.json` — Phát hiện 10 ambiguity patterns đặc thù
+- `clarification-qna.json` — Bộ câu hỏi phân định trách nhiệm BA, PO, Dev
+- `ui-business-guide.md` — File Markdown báo cáo 12 sections đầy đủ
+
 ## Cross-model hard gates
 
 Áp dụng nguyên thứ tự sau cho mọi model, đặc biệt model nhanh hoặc context nhỏ:
