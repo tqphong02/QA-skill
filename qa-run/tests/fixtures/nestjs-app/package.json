@@ -1,0 +1,1 @@
+{"name": "nestjs-app", "version": "1.0.0", "dependencies": {"@nestjs/core": "^10.0.0", "@nestjs/common": "^10.0.0", "typeorm": "^0.3.0"}}

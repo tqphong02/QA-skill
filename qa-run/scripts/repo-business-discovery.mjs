@@ -4,17 +4,21 @@
  *
  * Điều phối toàn bộ quy trình phân tích repository:
  *   Phase 1: Fingerprint → Source Index → Architecture → API Contracts → Business Rules
- *   Phase 2: Business Flows → State Machines → Permission Matrix → Domain Model (khi có)
- *   Phase 3: Runtime Reconciliation → Q&A Generation → Business Guide → Traceability Matrix (khi có)
+ *   Phase 2: Business Flows → State Machines → Permission Matrix → Domain Model
+ *   Phase 3: Runtime Reconciliation → Q&A Generation → Business Guide → Traceability Matrix
  *
- * Chế độ:
- *   --mode full         Chạy toàn bộ Phase 1 (Phase 2+3 thêm vào sau)
+ * Chế độ scan (--mode):
+ *   --mode full         Chạy toàn bộ Phase 1, 2 và 3 (mặc định)
  *   --mode incremental  Chỉ quét phần thay đổi theo git diff
- *   --mode phase1       Chỉ Phase 1 (mặc định)
+ *   --mode phase1       Chỉ Phase 1 (scanner lõi)
+ *
+ * Chế độ phân tích (--analysis-mode):
+ *   --analysis-mode deterministic  (Mặc định) Nhanh, 0 token AI, kết quả cấu trúc JSON/MD
+ *   --analysis-mode semantic       Tự động gọi AI diễn giải ý nghĩa nghiệp vụ từ JSON đã rút gọn
  *
  * Usage:
- *   node repo-business-discovery.mjs --repo /path/to/backend
- *   node repo-business-discovery.mjs --repo . --mode full
+ *   node repo-business-discovery.mjs --repo /path/to/backend --mode full
+ *   node repo-business-discovery.mjs --repo . --mode incremental
  *   node repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
  */
 
@@ -31,9 +35,11 @@ const getArg  = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ?
 const REPO_PATH     = path.resolve(getArg('--repo', '.'));
 const WORKSPACE     = getArg('--workspace', null);
 const REPOS_CSV     = getArg('--repos', null);
-const MODE          = getArg('--mode', 'phase1');
+const MODE          = getArg('--mode', 'full');
+const ANALYSIS_MODE = getArg('--analysis-mode', 'deterministic');
 const DATA_DIR      = process.env.QA_DATA_DIR || process.cwd();
 const KNOW_BASE     = path.join(DATA_DIR, 'qa-knowledge', 'repositories');
+const MERGED_DIR    = path.join(DATA_DIR, 'qa-knowledge', 'merged');
 
 function runScript(scriptName, extraArgs = []) {
   const scriptPath = path.join(__dirname, scriptName);
@@ -63,6 +69,49 @@ function getChangedFiles(repoPath, lastCommit) {
   } catch { return []; }
 }
 
+function generateSystemBusinessMap() {
+  fs.mkdirSync(MERGED_DIR, { recursive: true });
+  const mapPath = path.join(MERGED_DIR, 'system-business-map.json');
+
+  const systemMap = {
+    generatedAt: new Date().toISOString(),
+    repositories: {},
+  };
+
+  if (fs.existsSync(KNOW_BASE)) {
+    const dirs = fs.readdirSync(KNOW_BASE);
+    for (const d of dirs) {
+      const dirPath = path.join(KNOW_BASE, d);
+      if (!fs.statSync(dirPath).isDirectory()) continue;
+
+      const meta  = readJSON(dirPath, 'repo-metadata.json');
+      const api   = readJSON(dirPath, 'api-contracts.json');
+      const rules = readJSON(dirPath, 'business-rules.json');
+      const flows = readJSON(dirPath, 'business-flows.json');
+
+      if (meta) {
+        systemMap.repositories[d] = {
+          repoName: meta.repoName || d,
+          repoType: meta.repoType,
+          frameworks: meta.frameworks,
+          commit: meta.commit,
+          totalEndpoints: api?.totalEndpoints || 0,
+          totalRules: rules?.totalRules || 0,
+          totalFlows: flows?.totalFlows || 0,
+          scannedAt: meta.scannedAt,
+        };
+      }
+    }
+  }
+
+  fs.writeFileSync(mapPath, JSON.stringify(systemMap, null, 2), 'utf8');
+  console.log(`[orchestrator] ✅ System business map updated: ${mapPath}`);
+}
+
+function readJSON(dir, filename) {
+  try { return JSON.parse(fs.readFileSync(path.join(dir, filename), 'utf8')); } catch { return null; }
+}
+
 async function analyzeRepo(repoPath) {
   const repoName = path.basename(repoPath);
   const outputDir = path.join(KNOW_BASE, repoName);
@@ -73,8 +122,8 @@ async function analyzeRepo(repoPath) {
 
   // Incremental scan check
   if (MODE === 'incremental' && fs.existsSync(metaPath)) {
-    const prev = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-    const lastCommit = prev.commit;
+    const prev = readJSON(outputDir, 'repo-metadata.json');
+    const lastCommit = prev?.commit;
     if (lastCommit && lastCommit !== 'unknown' && lastCommit === currentCommit) {
       console.log(`[orchestrator] ✅ Knowledge up-to-date at commit ${currentCommit}. Skipping.`);
       return;
@@ -88,15 +137,16 @@ async function analyzeRepo(repoPath) {
 
   console.log('\n' + '═'.repeat(60));
   console.log(`[orchestrator] 🚀 REPO_BUSINESS_DISCOVERY`);
-  console.log(`  Repo:   ${repoPath}`);
-  console.log(`  Mode:   ${MODE}`);
-  console.log(`  Output: ${outputDir}`);
-  console.log(`  Commit: ${currentCommit}`);
+  console.log(`  Repo:           ${repoPath}`);
+  console.log(`  Mode:           ${MODE}`);
+  console.log(`  Analysis Mode:  ${ANALYSIS_MODE}`);
+  console.log(`  Output:         ${outputDir}`);
+  console.log(`  Commit:         ${currentCommit}`);
   console.log('═'.repeat(60) + '\n');
 
   const startTime = Date.now();
 
-  // ── Phase 1 ──────────────────────────────────────────────────────────────────
+  // ── Phase 1: Core Scanner ───────────────────────────────────────────────────
   console.log('[orchestrator] ── Phase 1: Core Scanner ──────────────────');
 
   const ok1 = runScript('repo-fingerprint.mjs', [
@@ -124,7 +174,7 @@ async function analyzeRepo(repoPath) {
     '--output', path.join(outputDir, 'business-rules.json'),
   ]);
 
-  // ── Phase 2 ──────────────────────────────────────────────────────────────────
+  // ── Phase 2: Flow, State, Permission, Domain ──────────────────────────────
   if (['full', 'phase2', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 2: Flow, State, Permission, Domain ──');
     runScript('business-flow-builder.mjs',       ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')]);
@@ -133,13 +183,26 @@ async function analyzeRepo(repoPath) {
     runScript('database-domain-extractor.mjs',   ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')]);
   }
 
-  // ── Phase 3 ──────────────────────────────────────────────────────────────────
+  // ── Phase 3: Reconciliation, Q&A, Guide, Traceability ────────────────────
   if (['full', 'phase3'].includes(MODE)) {
-    console.log('\n[orchestrator] ── Phase 3: Guide, Q&A, Traceability ──');
+    console.log('\n[orchestrator] ── Phase 3: Reconciliation, Q&A, Guide, Traceability ──');
     runScript('repo-runtime-reconciler.mjs',     ['--repo-knowledge', outputDir]);
     runScript('business-qna-generator.mjs',      ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')]);
     runScript('write-repo-business-guide.mjs',   ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')]);
     runScript('traceability-matrix-generator.mjs', ['--repo', repoName]);
+  }
+
+  // ── Semantic Enrichment Mode (Optional) ──────────────────────────────────
+  if (ANALYSIS_MODE === 'semantic') {
+    console.log('\n[orchestrator] ── Semantic Enrichment Mode ──');
+    console.log('[orchestrator] ℹ️  Semantic mode enabled: compact JSON prepared for LLM semantic interpretation');
+    const semanticSummary = {
+      repoName,
+      commit: currentCommit,
+      note: 'Semantic enrichment enabled. Feed business-guide.md or business-qna.json to AI for natural language domain reasoning.',
+      timestamp: new Date().toISOString(),
+    };
+    fs.writeFileSync(path.join(outputDir, 'semantic-enrichment.json'), JSON.stringify(semanticSummary, null, 2), 'utf8');
   }
 
   const duration = ((Date.now() - startTime) / 1000).toFixed(1);
@@ -149,6 +212,7 @@ async function analyzeRepo(repoPath) {
     repoName,
     repoPath,
     mode: MODE,
+    analysisMode: ANALYSIS_MODE,
     commit: currentCommit,
     phase1: { fingerprint: ok1, sourceIndex: ok2, architecture: ok3, apiContracts: ok4, businessRules: ok5 },
     outputDir,
@@ -174,7 +238,6 @@ async function analyzeRepo(repoPath) {
 
 async function main() {
   if (WORKSPACE && REPOS_CSV) {
-    // Multi-repo mode
     const repos = REPOS_CSV.split(',').map(r => r.trim());
     console.log(`[orchestrator] Multi-repo mode: ${repos.join(', ')}`);
     for (const repo of repos) {
@@ -192,6 +255,9 @@ async function main() {
     }
     await analyzeRepo(REPO_PATH);
   }
+
+  // Always update global system-business-map.json
+  generateSystemBusinessMap();
 }
 
 main().catch(err => {

@@ -212,11 +212,11 @@ async function main() {
 
     // Detect framework per file
     const isNestJS  = /@Controller|@Get\(|@Post\(|@Put\(|@Patch\(|@Delete\(/.test(content);
-    const isExpress = /(?:router|app|route)\.(get|post|put|patch|delete)\s*\(/.test(content);
+    const isExpressOrFastify = /(?:router|app|route|fastify)\.(get|post|put|patch|delete)\s*\(/.test(content);
     const isNextAPI = relativePath.replace(/\\/g, '/').includes('/api/');
 
-    if (isNestJS)        endpoints.push(...extractNestJSRoutes(content, relativePath));
-    else if (isExpress)  endpoints.push(...extractExpressRoutes(content, relativePath));
+    if (isNestJS)               endpoints.push(...extractNestJSRoutes(content, relativePath));
+    else if (isExpressOrFastify) endpoints.push(...extractExpressRoutes(content, relativePath));
 
     if (isNextAPI) endpoints.push(...extractNextJSRoutes(filePath, relativePath));
 
