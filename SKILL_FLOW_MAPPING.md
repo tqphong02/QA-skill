@@ -288,3 +288,60 @@ Lần làm việc tiếp theo:
 | **Phân tích Mâu thuẫn UI vs BRD** | ~60,000 Tokens *(Gửi full screenshot 4K & full DOM)* | **~3,500 Tokens** *(Chỉ gửi crop component & DOM filtered)* | 📉 **Tiết kiệm 94.2%** |
 | **Sinh Testcase cho Feature mới** | ~120,000 Tokens *(Nạp lại toàn bộ file tài liệu PDF gốc)* | **~4,000 Tokens** *(Chỉ đọc system-business-guide.md)* | 📉 **Tiết kiệm 96.7%** |
 | **Thực thi Testcase hàng loạt** | ~50,000 Tokens *(AI click từng bước)* | **0 Token AI** *(Chạy hoàn toàn qua Playwright CLI script)* | 📉 **Tiết kiệm 100%** |
+
+---
+
+## ⚡ 9. Kiến trúc Tối ưu Token 5 Cấp độ (5-Level Token Optimization Architecture)
+
+### 📐 Nguyên tắc Vận hành Tối ưu Token
+```text
+Script xử lý trước (Level 0)
+    ↓
+Chỉ lấy phần thay đổi hoặc có rủi ro (Incremental)
+    ↓
+AI chỉ đọc Context đã rút gọn (Context Pack)
+    ↓
+Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision)
+```
+
+---
+
+### 📶 Mô hình Xử lý Phân tầng 5 Cấp độ (5-Level Layered Processing Model)
+
+```mermaid
+flowchart TD
+    L0["Level 0: Deterministic Script (0 AI Token)\n• AST/Regex Scanners & Playwright CLI Execution"] --> L1
+    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• context-pack.json & dom-pruner output"] --> L2
+    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & changed symbols"] --> L3
+    L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
+    L4["Level 4: Full Screenshot / Full Source Code\n• Chỉ dùng khi Level 0 - Level 3 bị FAIL"]
+```
+
+- **Level 0**: Script deterministic hoàn toàn, **0 AI token**.
+- **Level 1**: AI đọc JSON tóm lược (`context-pack.json` & `dom-pruner.mjs` output).
+- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections).
+- **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`).
+- **Level 4**: Full screenshot hoặc full source code **CHỈ KHI THỰC SỰ CẦN THIẾT**.
+
+---
+
+### 🛠️ Bộ Script Hỗ trợ Tối ưu Token (`qa-run/scripts/`)
+
+1. **`artifact-cache.mjs`**: Cache kết quả trích xuất theo commit hash, file content hash và input hash. Nếu file không đổi, không phân tích lại.
+2. **`context-builder.mjs`**: Nhận Intent & Module hiện tại, gom đúng kiến thức liên quan, loại trùng và tạo `context-pack.json` tinh gọn.
+3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements).
+4. **`doc-indexer.mjs`**: Chia nhỏ tài liệu PDF/DOCX theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
+5. **`visual-evidence-router.mjs`**: Tự động quyết định vùng visual nào thực sự cần gửi cho AI Vision (chỉ crop region khi DOM audit nghi ngờ).
+6. **`incremental-discovery.mjs`**: Chỉ scan lại các route, module hoặc source file có sự thay đổi (dựa trên hash).
+7. **`token-budget-manager.mjs`**: Quản lý và kiểm soát Budget Token per Intent (`RETEST_TICKET`: 8k, `EXPLORATORY_ADHOC`: 12k, `UI_BUSINESS_RECONCILIATION`: 15k, `REPO_BUSINESS_DISCOVERY`: 20k).
+
+---
+
+### 📊 So sánh Hiệu quả Tiêu thụ Token Chi tiết
+
+| Luồng Xử lý | Chưa tối ưu (Raw Execution) | Sau khi tối ưu (Pruned + Cached) | Mức Tiết kiệm |
+|:---|:---:|:---:|:---:|
+| **Source Code Analysis** | 80,000 – 150,000 Tokens | **2,000 – 8,000 Tokens** | 📉 **Giảm ~95%** |
+| **Raw DOM & Screenshots** | 30,000 – 60,000 Tokens | **1,000 – 5,000 Tokens** | 📉 **Giảm ~93%** |
+| **Tài liệu PDF / DOCX** | 20,000 – 50,000 Tokens | **2,000 – 6,000 Tokens** | 📉 **Giảm ~90%** |
+| **App Re-discovery** | ~50,000 Tokens | **1,000 – 10,000 Tokens** | 📉 **Giảm ~90%** |
