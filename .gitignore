@@ -55,3 +55,6 @@ qa-run/vendor/Understand-Anything/dist/
 # Generated Knowledge Outputs (Contains local machine paths)
 qa-knowledge/
 **/qa-knowledge/
+
+# Zip Packages
+*.zip

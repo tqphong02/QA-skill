@@ -30,8 +30,13 @@ from googleapiclient.discovery import build
 VALID_RESULTS = {"Pass", "Fail", "N/A", "Untest", "Untested"}
 VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
 
+def is_local_excel(url_or_id):
+    return url_or_id.endswith('.xlsx') or os.path.isfile(url_or_id)
+
 def extract_spreadsheet_id(url_or_id):
-    """Extract 44-character spreadsheet ID from URL or return raw ID."""
+    """Extract 44-character spreadsheet ID from URL or return raw ID/local path."""
+    if is_local_excel(url_or_id):
+        return os.path.abspath(url_or_id)
     match = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", url_or_id)
     if match:
         return match.group(1)
@@ -94,7 +99,106 @@ def parse_header_indices(header_row):
         elif "notes" == val or "note" == val: mapping["note"] = idx
     return mapping
 
+def read_local_excel(filepath, sheet_name=None):
+    import openpyxl
+    wb = openpyxl.load_workbook(filepath, data_only=True)
+    target_sheet = sheet_name or wb.sheetnames[0]
+    if sheet_name:
+        for name in wb.sheetnames:
+            if name.lower() == sheet_name.lower():
+                target_sheet = name
+                break
+    ws = wb[target_sheet]
+    rows = []
+    for r in ws.iter_rows(values_only=True):
+        rows.append([str(c) if c is not None else "" for c in r])
+
+    header_idx = -1
+    col_map = {}
+    for idx, r in enumerate(rows):
+        mapping = parse_header_indices(r)
+        if "testcase_id" in mapping or "description" in mapping:
+            header_idx = idx
+            col_map = mapping
+            break
+
+    if header_idx == -1:
+        header_idx = 0
+        col_map = parse_header_indices(rows[0]) if rows else {}
+
+    testcases = []
+    current_module = "GENERAL"
+    current_group = ""
+
+    for r_idx in range(header_idx + 1, len(rows)):
+        row = rows[r_idx]
+        def get_col(key):
+            idx = col_map.get(key)
+            if idx is not None and idx < len(row):
+                return str(row[idx]).strip()
+            return ""
+
+        tc_id = get_col("testcase_id")
+        desc = get_col("description")
+        if not tc_id and not desc:
+            continue
+
+        testcases.append({
+            "row_number": r_idx + 1,
+            "module": current_module,
+            "group": current_group,
+            "scenario_id": get_col("scenario_id"),
+            "scenario_name": get_col("scenario_name"),
+            "testcase_id": tc_id,
+            "description": desc,
+            "precondition": get_col("precondition"),
+            "procedure": get_col("procedure"),
+            "expected": get_col("expected"),
+            "result": get_col("result") or "Untest",
+            "priority": get_col("priority") or "Medium",
+            "date": get_col("date"),
+            "tester": get_col("tester"),
+            "note": get_col("note"),
+        })
+
+    return {
+        "spreadsheet_id": filepath,
+        "sheet_name": target_sheet,
+        "header_row": header_idx + 1,
+        "column_mapping": col_map,
+        "total_testcases": len(testcases),
+        "testcases": testcases,
+    }
+
+def update_local_excel(filepath, updates, sheet_name=None):
+    import openpyxl
+    data_info = read_local_excel(filepath, sheet_name)
+    target_sheet = data_info["sheet_name"]
+    col_map = data_info["column_mapping"]
+    tc_by_row = {tc["row_number"]: tc for tc in data_info["testcases"]}
+
+    wb = openpyxl.load_workbook(filepath)
+    ws = wb[target_sheet]
+
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    updated_count = 0
+
+    for up in updates:
+        row_num = up.get("row_number")
+        if row_num and row_num in tc_by_row:
+            if "result" in col_map: ws.cell(row=row_num, column=col_map["result"] + 1, value=up.get("result", "Untest"))
+            if "priority" in col_map: ws.cell(row=row_num, column=col_map["priority"] + 1, value=up.get("priority", "Medium"))
+            if "date" in col_map: ws.cell(row=row_num, column=col_map["date"] + 1, value=today_str)
+            if "tester" in col_map: ws.cell(row=row_num, column=col_map["tester"] + 1, value=up.get("tester", "AI-Agent"))
+            if "note" in col_map: ws.cell(row=row_num, column=col_map["note"] + 1, value=sanitize_note(up.get("note", "")))
+            updated_count += 1
+
+    wb.save(filepath)
+    return {"status": "success", "updated_count": updated_count, "errors": []}
+
 def read_testcases(spreadsheet_id, sheet_name=None):
+    if is_local_excel(spreadsheet_id):
+        return read_local_excel(spreadsheet_id, sheet_name)
     service = get_sheets_service()
     meta = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
     sheets = meta.get("sheets", [])
@@ -198,7 +302,9 @@ def read_testcases(spreadsheet_id, sheet_name=None):
     }
 
 def update_testcase_results(spreadsheet_id, updates, sheet_name=None):
-    """Batch update execution results for specified row numbers in the sheet."""
+    """Batch update execution results for specified row numbers in the sheet or local excel."""
+    if is_local_excel(spreadsheet_id):
+        return update_local_excel(spreadsheet_id, updates, sheet_name)
     data_info = read_testcases(spreadsheet_id, sheet_name)
     target_sheet = data_info["sheet_name"]
     col_map = data_info["column_mapping"]

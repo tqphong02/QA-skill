@@ -45,7 +45,7 @@ const DRIVE_PYTHON_SCRIPT = path.join(
 const args = process.argv.slice(2);
 const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
 
-const SHEET_URL  = getArg('--sheet-url', args[0]);
+const SHEET_URL  = getArg('--sheet-url', getArg('--excel-file', getArg('--file', args[0])));
 const SHEET_NAME = getArg('--sheet-name', '');
 const MODULE_FILTER = getArg('--module', '');
 const PARALLEL   = args.includes('--parallel') || args.includes('--all');
@@ -53,8 +53,9 @@ const WORKERS    = parseInt(getArg('--workers', '4'), 10);
 const DRY_RUN    = args.includes('--dry-run');
 
 if (!SHEET_URL) {
-  console.error('❌ Thiếu --sheet-url <URL_OR_ID>');
-  console.error('Ví dụ: node execute-sheet.mjs --sheet-url "https://docs.google.com/spreadsheets/d/1xxx/edit"');
+  console.error('❌ Thiếu --sheet-url <URL_OR_ID> hoặc --excel-file <PATH_TO_XLSX>');
+  console.error('Ví dụ Google Sheet: node execute-sheet.mjs --sheet-url "https://docs.google.com/spreadsheets/d/1xxx/edit"');
+  console.error('Ví dụ Excel Local:   node execute-sheet.mjs --excel-file "./my-testcases.xlsx"');
   process.exit(1);
 }
 
