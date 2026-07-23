@@ -333,7 +333,10 @@ flowchart TD
 2. **`context-builder.mjs`**: Nhận Intent & Module hiện tại, gom đúng kiến thức liên quan, loại trùng và tạo `context-pack.json` tinh gọn.
 3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements, frameworks).
 4. **`doc-indexer.mjs`**: Phân tách tài liệu PDF/DOCX (đã qua `doc-to-md`) theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
-5. **`visual-evidence-router.mjs`**: Tự động quyết định vùng visual nào thực sự cần gửi cho AI Vision (chỉ crop region khi DOM audit nghi ngờ/conflict).
+5. **`visual-evidence-router.mjs`**: Tự động tích hợp **Microsoft OmniParser** (Screen Parsing Model) để phân tích bounding box của các phần tử giao diện cục bộ (Local Model):
+   - Chạy OmniParser phân tích ảnh screenshot thành danh sách cấu trúc JSON chứa tọa độ `[x1, y1, x2, y2]` và nhãn phần tử tương tác (`button`, `input`, `badge`, `menu`).
+   - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
+   - Chỉ crop đúng vùng patch nghi ngờ gửi cho LLM Vision API khi OmniParser hoặc DOM audit phát hiện mâu thuẫn.
 6. **`incremental-discovery.mjs`**: Chỉ scan lại các route, module hoặc source file có sự thay đổi (dựa trên hash).
 7. **`token-budget-manager.mjs`**: Quản lý và kiểm soát Budget Token per Intent bằng Tokenizer thật.
    - Budget Config: `RETEST_TICKET`: 8k, `EXPLORATORY_ADHOC`: 12k, `UI_BUSINESS_RECONCILIATION`: 15k, `REPO_BUSINESS_DISCOVERY`: 20k.
