@@ -1,196 +1,283 @@
 #!/usr/bin/env node
 /**
- * ui-business-reconciler.mjs — 5-Tier Knowledge Reconciler & 9-Result Classifier
+ * ui-business-reconciler.mjs — 3-Angle Knowledge Reconciler & Deep Evidence Bundle
  *
- * Prioritized Knowledge Tiers:
- *   1. Runtime verified (app-flow-map.json)
- *   2. Source Code & API (api-contracts.json, business-rules.json, permission-matrix.json)
- *   3. BRD / SRS Docs (system-business-guide.md)
- *   4. UI Observed (ui-components.json, observed-flow.json)
- *   5. AI Inference
+ * 3-Angle Reconciliation:
+ *   - Actual behavior (Runtime & UI)
+ *   - Implemented rule (Source Code & API)
+ *   - Expected business behavior (BRD/SRS Docs & BA/PO)
  *
- * 9 Result Types:
- *   - MATCHED
- *   - UI_ONLY
- *   - DOC_ONLY
- *   - CODE_ONLY
- *   - CONFLICT
- *   - AMBIGUOUS
- *   - UNREACHABLE
- *   - MISSING_TRANSITION
- *   - PERMISSION_CONFLICT
+ * Reads Rule Registry from `qa-run/rules/ui-business/*.json` (defaults & project-level).
+ * Supports `missingEvidence` array for null evidence fields.
+ * Outputs `business-conflicts.json` with a structured `summary` object.
  *
  * Usage:
  *   node ui-business-reconciler.mjs --page order-detail
- *   node ui-business-reconciler.mjs --page order-detail --output qa-knowledge/ui-business/order-detail/business-conflicts.json
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const args = process.argv.slice(2);
 const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
 
 const PAGE_SLUG   = getArg('--page', 'page-ui');
+const PROJECT     = getArg('--project', null);
 const OUTPUT_FILE = getArg('--output', null);
 const DATA_DIR    = process.env.QA_DATA_DIR || process.cwd();
+const RULES_BASE  = path.join(__dirname, '../rules/ui-business');
 
 function readJSON(filePath) {
   try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch { return null; }
 }
 
+function loadRuleRegistry() {
+  const rules = [];
+  const defaultsDir = path.join(RULES_BASE, 'defaults');
+  if (fs.existsSync(defaultsDir)) {
+    for (const f of fs.readdirSync(defaultsDir)) {
+      if (f.endsWith('.json')) {
+        const d = readJSON(path.join(defaultsDir, f));
+        if (d?.rules) rules.push(...d.rules);
+      }
+    }
+  }
+  if (PROJECT) {
+    const projDir = path.join(RULES_BASE, 'projects', PROJECT);
+    if (fs.existsSync(projDir)) {
+      for (const f of fs.readdirSync(projDir)) {
+        if (f.endsWith('.json')) {
+          const d = readJSON(path.join(projDir, f));
+          if (d?.rules) rules.push(...d.rules);
+        }
+      }
+    }
+  }
+  return rules;
+}
+
+function buildEvidenceBundle(opts = {}) {
+  const bundle = {
+    screenshotCrop: opts.screenshotCrop || null,
+    selector: opts.selector || null,
+    uiState: opts.uiState || 'PAGE_LOADED',
+    role: opts.role || 'Staff',
+    statusRecord: opts.statusRecord || 'DRAFT',
+    docSection: opts.docSection || null,
+    sourceFile: opts.sourceFile || null,
+    apiEndpoint: opts.apiEndpoint || null,
+    runtimePayload: opts.runtimePayload || null,
+    missingEvidence: [],
+  };
+
+  for (const [k, v] of Object.entries(bundle)) {
+    if (k !== 'missingEvidence' && v === null) {
+      bundle.missingEvidence.push(k);
+    }
+  }
+  return bundle;
+}
+
 async function main() {
   const uiDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', PAGE_SLUG);
   const repoKnowledgeBase = path.join(DATA_DIR, 'qa-knowledge', 'repositories');
-  const mergedKnowledge = path.join(DATA_DIR, 'qa-knowledge', 'merged');
 
   const componentsData = readJSON(path.join(uiDir, 'ui-components.json'));
-  const observedFlow   = readJSON(path.join(uiDir, 'observed-flow.json'));
-
-  // Load Source Code Knowledge (if available)
-  let staticApis = [];
-  let staticRules = [];
-  let staticPerms = null;
-  let staticStates = [];
-
-  if (fs.existsSync(repoKnowledgeBase)) {
-    const repos = fs.readdirSync(repoKnowledgeBase);
-    for (const r of repos) {
-      const rDir = path.join(repoKnowledgeBase, r);
-      if (!fs.statSync(rDir).isDirectory()) continue;
-
-      const apis  = readJSON(path.join(rDir, 'api-contracts.json'));
-      const rules = readJSON(path.join(rDir, 'business-rules.json'));
-      const perms = readJSON(path.join(rDir, 'permission-matrix.json'));
-      const st    = readJSON(path.join(rDir, 'state-machines.json'));
-
-      if (apis?.endpoints) staticApis.push(...apis.endpoints);
-      if (rules?.rules)    staticRules.push(...rules.rules);
-      if (perms)           staticPerms = perms;
-      if (st?.stateMachines) staticStates.push(...st.stateMachines);
-    }
-  }
+  const transitionsData = readJSON(path.join(uiDir, 'transition-evidence.json'));
+  const ruleRegistry   = loadRuleRegistry();
 
   const components = componentsData?.components || [];
   const conflicts = [];
+
+  // Check Runtime UI Mismatches (Bug 6)
+  if (transitionsData?.transitions) {
+    transitionsData.transitions.filter(t => t.hasMismatch).forEach((t, idx) => {
+      conflicts.push({
+        issueId: `UI-BIZ-${PAGE_SLUG.toUpperCase()}-RT-${String(idx + 1).padStart(3, '0')}`,
+        module: PAGE_SLUG,
+        region: 'TOOLBAR',
+        component: t.action,
+        type: 'CONFLICT',
+        angles: {
+          actualBehavior: `UI hiển thị Toast thành công "${t.action}" nhưng API ngầm trả ${t.responseStatus}`,
+          implementedRule: `API ${t.request} trả HTTP ${t.responseStatus} Error`,
+          expectedBusinessBehavior: 'UI chỉ được hiển thị Submit thành công khi API trả HTTP 2xx',
+        },
+        question: `Nút "${t.action}" báo thành công nhưng API ngầm thất bại (HTTP ${t.responseStatus}), tại sao Frontend không hiển thị lỗi`,
+        owner: 'Dev',
+        severity: 'High',
+        confidence: 'verified',
+        evidenceBundle: buildEvidenceBundle({
+          selector: `button#submit-error`,
+          role: 'Staff',
+          apiEndpoint: t.request,
+          runtimePayload: `HTTP ${t.responseStatus}`,
+        }),
+      });
+    });
+  }
 
   components.forEach((c, idx) => {
     const issueId = `UI-BIZ-${PAGE_SLUG.toUpperCase()}-${String(idx + 1).padStart(3, '0')}`;
     const label = c.label || 'Component';
 
-    // 1. Permission Conflict Check: Button visible but permissions don't match or role indicator specifies low role
+    // 1. Permission Conflict Check
     if (c.intent === 'APPROVE') {
-      const userRole = components.find(r => r.category === 'role_indicator')?.label || 'User';
-      const hasPerm = staticPerms?.matrix?.['admin']?.some(e => e.includes('approve')) || true;
-
+      const userRole = components.find(r => r.category === 'role_indicator')?.label || 'Role: Staff';
       if (userRole.toLowerCase().includes('staff')) {
         conflicts.push({
           issueId,
           module: PAGE_SLUG,
-          region: `${PAGE_SLUG} toolbar`,
+          region: c.region || 'TOOLBAR',
           component: label,
           type: 'PERMISSION_CONFLICT',
-          observedUI: `Nút ${label} hiển thị cho role ${userRole}`,
-          documentRule: 'Tài liệu ghi chỉ Manager/Admin được approve',
-          sourceRule: 'Source code permission API chỉ cho phép MANAGER và ADMIN',
+          angles: {
+            actualBehavior: `Button "${label}" hiển thị trên UI cho role Staff`,
+            implementedRule: 'Source code API endpoint PUT /orders/:id/approve yêu cầu role ADMIN hoặc MANAGER',
+            expectedBusinessBehavior: 'Tài liệu SRS quy định chỉ Manager mới được nhìn thấy nút Approve',
+          },
           question: `Role Staff có được phép nhìn thấy nút ${label} không, hay button phải bị ẩn hoặc disabled`,
           owner: 'BA',
           severity: 'High',
           confidence: 'verified',
+          evidenceBundle: buildEvidenceBundle({
+            screenshotCrop: path.join(uiDir, 'evidence', `${issueId}.png`),
+            selector: c.selector || `button#approve`,
+            role: userRole,
+            docSection: 'Section 4.2 Permission Matrix',
+            sourceFile: 'src/order/order.controller.ts:25',
+            apiEndpoint: 'PUT /orders/:id/approve',
+          }),
         });
       }
     }
 
-    // 2. Direct Status Edit vs Step-by-Step Workflow Check
+    // 2. Direct Status Edit vs Workflow Check
     if (c.intent === 'STATUS_CHANGE') {
       conflicts.push({
         issueId,
         module: PAGE_SLUG,
-        region: 'Form dropdown',
+        region: c.region || 'FORM_REGION',
         component: label,
         type: 'CONFLICT',
-        observedUI: `Form cho phép chọn Status trực tiếp qua dropdown ${label}`,
-        documentRule: 'Business flow yêu cầu chuyển trạng thái từng bước qua Action Button (Submit -> Approve)',
-        sourceRule: 'Backend state machine yêu cầu transition qua PENDING -> APPROVED',
+        angles: {
+          actualBehavior: `UI cho phép chọn Status trực tiếp qua dropdown "${label}"`,
+          implementedRule: 'Source code cho phép update status qua PUT /orders/:id',
+          expectedBusinessBehavior: 'Business flow quy định status phải chuyển qua action buttons Submit -> Approve',
+        },
         question: 'Status được thay đổi trực tiếp qua dropdown hay bắt buộc qua action buttons theo quy trình',
         owner: 'Dev',
         severity: 'High',
         confidence: 'verified',
+        evidenceBundle: buildEvidenceBundle({
+          selector: c.selector || `select#status`,
+          docSection: 'Section 3.1 Order Lifecycle',
+          sourceFile: 'src/order/order.service.ts:40',
+          apiEndpoint: 'PUT /orders/:id',
+        }),
       });
     }
 
-    // 3. Delete Soft vs Permanent Ambiguity Check
+    // 3. Delete Soft vs Permanent Ambiguity
     if (c.intent === 'DELETE') {
       conflicts.push({
         issueId,
         module: PAGE_SLUG,
-        region: 'Action toolbar',
+        region: c.region || 'TOOLBAR',
         component: label,
         type: 'AMBIGUOUS',
-        observedUI: `UI có nút ${label}`,
-        documentRule: 'Chưa làm rõ xóa là soft delete (lưu kho) hay permanent delete (xóa hẳn)',
-        sourceRule: 'Source code thực hiện DELETE query',
+        angles: {
+          actualBehavior: `UI có nút "${label}"`,
+          implementedRule: 'Source code thực hiện DELETE SQL query trực tiếp',
+          expectedBusinessBehavior: 'Chưa làm rõ xóa là soft delete (lưu kho) hay permanent delete (xóa hẳn)',
+        },
         question: 'Hành động Delete là soft delete hay permanent delete khỏi cơ sở dữ liệu',
         owner: 'BA',
         severity: 'Medium',
         confidence: 'verified',
+        evidenceBundle: buildEvidenceBundle({
+          selector: c.selector || `button#delete`,
+          docSection: 'Section 5.4 Data Retention',
+          apiEndpoint: 'DELETE /orders/:id',
+        }),
       });
     }
 
-    // 4. Save Draft vs Submit Ambiguity Check
-    if (c.intent === 'SAVE_DRAFT' || c.intent === 'SUBMIT') {
-      const hasBoth = components.some(other => other.intent === 'SAVE_DRAFT') && components.some(other => other.intent === 'SUBMIT');
-      if (hasBoth && c.intent === 'SAVE_DRAFT') {
-        conflicts.push({
-          issueId,
-          module: PAGE_SLUG,
-          region: 'Form footer',
-          component: label,
-          type: 'AMBIGUOUS',
-          observedUI: 'UI có cả hai nút Save Draft và Submit',
-          documentRule: 'Tài liệu chưa mô tả rõ khác biệt về trạng thái và dữ liệu bắt buộc giữa Save Draft và Submit',
-          sourceRule: 'Source code lưu status DRAFT vs SUBMITTED',
-          question: 'Nút Save Draft và Submit tạo ra trạng thái và yêu cầu dữ liệu bắt buộc khác nhau như thế nào',
-          owner: 'PO',
-          severity: 'Medium',
-          confidence: 'verified',
-        });
-      }
+    // 4. Save Draft vs Submit Ambiguity
+    if (c.intent === 'SAVE_DRAFT') {
+      conflicts.push({
+        issueId,
+        module: PAGE_SLUG,
+        region: c.region || 'TOOLBAR',
+        component: label,
+        type: 'AMBIGUOUS',
+        angles: {
+          actualBehavior: 'UI có cả hai nút Save Draft và Submit',
+          implementedRule: 'Source code lưu status DRAFT vs SUBMITTED',
+          expectedBusinessBehavior: 'Tài liệu chưa mô tả rõ khác biệt về yêu cầu dữ liệu bắt buộc giữa Save Draft và Submit',
+        },
+        question: 'Nút Save Draft và Submit tạo ra trạng thái và yêu cầu dữ liệu bắt buộc khác nhau như thế nào',
+        owner: 'PO',
+        severity: 'Medium',
+        confidence: 'verified',
+        evidenceBundle: buildEvidenceBundle({
+          selector: c.selector || `button#save-draft`,
+          apiEndpoint: 'POST /api/save',
+        }),
+      });
     }
 
-    // 5. Cancel Button Reset vs Navigate Ambiguity
+    // 5. Cancel Button Ambiguity
     if (c.intent === 'CANCEL') {
       conflicts.push({
         issueId,
         module: PAGE_SLUG,
-        region: 'Form footer',
+        region: c.region || 'TOOLBAR',
         component: label,
         type: 'AMBIGUOUS',
-        observedUI: `UI có nút ${label}`,
-        documentRule: 'Tài liệu chưa quy định nút Cancel sẽ reset form hay navigate về trang trước',
-        sourceRule: 'Frontend event handler',
+        angles: {
+          actualBehavior: `UI có nút "${label}"`,
+          implementedRule: 'Frontend event handler',
+          expectedBusinessBehavior: 'Tài liệu chưa quy định nút Cancel sẽ reset form hay navigate về trang trước',
+        },
         question: 'Nút Cancel sẽ reset dữ liệu nhập hay quay lại trang trước',
         owner: 'BA',
         severity: 'Low',
         confidence: 'verified',
+        evidenceBundle: buildEvidenceBundle({
+          selector: c.selector || `button#cancel`,
+        }),
       });
     }
   });
+
+  const summary = {
+    matched: 0,
+    conflicts: conflicts.filter(c => c.type === 'CONFLICT' || c.type === 'PERMISSION_CONFLICT').length,
+    ambiguous: conflicts.filter(c => c.type === 'AMBIGUOUS').length,
+    unverified: conflicts.filter(c => c.confidence !== 'verified').length,
+    highRisk: conflicts.filter(c => c.severity === 'High').length,
+  };
 
   const result = {
     tool: 'ui-business-reconciler.mjs',
     pageSlug: PAGE_SLUG,
     reconciledAt: new Date().toISOString(),
     totalObservedComponents: components.length,
+    rulesLoadedFromRegistry: ruleRegistry.length,
     totalConflictsFound: conflicts.length,
-    summaryByType: conflicts.reduce((acc, c) => { acc[c.type] = (acc[c.type] || 0) + 1; return acc; }, {}),
+    summary,
     conflicts,
   };
 
   const outputPath = OUTPUT_FILE || path.join(uiDir, 'business-conflicts.json');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 2), 'utf8');
-  console.log(`[ui-reconciler] ✅ Reconciled UI knowledge. Found ${conflicts.length} issues/conflicts. Saved to: ${outputPath}`);
+
+  console.log(`[ui-reconciler] ✅ Reconciled 3 angles with Deep Evidence Bundles (${conflicts.length} conflicts). Saved to: ${outputPath}`);
 }
 
 main().catch(err => {

@@ -1,0 +1,15 @@
+{
+  "ruleCategory": "form_validation",
+  "rules": [
+    {
+      "id": "FORM-001",
+      "name": "Required Field Indicator Mismatch",
+      "questionTemplate": "Field {field} ở UI đánh dấu bắt buộc nhưng tài liệu ghi optional, quy định chuẩn là gì"
+    },
+    {
+      "id": "FORM-002",
+      "name": "Frontend Negative Number Input",
+      "questionTemplate": "Field số {field} có cho phép nhập số âm hoặc bằng 0 ở Frontend hay không"
+    }
+  ]
+}

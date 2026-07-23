@@ -1,0 +1,13 @@
+{
+  "ruleCategory": "project_order_rules",
+  "project": "crm",
+  "rules": [
+    {
+      "id": "CRM-ORD-001",
+      "name": "CRM Order Approval Override",
+      "intent": "APPROVE",
+      "allowedRoles": ["ADMIN", "MANAGER"],
+      "questionTemplate": "[CRM Project Rule] Nút Approve chỉ được thao tác bởi Admin và Manager"
+    }
+  ]
+}

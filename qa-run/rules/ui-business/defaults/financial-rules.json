@@ -1,0 +1,11 @@
+{
+  "ruleCategory": "financial",
+  "rules": [
+    {
+      "id": "FIN-001",
+      "name": "Payment Menu Without Guard",
+      "menuKeyword": "payment",
+      "questionTemplate": "Menu {label} thuộc phân hệ thanh toán có bắt buộc xác thực OTP/PIN trước khi mở không"
+    }
+  ]
+}

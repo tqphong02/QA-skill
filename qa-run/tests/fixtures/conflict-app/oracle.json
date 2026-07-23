@@ -1,0 +1,66 @@
+{
+  "fixtureName": "conflict-app",
+  "pageSlug": "conflict-order-detail",
+  "totalPlantedConflicts": 6,
+  "matrix": {
+    "roles": ["STAFF", "MANAGER", "ADMIN"],
+    "recordStates": ["DRAFT", "SUBMITTED", "APPROVED"],
+    "testDataIds": { "draftOrder": "ORD-1001" }
+  },
+  "evidenceLimits": {
+    "maxPayloadBytes": 20000,
+    "maxScreenshotsPerState": 5,
+    "maxEvidencePerConflict": 10,
+    "retentionDays": 14
+  },
+  "expectedConflicts": [
+    {
+      "id": "BUG_1_STAFF_APPROVE",
+      "type": "PERMISSION_CONFLICT",
+      "component": "Approve",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["screenshotCrop", "selector", "uiState", "role", "docSection", "sourceFile", "apiEndpoint"],
+      "description": "Button Approve hiển thị với role Staff"
+    },
+    {
+      "id": "BUG_2_REQUIRED_FIELD_MISMATCH",
+      "type": "CONFLICT",
+      "component": "Amount",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["selector", "docSection", "sourceFile", "apiEndpoint"],
+      "description": "Field Amount required ở UI nhưng doc optional"
+    },
+    {
+      "id": "BUG_3_DELETE_NO_CONFIRM",
+      "type": "AMBIGUOUS",
+      "component": "Delete",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["selector", "docSection", "apiEndpoint"],
+      "description": "Nút Delete không có confirm modal và chưa rõ soft vs permanent delete"
+    },
+    {
+      "id": "BUG_4_SAME_API_DRAFT_SUBMIT",
+      "type": "AMBIGUOUS",
+      "component": "Save Draft",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["selector", "apiEndpoint"],
+      "description": "Save Draft và Submit cùng gọi một API /api/save"
+    },
+    {
+      "id": "BUG_5_STATUS_ILLEGAL_JUMP",
+      "type": "CONFLICT",
+      "component": "Status",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["selector", "docSection", "sourceFile", "apiEndpoint"],
+      "description": "Status dropdown cho phép chọn COMPLETED trực tiếp từ DRAFT"
+    },
+    {
+      "id": "BUG_6_UI_SUCCESS_BUT_API_500",
+      "type": "CONFLICT",
+      "component": "Submit Order Error",
+      "expectedRole": "Staff",
+      "expectedEvidence": ["selector", "role", "apiEndpoint", "runtimePayload"],
+      "description": "UI hiển thị Submit Order Successfully nhưng API trả HTTP 500"
+    }
+  ]
+}

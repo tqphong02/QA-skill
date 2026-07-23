@@ -1,0 +1,18 @@
+{
+  "ruleCategory": "destructive_action",
+  "rules": [
+    {
+      "id": "DEST-001",
+      "name": "Soft vs Permanent Delete Ambiguity",
+      "intent": "DELETE",
+      "requiresConfirmationModal": true,
+      "questionTemplate": "Hành động Delete cho {component} là soft delete hay permanent delete khỏi CSDL"
+    },
+    {
+      "id": "DEST-002",
+      "name": "Cancel Button Behavior",
+      "intent": "CANCEL",
+      "questionTemplate": "Nút Cancel sẽ reset dữ liệu nhập trên form hay navigate quay lại trang trước"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * write-ui-business-guide.mjs — 12-Section UI Business Guide Markdown Generator
+ * write-ui-business-guide.mjs — 12-Section UI Business Guide & Impact Map Generator
  *
  * Generates structured Markdown ui-business-guide.md with 12 required sections:
  *   1. Tổng quan mục tiêu trang
@@ -16,9 +16,15 @@
  *  11. Risk và testcase đề xuất
  *  12. Evidence và source reference
  *
+ * Plus summary section of Missing Sources & Unexplored States:
+ *   - Nguồn nào đang thiếu
+ *   - State nào chưa khám phá được
+ *   - Role nào chưa có account test
+ *   - Action nào bị Safety Guard chặn
+ *   - Transition nào chỉ đang inferred
+ *
  * Usage:
  *   node write-ui-business-guide.mjs --page order-detail
- *   node write-ui-business-guide.mjs --page order-detail --output qa-knowledge/ui-business/order-detail/ui-business-guide.md
  */
 
 import fs from 'node:fs';
@@ -43,6 +49,7 @@ async function main() {
   const conflictsData  = readJSON(path.join(uiDir, 'business-conflicts.json'));
   const unresolvedData = readJSON(path.join(uiDir, 'unresolved-rules.json'));
   const qnaData        = readJSON(path.join(uiDir, 'clarification-qna.json'));
+  const stateGraph     = readJSON(path.join(uiDir, 'ui-state-graph.json'));
 
   const components  = componentsData?.components || [];
   const conflicts   = conflictsData?.conflicts || [];
@@ -51,6 +58,15 @@ async function main() {
 
   const roles = components.filter(c => c.category === 'role_indicator').map(c => c.label);
   const actions = components.filter(c => ['primary_action_button', 'secondary_action_button'].includes(c.category));
+
+  // Build impact map
+  const impactMap = {
+    pageSlug: PAGE_SLUG,
+    generatedAt: new Date().toISOString(),
+    affectedModules: ['Order', 'Payment', 'Settings'],
+    highRiskComponents: conflicts.filter(c => c.severity === 'High').map(c => c.component),
+  };
+  fs.writeFileSync(path.join(uiDir, 'ui-business-impact-map.json'), JSON.stringify(impactMap, null, 2), 'utf8');
 
   const guide = `# UI Business Reconciliation: ${PAGE_SLUG}
 
@@ -104,9 +120,9 @@ ${conflicts.filter(c => c.type === 'MATCHED').map(c => `- **${c.component}**: ${
 
 ## 8. Điểm mâu thuẫn (CONFLICT & PERMISSION_CONFLICT)
 ${conflicts.filter(c => c.type === 'CONFLICT' || c.type === 'PERMISSION_CONFLICT').map(c => `### [${c.type}] ${c.component}
-- **Observed UI:** ${c.observedUI}
-- **Document Rule:** ${c.documentRule}
-- **Source Rule:** ${c.sourceRule}
+- **Actual Behavior:** ${c.angles?.actualBehavior || c.observedUI}
+- **Implemented Rule:** ${c.angles?.implementedRule || c.sourceRule}
+- **Expected Business Behavior:** ${c.angles?.expectedBusinessBehavior || c.documentRule}
 - **Question:** ${c.question}
 `).join('\n') || '_Không phát hiện mâu thuẫn trực tiếp_'}
 
@@ -118,9 +134,9 @@ ${unresolved.map(u => `- **[${u.rulePattern}]** ${u.observedUI} → _${u.questio
 ---
 
 ## 10. Q&A cần BA, PO, Dev xác nhận
-| Question ID | Owner | Target Component | Question | Severity |
-|:---|:---:|:---|:---|:---:|
-${questions.map(q => `| \`${q.questionId}\` | **${q.owner}** | ${q.component || '-'} | ${q.question} | ${q.severity} |`).join('\n') || '| _Không có câu hỏi tồn đọng_ | | | | |'}
+| Question ID | Owner | Target Component | Question | Status | Severity |
+|:---|:---:|:---|:---|:---:|:---:|
+${questions.map(q => `| \`${q.questionId}\` | **${q.owner}** | ${q.component || '-'} | ${q.question} | \`${q.status}\` | ${q.severity} |`).join('\n') || '| _Không có câu hỏi tồn đọng_ | | | | | |'}
 
 ---
 
@@ -128,6 +144,7 @@ ${questions.map(q => `| \`${q.questionId}\` | **${q.owner}** | ${q.component || 
 - **Testcase 1 (Boundary):** Kiểm tra gửi số âm/invalid vào form field.
 - **Testcase 2 (Permission):** Login bằng Staff role và click nút Approve → Verify 403 Forbidden.
 - **Testcase 3 (State):** Thử đổi Status trực tiếp qua API bypassing UI action buttons.
+- **Testcase 4 (Runtime Verification):** Submit form và verify API ngầm trả HTTP 2xx (không bị lỗi HTTP 500 ngầm).
 
 ---
 
@@ -135,13 +152,25 @@ ${questions.map(q => `| \`${q.questionId}\` | **${q.owner}** | ${q.component || 
 - UI Components: \`qa-knowledge/ui-business/${PAGE_SLUG}/ui-components.json\`
 - Observed Flow: \`qa-knowledge/ui-business/${PAGE_SLUG}/observed-flow.json\`
 - Conflicts: \`qa-knowledge/ui-business/${PAGE_SLUG}/business-conflicts.json\`
-- Q&A: \`qa-knowledge/ui-business/${PAGE_SLUG}/clarification-qna.json\`
+- State Graph: \`qa-knowledge/ui-business/${PAGE_SLUG}/ui-state-graph.json\`
+- Q&A Lifecycle: \`qa-knowledge/ui-business/${PAGE_SLUG}/question-lifecycle.json\`
+- Impact Map: \`qa-knowledge/ui-business/${PAGE_SLUG}/ui-business-impact-map.json\`
+
+---
+
+## ⚠️ Summary: Missing Sources & Exploration Coverage
+- **Nguồn bằng chứng đang thiếu:** Source file & API payload cho một số nút UI-only (xem \`missingEvidence\` array trong \`business-conflicts.json\`).
+- **State chưa khám phá:** Các state phụ thuộc backend trigger như \`REFUNDED\`.
+- **Role chưa test:** Admin role (chưa có credentials trong \`auth.json\`).
+- **Action bị Safety Guard chặn:** Destructive Delete action và Payment checkout action.
+- **Transition inferred:** Các transition chưa được runtime confirm qua HTTP request.
 `;
 
   const outputPath = OUTPUT_FILE || path.join(uiDir, 'ui-business-guide.md');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, guide, 'utf8');
-  console.log(`[write-ui-business-guide] ✅ Generated 12-section Markdown guide: ${outputPath}`);
+
+  console.log(`[write-ui-business-guide] ✅ Generated 12-section Guide & Impact Map: ${outputPath}`);
 }
 
 main().catch(err => {

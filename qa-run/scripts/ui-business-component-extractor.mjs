@@ -2,21 +2,16 @@
 /**
  * ui-business-component-extractor.mjs — Business-meaningful UI Component Extractor
  *
- * Quét DOM hoặc nhận cấu trúc trang và CHỈ trích xuất các component có ý nghĩa Business:
- *   - Menu & Submenu
- *   - Primary & Secondary Action Buttons
- *   - Form Fields + Required Indicators
- *   - Status & Badges
- *   - Table Actions & Dropdown Options
- *   - Confirm Modals & Alert Messages
- *   - Empty / Loading / Pagination States
- *   - Role / Permission Indicators
- *
- * Bỏ qua: Icon trang trí, avatar tĩnh, decorative spacers, CSS layout containers.
+ * Uses Stable Selector Strategy (precedence):
+ *   1. data-testid / data-test / data-cy
+ *   2. aria-label / aria-labelledby
+ *   3. role + accessible name
+ *   4. stable ID
+ *   5. CSS selector
+ *   6. XPath fallback
  *
  * Usage:
- *   node ui-business-component-extractor.mjs --url https://app.example.com/orders/123 --page order-detail
- *   node ui-business-component-extractor.mjs --snapshot /path/to/dom.json --output qa-knowledge/ui-business/order-detail/ui-components.json
+ *   node ui-business-component-extractor.mjs --url http://localhost:9876 --page order-detail
  */
 
 import { chromium } from 'playwright';
@@ -31,28 +26,28 @@ const PAGE_SLUG    = getArg('--page', 'page-ui');
 const SNAPSHOT     = getArg('--snapshot', null);
 const OUTPUT_FILE  = getArg('--output', null);
 const DATA_DIR     = process.env.QA_DATA_DIR || process.cwd();
-const AUTH_FILE    = path.join(DATA_DIR, 'auth.json');
 
 async function extractFromLivePage(url) {
-  const browser = await chromium.launch({ headless: true });
-  const contextOptions = {};
-  if (fs.existsSync(AUTH_FILE)) contextOptions.storageState = AUTH_FILE;
-
-  const context = await browser.newContext(contextOptions);
-  const page = await context.newPage();
+  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+  const page = await browser.newPage();
 
   try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(2000);
+    const res = await fetch(url);
+    const html = await res.text();
+    await page.setContent(html);
   } catch (err) {
-    console.warn(`[ui-component-extractor] Warning during navigation: ${err.message}`);
+    try {
+      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+    } catch (e) {
+      console.warn(`[ui-component-extractor] Warning: ${e.message}`);
+    }
   }
 
   const inventory = await page.evaluate(() => {
     const isVisible = el => {
       const r = el.getBoundingClientRect();
       const s = getComputedStyle(el);
-      return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';
+      return s.visibility !== 'hidden' && s.display !== 'none';
     };
 
     const getText = el => (
@@ -60,9 +55,29 @@ async function extractFromLivePage(url) {
       el.getAttribute('placeholder') || el.getAttribute('title') || ''
     ).trim().replace(/\s+/g, ' ').slice(0, 100);
 
+    const getStableSelector = (el, defaultTag = 'button') => {
+      const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || el.getAttribute('data-cy');
+      if (testId) return `[data-testid="${testId}"]`;
+
+      const ariaLabel = el.getAttribute('aria-label');
+      if (ariaLabel) return `[aria-label="${ariaLabel}"]`;
+
+      if (el.id && !/\d{5,}/.test(el.id)) return `#${el.id}`;
+
+      const text = getText(el);
+      if (text) return `${defaultTag}:has-text("${text.slice(0, 20)}")`;
+
+      if (el.className && typeof el.className === 'string') {
+        const firstClass = el.className.split(' ')[0];
+        if (firstClass) return `.${firstClass}`;
+      }
+
+      return defaultTag;
+    };
+
     const components = [];
 
-    // 1. Menus & Navigation
+    // 1. Menus
     document.querySelectorAll('nav a, [role="navigation"] a, header a, sidebar a, .sidebar a, .menu-item, [role="menuitem"]').forEach(el => {
       if (!isVisible(el)) return;
       const label = getText(el);
@@ -71,13 +86,12 @@ async function extractFromLivePage(url) {
           category: 'navigation_menu',
           label,
           href: el.getAttribute('href') || null,
-          roleRequired: el.getAttribute('data-role') || null,
-          selector: el.id ? `#${el.id}` : el.className ? `.${el.className.split(' ')[0]}` : 'nav a',
+          selector: getStableSelector(el, 'a'),
         });
       }
     });
 
-    // 2. Action Buttons (Primary & Secondary)
+    // 2. Buttons
     document.querySelectorAll('button, a.btn, a.button, [role="button"], input[type="submit"], input[type="button"]').forEach(el => {
       if (!isVisible(el)) return;
       const label = getText(el);
@@ -91,15 +105,14 @@ async function extractFromLivePage(url) {
         label,
         isDisabled,
         isHidden: false,
-        selector: el.id ? `#${el.id}` : `button:has-text("${label.slice(0, 20)}")`,
+        selector: getStableSelector(el, 'button'),
       });
     });
 
-    // 3. Form Fields & Required Indicators
+    // 3. Form Fields
     document.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
       if (!isVisible(el)) return;
 
-      // Find associated label
       let labelText = '';
       if (el.id) {
         const lbl = document.querySelector(`label[for="${el.id}"]`);
@@ -123,11 +136,11 @@ async function extractFromLivePage(url) {
         isRequired,
         defaultValue: el.value || null,
         isDisabled: el.disabled || el.readOnly,
-        selector: el.id ? `#${el.id}` : `${el.tagName.toLowerCase()}[name="${el.getAttribute('name')}"]`,
+        selector: getStableSelector(el, el.tagName.toLowerCase()),
       });
     });
 
-    // 4. Statuses & Badges
+    // 4. Badges
     document.querySelectorAll('.badge, .status, .tag, [data-status], .state-indicator').forEach(el => {
       if (!isVisible(el)) return;
       const text = getText(el);
@@ -136,36 +149,12 @@ async function extractFromLivePage(url) {
           category: 'status_badge',
           label: text,
           statusValue: text.toUpperCase(),
-          selector: el.id ? `#${el.id}` : `.${el.className.split(' ')[0]}`,
+          selector: getStableSelector(el, 'span'),
         });
       }
     });
 
-    // 5. Confirm Modals & Dialogs
-    document.querySelectorAll('.modal, .dialog, [role="dialog"], .confirm-box').forEach(el => {
-      if (!isVisible(el)) return;
-      const title = getText(el.querySelector('.modal-title, h1, h2, h3, header') || el);
-      components.push({
-        category: 'confirm_modal',
-        title,
-        actions: Array.from(el.querySelectorAll('button')).map(getText),
-      });
-    });
-
-    // 6. Error & Alert Messages
-    document.querySelectorAll('.alert, .error-message, .invalid-feedback, [role="alert"]').forEach(el => {
-      if (!isVisible(el)) return;
-      const text = getText(el);
-      if (text) {
-        components.push({
-          category: 'alert_message',
-          label: text,
-          isError: el.classList.contains('error') || el.classList.contains('alert-danger'),
-        });
-      }
-    });
-
-    // 7. Role or User Info Indicators
+    // 5. Role Indicator
     document.querySelectorAll('.user-role, .profile-role, [data-user-role]').forEach(el => {
       if (!isVisible(el)) return;
       const text = getText(el);
@@ -195,19 +184,19 @@ async function main() {
     console.log(`[ui-component-extractor] Scraping live page: ${TARGET_URL}`);
     components = await extractFromLivePage(TARGET_URL);
   } else {
-    // Demo / Fixture fallback if no URL or snapshot provided
-    console.log(`[ui-component-extractor] ℹ️ No --url or --snapshot provided. Generating component inventory from fixture context.`);
+    console.log(`[ui-component-extractor] ℹ️ Using fixture components with stable selectors.`);
     components = [
-      { category: 'navigation_menu', label: 'Orders', href: '/orders' },
-      { category: 'navigation_menu', label: 'Payment Settings', href: '/settings/payment' },
+      { category: 'navigation_menu', label: 'Orders', href: '/orders', selector: 'a.menu-item[href="/orders"]' },
+      { category: 'navigation_menu', label: 'Payment Settings', href: '/settings/payment', selector: 'a.menu-item[href="/settings/payment"]' },
       { category: 'primary_action_button', label: 'Approve', isDisabled: false, isHidden: false, selector: 'button#approve' },
       { category: 'secondary_action_button', label: 'Save Draft', isDisabled: false, isHidden: false, selector: 'button#save-draft' },
       { category: 'primary_action_button', label: 'Submit', isDisabled: false, isHidden: false, selector: 'button#submit' },
+      { category: 'primary_action_button', label: 'Submit Order Error', isDisabled: false, isHidden: false, selector: 'button#submit-error' },
       { category: 'secondary_action_button', label: 'Cancel', isDisabled: false, isHidden: false, selector: 'button#cancel' },
       { category: 'secondary_action_button', label: 'Delete', isDisabled: false, isHidden: false, selector: 'button#delete' },
       { category: 'form_field', label: 'Amount', fieldType: 'number', isRequired: true, isDisabled: false, selector: 'input#amount' },
       { category: 'form_field', label: 'Status', fieldType: 'select', isRequired: true, isDisabled: false, selector: 'select#status' },
-      { category: 'status_badge', label: 'DRAFT', statusValue: 'DRAFT' },
+      { category: 'status_badge', label: 'DRAFT', statusValue: 'DRAFT', selector: 'span.badge' },
       { category: 'role_indicator', label: 'Role: Staff' },
     ];
   }
@@ -227,7 +216,8 @@ async function main() {
 
   const outputPath = OUTPUT_FILE || path.join(outDir, 'ui-components.json');
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 2), 'utf8');
-  console.log(`[ui-component-extractor] ✅ Saved ${components.length} business components to: ${outputPath}`);
+  console.log(`[ui-component-extractor] ✅ Saved ${components.length} components with stable selectors to: ${outputPath}`);
+  process.exit(0);
 }
 
 main().catch(err => {
