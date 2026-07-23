@@ -284,10 +284,105 @@ Lần làm việc tiếp theo:
 
 | Tác vụ QA | Chưa có Caching Memory (Raw Read) | Có Caching Memory (`qa-knowledge/`) | Tỷ lệ Tiết kiệm Token |
 |:---|:---:|:---:|:---:|
-| **Retest 1 Bug Ticket** | ~90,000 Tokens *(Đọc lại toàn bộ code & HTML)* | **~2,000 Tokens** *(Chỉ đọc guide của feature bị ảnh hưởng)* | 📉 **Tiết kiệm 97.8%** |
-| **Phân tích Mâu thuẫn UI vs BRD** | ~60,000 Tokens *(Gửi full screenshot 4K & full DOM)* | **~3,500 Tokens** *(Chỉ gửi crop component & DOM filtered)* | 📉 **Tiết kiệm 94.2%** |
-| **Sinh Testcase cho Feature mới** | ~120,000 Tokens *(Nạp lại toàn bộ file tài liệu PDF gốc)* | **~4,000 Tokens** *(Chỉ đọc system-business-guide.md)* | 📉 **Tiết kiệm 96.7%** |
-| **Thực thi Testcase hàng loạt** | ~50,000 Tokens *(AI click từng bước)* | **0 Token AI** *(Chạy hoàn toàn qua Playwright CLI script)* | 📉 **Tiết kiệm 100%** |
+| **Retest 1 Bug Ticket** | ~90,000 Tokens *(Đọc lại toàn bộ code & HTML)* | **~2,000 Tokens** *(Chỉ đọc guide của feature bị ảnh hưởng)* | 📉 **Mục tiêu Giảm ~97%** |
+| **Phân tích Mâu thuẫn UI vs BRD** | ~60,000 Tokens *(Gửi full screenshot 4K & full DOM)* | **~3,500 Tokens** *(Chỉ gửi crop component & DOM filtered)* | 📉 **Mục tiêu Giảm ~94%** |
+| **Sinh Testcase cho Feature mới** | ~120,000 Tokens *(Nạp lại toàn bộ file tài liệu PDF gốc)* | **~4,000 Tokens** *(Chỉ đọc system-business-guide.md)* | 📉 **Mục tiêu Giảm ~96%** |
+| **Thực thi Testcase hàng loạt** | ~50,000 Tokens *(AI click từng bước)* | **0 Token AI** *(Chạy hoàn toàn qua Playwright CLI script)* | 📉 **Mục tiêu Giảm 100%** |
+
+---
+
+## ⚡ 9. Kiến trúc Tối ưu Token 5 Cấp độ (5-Level Token Optimization Architecture)
+
+### 📐 Nguyên tắc Vận hành Tối ưu Token
+```text
+Script xử lý trước (Level 0)
+    ↓
+Chỉ lấy phần thay đổi hoặc có rủi ro (Incremental Scan)
+    ↓
+AI chỉ đọc Context đã rút gọn (Context Pack)
+    ↓
+Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision Only)
+```
+
+---
+
+### 📶 Mô hình Xử lý Phân tầng 5 Cấp độ (5-Level Layered Processing Model)
+
+```mermaid
+flowchart TD
+    L0["Level 0: Deterministic Script (0 AI Token)\n• AST/Regex Scanners & Playwright CLI Execution"] --> L1
+    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• context-pack.json & dom-pruner output"] --> L2
+    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & changed symbols"] --> L3
+    L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
+    L4["Level 4: Scoped Fallback (Module / Symbol Boundary)\n• Vẫn giới hạn theo Scope Module, tuyệt đối không dump full repo"]
+```
+
+- **Level 0**: Script deterministic hoàn toàn, **0 AI token**.
+- **Level 1**: AI đọc JSON tóm lược (`context-pack.json` & `dom-pruner.mjs` output).
+- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections).
+- **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`). Giới hạn theo số ảnh crop, kích thước vùng crop và số lần gọi Vision API.
+- **Level 4**: Scoped Fallback — Vẫn giới hạn phạm vi theo Module / Symbol boundary ngay cả khi fallback, **tuyệt đối không dump toàn bộ source code repository**.
+
+---
+
+### 🛠️ Bộ 7 Script Hỗ trợ Tối ưu Token (`qa-run/scripts/`) & Cache Key Versioning
+
+1. **`artifact-cache.mjs`**: Cache kết quả trích xuất dựa trên phiên bản tổng hợp:
+   `CacheKey = MD5(commitHash | fileContentHash | inputHash | parserVersion | adapterVersion | knowledgeSchemaVersion)`
+   *(Tránh trường hợp dùng lại cache cũ sai cấu trúc schema).*
+2. **`context-builder.mjs`**: Nhận Intent & Module hiện tại, gom đúng kiến thức liên quan, loại trùng và tạo `context-pack.json` tinh gọn.
+3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements, frameworks).
+4. **`doc-indexer.mjs`**: Phân tách tài liệu PDF/DOCX (đã qua `doc-to-md`) theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
+5. **`visual-evidence-router.mjs`**: Tự động quyết định vùng visual nào thực sự cần gửi cho AI Vision (chỉ crop region khi DOM audit nghi ngờ/conflict).
+6. **`incremental-discovery.mjs`**: Chỉ scan lại các route, module hoặc source file có sự thay đổi (dựa trên hash).
+7. **`token-budget-manager.mjs`**: Quản lý và kiểm soát Budget Token per Intent bằng Tokenizer thật.
+   - Budget Config: `RETEST_TICKET`: 8k, `EXPLORATORY_ADHOC`: 12k, `UI_BUSINESS_RECONCILIATION`: 15k, `REPO_BUSINESS_DISCOVERY`: 20k.
+   - Khi vượt budget: Tự động loại duplicate -> Bỏ phần confidence thấp -> Giữ High Risk -> Ghi phần đã cắt bớt.
+
+---
+
+### 📊 File Đo Lường Hiệu quả Token (`qa-knowledge/metrics/token-usage.json`)
+
+Mọi phiên test tự động ghi nhận chỉ số thực tế để làm cơ sở benchmark:
+
+```json
+{
+  "intent": "UI_BUSINESS_RECONCILIATION",
+  "rawEstimatedTokens": 42000,
+  "finalContextTokens": 4800,
+  "cacheHit": true,
+  "documentsRetrieved": 3,
+  "screenshotsSent": 2,
+  "fullPageVisionUsed": false,
+  "fallbackLevel": 3,
+  "recordedAt": "2026-07-24T00:05:00.000Z"
+}
+```
+
+---
+
+### 🚦 Thứ tự Triển khai & Điều kiện Nghiệm thu Token Optimization Engine
+
+#### Thứ tự Triển khai 7 Scripts:
+```text
+1. artifact-cache.mjs          (Cache key versioning & Hash check)
+2. dom-pruner.mjs              (Rút gọn DOM thành Business Components)
+3. doc-indexer.mjs             (Indexing & Filter Section tài liệu)
+4. incremental-discovery.mjs   (Scan theo module/route hash thay đổi)
+5. context-builder.mjs         (Gom context pack tinh gọn per intent)
+6. visual-evidence-router.mjs  (Điều phối crop ảnh nghi ngờ cho Vision)
+7. token-budget-manager.mjs    (Token budget guard & Real tokenizer metric)
+```
+
+#### Điều kiện Nghiệm thu:
+- [x] Không gửi Full DOM thô mặc định cho AI.
+- [x] Không gửi toàn bộ Source Code repository cho AI.
+- [x] Tài liệu chỉ lấy đúng Section liên quan đến tính năng đang test.
+- [x] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict.
+- [x] Repo không thay đổi bắt buộc dùng Cache.
+- [x] Retest ticket chỉ scan module bị ảnh hưởng (Incremental).
+- [x] Context vượt Budget phải tự cắt gọt và ghi rõ phần đã loại bỏ.
+- [x] Mọi Fallback lên Level cao hơn phải có lý do ghi rõ trong `token-usage.json`.
 
 ---
 
