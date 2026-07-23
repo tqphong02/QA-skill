@@ -442,7 +442,28 @@ flowchart TD
 
 | Luồng Xử lý | Chưa tối ưu (Raw Execution) | Sau khi tối ưu (Pruned + Cached) | Mức Tiết kiệm |
 |:---|:---:|:---:|:---:|
-| **Source Code Analysis** | 80,000 – 150,000 Tokens | **2,000 – 8,000 Tokens** | 📉 **Giảm ~95%** |
-| **Raw DOM & Screenshots** | 30,000 – 60,000 Tokens | **1,000 – 5,000 Tokens** | 📉 **Giảm ~93%** |
-| **Tài liệu PDF / DOCX** | 20,000 – 50,000 Tokens | **2,000 – 6,000 Tokens** | 📉 **Giảm ~90%** |
-| **App Re-discovery** | ~50,000 Tokens | **1,000 – 10,000 Tokens** | 📉 **Giảm ~90%** |
+| **Source Code Analysis** | 80,000 – 150,000 Tokens | **2,000 – 8,000 Tokens** | 📉 **Mục tiêu Giảm ~95%** |
+| **Raw DOM & Screenshots** | 30,000 – 60,000 Tokens | **1,000 – 5,000 Tokens** | 📉 **Mục tiêu Giảm ~93%** |
+| **Tài liệu PDF / DOCX** | 20,000 – 50,000 Tokens | **2,000 – 6,000 Tokens** | 📉 **Mục tiêu Giảm ~90%** |
+| **App Re-discovery** | ~50,000 Tokens | **1,000 – 10,000 Tokens** | 📉 **Mục tiêu Giảm ~90%** |
+
+---
+
+## 🔗 10. Mapping Chi tiết 2 Vendor Engine Mới (OmniParser & Understand-Anything)
+
+### 📦 1. Microsoft OmniParser (`qa-run/vendor/OmniParser`)
+- **Vai trò**: Trích xuất Bounding Boxes & Tọa độ giao diện thị giác cục bộ (Local GUI Grounding).
+- **Mapping với Các Skill**:
+  - 🟢 **`qa-run`** (`visual-evidence-router.mjs`): Chuyển ảnh screenshot thành dữ liệu JSON cấu trúc `[x1, y1, x2, y2]`. Giảm 100% Vision Token cho các trường hợp không có mâu thuẫn layout.
+  - 🟢 **`accessibility-qa`**: Đối chiếu danh sách Bounding Boxes của OmniParser với cây DOM Accessibility Tree để phát hiện nút bấm/icon có hiển thị nhưng bị thiếu thuộc tính `aria-label`.
+  - 🟢 **`playwright-pom-automation`**: Định vị vị trí nút bấm / phần tử trên màn hình khi DOM bị mã hóa obfuscated hoặc vẽ qua Canvas / WebGL.
+
+---
+
+### 📦 2. Egonex-AI Understand-Anything (`qa-run/vendor/Understand-Anything`)
+- **Vai trò**: Phân tích Ngữ nghĩa Mã nguồn (Semantic Code Indexing & Repository Knowledge Graph).
+- **Mapping với Các Skill**:
+  - 🟢 **`qa-run`** (`repo-business-discovery.mjs` & `context-builder.mjs`): Xây dựng bản đồ biểu tượng (Symbol Index) & sơ đồ kiến trúc module từ source code.
+  - 🟢 **`business-analysis`**: Đọc `context-pack.json` do Understand-Anything tạo ra để rà soát 18 vùng Senior QA mà không phải đọc file source thô.
+  - 🟢 **`testcase-template`**: Đọc danh mục DTO & State Transitions từ Understand-Anything để sinh testcase kiểm thử biên & chuyển trạng thái.
+  - 🟢 **`api-contract-qa`**: Đối chiếu định nghĩa API trích xuất bởi Understand-Anything với file OpenAPI / Postman spec.
