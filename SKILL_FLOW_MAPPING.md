@@ -330,7 +330,10 @@ flowchart TD
 1. **`artifact-cache.mjs`**: Cache kết quả trích xuất dựa trên phiên bản tổng hợp:
    `CacheKey = MD5(commitHash | fileContentHash | inputHash | parserVersion | adapterVersion | knowledgeSchemaVersion)`
    *(Tránh trường hợp dùng lại cache cũ sai cấu trúc schema).*
-2. **`context-builder.mjs`**: Nhận Intent & Module hiện tại, gom đúng kiến thức liên quan, loại trùng và tạo `context-pack.json` tinh gọn.
+2. **`context-builder.mjs`**: Tự động tích hợp **Egonex-AI Understand-Anything** để xây dựng Semantic Knowledge Graph cho codebase:
+   - Đọc bản đồ biểu tượng (Symbol Index) và cấu trúc module do Understand-Anything phân tích.
+   - Lọc duy nhất API, DTO và Rules liên quan đến Module đang kiểm thử (`--module order`).
+   - Xuất file `context-pack-<module>.json` siêu ngắn gọn (**~1,500 - 3,000 Tokens**) thay cho việc nạp trực tiếp hàng chục nghìn dòng source code thô.
 3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements, frameworks).
 4. **`doc-indexer.mjs`**: Phân tách tài liệu PDF/DOCX (đã qua `doc-to-md`) theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
 5. **`visual-evidence-router.mjs`**: Tự động tích hợp **Microsoft OmniParser** (Screen Parsing Model) để phân tích bounding box của các phần tử giao diện cục bộ (Local Model):
