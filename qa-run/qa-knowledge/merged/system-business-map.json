@@ -1,0 +1,18 @@
+{
+  "generatedAt": "2026-07-23T16:35:26.771Z",
+  "repositories": {
+    "nestjs-app": {
+      "repoName": "nestjs-app",
+      "repoType": "backend",
+      "frameworks": [
+        "NestJS",
+        "TypeORM"
+      ],
+      "commit": "1f228d5",
+      "totalEndpoints": 5,
+      "totalRules": 13,
+      "totalFlows": 5,
+      "scannedAt": "2026-07-23T16:35:25.775Z"
+    }
+  }
+}

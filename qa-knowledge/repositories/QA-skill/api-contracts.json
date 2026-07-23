@@ -1,0 +1,9 @@
+{
+  "tool": "api-contract-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "extractedAt": "2026-07-23T15:30:49.354Z",
+  "totalEndpoints": 0,
+  "openAPISpecFound": false,
+  "summaryByModule": {},
+  "endpoints": []
+}

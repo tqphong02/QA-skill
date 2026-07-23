@@ -1,0 +1,20 @@
+{
+  "tool": "architecture-discovery.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "discoveredAt": "2026-07-23T15:30:49.268Z",
+  "totalModules": 0,
+  "totalFiles": 61,
+  "globalIntegrations": [
+    "cron_job",
+    "database",
+    "email",
+    "file_storage",
+    "http_client",
+    "payment_gateway",
+    "push_notification",
+    "queue_event",
+    "redis",
+    "sms"
+  ],
+  "modules": []
+}

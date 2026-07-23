@@ -1,0 +1,13 @@
+{
+  "pageSlug": "test-slug",
+  "generatedAt": "2026-07-23T16:16:03.856Z",
+  "affectedModules": [
+    "Order",
+    "Payment",
+    "Settings"
+  ],
+  "highRiskComponents": [
+    "Approve",
+    "Status"
+  ]
+}

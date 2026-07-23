@@ -1,0 +1,42 @@
+{
+  "tool": "permission-matrix-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill/qa-run/tests/fixtures/nestjs-app",
+  "extractedAt": "2026-07-23T16:35:26.351Z",
+  "roles": [
+    "admin",
+    "manager"
+  ],
+  "totalGrants": 2,
+  "matrix": {
+    "admin": [
+      "GET /orders/:id",
+      "DELETE /orders/:id"
+    ],
+    "manager": [
+      "GET /orders/:id",
+      "DELETE /orders/:id"
+    ]
+  },
+  "rawGrants": [
+    {
+      "roles": [
+        "admin",
+        "manager"
+      ],
+      "endpoint": "GET /orders/:id",
+      "guard": "authenticated",
+      "source": "src/order/order.controller.ts:10",
+      "confidence": "verified"
+    },
+    {
+      "roles": [
+        "admin",
+        "manager"
+      ],
+      "endpoint": "DELETE /orders/:id",
+      "guard": "authenticated",
+      "source": "src/order/order.controller.ts:26",
+      "confidence": "verified"
+    }
+  ]
+}

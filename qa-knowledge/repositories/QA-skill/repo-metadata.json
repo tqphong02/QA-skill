@@ -1,0 +1,21 @@
+{
+  "repoName": "QA-skill",
+  "repoPath": "/Users/user/QA-skill",
+  "repoType": "unknown",
+  "frameworks": [],
+  "language": "JavaScript",
+  "commit": "8e138cc",
+  "branch": "main",
+  "nodeVersion": "v24.16.0",
+  "packageName": null,
+  "packageVersion": null,
+  "description": null,
+  "hasTypeScript": false,
+  "hasDockerfile": false,
+  "hasCIConfig": false,
+  "hasOpenAPISpec": false,
+  "sourceFilesCount": 20,
+  "entryPoints": [],
+  "modules": [],
+  "scannedAt": "2026-07-23T15:30:48.978Z"
+}

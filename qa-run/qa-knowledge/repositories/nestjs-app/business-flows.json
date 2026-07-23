@@ -1,0 +1,211 @@
+{
+  "tool": "business-flow-builder.mjs",
+  "repoPath": "/Users/user/QA-skill/qa-run/tests/fixtures/nestjs-app",
+  "builtAt": "2026-07-23T16:35:26.188Z",
+  "totalFlows": 5,
+  "flows": [
+    {
+      "flowId": "ORDER_GET_5D2B12D8",
+      "name": "GET / (Roles)",
+      "module": "order",
+      "actor": "Admin",
+      "trigger": "GET ",
+      "preconditions": [
+        "User phải được xác thực",
+        "User phải có quyền thích hợp"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "action": "orderService.findAll()",
+          "source": "src/order/order.controller.ts:4"
+        },
+        {
+          "order": 2,
+          "action": "orderService.findOne()",
+          "source": "src/order/order.controller.ts:9"
+        },
+        {
+          "order": 3,
+          "action": "orderService.create()",
+          "source": "src/order/order.controller.ts:14"
+        },
+        {
+          "order": 4,
+          "action": "orderService.approve()",
+          "source": "src/order/order.controller.ts:20"
+        },
+        {
+          "order": 5,
+          "action": "orderService.remove()",
+          "source": "src/order/order.controller.ts:26"
+        }
+      ],
+      "alternativeFlows": [],
+      "failureFlows": [],
+      "sideEffects": [
+        "database_write",
+        "database_delete"
+      ],
+      "sourceReferences": [
+        {
+          "file": "src/order/order.controller.ts",
+          "line": 9
+        }
+      ],
+      "confidence": "verified"
+    },
+    {
+      "flowId": "ORDER_GET_00D87662",
+      "name": "GET :id (findOne)",
+      "module": "order",
+      "actor": "Admin",
+      "trigger": "GET :id",
+      "preconditions": [
+        "User phải được xác thực",
+        "User phải có quyền thích hợp"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "action": "orderService.findOne()",
+          "source": "src/order/order.controller.ts:3"
+        },
+        {
+          "order": 2,
+          "action": "orderService.create()",
+          "source": "src/order/order.controller.ts:8"
+        },
+        {
+          "order": 3,
+          "action": "orderService.approve()",
+          "source": "src/order/order.controller.ts:14"
+        },
+        {
+          "order": 4,
+          "action": "orderService.remove()",
+          "source": "src/order/order.controller.ts:20"
+        }
+      ],
+      "alternativeFlows": [],
+      "failureFlows": [],
+      "sideEffects": [
+        "database_write",
+        "database_delete"
+      ],
+      "sourceReferences": [
+        {
+          "file": "src/order/order.controller.ts",
+          "line": 15
+        }
+      ],
+      "confidence": "verified"
+    },
+    {
+      "flowId": "ORDER_POST_002B0614",
+      "name": "POST / (create)",
+      "module": "order",
+      "actor": "Admin",
+      "trigger": "POST ",
+      "preconditions": [
+        "User phải được xác thực",
+        "User phải có quyền thích hợp"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "action": "orderService.create()",
+          "source": "src/order/order.controller.ts:3"
+        },
+        {
+          "order": 2,
+          "action": "orderService.approve()",
+          "source": "src/order/order.controller.ts:9"
+        },
+        {
+          "order": 3,
+          "action": "orderService.remove()",
+          "source": "src/order/order.controller.ts:15"
+        }
+      ],
+      "alternativeFlows": [],
+      "failureFlows": [],
+      "sideEffects": [
+        "database_write",
+        "database_delete"
+      ],
+      "sourceReferences": [
+        {
+          "file": "src/order/order.controller.ts",
+          "line": 20
+        }
+      ],
+      "confidence": "verified"
+    },
+    {
+      "flowId": "ORDER_PUT_A9162DD5",
+      "name": "PUT :id/approve (Roles)",
+      "module": "order",
+      "actor": "Admin",
+      "trigger": "PUT :id/approve",
+      "preconditions": [
+        "User phải được xác thực",
+        "User phải có quyền thích hợp"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "action": "orderService.approve()",
+          "source": "src/order/order.controller.ts:4"
+        },
+        {
+          "order": 2,
+          "action": "orderService.remove()",
+          "source": "src/order/order.controller.ts:10"
+        }
+      ],
+      "alternativeFlows": [],
+      "failureFlows": [],
+      "sideEffects": [
+        "database_delete"
+      ],
+      "sourceReferences": [
+        {
+          "file": "src/order/order.controller.ts",
+          "line": 25
+        }
+      ],
+      "confidence": "verified"
+    },
+    {
+      "flowId": "ORDER_DELETE_24A6ECB2",
+      "name": "DELETE :id (Roles)",
+      "module": "order",
+      "actor": "Admin",
+      "trigger": "DELETE :id",
+      "preconditions": [
+        "User phải được xác thực",
+        "User phải có quyền thích hợp"
+      ],
+      "steps": [
+        {
+          "order": 1,
+          "action": "orderService.remove()",
+          "source": "src/order/order.controller.ts:4"
+        }
+      ],
+      "alternativeFlows": [],
+      "failureFlows": [],
+      "sideEffects": [
+        "database_delete"
+      ],
+      "sourceReferences": [
+        {
+          "file": "src/order/order.controller.ts",
+          "line": 31
+        }
+      ],
+      "confidence": "verified"
+    }
+  ]
+}

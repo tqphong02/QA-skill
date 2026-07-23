@@ -1,0 +1,24 @@
+{
+  "tool": "visual-business-signal-extractor.mjs",
+  "pageSlug": "test-slug",
+  "analyzedAt": "2026-07-23T16:16:03.458Z",
+  "totalSignals": 2,
+  "byLevel": {
+    "MEASURED": 1,
+    "NEEDS_REVIEW": 1
+  },
+  "signals": [
+    {
+      "signalType": "MULTIPLE_PRIMARY_BUTTONS",
+      "evidenceLevel": "MEASURED",
+      "description": "Phát hiện 3 nút bấm primary (Approve, Submit, Submit Order Error) cùng mức độ nổi bật trực quan",
+      "recommendation": "Chỉ nên để 1 nút làm Primary Action duy nhất per region"
+    },
+    {
+      "signalType": "STATUS_BADGE_POSITIONING",
+      "evidenceLevel": "NEEDS_REVIEW",
+      "description": "Status badge \"DRAFT\" đặt ở phần thông tin chung",
+      "recommendation": "BA xác nhận vị trí hiển thị badge có phản ánh đúng trạng thái hiện tại của record không"
+    }
+  ]
+}

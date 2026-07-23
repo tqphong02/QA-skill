@@ -1,0 +1,9 @@
+{
+  "tool": "permission-matrix-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "extractedAt": "2026-07-23T15:30:49.738Z",
+  "roles": [],
+  "totalGrants": 0,
+  "matrix": {},
+  "rawGrants": []
+}

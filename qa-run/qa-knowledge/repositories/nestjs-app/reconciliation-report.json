@@ -1,0 +1,360 @@
+{
+  "tool": "repo-runtime-reconciler.mjs",
+  "repoName": "nestjs-app",
+  "commit": "1f228d5",
+  "reconciledAt": "2026-07-23T16:35:26.508Z",
+  "hasRuntimeData": false,
+  "totalEntries": 18,
+  "summary": {
+    "STATIC_ONLY": 18
+  },
+  "gaps": [
+    {
+      "gapType": "unobserved_api",
+      "severity": "medium",
+      "description": "5 API endpoints trong source code chưa được quan sát trong runtime",
+      "items": [
+        "GET /orders",
+        "GET /orders/:id",
+        "POST /orders",
+        "PUT /orders/:id/approve",
+        "DELETE /orders/:id"
+      ],
+      "recommendation": "Chạy qa-run baseline discovery để observe các endpoint này"
+    }
+  ],
+  "entries": [
+    {
+      "entity": "GET /orders",
+      "type": "api_endpoint",
+      "module": "order",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "NOT_DOCUMENTED",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:9",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "GET /orders/:id",
+      "type": "api_endpoint",
+      "module": "order",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "NOT_DOCUMENTED",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:15",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "POST /orders",
+      "type": "api_endpoint",
+      "module": "order",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "NOT_DOCUMENTED",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:20",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PUT /orders/:id/approve",
+      "type": "api_endpoint",
+      "module": "order",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "NOT_DOCUMENTED",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:25",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "DELETE /orders/:id",
+      "type": "api_endpoint",
+      "module": "order",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "NOT_DOCUMENTED",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:31",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PERMISSION_BF426B",
+      "type": "business_rule",
+      "module": "order",
+      "category": "permission",
+      "condition": "@UseGuards(JwtAuthGuard)",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:5",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PERMISSION_203CBC",
+      "type": "business_rule",
+      "module": "order",
+      "category": "permission",
+      "condition": "@Roles('admin', 'manager')",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:10",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PERMISSION_3B47B5",
+      "type": "business_rule",
+      "module": "order",
+      "category": "permission",
+      "condition": "@Roles('admin')",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.controller.ts:32",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "UNIQUENESS_B1502A",
+      "type": "business_rule",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:1",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "EXISTENCE_CHECK_19AC93",
+      "type": "business_rule",
+      "module": "order",
+      "category": "existence_check",
+      "condition": "if (!order) throw new NotFoundException('Order not found');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:16",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "STATE_TRANSITION_FEB75D",
+      "type": "business_rule",
+      "module": "order",
+      "category": "state_transition",
+      "condition": "throw new Error('Cannot approve order not in PENDING status');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:23",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PERMISSION_E49BE7",
+      "type": "business_rule",
+      "module": "order",
+      "category": "permission",
+      "condition": "if (!user.hasPermission('order:approve')) {",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:25",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "PERMISSION_483662",
+      "type": "business_rule",
+      "module": "order",
+      "category": "permission",
+      "condition": "throw new ForbiddenException('Insufficient permission to approve order');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:26",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "FINANCIAL_483662",
+      "type": "business_rule",
+      "module": "order",
+      "category": "financial",
+      "condition": "throw new ForbiddenException('Insufficient permission to approve order');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:26",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "STATE_TRANSITION_B5F2AA",
+      "type": "business_rule",
+      "module": "order",
+      "category": "state_transition",
+      "condition": "if (order.status === OrderStatus.COMPLETED) {",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:36",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "UNIQUENESS_4107DF",
+      "type": "business_rule",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "throw new ConflictException('Cannot delete completed order');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:37",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "EXISTENCE_CHECK_1B166C",
+      "type": "business_rule",
+      "module": "order",
+      "category": "existence_check",
+      "condition": "if (existing) throw new ConflictException('Order code already exists');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:44",
+          "type": "static_code"
+        }
+      ]
+    },
+    {
+      "entity": "UNIQUENESS_1B166C",
+      "type": "business_rule",
+      "module": "order",
+      "category": "uniqueness",
+      "condition": "if (existing) throw new ConflictException('Order code already exists');",
+      "sourceStatus": "FOUND",
+      "runtimeStatus": "NOT_OBSERVED",
+      "documentStatus": "UNKNOWN",
+      "result": "STATIC_ONLY",
+      "conflicts": [],
+      "confidence": "verified",
+      "sources": [
+        {
+          "file": "src/order/order.service.ts:44",
+          "type": "static_code"
+        }
+      ]
+    }
+  ]
+}

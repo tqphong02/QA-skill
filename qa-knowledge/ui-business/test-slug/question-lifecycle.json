@@ -1,0 +1,141 @@
+{
+  "tool": "ui-business-qna-generator.mjs",
+  "pageSlug": "test-slug",
+  "managedAt": "2026-07-23T16:16:03.778Z",
+  "totalQuestions": 6,
+  "byStatus": {
+    "OPEN": 6
+  },
+  "byOwner": {
+    "BA": 4,
+    "PO": 1,
+    "Dev": 1
+  },
+  "questions": [
+    {
+      "questionId": "UI-QA-38E43CFD79",
+      "owner": "BA",
+      "module": "test-slug",
+      "region": "TOOLBAR",
+      "component": "Approve",
+      "type": "PERMISSION_CONFLICT",
+      "question": "Role Staff có được phép nhìn thấy nút Approve không, hay button phải bị ẩn hoặc disabled",
+      "affectedComponents": [
+        "Approve"
+      ],
+      "affectedFlows": [
+        "test-slug_flow"
+      ],
+      "severity": "High",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.776Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    },
+    {
+      "questionId": "UI-QA-030C06EFFF",
+      "owner": "PO",
+      "module": "test-slug",
+      "region": "TOOLBAR",
+      "component": "Save Draft",
+      "type": "AMBIGUOUS",
+      "question": "Nút Save Draft và Submit tạo ra trạng thái và yêu cầu dữ liệu bắt buộc khác nhau như thế nào",
+      "affectedComponents": [
+        "Save Draft"
+      ],
+      "affectedFlows": [
+        "test-slug_flow"
+      ],
+      "severity": "Medium",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.778Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    },
+    {
+      "questionId": "UI-QA-24D5A86289",
+      "owner": "BA",
+      "module": "test-slug",
+      "region": "TOOLBAR",
+      "component": "Cancel",
+      "type": "AMBIGUOUS",
+      "question": "Nút Cancel sẽ reset dữ liệu nhập hay quay lại trang trước",
+      "affectedComponents": [
+        "Cancel"
+      ],
+      "affectedFlows": [
+        "test-slug_flow"
+      ],
+      "severity": "Low",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.778Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    },
+    {
+      "questionId": "UI-QA-7074F4C4D4",
+      "owner": "BA",
+      "module": "test-slug",
+      "region": "TOOLBAR",
+      "component": "Delete",
+      "type": "AMBIGUOUS",
+      "question": "Hành động Delete là soft delete hay permanent delete khỏi cơ sở dữ liệu",
+      "affectedComponents": [
+        "Delete"
+      ],
+      "affectedFlows": [
+        "test-slug_flow"
+      ],
+      "severity": "Medium",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.778Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    },
+    {
+      "questionId": "UI-QA-8EC9F1C833",
+      "owner": "Dev",
+      "module": "test-slug",
+      "region": "FORM_REGION",
+      "component": "Status",
+      "type": "CONFLICT",
+      "question": "Status được thay đổi trực tiếp qua dropdown hay bắt buộc qua action buttons theo quy trình",
+      "affectedComponents": [
+        "Status"
+      ],
+      "affectedFlows": [
+        "test-slug_flow"
+      ],
+      "severity": "High",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.778Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    },
+    {
+      "questionId": "UI-QA-A03DD00BFB",
+      "owner": "BA",
+      "module": "test-slug",
+      "component": "Cancel button",
+      "type": "AMBIGUOUS",
+      "question": "Hành động Cancel có được thực hiện sau khi đơn đã ở trạng thái Approved không",
+      "affectedComponents": [
+        "Cancel button"
+      ],
+      "affectedFlows": [
+        "order_cancel_flow"
+      ],
+      "severity": "High",
+      "confidence": "verified",
+      "createdAt": "2026-07-23T16:16:03.778Z",
+      "status": "OPEN",
+      "answer": null,
+      "resolvedAt": null
+    }
+  ]
+}

@@ -1,0 +1,168 @@
+{
+  "tool": "ui-action-intent-classifier.mjs",
+  "pageSlug": "test-order-detail",
+  "targetUrl": "snapshot/fixture",
+  "extractedAt": "2026-07-23T16:35:25.264Z",
+  "totalComponents": 12,
+  "byCategory": {
+    "navigation_menu": 2,
+    "primary_action_button": 3,
+    "secondary_action_button": 3,
+    "form_field": 2,
+    "status_badge": 1,
+    "role_indicator": 1
+  },
+  "components": [
+    {
+      "category": "navigation_menu",
+      "label": "Orders",
+      "href": "/orders",
+      "selector": "a.menu-item[href=\"/orders\"]",
+      "region": "SIDEBAR",
+      "intent": "NAVIGATE",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "navigation_menu",
+      "label": "Payment Settings",
+      "href": "/settings/payment",
+      "selector": "a.menu-item[href=\"/settings/payment\"]",
+      "region": "SIDEBAR",
+      "intent": "NAVIGATE",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "primary_action_button",
+      "label": "Approve",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#approve",
+      "region": "TOOLBAR",
+      "intent": "APPROVE",
+      "expectedState": "APPROVED",
+      "risk": "high",
+      "requiresPermission": true
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Save Draft",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#save-draft",
+      "region": "TOOLBAR",
+      "intent": "SAVE_DRAFT",
+      "expectedState": "DRAFT",
+      "risk": "medium"
+    },
+    {
+      "category": "primary_action_button",
+      "label": "Submit",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#submit",
+      "region": "TOOLBAR",
+      "intent": "SUBMIT",
+      "expectedState": "SUBMITTED",
+      "risk": "high"
+    },
+    {
+      "category": "primary_action_button",
+      "label": "Submit Order Error",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#submit-error",
+      "region": "TOOLBAR",
+      "intent": "SUBMIT",
+      "expectedState": "SUBMITTED",
+      "risk": "high"
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Cancel",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#cancel",
+      "region": "TOOLBAR",
+      "intent": "CANCEL",
+      "expectedState": "CANCELLED",
+      "risk": "medium",
+      "ambiguity": "reset_vs_navigate"
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Delete",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#delete",
+      "region": "TOOLBAR",
+      "intent": "DELETE",
+      "expectedState": "DELETED",
+      "risk": "critical",
+      "ambiguity": "soft_vs_permanent"
+    },
+    {
+      "category": "form_field",
+      "label": "Amount",
+      "fieldType": "number",
+      "isRequired": true,
+      "isDisabled": false,
+      "selector": "input#amount",
+      "region": "FORM_REGION",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "form_field",
+      "label": "Status",
+      "fieldType": "select",
+      "isRequired": true,
+      "isDisabled": false,
+      "selector": "select#status",
+      "region": "FORM_REGION",
+      "intent": "STATUS_CHANGE",
+      "expectedState": "DIRECT_SELECT",
+      "risk": "high",
+      "ambiguity": "direct_edit_vs_workflow"
+    },
+    {
+      "category": "status_badge",
+      "label": "DRAFT",
+      "statusValue": "DRAFT",
+      "selector": "span.badge",
+      "region": "MAIN_CONTENT",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "role_indicator",
+      "label": "Role: Staff",
+      "region": "HEADER",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    }
+  ],
+  "byRegion": {
+    "SIDEBAR": 2,
+    "TOOLBAR": 6,
+    "FORM_REGION": 2,
+    "MAIN_CONTENT": 1,
+    "HEADER": 1
+  },
+  "segmentedAt": "2026-07-23T16:35:25.362Z",
+  "classifiedAt": "2026-07-23T16:35:25.442Z",
+  "intentSummary": {
+    "NAVIGATE": 2,
+    "APPROVE": 1,
+    "SAVE_DRAFT": 1,
+    "SUBMIT": 2,
+    "CANCEL": 1,
+    "DELETE": 1,
+    "OTHER": 3,
+    "STATUS_CHANGE": 1
+  }
+}

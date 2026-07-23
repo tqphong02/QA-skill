@@ -1,0 +1,135 @@
+{
+  "tool": "ui-action-intent-classifier.mjs",
+  "pageSlug": "order-detail",
+  "targetUrl": "snapshot/fixture",
+  "extractedAt": "2026-07-23T16:00:40.071Z",
+  "totalComponents": 11,
+  "byCategory": {
+    "navigation_menu": 2,
+    "primary_action_button": 2,
+    "secondary_action_button": 3,
+    "form_field": 2,
+    "status_badge": 1,
+    "role_indicator": 1
+  },
+  "components": [
+    {
+      "category": "navigation_menu",
+      "label": "Orders",
+      "href": "/orders",
+      "intent": "NAVIGATE",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "navigation_menu",
+      "label": "Payment Settings",
+      "href": "/settings/payment",
+      "intent": "NAVIGATE",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "primary_action_button",
+      "label": "Approve",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#approve",
+      "intent": "APPROVE",
+      "expectedState": "APPROVED",
+      "risk": "high",
+      "requiresPermission": true
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Save Draft",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#save-draft",
+      "intent": "SAVE_DRAFT",
+      "expectedState": "DRAFT",
+      "risk": "medium"
+    },
+    {
+      "category": "primary_action_button",
+      "label": "Submit",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#submit",
+      "intent": "SUBMIT",
+      "expectedState": "SUBMITTED",
+      "risk": "high"
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Cancel",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#cancel",
+      "intent": "CANCEL",
+      "expectedState": "CANCELLED",
+      "risk": "medium",
+      "ambiguity": "reset_vs_navigate"
+    },
+    {
+      "category": "secondary_action_button",
+      "label": "Delete",
+      "isDisabled": false,
+      "isHidden": false,
+      "selector": "button#delete",
+      "intent": "DELETE",
+      "expectedState": "DELETED",
+      "risk": "critical",
+      "ambiguity": "soft_vs_permanent"
+    },
+    {
+      "category": "form_field",
+      "label": "Amount",
+      "fieldType": "number",
+      "isRequired": true,
+      "isDisabled": false,
+      "selector": "input#amount",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "form_field",
+      "label": "Status",
+      "fieldType": "select",
+      "isRequired": true,
+      "isDisabled": false,
+      "selector": "select#status",
+      "intent": "STATUS_CHANGE",
+      "expectedState": "DIRECT_SELECT",
+      "risk": "high",
+      "ambiguity": "direct_edit_vs_workflow"
+    },
+    {
+      "category": "status_badge",
+      "label": "DRAFT",
+      "statusValue": "DRAFT",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    },
+    {
+      "category": "role_indicator",
+      "label": "Role: Staff",
+      "intent": "OTHER",
+      "expectedState": null,
+      "risk": "low"
+    }
+  ],
+  "classifiedAt": "2026-07-23T16:00:40.152Z",
+  "intentSummary": {
+    "NAVIGATE": 2,
+    "APPROVE": 1,
+    "SAVE_DRAFT": 1,
+    "SUBMIT": 1,
+    "CANCEL": 1,
+    "DELETE": 1,
+    "OTHER": 3,
+    "STATUS_CHANGE": 1
+  }
+}

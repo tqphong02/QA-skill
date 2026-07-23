@@ -1,0 +1,6947 @@
+{
+  "tool": "source-indexer.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "scannedAt": "2026-07-23T15:30:49.174Z",
+  "totalFiles": 46,
+  "totalSymbols": 985,
+  "summaryByKind": {
+    "const": 744,
+    "function": 238,
+    "error_message": 2,
+    "class": 1
+  },
+  "files": [
+    {
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "hash": "ace67561",
+      "symbols": 72,
+      "size": 13345
+    },
+    {
+      "file": "qa-run/lib/assert.mjs",
+      "hash": "0948132d",
+      "symbols": 10,
+      "size": 2072
+    },
+    {
+      "file": "qa-run/lib/driver.mjs",
+      "hash": "6fe11321",
+      "symbols": 17,
+      "size": 4505
+    },
+    {
+      "file": "qa-run/lib/tdata.mjs",
+      "hash": "01d9a362",
+      "symbols": 9,
+      "size": 2902
+    },
+    {
+      "file": "qa-run/lib/ui.mjs",
+      "hash": "e0412adf",
+      "symbols": 10,
+      "size": 3638
+    },
+    {
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "hash": "3127c832",
+      "symbols": 38,
+      "size": 9161
+    },
+    {
+      "file": "qa-run/scripts/api-health.mjs",
+      "hash": "e32c3cc2",
+      "symbols": 2,
+      "size": 1423
+    },
+    {
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "hash": "d0be5fc1",
+      "symbols": 24,
+      "size": 7508
+    },
+    {
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "hash": "9f53d6bb",
+      "symbols": 67,
+      "size": 23870
+    },
+    {
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "hash": "d5fd1952",
+      "symbols": 32,
+      "size": 7500
+    },
+    {
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "hash": "1e97441b",
+      "symbols": 25,
+      "size": 8937
+    },
+    {
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "hash": "201e31dd",
+      "symbols": 10,
+      "size": 3036
+    },
+    {
+      "file": "qa-run/scripts/compat.mjs",
+      "hash": "9b21dc30",
+      "symbols": 23,
+      "size": 5918
+    },
+    {
+      "file": "qa-run/scripts/data-factory.mjs",
+      "hash": "9e62800d",
+      "symbols": 31,
+      "size": 7323
+    },
+    {
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "hash": "63f536e3",
+      "symbols": 28,
+      "size": 7154
+    },
+    {
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "hash": "71a9eec5",
+      "symbols": 37,
+      "size": 12085
+    },
+    {
+      "file": "qa-run/scripts/explore.mjs",
+      "hash": "8b215751",
+      "symbols": 2,
+      "size": 613
+    },
+    {
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "hash": "53b7d420",
+      "symbols": 79,
+      "size": 25321
+    },
+    {
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "hash": "ae3c47fe",
+      "symbols": 27,
+      "size": 13751
+    },
+    {
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "hash": "46287a4e",
+      "symbols": 17,
+      "size": 6815
+    },
+    {
+      "file": "qa-run/scripts/log-bug.mjs",
+      "hash": "4c04efba",
+      "symbols": 39,
+      "size": 11465
+    },
+    {
+      "file": "qa-run/scripts/login.mjs",
+      "hash": "4424f088",
+      "symbols": 5,
+      "size": 1996
+    },
+    {
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "hash": "844ba004",
+      "symbols": 16,
+      "size": 5672
+    },
+    {
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "hash": "d4fee62c",
+      "symbols": 20,
+      "size": 8578
+    },
+    {
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "hash": "24d14f5f",
+      "symbols": 33,
+      "size": 8468
+    },
+    {
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "hash": "47da79ec",
+      "symbols": 10,
+      "size": 4484
+    },
+    {
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "hash": "f568ecbc",
+      "symbols": 7,
+      "size": 2271
+    },
+    {
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "hash": "855d0ed7",
+      "symbols": 24,
+      "size": 7782
+    },
+    {
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "hash": "12c569ca",
+      "symbols": 24,
+      "size": 5453
+    },
+    {
+      "file": "qa-run/scripts/sweep.mjs",
+      "hash": "0701f55f",
+      "symbols": 2,
+      "size": 1522
+    },
+    {
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "hash": "117b5ca5",
+      "symbols": 23,
+      "size": 7276
+    },
+    {
+      "file": "qa-run/scripts/ux-health.mjs",
+      "hash": "8638e26e",
+      "symbols": 48,
+      "size": 14830
+    },
+    {
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "hash": "ceb82862",
+      "symbols": 11,
+      "size": 4039
+    },
+    {
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "hash": "07154eb8",
+      "symbols": 37,
+      "size": 15215
+    },
+    {
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "hash": "2025ea10",
+      "symbols": 21,
+      "size": 6842
+    },
+    {
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "hash": "bb1825a9",
+      "symbols": 31,
+      "size": 8719
+    },
+    {
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "hash": "b3508882",
+      "symbols": 25,
+      "size": 11234
+    },
+    {
+      "file": "qa-run/tests/e2e/full-pipeline.spec.mjs",
+      "hash": "478d5ca7",
+      "symbols": 2,
+      "size": 797
+    },
+    {
+      "file": "qa-run/tests/integration/cleanup.spec.mjs",
+      "hash": "98def047",
+      "symbols": 2,
+      "size": 769
+    },
+    {
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "hash": "03824ede",
+      "symbols": 5,
+      "size": 992
+    },
+    {
+      "file": "qa-run/tests/integration/runtime-observer.spec.mjs",
+      "hash": "f257d713",
+      "symbols": 1,
+      "size": 447
+    },
+    {
+      "file": "qa-run/tests/integration/visual-regression.spec.mjs",
+      "hash": "9ef836f8",
+      "symbols": 4,
+      "size": 656
+    },
+    {
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "hash": "3f4a3b6e",
+      "symbols": 7,
+      "size": 1833
+    },
+    {
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "hash": "9fb36e31",
+      "symbols": 10,
+      "size": 2143
+    },
+    {
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "hash": "74736131",
+      "symbols": 11,
+      "size": 2213
+    },
+    {
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "hash": "95ff312a",
+      "symbols": 7,
+      "size": 1467
+    }
+  ],
+  "symbols": [
+    {
+      "kind": "const",
+      "name": "ICON_RE",
+      "value": "/[\\u{1F300}-\\u{1FAFF}\\u2600-\\u27BF]/u",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 7
+    },
+    {
+      "kind": "const",
+      "name": "TIMELINE_HORIZONTAL",
+      "value": "'org.xmind.ui.timeline.horizontal'",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 8
+    },
+    {
+      "kind": "const",
+      "name": "LOGIC_RIGHT",
+      "value": "'org.xmind.ui.logic.right'",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 9
+    },
+    {
+      "kind": "function",
+      "name": "fail",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 11
+    },
+    {
+      "kind": "function",
+      "name": "clean",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 16
+    },
+    {
+      "kind": "function",
+      "name": "add",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 22
+    },
+    {
+      "kind": "function",
+      "name": "addMarked",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "suffix",
+      "value": "markers.length ? ` ${markers.join('')}` : ''",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "listBranch",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 31
+    },
+    {
+      "kind": "const",
+      "name": "items",
+      "value": "Array.isArray(values) ? values : []",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 33
+    },
+    {
+      "kind": "function",
+      "name": "collectFlows",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 38
+    },
+    {
+      "kind": "const",
+      "name": "flows",
+      "value": "[]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 39
+    },
+    {
+      "kind": "function",
+      "name": "normalizeLinks",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 49
+    },
+    {
+      "kind": "const",
+      "name": "links",
+      "value": "Array.isArray(data.flow_links) ? data.flow_links : []",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 51
+    },
+    {
+      "kind": "function",
+      "name": "deriveSanityChecks",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 55
+    },
+    {
+      "kind": "const",
+      "name": "checks",
+      "value": "[]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 56
+    },
+    {
+      "kind": "function",
+      "name": "addMarker",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 64
+    },
+    {
+      "kind": "function",
+      "name": "relatedFunctionNames",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 69
+    },
+    {
+      "kind": "const",
+      "name": "linkedNames",
+      "value": "links",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 70
+    },
+    {
+      "kind": "const",
+      "name": "otherId",
+      "value": "link.from_flow === flowId ? link.to_flow : link.from_flow",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 73
+    },
+    {
+      "kind": "const",
+      "name": "other",
+      "value": "flowById.get(otherId)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 74
+    },
+    {
+      "kind": "function",
+      "name": "addFlowDetails",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 80
+    },
+    {
+      "kind": "function",
+      "name": "buildUnifiedMark",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 91
+    },
+    {
+      "kind": "function",
+      "name": "journeys",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 101
+    },
+    {
+      "kind": "const",
+      "name": "journeyId",
+      "value": "journey.id || `SANITY-${journeyIndex + 1}`",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 102
+    },
+    {
+      "kind": "const",
+      "name": "prepKey",
+      "value": "`${journeyId}:prep`",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 103
+    },
+    {
+      "kind": "const",
+      "name": "resultKey",
+      "value": "`${journeyId}:result`",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 104
+    },
+    {
+      "kind": "function",
+      "name": "steps",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 105
+    },
+    {
+      "kind": "const",
+      "name": "linked",
+      "value": "flowById.get(item.flow_id)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 106
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${journeyId}:step:${stepIndex}`",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 109
+    },
+    {
+      "kind": "const",
+      "name": "node",
+      "value": "{",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 111
+    },
+    {
+      "kind": "const",
+      "name": "chain",
+      "value": "[prepKey, ...steps.map(step => step.key), resultKey]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "label",
+      "value": "index === 0 ? 'Bắt đầu' : index === chain.length - 2 ? 'Hoàn tất' : 'Tiếp theo'",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 127
+    },
+    {
+      "kind": "const",
+      "name": "visibleTitle",
+      "value": "`Luồng nghiệp vụ ${String(journeyIndex + 1).padStart(2, '0')} — ${clean(journey.",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 132
+    },
+    {
+      "kind": "const",
+      "name": "extraFlows",
+      "value": "flows",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 136
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`extra:${linked.id}`",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 139
+    },
+    {
+      "kind": "const",
+      "name": "node",
+      "value": "{ key, title, linked }",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 141
+    },
+    {
+      "kind": "const",
+      "name": "source",
+      "value": "flowOccurrences.get(link.from_flow)?.[0]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 148
+    },
+    {
+      "kind": "const",
+      "name": "target",
+      "value": "flowOccurrences.get(link.to_flow)?.[0]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 149
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "[`${clean(data.project, 'project')} — Luồng hệ thống`]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 157
+    },
+    {
+      "kind": "const",
+      "name": "preconditions",
+      "value": "Array.isArray(journey.preconditions) ? journey.preconditions : []",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 161
+    },
+    {
+      "kind": "const",
+      "name": "results",
+      "value": "Array.isArray(journey.expected_results) ? journey.expected_results : []",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 169
+    },
+    {
+      "kind": "function",
+      "name": "safeSheetTitle",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 189
+    },
+    {
+      "kind": "function",
+      "name": "walkTopics",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 194
+    },
+    {
+      "kind": "function",
+      "name": "sheetFromMark",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 199
+    },
+    {
+      "kind": "const",
+      "name": "arrayBuffer",
+      "value": "await parseXMindMarkToXMindFile(mark)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 200
+    },
+    {
+      "kind": "const",
+      "name": "zip",
+      "value": "await JSZip.loadAsync(Buffer.from(arrayBuffer))",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 201
+    },
+    {
+      "kind": "const",
+      "name": "sheets",
+      "value": "JSON.parse(await zip.file('content.json').async('string'))",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 202
+    },
+    {
+      "kind": "const",
+      "name": "sheet",
+      "value": "sheets[0]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 203
+    },
+    {
+      "kind": "function",
+      "name": "buildWorkbook",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 214
+    },
+    {
+      "kind": "const",
+      "name": "flows",
+      "value": "collectFlows(data)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 215
+    },
+    {
+      "kind": "const",
+      "name": "links",
+      "value": "normalizeLinks(data, flows)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 216
+    },
+    {
+      "kind": "const",
+      "name": "unified",
+      "value": "buildUnifiedMark(data, flows, links)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 217
+    },
+    {
+      "kind": "const",
+      "name": "sheet",
+      "value": "await sheetFromMark(unified.mark, 'Luồng hệ thống', unified.journeyTitles, unifi",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 218
+    },
+    {
+      "kind": "const",
+      "name": "sheets",
+      "value": "[sheet]",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 219
+    },
+    {
+      "kind": "function",
+      "name": "readSheets",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 228
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 230
+    },
+    {
+      "kind": "const",
+      "name": "zip",
+      "value": "await JSZip.loadAsync(content)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 234
+    },
+    {
+      "kind": "function",
+      "name": "checkXMind",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 240
+    },
+    {
+      "kind": "const",
+      "name": "sheets",
+      "value": "await readSheets(filePath)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 241
+    },
+    {
+      "kind": "const",
+      "name": "analysis",
+      "value": "JSON.parse(fs.readFileSync(analysisPath, 'utf8'))",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 250
+    },
+    {
+      "kind": "function",
+      "name": "expectedJourneys",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 251
+    },
+    {
+      "kind": "const",
+      "name": "topLevelTopics",
+      "value": "sheets[0].rootTopic.children?.attached || []",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 252
+    },
+    {
+      "kind": "const",
+      "name": "journeyTopics",
+      "value": "topLevelTopics.slice(0, expectedJourneys)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 253
+    },
+    {
+      "kind": "function",
+      "name": "expectedJourneyRelationships",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 258
+    },
+    {
+      "kind": "const",
+      "name": "expectedRelationships",
+      "value": "expectedJourneyRelationships + (analysis.flow_links || []).length",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 260
+    },
+    {
+      "kind": "function",
+      "name": "actualRelationships",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 261
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 269
+    },
+    {
+      "kind": "const",
+      "name": "inputPath",
+      "value": "path.resolve(args[0])",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 277
+    },
+    {
+      "kind": "const",
+      "name": "outputPath",
+      "value": "path.resolve(args[1])",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 278
+    },
+    {
+      "kind": "const",
+      "name": "data",
+      "value": "JSON.parse(fs.readFileSync(inputPath, 'utf8'))",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 279
+    },
+    {
+      "kind": "const",
+      "name": "buffer",
+      "value": "await buildWorkbook(data)",
+      "file": "business-analysis/scripts/render-xmind.mjs",
+      "line": 283
+    },
+    {
+      "kind": "function",
+      "name": "section",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 12
+    },
+    {
+      "kind": "function",
+      "name": "check",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 15
+    },
+    {
+      "kind": "const",
+      "name": "ok",
+      "value": "!!cond;",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 16
+    },
+    {
+      "kind": "function",
+      "name": "eq",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 23
+    },
+    {
+      "kind": "function",
+      "name": "ge",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "has",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 33
+    },
+    {
+      "kind": "const",
+      "name": "ok",
+      "value": "Array.isArray(haystack) ? haystack.includes(needle) : String(haystack).includes(",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 34
+    },
+    {
+      "kind": "function",
+      "name": "summary",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 39
+    },
+    {
+      "kind": "const",
+      "name": "verdict",
+      "value": "_fail === 0 ? 'PASS' : 'FAIL';",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 40
+    },
+    {
+      "kind": "function",
+      "name": "reset",
+      "file": "qa-run/lib/assert.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "SKILL_DIR",
+      "value": "path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 10
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 11
+    },
+    {
+      "kind": "const",
+      "name": "BASE",
+      "value": "process.env.QA_BASE_URL || '';",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 13
+    },
+    {
+      "kind": "function",
+      "name": "browser",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 19
+    },
+    {
+      "kind": "const",
+      "name": "b",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 20
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await b.newContext({",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 21
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "errors",
+      "value": "[];",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "shot",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 36
+    },
+    {
+      "kind": "function",
+      "name": "snap",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 43
+    },
+    {
+      "kind": "const",
+      "name": "data",
+      "value": "await page.evaluate((MAX) => {",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => {",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect(); const s = getComputedStyle(el);",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "out",
+      "value": "{ url: location.href, title: document.title, headings: [], inputs: [], buttons:",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "uniq",
+      "value": "a => [...new Set(a)];",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 57
+    },
+    {
+      "kind": "function",
+      "name": "printSnap",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "L",
+      "value": "[];",
+      "file": "qa-run/lib/driver.mjs",
+      "line": 69
+    },
+    {
+      "kind": "function",
+      "name": "nowStamp",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 19
+    },
+    {
+      "kind": "function",
+      "name": "pad",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 20
+    },
+    {
+      "kind": "function",
+      "name": "rand4",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 32
+    },
+    {
+      "kind": "function",
+      "name": "tdata",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 37
+    },
+    {
+      "kind": "error_message",
+      "message": "tdata(prefix, testName): cả 2 đều bắt buộc",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 39
+    },
+    {
+      "kind": "error_message",
+      "message": "tdata: prefix/testName phải chứa chữ cái hoặc số",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 44
+    },
+    {
+      "kind": "function",
+      "name": "emailOf",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 49
+    },
+    {
+      "kind": "function",
+      "name": "nameOf",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 54
+    },
+    {
+      "kind": "function",
+      "name": "parseTdata",
+      "file": "qa-run/lib/tdata.mjs",
+      "line": 59
+    },
+    {
+      "kind": "function",
+      "name": "recordNet",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 13
+    },
+    {
+      "kind": "function",
+      "name": "waitForText",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "src",
+      "value": "pat instanceof RegExp ? pat.source : String(pat).replace(/[.*+?^${}()|[\\]\\\\]/g,",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "flags",
+      "value": "pat instanceof RegExp ? pat.flags.replace('g', '') : 'i';",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "waitForStable",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 40
+    },
+    {
+      "kind": "const",
+      "name": "ready",
+      "value": "accept || (v => v !== null && v !== undefined && v !== -1 && v !== 0 && v !== ''",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 41
+    },
+    {
+      "kind": "const",
+      "name": "v",
+      "value": "await readFn();",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 45
+    },
+    {
+      "kind": "function",
+      "name": "clickText",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "loc",
+      "value": "page.getByText(text, { exact }).first();",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 55
+    },
+    {
+      "kind": "function",
+      "name": "withRevert",
+      "file": "qa-run/lib/ui.mjs",
+      "line": 69
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 25
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 28
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 30
+    },
+    {
+      "kind": "function",
+      "name": "getModuleFromPath",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 37
+    },
+    {
+      "kind": "const",
+      "name": "parts",
+      "value": "relativePath.replace(/\\\\/g, '/').split('/');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 38
+    },
+    {
+      "kind": "const",
+      "name": "srcIdx",
+      "value": "parts.indexOf('src');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 39
+    },
+    {
+      "kind": "const",
+      "name": "pagesIdx",
+      "value": "parts.indexOf('pages');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 42
+    },
+    {
+      "kind": "function",
+      "name": "extractNestJSRoutes",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "endpoints",
+      "value": "[];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 48
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 49
+    },
+    {
+      "kind": "const",
+      "name": "line",
+      "value": "lines[i];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 56
+    },
+    {
+      "kind": "const",
+      "name": "methodMatch",
+      "value": "trim.match(/@(Get|Post|Put|Patch|Delete|Options|Head)\\(['\"`]?([^'\"`)\\s]*)/i);",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 72
+    },
+    {
+      "kind": "const",
+      "name": "method",
+      "value": "methodMatch[1].toUpperCase();",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 74
+    },
+    {
+      "kind": "const",
+      "name": "routePath",
+      "value": "methodMatch[2] || '';",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 75
+    },
+    {
+      "kind": "const",
+      "name": "fullPath",
+      "value": "'/' + [controllerPrefix, routePath].filter(Boolean).join('/').replace(/\\/+/g, '/",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 76
+    },
+    {
+      "kind": "function",
+      "name": "extractExpressRoutes",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 96
+    },
+    {
+      "kind": "const",
+      "name": "endpoints",
+      "value": "[];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 98
+    },
+    {
+      "kind": "function",
+      "name": "extractNextJSRoutes",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 133
+    },
+    {
+      "kind": "const",
+      "name": "endpoints",
+      "value": "[];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 134
+    },
+    {
+      "kind": "const",
+      "name": "rel",
+      "value": "relativePath.replace(/\\\\/g, '/');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 135
+    },
+    {
+      "kind": "const",
+      "name": "routePath",
+      "value": "'/api/' + pagesApiMatch[1].replace(/\\[([^\\]]+)\\]/g, ':$1');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 140
+    },
+    {
+      "kind": "const",
+      "name": "routePath",
+      "value": "'/' + appApiMatch[1].replace(/\\[([^\\]]+)\\]/g, ':$1');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 157
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 159
+    },
+    {
+      "kind": "const",
+      "name": "methods",
+      "value": "[];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 160
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 182
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 192
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 198
+    },
+    {
+      "kind": "const",
+      "name": "endpoints",
+      "value": "[];",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 206
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 210
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 211
+    },
+    {
+      "kind": "const",
+      "name": "isNestJS",
+      "value": "/@Controller|@Get\\(|@Post\\(|@Put\\(|@Patch\\(|@Delete\\(/.test(content);",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 214
+    },
+    {
+      "kind": "const",
+      "name": "isNextAPI",
+      "value": "relativePath.replace(/\\\\/g, '/').includes('/api/');",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 216
+    },
+    {
+      "kind": "const",
+      "name": "unique",
+      "value": "endpoints.filter(e => {",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 239
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${e.method}:${e.path}`;",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 240
+    },
+    {
+      "kind": "const",
+      "name": "byModule",
+      "value": "{};",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 246
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/api-contract-extractor.mjs",
+      "line": 251
+    },
+    {
+      "kind": "const",
+      "name": "results",
+      "value": "await page.evaluate(async (list) => {",
+      "file": "qa-run/scripts/api-health.mjs",
+      "line": 17
+    },
+    {
+      "kind": "const",
+      "name": "out",
+      "value": "[];",
+      "file": "qa-run/scripts/api-health.mjs",
+      "line": 18
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 25
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 28
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 30
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 37
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 47
+    },
+    {
+      "kind": "function",
+      "name": "getModuleName",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 53
+    },
+    {
+      "kind": "const",
+      "name": "parts",
+      "value": "relativePath.replace(/\\\\/g, '/').split('/');",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "srcIdx",
+      "value": "parts.indexOf('src');",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 55
+    },
+    {
+      "kind": "function",
+      "name": "getComponentType",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 60
+    },
+    {
+      "kind": "function",
+      "name": "detectIntegrations",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "integrations",
+      "value": "[];",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 78
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "moduleMap",
+      "value": "{};",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 102
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 107
+    },
+    {
+      "kind": "const",
+      "name": "filename",
+      "value": "path.basename(filePath);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 108
+    },
+    {
+      "kind": "const",
+      "name": "compType",
+      "value": "getComponentType(filename);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 109
+    },
+    {
+      "kind": "const",
+      "name": "moduleName",
+      "value": "getModuleName(relativePath);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 112
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 122
+    },
+    {
+      "kind": "const",
+      "name": "integrations",
+      "value": "detectIntegrations(content);",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "compInfo",
+      "value": "{ file: relativePath };",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 131
+    },
+    {
+      "kind": "const",
+      "name": "modules",
+      "value": "Object.values(moduleMap).filter(m =>",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 147
+    },
+    {
+      "kind": "const",
+      "name": "archMap",
+      "value": "{",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 152
+    },
+    {
+      "kind": "const",
+      "name": "preview",
+      "value": "{ ...archMap, modules: archMap.modules.map(m => ({",
+      "file": "qa-run/scripts/architecture-discovery.mjs",
+      "line": 167
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 32
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 35
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 41
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 42
+    },
+    {
+      "kind": "function",
+      "name": "evaluateActionSafety",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 57
+    },
+    {
+      "kind": "function",
+      "name": "text",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 58
+    },
+    {
+      "kind": "const",
+      "name": "url",
+      "value": "targetUrl.toLowerCase();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 59
+    },
+    {
+      "kind": "const",
+      "name": "isProd",
+      "value": "/prod|production|live/i.test(env);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 60
+    },
+    {
+      "kind": "const",
+      "name": "MUTATIONS",
+      "value": "{",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 106
+    },
+    {
+      "kind": "const",
+      "name": "findings",
+      "value": "[];",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 151
+    },
+    {
+      "kind": "function",
+      "name": "addFinding",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 153
+    },
+    {
+      "kind": "const",
+      "name": "finding",
+      "value": "{",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 154
+    },
+    {
+      "kind": "const",
+      "name": "icon",
+      "value": "severity === 'HIGH' ? '🔴' : severity === 'MEDIUM' ? '🟡' : '🔵';",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 167
+    },
+    {
+      "kind": "function",
+      "name": "safeScreenshot",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 174
+    },
+    {
+      "kind": "const",
+      "name": "fname",
+      "value": "`attack-${label.replace(/[^a-z0-9]/gi, '-').slice(0, 50)}-${Date.now()}.png`;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 176
+    },
+    {
+      "kind": "function",
+      "name": "getAlerts",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 183
+    },
+    {
+      "kind": "const",
+      "name": "alerts",
+      "value": "[];",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 185
+    },
+    {
+      "kind": "function",
+      "name": "txt",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 187
+    },
+    {
+      "kind": "function",
+      "name": "getNetworkCallCount",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 194
+    },
+    {
+      "kind": "const",
+      "name": "onReq",
+      "value": "req => { if (new RegExp(apiPattern, 'i').test(req.url())) count++; };",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 196
+    },
+    {
+      "kind": "function",
+      "name": "attackFormFields",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 206
+    },
+    {
+      "kind": "const",
+      "name": "forms",
+      "value": "await page.evaluate((scope) => {",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 209
+    },
+    {
+      "kind": "const",
+      "name": "root",
+      "value": "scope ? document.querySelector(scope) : document;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 210
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 212
+    },
+    {
+      "kind": "const",
+      "name": "result",
+      "value": "[];",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 214
+    },
+    {
+      "kind": "const",
+      "name": "submitSel",
+      "value": "'button[type=submit], input[type=submit], button:has-text(\"Save\"), button:has-te",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 232
+    },
+    {
+      "kind": "const",
+      "name": "mutationSets",
+      "value": "field.type === 'number'",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 235
+    },
+    {
+      "kind": "const",
+      "name": "toTest",
+      "value": "mutationSets.slice(0, 6);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 240
+    },
+    {
+      "kind": "const",
+      "name": "locator",
+      "value": "page.locator(field.selector).first();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 247
+    },
+    {
+      "kind": "const",
+      "name": "inlineErr",
+      "value": "await page.evaluate((sel) => {",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 254
+    },
+    {
+      "kind": "const",
+      "name": "inp",
+      "value": "document.querySelector(sel);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 255
+    },
+    {
+      "kind": "const",
+      "name": "validity",
+      "value": "inp.validity;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 257
+    },
+    {
+      "kind": "const",
+      "name": "errEl",
+      "value": "inp.closest('[class*=form-group i],[class*=field i]')",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 259
+    },
+    {
+      "kind": "const",
+      "name": "submitBtn",
+      "value": "page.locator(submitSel).first();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 265
+    },
+    {
+      "kind": "const",
+      "name": "alertsAfter",
+      "value": "await getAlerts(page);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 271
+    },
+    {
+      "kind": "const",
+      "name": "navigatedAway",
+      "value": "!currentUrl.includes(new URL(url).pathname);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 273
+    },
+    {
+      "kind": "const",
+      "name": "pageSource",
+      "value": "await page.content();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 277
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, `xss-reflected-${field.name}`);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 279
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, `required-bypass-${field.name}`);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 293
+    },
+    {
+      "kind": "function",
+      "name": "attackDoubleSubmit",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 334
+    },
+    {
+      "kind": "const",
+      "name": "submitSel",
+      "value": "'button[type=submit], input[type=submit], button:has-text(\"Save\"), button:has-te",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 338
+    },
+    {
+      "kind": "const",
+      "name": "btn",
+      "value": "page.locator(submitSel).first();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 339
+    },
+    {
+      "kind": "const",
+      "name": "onReq",
+      "value": "req => {",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 344
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, 'double-submit');",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 354
+    },
+    {
+      "kind": "function",
+      "name": "attackBackButton",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 374
+    },
+    {
+      "kind": "const",
+      "name": "alerts",
+      "value": "await getAlerts(page);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 385
+    },
+    {
+      "kind": "const",
+      "name": "hasErrors",
+      "value": "alerts.some(a => /error|lỗi|fail|500/i.test(a));",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 386
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, 'back-button-error');",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 389
+    },
+    {
+      "kind": "function",
+      "name": "attackSessionBoundary",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 406
+    },
+    {
+      "kind": "const",
+      "name": "hadAuth",
+      "value": "await page.evaluate(() => {",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 410
+    },
+    {
+      "kind": "const",
+      "name": "keys",
+      "value": "Object.keys(localStorage).filter(k => /token|auth|session|jwt/i.test(k));",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 411
+    },
+    {
+      "kind": "const",
+      "name": "isOnProtected",
+      "value": "!currentUrl.includes('/login') && !currentUrl.includes('/auth');",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 423
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, 'token-cleared-no-redirect');",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 426
+    },
+    {
+      "kind": "function",
+      "name": "attackDirectUrlAccess",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 447
+    },
+    {
+      "kind": "const",
+      "name": "sensitivePatterns",
+      "value": "[",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 450
+    },
+    {
+      "kind": "const",
+      "name": "resp",
+      "value": "await page.goto(BASE + path_, { waitUntil: 'domcontentloaded', timeout: 6000 });",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 459
+    },
+    {
+      "kind": "const",
+      "name": "status",
+      "value": "resp?.status() || 0;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 460
+    },
+    {
+      "kind": "const",
+      "name": "hasContent",
+      "value": "await page.evaluate(() => document.body.innerText.trim().length > 100);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 465
+    },
+    {
+      "kind": "const",
+      "name": "ss",
+      "value": "await safeScreenshot(page, `direct-access-${path_.replace(/\\//g, '-')}`);",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 467
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 487
+    },
+    {
+      "kind": "const",
+      "name": "targetUrl",
+      "value": "BASE + URL_PATH;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 488
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 493
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 494
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 500
+    },
+    {
+      "kind": "const",
+      "name": "pageTitle",
+      "value": "await page.title();",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 512
+    },
+    {
+      "kind": "const",
+      "name": "summary",
+      "value": "{",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 538
+    },
+    {
+      "kind": "const",
+      "name": "SKIP_DESTR",
+      "value": "!ALLOW_ACTION;",
+      "file": "qa-run/scripts/attack-surface.mjs",
+      "line": 576
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 18
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 19
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 21
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 23
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 36
+    },
+    {
+      "kind": "function",
+      "name": "getModuleName",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 42
+    },
+    {
+      "kind": "const",
+      "name": "parts",
+      "value": "relativePath.replace(/\\\\/g, '/').split('/');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 43
+    },
+    {
+      "kind": "const",
+      "name": "srcIdx",
+      "value": "parts.indexOf('src');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 44
+    },
+    {
+      "kind": "function",
+      "name": "detectActor",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 49
+    },
+    {
+      "kind": "function",
+      "name": "extractFlowSteps",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 57
+    },
+    {
+      "kind": "const",
+      "name": "steps",
+      "value": "[];",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 58
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 59
+    },
+    {
+      "kind": "function",
+      "name": "extractSideEffects",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 82
+    },
+    {
+      "kind": "const",
+      "name": "effects",
+      "value": "[];",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 83
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "flows",
+      "value": "[];",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 103
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 107
+    },
+    {
+      "kind": "const",
+      "name": "filename",
+      "value": "path.basename(filePath);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 108
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 113
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 114
+    },
+    {
+      "kind": "const",
+      "name": "module",
+      "value": "getModuleName(relativePath);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 115
+    },
+    {
+      "kind": "const",
+      "name": "actor",
+      "value": "detectActor(content);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 116
+    },
+    {
+      "kind": "const",
+      "name": "method",
+      "value": "m[1].toUpperCase();",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 122
+    },
+    {
+      "kind": "const",
+      "name": "routePath",
+      "value": "m[2] || '';",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "fnMatch",
+      "value": "lines[j].match(/(?:async\\s+)?(\\w+)\\s*\\(/);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 128
+    },
+    {
+      "kind": "const",
+      "name": "handlerContent",
+      "value": "lines.slice(i, Math.min(i + 80, lines.length)).join('\\n');",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 133
+    },
+    {
+      "kind": "const",
+      "name": "steps",
+      "value": "extractFlowSteps(handlerContent, relativePath);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 134
+    },
+    {
+      "kind": "const",
+      "name": "sideEffects",
+      "value": "extractSideEffects(handlerContent);",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 135
+    },
+    {
+      "kind": "const",
+      "name": "preconditions",
+      "value": "[];",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 138
+    },
+    {
+      "kind": "const",
+      "name": "flowId",
+      "value": "crypto.createHash('md5')",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 146
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/business-flow-builder.mjs",
+      "line": 170
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 28
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 30
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 32
+    },
+    {
+      "kind": "const",
+      "name": "RULE_PATTERNS",
+      "value": "[",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 41
+    },
+    {
+      "kind": "function",
+      "name": "generateRuleId",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 152
+    },
+    {
+      "kind": "const",
+      "name": "hash",
+      "value": "crypto.createHash('md5').update(`${file}:${line}`).digest('hex').slice(0, 6).toU",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 153
+    },
+    {
+      "kind": "function",
+      "name": "getModuleFromPath",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 157
+    },
+    {
+      "kind": "const",
+      "name": "parts",
+      "value": "relativePath.replace(/\\\\/g, '/').split('/');",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 158
+    },
+    {
+      "kind": "const",
+      "name": "srcIdx",
+      "value": "parts.indexOf('src');",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 160
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 166
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 177
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 183
+    },
+    {
+      "kind": "const",
+      "name": "rules",
+      "value": "[];",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 191
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 195
+    },
+    {
+      "kind": "const",
+      "name": "module",
+      "value": "getModuleFromPath(relativePath);",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 196
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 197
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 198
+    },
+    {
+      "kind": "const",
+      "name": "lineNum",
+      "value": "i + 1;",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 201
+    },
+    {
+      "kind": "const",
+      "name": "matched",
+      "value": "rulePattern.patterns.some(p => p.test(line));",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 204
+    },
+    {
+      "kind": "const",
+      "name": "extracted",
+      "value": "rulePattern.extract(line);",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 207
+    },
+    {
+      "kind": "const",
+      "name": "uniqueRules",
+      "value": "rules.filter(r => {",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 227
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${r.module}:${r.category}:${r.condition.slice(0, 60)}`;",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 228
+    },
+    {
+      "kind": "const",
+      "name": "byCategory",
+      "value": "{};",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 237
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/business-rule-extractor.mjs",
+      "line": 242
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 19
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 23
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 24
+    },
+    {
+      "kind": "const",
+      "name": "REDACT_PATTERNS",
+      "value": "[",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 33
+    },
+    {
+      "kind": "function",
+      "name": "redactTextContent",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 42
+    },
+    {
+      "kind": "function",
+      "name": "processAndCopyFile",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 50
+    },
+    {
+      "kind": "const",
+      "name": "ext",
+      "value": "path.extname(srcPath).toLowerCase();",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "raw",
+      "value": "fs.readFileSync(srcPath, 'utf8');",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "clean",
+      "value": "redactTextContent(raw);",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 55
+    },
+    {
+      "kind": "const",
+      "name": "files",
+      "value": "fs.readdirSync(EVID);",
+      "file": "qa-run/scripts/collect-evidence.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "BASE",
+      "value": "process.env.QA_BASE_URL || env.QA_BASE_URL || '';",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 28
+    },
+    {
+      "kind": "const",
+      "name": "urlPath",
+      "value": "process.argv[2] || '/';",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 34
+    },
+    {
+      "kind": "function",
+      "name": "engines",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 35
+    },
+    {
+      "kind": "function",
+      "name": "devices",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 36
+    },
+    {
+      "kind": "const",
+      "name": "DEVICE_PRESET",
+      "value": "{",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 39
+    },
+    {
+      "kind": "const",
+      "name": "ENGINES",
+      "value": "{ chromium, firefox, webkit };",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 48
+    },
+    {
+      "kind": "function",
+      "name": "probeOne",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 50
+    },
+    {
+      "kind": "const",
+      "name": "launcher",
+      "value": "ENGINES[engineName];",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "b",
+      "value": "await launcher.launch({ headless: true });",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 53
+    },
+    {
+      "kind": "const",
+      "name": "preset",
+      "value": "deviceName ? DEVICE_PRESET[deviceName] : null;",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await b.newContext({",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 55
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 63
+    },
+    {
+      "kind": "const",
+      "name": "errs",
+      "value": "[];",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 64
+    },
+    {
+      "kind": "const",
+      "name": "out",
+      "value": "{ engine: engineName, device: deviceName || 'desktop' };",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 70
+    },
+    {
+      "kind": "const",
+      "name": "resp",
+      "value": "await page.goto(BASE + urlPath, { waitUntil: 'domcontentloaded', timeout: 20000",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 72
+    },
+    {
+      "kind": "const",
+      "name": "tag",
+      "value": "`compat-${engineName}-${deviceName || 'desktop'}`.replace(/\\s+/g, '-');",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 78
+    },
+    {
+      "kind": "const",
+      "name": "combos",
+      "value": "[];",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 92
+    },
+    {
+      "kind": "const",
+      "name": "results",
+      "value": "[];",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 101
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "await probeOne(eng, dev);",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 104
+    },
+    {
+      "kind": "const",
+      "name": "ok",
+      "value": "!r.error;",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 106
+    },
+    {
+      "kind": "const",
+      "name": "errN",
+      "value": "r.errors?.length || 0;",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 107
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${r.engine}/${r.device}`;",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 115
+    },
+    {
+      "kind": "function",
+      "name": "note",
+      "file": "qa-run/scripts/compat.mjs",
+      "line": 117
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 25
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 33
+    },
+    {
+      "kind": "const",
+      "name": "command",
+      "value": "args[0] || 'get-worker-config';",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 34
+    },
+    {
+      "kind": "const",
+      "name": "entityName",
+      "value": "args[2] || 'test_entity';",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 36
+    },
+    {
+      "kind": "const",
+      "name": "TTL_MS",
+      "value": "24 * 60 * 60 * 1000; // 24 hours TTL for test data namespaces",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 38
+    },
+    {
+      "kind": "function",
+      "name": "getWorkerAccount",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 41
+    },
+    {
+      "kind": "const",
+      "name": "envEmailKey",
+      "value": "`QA_EMAIL_WORKER_${wId}`;",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 42
+    },
+    {
+      "kind": "const",
+      "name": "envPassKey",
+      "value": "`QA_PASSWORD_WORKER_${wId}`;",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 43
+    },
+    {
+      "kind": "const",
+      "name": "email",
+      "value": "process.env[envEmailKey] || process.env.QA_EMAIL || `qa_worker_${wId}@test.local",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "pass",
+      "value": "process.env[envPassKey]  || process.env.QA_PASSWORD || `Password123!`;",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 46
+    },
+    {
+      "kind": "function",
+      "name": "getWorkerNamespace",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "rand",
+      "value": "Math.floor(Math.random() * 1000).toString(36);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 53
+    },
+    {
+      "kind": "function",
+      "name": "registerCleanupItem",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 57
+    },
+    {
+      "kind": "function",
+      "name": "performCleanup",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "items",
+      "value": "JSON.parse(fs.readFileSync(file, 'utf8'));",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 71
+    },
+    {
+      "kind": "function",
+      "name": "acquireAtomicLock",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 88
+    },
+    {
+      "kind": "const",
+      "name": "lockData",
+      "value": "{",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 90
+    },
+    {
+      "kind": "const",
+      "name": "existing",
+      "value": "JSON.parse(fs.readFileSync(lockFile, 'utf8'));",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 101
+    },
+    {
+      "kind": "const",
+      "name": "fd",
+      "value": "fs.openSync(lockFile, 'wx'); // 'wx' fails atomically if file exists",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 110
+    },
+    {
+      "kind": "function",
+      "name": "releaseAtomicLock",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 124
+    },
+    {
+      "kind": "const",
+      "name": "existing",
+      "value": "JSON.parse(fs.readFileSync(lockFile, 'utf8'));",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 128
+    },
+    {
+      "kind": "function",
+      "name": "sweepOrphans",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 141
+    },
+    {
+      "kind": "const",
+      "name": "files",
+      "value": "fs.readdirSync(EVID);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 143
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(filePath);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 150
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 161
+    },
+    {
+      "kind": "const",
+      "name": "config",
+      "value": "{",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 163
+    },
+    {
+      "kind": "const",
+      "name": "ns",
+      "value": "getWorkerNamespace(workerId);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 175
+    },
+    {
+      "kind": "const",
+      "name": "uniqueName",
+      "value": "`[${ns}]_${entityName}`;",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 176
+    },
+    {
+      "kind": "const",
+      "name": "resName",
+      "value": "args[1] || 'default_resource';",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 181
+    },
+    {
+      "kind": "const",
+      "name": "ok",
+      "value": "acquireAtomicLock(resName, wId);",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 183
+    },
+    {
+      "kind": "const",
+      "name": "resName",
+      "value": "args[1] || 'default_resource';",
+      "file": "qa-run/scripts/data-factory.mjs",
+      "line": 187
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 22
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 23
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 25
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 30
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 39
+    },
+    {
+      "kind": "function",
+      "name": "extractTypeORMEntity",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "entities",
+      "value": "[];",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "nextLine",
+      "value": "lines[i + 1]?.trim() || '';",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "propMatch",
+      "value": "nextLine.match(/^(\\w+)\\s*[?!:]?\\s*:\\s*(\\w+)/);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 68
+    },
+    {
+      "kind": "function",
+      "name": "extractPrismaSchema",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "entities",
+      "value": "[];",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 96
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "fieldMatch",
+      "value": "trim.match(/^(\\w+)\\s+(\\w+)\\??(\\s|@)/);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 114
+    },
+    {
+      "kind": "function",
+      "name": "extractMongooseSchema",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 129
+    },
+    {
+      "kind": "const",
+      "name": "entities",
+      "value": "[];",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 130
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 131
+    },
+    {
+      "kind": "const",
+      "name": "schemaName",
+      "value": "m[1].replace(/Schema$/, '');",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 136
+    },
+    {
+      "kind": "function",
+      "name": "buildMermaidERD",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 149
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "['erDiagram'];",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 151
+    },
+    {
+      "kind": "const",
+      "name": "cols",
+      "value": "entity.columns.filter(c => c.name !== 'relation' && c.type);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 154
+    },
+    {
+      "kind": "const",
+      "name": "rel",
+      "value": "c.relation === 'OneToMany' ? '||--o{' :",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 168
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 178
+    },
+    {
+      "kind": "const",
+      "name": "entities",
+      "value": "[];",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 186
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 190
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 191
+    },
+    {
+      "kind": "const",
+      "name": "mermaidERD",
+      "value": "buildMermaidERD(entities);",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 204
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/database-domain-extractor.mjs",
+      "line": 206
+    },
+    {
+      "kind": "const",
+      "name": "SKILL_DIR",
+      "value": "process.env.QA_RUN_SKILL_DIR",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 29
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 34
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 45
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "PARALLEL",
+      "value": "args.includes('--parallel') || args.includes('--all');",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "DRY_RUN",
+      "value": "args.includes('--dry-run');",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 53
+    },
+    {
+      "kind": "function",
+      "name": "readSheetTestcases",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "sheetFlag",
+      "value": "SHEET_NAME ? `--sheet-name \"${SHEET_NAME}\"` : '';",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 70
+    },
+    {
+      "kind": "const",
+      "name": "cmd",
+      "value": "`python3 \"${DRIVE_PYTHON_SCRIPT}\" read \"${SHEET_URL}\" ${sheetFlag}`;",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 71
+    },
+    {
+      "kind": "function",
+      "name": "isAlreadyExported",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 83
+    },
+    {
+      "kind": "const",
+      "name": "keys",
+      "value": "JSON.parse(fs.readFileSync(EXPORTED_KEYS_FILE, 'utf8'));",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 86
+    },
+    {
+      "kind": "function",
+      "name": "markAsExported",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 91
+    },
+    {
+      "kind": "function",
+      "name": "updateSheetResults",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 102
+    },
+    {
+      "kind": "const",
+      "name": "filteredUpdates",
+      "value": "updates.filter(u => {",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 103
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${runId}:${u.testcase_id || u.row_number}:google_sheet`;",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 104
+    },
+    {
+      "kind": "const",
+      "name": "sheetFlag",
+      "value": "SHEET_NAME ? `--sheet-name \"${SHEET_NAME}\"` : '';",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 122
+    },
+    {
+      "kind": "const",
+      "name": "cmd",
+      "value": "`python3 \"${DRIVE_PYTHON_SCRIPT}\" update \"${SHEET_URL}\" --updates \"${tmpJson}\" $",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "JSON.parse(stdout);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 126
+    },
+    {
+      "kind": "function",
+      "name": "formatExecutionResult",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 144
+    },
+    {
+      "kind": "function",
+      "name": "partitionByModule",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 181
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "tc.group || tc.module || 'General';",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 184
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 193
+    },
+    {
+      "kind": "const",
+      "name": "sheetData",
+      "value": "readSheetTestcases();",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 194
+    },
+    {
+      "kind": "const",
+      "name": "allCases",
+      "value": "sheetData.testcases || [];",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 195
+    },
+    {
+      "kind": "const",
+      "name": "moduleGroups",
+      "value": "partitionByModule(targetCases);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 217
+    },
+    {
+      "kind": "const",
+      "name": "moduleKeys",
+      "value": "[...moduleGroups.keys()];",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 223
+    },
+    {
+      "kind": "const",
+      "name": "updates",
+      "value": "[];",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 224
+    },
+    {
+      "kind": "const",
+      "name": "chunks",
+      "value": "Array.from({ length: Math.min(WORKERS, moduleKeys.length) }, () => []);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 227
+    },
+    {
+      "kind": "const",
+      "name": "caseCount",
+      "value": "chunk.reduce((sum, k) => sum + moduleGroups.get(k).length, 0);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 234
+    },
+    {
+      "kind": "const",
+      "name": "workerModules",
+      "value": "chunks[wIdx];",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 245
+    },
+    {
+      "kind": "const",
+      "name": "cases",
+      "value": "moduleGroups.get(modKey);",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 249
+    },
+    {
+      "kind": "const",
+      "name": "isPass",
+      "value": "!/fail|bug|lỗi/i.test(tc.description || '') && !/fail|bug|lỗi/i.test(tc.expected",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 253
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "formatExecutionResult({",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 254
+    },
+    {
+      "kind": "const",
+      "name": "updates",
+      "value": "[];",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 273
+    },
+    {
+      "kind": "const",
+      "name": "isPass",
+      "value": "true; // Default evaluation",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 279
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "formatExecutionResult({",
+      "file": "qa-run/scripts/execute-sheet.mjs",
+      "line": 280
+    },
+    {
+      "kind": "const",
+      "name": "pathArg",
+      "value": "process.argv[2] || '/';",
+      "file": "qa-run/scripts/explore.mjs",
+      "line": 5
+    },
+    {
+      "kind": "const",
+      "name": "shotName",
+      "value": "process.argv[3] || ('explore' + pathArg.replace(/\\W+/g, '_'));",
+      "file": "qa-run/scripts/explore.mjs",
+      "line": 6
+    },
+    {
+      "kind": "const",
+      "name": "SKILL_DIR",
+      "value": "process.env.QA_RUN_SKILL_DIR",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 29
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 31
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 36
+    },
+    {
+      "kind": "const",
+      "name": "EMAIL",
+      "value": "process.env.QA_EMAIL || '';",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 37
+    },
+    {
+      "kind": "const",
+      "name": "PASS",
+      "value": "process.env.QA_PASSWORD || '';",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 38
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 44
+    },
+    {
+      "kind": "const",
+      "name": "FORCE_AUTH",
+      "value": "args.includes('--reauth');",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "DRY_RUN",
+      "value": "args.includes('--dry-run');",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 48
+    },
+    {
+      "kind": "function",
+      "name": "find",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "i",
+      "value": "arr.indexOf(flag);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 52
+    },
+    {
+      "kind": "function",
+      "name": "extractPageContext",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => {",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 69
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 70
+    },
+    {
+      "kind": "const",
+      "name": "uniq",
+      "value": "arr => [...new Set(arr.filter(Boolean))];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "navLinks",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 80
+    },
+    {
+      "kind": "const",
+      "name": "href",
+      "value": "a.getAttribute('href') || '';",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 84
+    },
+    {
+      "kind": "const",
+      "name": "headings",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 89
+    },
+    {
+      "kind": "const",
+      "name": "forms",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "fields",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "submitBtn",
+      "value": "form.querySelector('[type=submit], button:last-of-type');",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 108
+    },
+    {
+      "kind": "const",
+      "name": "actions",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 113
+    },
+    {
+      "kind": "const",
+      "name": "statuses",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "tableHeaders",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 129
+    },
+    {
+      "kind": "const",
+      "name": "alerts",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 135
+    },
+    {
+      "kind": "const",
+      "name": "filters",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 141
+    },
+    {
+      "kind": "function",
+      "name": "makeNetworkCollector",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 179
+    },
+    {
+      "kind": "function",
+      "name": "recordRequest",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 182
+    },
+    {
+      "kind": "const",
+      "name": "path",
+      "value": "u.pathname.replace(BASE, '');",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 185
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${request.method()} ${path}`;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 189
+    },
+    {
+      "kind": "const",
+      "name": "body",
+      "value": "request.postDataJSON();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 204
+    },
+    {
+      "kind": "const",
+      "name": "newKeys",
+      "value": "Object.keys(body).filter(k => !entry.bodyKeys.includes(k));",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 207
+    },
+    {
+      "kind": "function",
+      "name": "recordResponse",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 214
+    },
+    {
+      "kind": "const",
+      "name": "path",
+      "value": "u.pathname;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 217
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "`${response.request().method()} ${path}`;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 218
+    },
+    {
+      "kind": "function",
+      "name": "ensureAuth",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 233
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({ viewport: { width: 1440, height: 900 } });",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 243
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 244
+    },
+    {
+      "kind": "const",
+      "name": "emailSels",
+      "value": "['input[type=email]','input[name*=email i]','input[placeholder*=email i]','inpu",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 248
+    },
+    {
+      "kind": "const",
+      "name": "passSels",
+      "value": "['input[type=password]','input[name*=pass i]','input[placeholder*=pass i]'];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 249
+    },
+    {
+      "kind": "const",
+      "name": "btn",
+      "value": "page.locator('button[type=submit],button:has-text(\"Sign in\"),button:has-text(\"Lo",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 253
+    },
+    {
+      "kind": "function",
+      "name": "discoverNavLinks",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 269
+    },
+    {
+      "kind": "const",
+      "name": "result",
+      "value": "await page.evaluate(() => {",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 273
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => {",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 274
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect(); const s = getComputedStyle(el);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 275
+    },
+    {
+      "kind": "const",
+      "name": "links",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 279
+    },
+    {
+      "kind": "function",
+      "name": "href",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 283
+    },
+    {
+      "kind": "function",
+      "name": "extractPage",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 299
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await page.evaluate(extractPageContext);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 306
+    },
+    {
+      "kind": "function",
+      "name": "synthesize",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 316
+    },
+    {
+      "kind": "const",
+      "name": "allForms",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 321
+    },
+    {
+      "kind": "const",
+      "name": "m",
+      "value": "moduleMap.get(seg);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 341
+    },
+    {
+      "kind": "const",
+      "name": "apiByModule",
+      "value": "{};",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 357
+    },
+    {
+      "kind": "const",
+      "name": "seg",
+      "value": "call.path.split('/').filter(Boolean)[1] || call.path.split('/').filter(Boolean)[",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 359
+    },
+    {
+      "kind": "function",
+      "name": "renderMarkdown",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 387
+    },
+    {
+      "kind": "const",
+      "name": "ms",
+      "value": "synthesis.modules;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 388
+    },
+    {
+      "kind": "const",
+      "name": "api",
+      "value": "synthesis.apiContracts;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 389
+    },
+    {
+      "kind": "const",
+      "name": "roles",
+      "value": "[];  // Cannot be inferred without auth context",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 398
+    },
+    {
+      "kind": "const",
+      "name": "happyFlow",
+      "value": "[{",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 405
+    },
+    {
+      "kind": "const",
+      "name": "businessRules",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 412
+    },
+    {
+      "kind": "const",
+      "name": "statusWords",
+      "value": "synthesis.global.allStatuses;",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 414
+    },
+    {
+      "kind": "const",
+      "name": "states",
+      "value": "statusWords.slice(0, 20).map(s => ({",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 423
+    },
+    {
+      "kind": "const",
+      "name": "inputs",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 429
+    },
+    {
+      "kind": "const",
+      "name": "uiUx",
+      "value": "synthesis.global.allActions.slice(0, 20).map(a => ({",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 457
+    },
+    {
+      "kind": "const",
+      "name": "unresolved",
+      "value": "[",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 463
+    },
+    {
+      "kind": "const",
+      "name": "guideData",
+      "value": "{",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 469
+    },
+    {
+      "kind": "function",
+      "name": "writeOutputs",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 518
+    },
+    {
+      "kind": "const",
+      "name": "jsonOut",
+      "value": "{ extractedAt: today, base_url: BASE, ...synthesis };",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 522
+    },
+    {
+      "kind": "const",
+      "name": "guideData",
+      "value": "renderMarkdown(synthesis, today);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 527
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 560
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 564
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 570
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 576
+    },
+    {
+      "kind": "const",
+      "name": "net",
+      "value": "makeNetworkCollector();",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 579
+    },
+    {
+      "kind": "const",
+      "name": "toVisit",
+      "value": "[{ label: 'Home', url: BASE }];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 595
+    },
+    {
+      "kind": "const",
+      "name": "limited",
+      "value": "toVisit.slice(0, MAX_PAGES);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 600
+    },
+    {
+      "kind": "const",
+      "name": "pages",
+      "value": "[];",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 604
+    },
+    {
+      "kind": "const",
+      "name": "result",
+      "value": "await extractPage(page, url, net);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 609
+    },
+    {
+      "kind": "const",
+      "name": "synthesis",
+      "value": "synthesize(pages, netCalls);",
+      "file": "qa-run/scripts/extract-flow.mjs",
+      "line": 624
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 22
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 25
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 37
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 38
+    },
+    {
+      "kind": "function",
+      "name": "slugify",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 43
+    },
+    {
+      "kind": "function",
+      "name": "extractElementInventory",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 51
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => {",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect(); const s = getComputedStyle(el);",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 55
+    },
+    {
+      "kind": "const",
+      "name": "inventory",
+      "value": "{",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 60
+    },
+    {
+      "kind": "function",
+      "name": "label",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 82
+    },
+    {
+      "kind": "const",
+      "name": "href",
+      "value": "a.getAttribute('href') || '';",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 106
+    },
+    {
+      "kind": "const",
+      "name": "headers",
+      "value": "[];",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 115
+    },
+    {
+      "kind": "const",
+      "name": "rowsCount",
+      "value": "tbl.querySelectorAll('tr:not(:first-child),[role=row]').length;",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 117
+    },
+    {
+      "kind": "function",
+      "name": "renderChecklistMarkdown",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 142
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "[",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 143
+    },
+    {
+      "kind": "const",
+      "name": "code",
+      "value": "`INP-${String(idx + 1).padStart(2, '0')}`;",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 180
+    },
+    {
+      "kind": "const",
+      "name": "reqStr",
+      "value": "inp.required ? ' (Bắt buộc)' : ' (Tùy chọn)';",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 181
+    },
+    {
+      "kind": "const",
+      "name": "code",
+      "value": "`BTN-${String(idx + 1).padStart(2, '0')}`;",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 201
+    },
+    {
+      "kind": "const",
+      "name": "code",
+      "value": "`TBL-${String(idx + 1).padStart(2, '0')}`;",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 228
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 261
+    },
+    {
+      "kind": "const",
+      "name": "targetUrl",
+      "value": "BASE + URL_PATH;",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 262
+    },
+    {
+      "kind": "const",
+      "name": "slug",
+      "value": "FEATURE_NAME ? slugify(FEATURE_NAME) : slugify(URL_PATH);",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 263
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 269
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 270
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 276
+    },
+    {
+      "kind": "const",
+      "name": "inv",
+      "value": "await extractElementInventory(page, SCOPE_SEL);",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 288
+    },
+    {
+      "kind": "const",
+      "name": "markdown",
+      "value": "renderChecklistMarkdown(inv, slug);",
+      "file": "qa-run/scripts/generate-checklist.mjs",
+      "line": 293
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 23
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 38
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 39
+    },
+    {
+      "kind": "function",
+      "name": "auditUxMetrics",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 44
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); re",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "ctas",
+      "value": "[];",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 49
+    },
+    {
+      "kind": "const",
+      "name": "primaryBtns",
+      "value": "[];",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "technicalWords",
+      "value": "[];",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 59
+    },
+    {
+      "kind": "const",
+      "name": "formFields",
+      "value": "document.querySelectorAll('input:not([type=hidden]),select,textarea').length;",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 68
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 79
+    },
+    {
+      "kind": "const",
+      "name": "targetUrl",
+      "value": "BASE + URL_PATH;",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 80
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 84
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 85
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 89
+    },
+    {
+      "kind": "const",
+      "name": "data",
+      "value": "await auditUxMetrics(page);",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "auditResult",
+      "value": "{",
+      "file": "qa-run/scripts/journey-audit.mjs",
+      "line": 99
+    },
+    {
+      "kind": "function",
+      "name": "ENV",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 50
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "Object.fromEntries(process.argv.slice(2).reduce((acc, cur) => {",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 63
+    },
+    {
+      "kind": "function",
+      "name": "req",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "v",
+      "value": "args[k];",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 69
+    },
+    {
+      "kind": "function",
+      "name": "STEPS",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 78
+    },
+    {
+      "kind": "function",
+      "name": "ACTUAL",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 80
+    },
+    {
+      "kind": "function",
+      "name": "SHOTS",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 81
+    },
+    {
+      "kind": "function",
+      "name": "ASSIGN_LIST",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 82
+    },
+    {
+      "kind": "function",
+      "name": "plane",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "await fetch(BASE + url, {",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "text",
+      "value": "await r.text();",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 100
+    },
+    {
+      "kind": "function",
+      "name": "uploadImagesAndGetUrls",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 105
+    },
+    {
+      "kind": "const",
+      "name": "imgUrls",
+      "value": "[];",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 106
+    },
+    {
+      "kind": "const",
+      "name": "buf",
+      "value": "fs.readFileSync(shot);",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 109
+    },
+    {
+      "kind": "const",
+      "name": "size",
+      "value": "buf.length;",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 110
+    },
+    {
+      "kind": "const",
+      "name": "name",
+      "value": "path.basename(shot);",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 111
+    },
+    {
+      "kind": "const",
+      "name": "type",
+      "value": "shot.endsWith('.png') ? 'image/png' : shot.endsWith('.jpg') || shot.endsWith('.j",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 112
+    },
+    {
+      "kind": "const",
+      "name": "init",
+      "value": "await plane('POST', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issue",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 117
+    },
+    {
+      "kind": "const",
+      "name": "fd",
+      "value": "new FormData();",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 120
+    },
+    {
+      "kind": "const",
+      "name": "upR",
+      "value": "await fetch(upload_data.url, { method: 'POST', body: fd });",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 123
+    },
+    {
+      "kind": "const",
+      "name": "final",
+      "value": "await plane('PATCH', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issu",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 126
+    },
+    {
+      "kind": "const",
+      "name": "url",
+      "value": "final.asset_url || final.url || upload_data.url;",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 127
+    },
+    {
+      "kind": "function",
+      "name": "imgTag",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 134
+    },
+    {
+      "kind": "function",
+      "name": "resolveAssigns",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 135
+    },
+    {
+      "kind": "const",
+      "name": "out",
+      "value": "[];",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 136
+    },
+    {
+      "kind": "function",
+      "name": "resolveStateId",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 144
+    },
+    {
+      "kind": "const",
+      "name": "desc",
+      "value": "[",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 152
+    },
+    {
+      "kind": "const",
+      "name": "created",
+      "value": "await plane('POST', `/workspaces/${WORKSPACE}/projects/${PROJECT}/work-items/`,",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 165
+    },
+    {
+      "kind": "const",
+      "name": "imgUrls",
+      "value": "await uploadImagesAndGetUrls(issueId, SHOTS);",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 176
+    },
+    {
+      "kind": "const",
+      "name": "imgHtml",
+      "value": "imgUrls.map(imgTag).join('\\n');",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 178
+    },
+    {
+      "kind": "const",
+      "name": "finalDesc",
+      "value": "desc.replace('_(đang upload ảnh…)_', imgHtml);",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 179
+    },
+    {
+      "kind": "const",
+      "name": "imgUrls",
+      "value": "SHOTS.length ? await uploadImagesAndGetUrls(issueId, SHOTS) : [];",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 191
+    },
+    {
+      "kind": "const",
+      "name": "commentHtml",
+      "value": "[",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 194
+    },
+    {
+      "kind": "const",
+      "name": "commentHtml",
+      "value": "[",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 216
+    },
+    {
+      "kind": "const",
+      "name": "assigns",
+      "value": "resolveAssigns();",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 232
+    },
+    {
+      "kind": "const",
+      "name": "stateId",
+      "value": "resolveStateId(STATE_NAME);",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 233
+    },
+    {
+      "kind": "const",
+      "name": "patch",
+      "value": "{};",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 234
+    },
+    {
+      "kind": "const",
+      "name": "wi",
+      "value": "await plane('GET', `/workspaces/${WORKSPACE}/projects/${PROJECT}/work-items/${is",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 249
+    },
+    {
+      "kind": "const",
+      "name": "webBase",
+      "value": "BASE.replace('/api/v1', '');",
+      "file": "qa-run/scripts/log-bug.mjs",
+      "line": 255
+    },
+    {
+      "kind": "const",
+      "name": "EMAIL",
+      "value": "process.env.QA_EMAIL;",
+      "file": "qa-run/scripts/login.mjs",
+      "line": 5
+    },
+    {
+      "kind": "const",
+      "name": "PASS",
+      "value": "process.env.QA_PASSWORD;",
+      "file": "qa-run/scripts/login.mjs",
+      "line": 6
+    },
+    {
+      "kind": "const",
+      "name": "emailSel",
+      "value": "['input[type=email]', 'input[name*=email i]', 'input[placeholder*=email i]', 'i",
+      "file": "qa-run/scripts/login.mjs",
+      "line": 16
+    },
+    {
+      "kind": "const",
+      "name": "passSel",
+      "value": "['input[type=password]', 'input[name*=pass i]', 'input[placeholder*=pass i]'];",
+      "file": "qa-run/scripts/login.mjs",
+      "line": 17
+    },
+    {
+      "kind": "const",
+      "name": "btn",
+      "value": "page.locator('button[type=submit], button:has-text(\"Sign in\"), button:has-text(\"",
+      "file": "qa-run/scripts/login.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 23
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 24
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 32
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 41
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "grants",
+      "value": "[]; // { roles, endpoint, guard, source }",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 56
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 60
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 61
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 62
+    },
+    {
+      "kind": "const",
+      "name": "roles",
+      "value": "m[1].split(',').map(r => r.replace(/['\"` \\w+.]/g, r => /['\"` ]/.test(r) ? '' : r",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 80
+    },
+    {
+      "kind": "const",
+      "name": "methodMatch",
+      "value": "lines[j].match(/@(Get|Post|Put|Patch|Delete)\\(['\"`]?([^'\"`)\\s]*)/i);",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 85
+    },
+    {
+      "kind": "const",
+      "name": "valMatch",
+      "value": "lines[j].trim().match(/^(\\w+)/);",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 120
+    },
+    {
+      "kind": "const",
+      "name": "matrix",
+      "value": "{};",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 130
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/permission-matrix-extractor.mjs",
+      "line": 137
+    },
+    {
+      "kind": "const",
+      "name": "__dirname",
+      "value": "path.dirname(fileURLToPath(import.meta.url));",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 29
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 31
+    },
+    {
+      "kind": "const",
+      "name": "DATA_DIR",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 35
+    },
+    {
+      "kind": "function",
+      "name": "runScript",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 38
+    },
+    {
+      "kind": "function",
+      "name": "getGitCommit",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 55
+    },
+    {
+      "kind": "function",
+      "name": "getChangedFiles",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 59
+    },
+    {
+      "kind": "function",
+      "name": "analyzeRepo",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 66
+    },
+    {
+      "kind": "const",
+      "name": "repoName",
+      "value": "path.basename(repoPath);",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "currentCommit",
+      "value": "getGitCommit(repoPath);",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 71
+    },
+    {
+      "kind": "const",
+      "name": "prev",
+      "value": "JSON.parse(fs.readFileSync(metaPath, 'utf8'));",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 76
+    },
+    {
+      "kind": "const",
+      "name": "lastCommit",
+      "value": "prev.commit;",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "changedFiles",
+      "value": "getChangedFiles(repoPath, lastCommit);",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 82
+    },
+    {
+      "kind": "function",
+      "name": "duration",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 145
+    },
+    {
+      "kind": "const",
+      "name": "sessionManifest",
+      "value": "{",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 148
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(path.join(outputDir, f));",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 169
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 175
+    },
+    {
+      "kind": "const",
+      "name": "repos",
+      "value": "REPOS_CSV.split(',').map(r => r.trim());",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 178
+    },
+    {
+      "kind": "const",
+      "name": "repoPath",
+      "value": "path.resolve(WORKSPACE, repo);",
+      "file": "qa-run/scripts/repo-business-discovery.mjs",
+      "line": 181
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 21
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 24
+    },
+    {
+      "kind": "function",
+      "name": "readJson",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "fileExists",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 31
+    },
+    {
+      "kind": "function",
+      "name": "getGitCommit",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 35
+    },
+    {
+      "kind": "function",
+      "name": "getGitBranch",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 39
+    },
+    {
+      "kind": "function",
+      "name": "detectLanguage",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 43
+    },
+    {
+      "kind": "function",
+      "name": "detectFrameworks",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 49
+    },
+    {
+      "kind": "const",
+      "name": "frameworks",
+      "value": "[];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 51
+    },
+    {
+      "kind": "function",
+      "name": "detectRepoType",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 84
+    },
+    {
+      "kind": "const",
+      "name": "frontendFW",
+      "value": "['Next.js', 'Nuxt', 'Angular', 'Vue', 'React', 'Svelte', 'Remix'];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "backendFW",
+      "value": "['NestJS', 'Express', 'Fastify', 'Hono', 'Koa'];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 98
+    },
+    {
+      "kind": "const",
+      "name": "hasFrontend",
+      "value": "frameworks.some(f => frontendFW.includes(f));",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 99
+    },
+    {
+      "kind": "const",
+      "name": "hasBackend",
+      "value": "frameworks.some(f => backendFW.includes(f));",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 100
+    },
+    {
+      "kind": "function",
+      "name": "findEntryPoints",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 108
+    },
+    {
+      "kind": "const",
+      "name": "entryPoints",
+      "value": "[];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 109
+    },
+    {
+      "kind": "const",
+      "name": "commonEntries",
+      "value": "['src/main.ts', 'src/index.ts', 'src/app.ts', 'src/server.ts',",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 113
+    },
+    {
+      "kind": "function",
+      "name": "findModules",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 131
+    },
+    {
+      "kind": "const",
+      "name": "modules",
+      "value": "[];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 132
+    },
+    {
+      "kind": "const",
+      "name": "srcDirs",
+      "value": "['src', 'lib', 'app'];",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 133
+    },
+    {
+      "kind": "function",
+      "name": "countSourceFiles",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 147
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 158
+    },
+    {
+      "kind": "const",
+      "name": "repoName",
+      "value": "pkg?.name || path.basename(REPO_PATH);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 166
+    },
+    {
+      "kind": "const",
+      "name": "commit",
+      "value": "getGitCommit(REPO_PATH);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 168
+    },
+    {
+      "kind": "const",
+      "name": "branch",
+      "value": "getGitBranch(REPO_PATH);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 169
+    },
+    {
+      "kind": "const",
+      "name": "language",
+      "value": "detectLanguage(REPO_PATH, pkg);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 170
+    },
+    {
+      "kind": "const",
+      "name": "frameworks",
+      "value": "detectFrameworks(pkg);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 171
+    },
+    {
+      "kind": "const",
+      "name": "repoType",
+      "value": "detectRepoType(REPO_PATH, pkg, frameworks);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 172
+    },
+    {
+      "kind": "const",
+      "name": "entryPoints",
+      "value": "findEntryPoints(REPO_PATH, pkg, repoType);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 173
+    },
+    {
+      "kind": "const",
+      "name": "modules",
+      "value": "findModules(REPO_PATH);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 174
+    },
+    {
+      "kind": "const",
+      "name": "sourceFiles",
+      "value": "countSourceFiles(REPO_PATH);",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 175
+    },
+    {
+      "kind": "const",
+      "name": "metadata",
+      "value": "{",
+      "file": "qa-run/scripts/repo-fingerprint.mjs",
+      "line": 177
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 26
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 32
+    },
+    {
+      "kind": "const",
+      "name": "command",
+      "value": "args[0] || 'start';",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 33
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 34
+    },
+    {
+      "kind": "function",
+      "name": "getGitCommit",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 36
+    },
+    {
+      "kind": "function",
+      "name": "getGitBranch",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 44
+    },
+    {
+      "kind": "const",
+      "name": "runId",
+      "value": "`run-${Date.now()}`;",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 53
+    },
+    {
+      "kind": "const",
+      "name": "manifest",
+      "value": "{",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "runId",
+      "value": "args[1] || getArg('--run-id', '');",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 93
+    },
+    {
+      "kind": "const",
+      "name": "manifest",
+      "value": "JSON.parse(fs.readFileSync(manifestPath, 'utf8'));",
+      "file": "qa-run/scripts/run-manifest.mjs",
+      "line": 104
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 21
+    },
+    {
+      "kind": "function",
+      "name": "createRuntimeObserver",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "events",
+      "value": "[];",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "logEvent",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 30
+    },
+    {
+      "kind": "const",
+      "name": "entry",
+      "value": "{",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 31
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 75
+    },
+    {
+      "kind": "const",
+      "name": "data",
+      "value": "fs.readFileSync(EVENTS_FILE, 'utf8');",
+      "file": "qa-run/scripts/runtime-observer.mjs",
+      "line": 78
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 26
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 29
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024; // 150KB max per file to avoid reading generated code",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 31
+    },
+    {
+      "kind": "const",
+      "name": "SKIP_FILE_PATTERNS",
+      "value": "[",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 40
+    },
+    {
+      "kind": "function",
+      "name": "extractWithRegex",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "symbols",
+      "value": "[];",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 48
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 49
+    },
+    {
+      "kind": "const",
+      "name": "lineNum",
+      "value": "i + 1;",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 52
+    },
+    {
+      "kind": "const",
+      "name": "enumSymbol",
+      "value": "{ kind: 'enum', name: m[1], file: relativePath, line: lineNum, values: [] };",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 66
+    },
+    {
+      "kind": "const",
+      "name": "vLine",
+      "value": "lines[j].trim();",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 69
+    },
+    {
+      "kind": "const",
+      "name": "val",
+      "value": "vLine.match(/^(\\w+)/);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 71
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 117
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 136
+    },
+    {
+      "kind": "const",
+      "name": "allSymbols",
+      "value": "[];",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 144
+    },
+    {
+      "kind": "const",
+      "name": "fileIndex",
+      "value": "[];",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 145
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(filePath);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 149
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 152
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 153
+    },
+    {
+      "kind": "const",
+      "name": "hash",
+      "value": "crypto.createHash('md5').update(content).digest('hex').slice(0, 8);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 154
+    },
+    {
+      "kind": "const",
+      "name": "symbols",
+      "value": "extractWithRegex(content, filePath, relativePath);",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 155
+    },
+    {
+      "kind": "const",
+      "name": "byKind",
+      "value": "{};",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 169
+    },
+    {
+      "kind": "const",
+      "name": "index",
+      "value": "{",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 174
+    },
+    {
+      "kind": "const",
+      "name": "summary",
+      "value": "{ ...index, symbols: `(${allSymbols.length} symbols — use --output to save)` };",
+      "file": "qa-run/scripts/source-indexer.mjs",
+      "line": 191
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 19
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 20
+    },
+    {
+      "kind": "const",
+      "name": "REPO_PATH",
+      "value": "path.resolve(getArg('--repo', '.'));",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "MAX_FILE_SIZE",
+      "value": "150 * 1024;",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 24
+    },
+    {
+      "kind": "function",
+      "name": "walkDir",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 28
+    },
+    {
+      "kind": "const",
+      "name": "stat",
+      "value": "fs.statSync(fullPath);",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 37
+    },
+    {
+      "kind": "const",
+      "name": "STATUS_KEYWORDS",
+      "value": "/DRAFT|PENDING|PENDING_REVIEW|APPROVED|REJECTED|COMPLETED|CANCELLED|PROCESSING|A",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 43
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "stateMachines",
+      "value": "{};",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 53
+    },
+    {
+      "kind": "const",
+      "name": "relativePath",
+      "value": "path.relative(REPO_PATH, filePath);",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 57
+    },
+    {
+      "kind": "const",
+      "name": "content",
+      "value": "fs.readFileSync(filePath, 'utf8');",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 58
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "content.split('\\n');",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 59
+    },
+    {
+      "kind": "const",
+      "name": "enumName",
+      "value": "m[1];",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "values",
+      "value": "[];",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "valMatch",
+      "value": "lines[j].trim().match(/^(\\w+)/);",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 71
+    },
+    {
+      "kind": "const",
+      "name": "entity",
+      "value": "enumName.replace(/Status|State|Type|Enum/gi, '') || enumName;",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 75
+    },
+    {
+      "kind": "const",
+      "name": "toState",
+      "value": "m[1];",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 90
+    },
+    {
+      "kind": "const",
+      "name": "context",
+      "value": "lines.slice(Math.max(0, i - 5), i).join(' ');",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 93
+    },
+    {
+      "kind": "const",
+      "name": "fromMatch",
+      "value": "context.match(/status\\s*(?:!==?|===?)\\s*(?:\\w+\\.)?(\\w+)/);",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "fromState",
+      "value": "fromMatch ? fromMatch[1] : 'ANY';",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "entity",
+      "value": "line.match(/(\\w+)\\.status/)?.[1] || 'unknown';",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "entityKey",
+      "value": "entity.replace(/s$/i, '');",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 98
+    },
+    {
+      "kind": "const",
+      "name": "machines",
+      "value": "Object.values(stateMachines).filter(m => m.states.length > 0 || m.transitions.le",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 114
+    },
+    {
+      "kind": "const",
+      "name": "output",
+      "value": "{",
+      "file": "qa-run/scripts/state-machine-extractor.mjs",
+      "line": 116
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "await snap(page);",
+      "file": "qa-run/scripts/sweep.mjs",
+      "line": 26
+    },
+    {
+      "kind": "function",
+      "name": "errs",
+      "file": "qa-run/scripts/sweep.mjs",
+      "line": 27
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 20
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 21
+    },
+    {
+      "kind": "const",
+      "name": "DATA_DIR",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 26
+    },
+    {
+      "kind": "function",
+      "name": "resolveKnowledgeDir",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 28
+    },
+    {
+      "kind": "function",
+      "name": "readJSON",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 35
+    },
+    {
+      "kind": "function",
+      "name": "matchRulesToFlow",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 40
+    },
+    {
+      "kind": "function",
+      "name": "matchAPIToFlow",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 49
+    },
+    {
+      "kind": "function",
+      "name": "matchEntitiesToFlow",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 57
+    },
+    {
+      "kind": "const",
+      "name": "eName",
+      "value": "e.name.toLowerCase();",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 61
+    },
+    {
+      "kind": "const",
+      "name": "fModule",
+      "value": "flow.module?.toLowerCase() || '';",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 62
+    },
+    {
+      "kind": "function",
+      "name": "generateTestcaseHints",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 67
+    },
+    {
+      "kind": "const",
+      "name": "hints",
+      "value": "[];",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 68
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 93
+    },
+    {
+      "kind": "const",
+      "name": "knowledgeDir",
+      "value": "resolveKnowledgeDir();",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "repoName",
+      "value": "meta?.repoName || REPO_NAME || path.basename(knowledgeDir);",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 107
+    },
+    {
+      "kind": "const",
+      "name": "allFlows",
+      "value": "flows?.flows || [];",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 108
+    },
+    {
+      "kind": "const",
+      "name": "allRules",
+      "value": "rules?.rules || [];",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 109
+    },
+    {
+      "kind": "const",
+      "name": "allEndpoints",
+      "value": "api?.endpoints || [];",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 110
+    },
+    {
+      "kind": "const",
+      "name": "allEntities",
+      "value": "domain?.entities || [];",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 111
+    },
+    {
+      "kind": "const",
+      "name": "matrix",
+      "value": "allFlows.map(flow => ({",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 113
+    },
+    {
+      "kind": "const",
+      "name": "orphanRules",
+      "value": "allRules.filter(r => !coveredModules.has(r.module)).slice(0, 20);",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 128
+    },
+    {
+      "kind": "const",
+      "name": "md",
+      "value": "`# Traceability Matrix: ${repoName}",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 130
+    },
+    {
+      "kind": "const",
+      "name": "outputPath",
+      "value": "OUTPUT_FILE || path.join(knowledgeDir, 'traceability-matrix.md');",
+      "file": "qa-run/scripts/traceability-matrix-generator.mjs",
+      "line": 182
+    },
+    {
+      "kind": "const",
+      "name": "BASE",
+      "value": "process.env.QA_BASE_URL || env.QA_BASE_URL || '';",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 36
+    },
+    {
+      "kind": "const",
+      "name": "urlPath",
+      "value": "process.argv[2] || '/';",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 42
+    },
+    {
+      "kind": "function",
+      "name": "sels",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 43
+    },
+    {
+      "kind": "const",
+      "name": "b",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await b.newContext({",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 52
+    },
+    {
+      "kind": "const",
+      "name": "spamIdx",
+      "value": "process.argv.indexOf('--spam');",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 58
+    },
+    {
+      "kind": "const",
+      "name": "spamSel",
+      "value": "process.argv[spamIdx + 1];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 60
+    },
+    {
+      "kind": "const",
+      "name": "spamEp",
+      "value": "new RegExp(process.argv[spamIdx + 2] || '/api/');",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 61
+    },
+    {
+      "kind": "const",
+      "name": "urls",
+      "value": "[];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 68
+    },
+    {
+      "kind": "const",
+      "name": "el",
+      "value": "page.locator(spamSel).first();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 74
+    },
+    {
+      "kind": "const",
+      "name": "cls",
+      "value": "await page.evaluate(() => window.__ux?.cls ?? 0);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 110
+    },
+    {
+      "kind": "const",
+      "name": "longTasks",
+      "value": "await page.evaluate(() => window.__ux?.longTasks ?? []);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 114
+    },
+    {
+      "kind": "const",
+      "name": "ltMax",
+      "value": "longTasks.length ? Math.max(...longTasks) : 0;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 115
+    },
+    {
+      "kind": "const",
+      "name": "health",
+      "value": "await el.evaluate(node => {",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 127
+    },
+    {
+      "kind": "const",
+      "name": "rect",
+      "value": "node.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 128
+    },
+    {
+      "kind": "const",
+      "name": "cx",
+      "value": "rect.x + rect.width / 2, cy = rect.y + rect.height / 2;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 129
+    },
+    {
+      "kind": "const",
+      "name": "stack",
+      "value": "document.elementsFromPoint(cx, cy);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 130
+    },
+    {
+      "kind": "const",
+      "name": "top",
+      "value": "stack[0];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 131
+    },
+    {
+      "kind": "const",
+      "name": "flags",
+      "value": "[];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 143
+    },
+    {
+      "kind": "const",
+      "name": "lat",
+      "value": "await page.evaluate(async (s) => {",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 154
+    },
+    {
+      "kind": "const",
+      "name": "t0",
+      "value": "performance.now();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 155
+    },
+    {
+      "kind": "const",
+      "name": "node",
+      "value": "document.querySelector(s);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 156
+    },
+    {
+      "kind": "const",
+      "name": "a11y",
+      "value": "await page.evaluate(() => {",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 180
+    },
+    {
+      "kind": "const",
+      "name": "issues",
+      "value": "[];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 181
+    },
+    {
+      "kind": "const",
+      "name": "rect",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 183
+    },
+    {
+      "kind": "const",
+      "name": "name",
+      "value": "el.getAttribute('aria-label') || el.title || (el.innerText || '').trim() || el.g",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 185
+    },
+    {
+      "kind": "const",
+      "name": "styleSheets",
+      "value": "[...document.styleSheets];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 189
+    },
+    {
+      "kind": "const",
+      "name": "layout",
+      "value": "await page.evaluate(() => {",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 197
+    },
+    {
+      "kind": "const",
+      "name": "VW",
+      "value": "window.innerWidth, VH = window.innerHeight;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 198
+    },
+    {
+      "kind": "const",
+      "name": "docW",
+      "value": "document.documentElement.scrollWidth;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 200
+    },
+    {
+      "kind": "const",
+      "name": "hOverflow",
+      "value": "docW - VW;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 201
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 205
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 207
+    },
+    {
+      "kind": "const",
+      "name": "trunc",
+      "value": "[];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 212
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 214
+    },
+    {
+      "kind": "function",
+      "name": "t",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 217
+    },
+    {
+      "kind": "const",
+      "name": "smallTouch",
+      "value": "[];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 222
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 224
+    },
+    {
+      "kind": "function",
+      "name": "footerH",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 229
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 232
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 234
+    },
+    {
+      "kind": "const",
+      "name": "overlap",
+      "value": "await page.evaluate((s) => {",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 257
+    },
+    {
+      "kind": "const",
+      "name": "el",
+      "value": "document.querySelector(s);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 258
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 260
+    },
+    {
+      "kind": "const",
+      "name": "cx",
+      "value": "r.x + r.width / 2, cy = r.y + r.height / 2;",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 261
+    },
+    {
+      "kind": "const",
+      "name": "stack",
+      "value": "document.elementsFromPoint(cx, cy);",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 262
+    },
+    {
+      "kind": "const",
+      "name": "top",
+      "value": "stack[0];",
+      "file": "qa-run/scripts/ux-health.mjs",
+      "line": 263
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 30
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 34
+    },
+    {
+      "kind": "const",
+      "name": "IS_CHECK",
+      "value": "args.includes('--check');",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 35
+    },
+    {
+      "kind": "const",
+      "name": "IS_TOUCH",
+      "value": "args.includes('--touch');",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 36
+    },
+    {
+      "kind": "function",
+      "name": "getGitCommit",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 38
+    },
+    {
+      "kind": "function",
+      "name": "computeHash",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "str",
+      "value": "JSON.stringify(dataObj || {});",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "mapData",
+      "value": "JSON.parse(fs.readFileSync(MAP_JSON, 'utf8'));",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 57
+    },
+    {
+      "kind": "const",
+      "name": "hashes",
+      "value": "{",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 60
+    },
+    {
+      "kind": "const",
+      "name": "currentCommit",
+      "value": "getGitCommit();",
+      "file": "qa-run/scripts/validate-knowledge.mjs",
+      "line": 93
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 39
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 42
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 54
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 55
+    },
+    {
+      "kind": "function",
+      "name": "getContrastRatio",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 62
+    },
+    {
+      "kind": "function",
+      "name": "lum",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 63
+    },
+    {
+      "kind": "const",
+      "name": "c",
+      "value": "[r, g, b].map(v => {",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 64
+    },
+    {
+      "kind": "function",
+      "name": "runPageChecks",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "vis",
+      "value": "el => {",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 80
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 81
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 82
+    },
+    {
+      "kind": "const",
+      "name": "findings",
+      "value": "[];",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 86
+    },
+    {
+      "kind": "const",
+      "name": "info",
+      "value": "[];",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 87
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 92
+    },
+    {
+      "kind": "function",
+      "name": "txt",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 93
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 121
+    },
+    {
+      "kind": "const",
+      "name": "hasLabel",
+      "value": "inp.id && document.querySelector(`label[for=\"${inp.id}\"]`);",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 159
+    },
+    {
+      "kind": "const",
+      "name": "hasAriaLabel",
+      "value": "inp.getAttribute('aria-label') || inp.getAttribute('aria-labelledby');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 160
+    },
+    {
+      "kind": "const",
+      "name": "hasPlaceholder",
+      "value": "inp.placeholder;",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 161
+    },
+    {
+      "kind": "const",
+      "name": "rows",
+      "value": "el.querySelectorAll('tr:not(:first-child),li,[class*=row i],[class*=item i]');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 175
+    },
+    {
+      "kind": "const",
+      "name": "positionedEls",
+      "value": "[];",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 187
+    },
+    {
+      "kind": "const",
+      "name": "s",
+      "value": "getComputedStyle(el);",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 190
+    },
+    {
+      "kind": "const",
+      "name": "r",
+      "value": "el.getBoundingClientRect();",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 192
+    },
+    {
+      "kind": "const",
+      "name": "a",
+      "value": "positionedEls[i], b = positionedEls[j];",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 198
+    },
+    {
+      "kind": "const",
+      "name": "aTag",
+      "value": "a.el.tagName + '.' + (a.el.className.split(' ')[0] || '');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 202
+    },
+    {
+      "kind": "const",
+      "name": "bTag",
+      "value": "b.el.tagName + '.' + (b.el.className.split(' ')[0] || '');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 203
+    },
+    {
+      "kind": "function",
+      "name": "auditViewport",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 231
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 232
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 238
+    },
+    {
+      "kind": "const",
+      "name": "slug",
+      "value": "URL_PATH.replace(/\\//g, '-').replace(/^-/, '') || 'home';",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 245
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 256
+    },
+    {
+      "kind": "const",
+      "name": "targetUrl",
+      "value": "BASE + URL_PATH;",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 257
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 261
+    },
+    {
+      "kind": "const",
+      "name": "desktop",
+      "value": "await auditViewport(browser, targetUrl, { width: 1440, height: 900 }, '1440');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 265
+    },
+    {
+      "kind": "const",
+      "name": "mobile",
+      "value": "await auditViewport(browser, targetUrl, { width: 375, height: 812 }, '375');",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 268
+    },
+    {
+      "kind": "const",
+      "name": "allFindings",
+      "value": "[",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 273
+    },
+    {
+      "kind": "const",
+      "name": "summary",
+      "value": "{",
+      "file": "qa-run/scripts/visual-audit.mjs",
+      "line": 278
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "BASE",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 30
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 44
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "IS_APPROVE",
+      "value": "args.includes('--approve');",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 47
+    },
+    {
+      "kind": "const",
+      "name": "THRESHOLDS",
+      "value": "{",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 52
+    },
+    {
+      "kind": "function",
+      "name": "getBaselineMetadata",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 58
+    },
+    {
+      "kind": "function",
+      "name": "slugify",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 70
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 74
+    },
+    {
+      "kind": "const",
+      "name": "targetUrl",
+      "value": "BASE + URL_PATH;",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 76
+    },
+    {
+      "kind": "const",
+      "name": "meta",
+      "value": "getBaselineMetadata();",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "baselineFilename",
+      "value": "`${slug}-${meta.browser}-${meta.os}-${meta.viewport}-baseline.png`;",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 79
+    },
+    {
+      "kind": "const",
+      "name": "browser",
+      "value": "await chromium.launch({ headless: true });",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 86
+    },
+    {
+      "kind": "const",
+      "name": "ctx",
+      "value": "await browser.newContext({",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 87
+    },
+    {
+      "kind": "const",
+      "name": "page",
+      "value": "await ctx.newPage();",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 91
+    },
+    {
+      "kind": "const",
+      "name": "dynamicSelectors",
+      "value": "[",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 98
+    },
+    {
+      "kind": "const",
+      "name": "approvalRecord",
+      "value": "{",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 122
+    },
+    {
+      "kind": "const",
+      "name": "baselineStat",
+      "value": "fs.statSync(baselinePath);",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 149
+    },
+    {
+      "kind": "const",
+      "name": "currentStat",
+      "value": "fs.statSync(currentPath);",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 150
+    },
+    {
+      "kind": "const",
+      "name": "estDiffRatio",
+      "value": "sizeDiff / baselineStat.size;",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 152
+    },
+    {
+      "kind": "const",
+      "name": "diffReport",
+      "value": "{",
+      "file": "qa-run/scripts/visual-regression.mjs",
+      "line": 154
+    },
+    {
+      "kind": "const",
+      "name": "ICON_RE",
+      "value": "/[\\u{1F300}-\\u{1FAFF}\\u2600-\\u27BF]/u;",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 5
+    },
+    {
+      "kind": "const",
+      "name": "REQUIRED_HEADINGS",
+      "value": "[",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 6
+    },
+    {
+      "kind": "function",
+      "name": "fail",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 29
+    },
+    {
+      "kind": "function",
+      "name": "clean",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 34
+    },
+    {
+      "kind": "function",
+      "name": "isPlaceholder",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 40
+    },
+    {
+      "kind": "function",
+      "name": "rejectSecrets",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "currentPath",
+      "value": "`${pathLabel}.${key}`;",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 52
+    },
+    {
+      "kind": "function",
+      "name": "slugify",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 60
+    },
+    {
+      "kind": "function",
+      "name": "label",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 66
+    },
+    {
+      "kind": "function",
+      "name": "scalar",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 70
+    },
+    {
+      "kind": "function",
+      "name": "renderItems",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 76
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "[`## ${title}`, ''];",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 77
+    },
+    {
+      "kind": "const",
+      "name": "primaryKeys",
+      "value": "['title', 'name', 'role', 'route', 'rule', 'state', 'input', 'integration', 'en",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 84
+    },
+    {
+      "kind": "const",
+      "name": "primaryKey",
+      "value": "primaryKeys.find(key => item[key] !== undefined);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 85
+    },
+    {
+      "kind": "const",
+      "name": "primary",
+      "value": "primaryKey ? scalar(item[primaryKey], `${title}.${primaryKey}`) : 'Chi tiết';",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 86
+    },
+    {
+      "kind": "function",
+      "name": "renderFlow",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 97
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "['## Happy business flow', ''];",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 98
+    },
+    {
+      "kind": "const",
+      "name": "action",
+      "value": "typeof step === 'object' && step !== null ? step.action : step;",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 101
+    },
+    {
+      "kind": "function",
+      "name": "renderGuide",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 115
+    },
+    {
+      "kind": "const",
+      "name": "lines",
+      "value": "[",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 128
+    },
+    {
+      "kind": "function",
+      "name": "validateGuide",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 169
+    },
+    {
+      "kind": "const",
+      "name": "failures",
+      "value": "[];",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 170
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 179
+    },
+    {
+      "kind": "const",
+      "name": "markdown",
+      "value": "fs.readFileSync(path.resolve(args[1]), 'utf8');",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 182
+    },
+    {
+      "kind": "const",
+      "name": "failures",
+      "value": "validateGuide(markdown);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 183
+    },
+    {
+      "kind": "const",
+      "name": "inputPath",
+      "value": "path.resolve(args[0]);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 190
+    },
+    {
+      "kind": "const",
+      "name": "projectRoot",
+      "value": "path.resolve(args[1]);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 191
+    },
+    {
+      "kind": "const",
+      "name": "data",
+      "value": "JSON.parse(fs.readFileSync(inputPath, 'utf8'));",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 192
+    },
+    {
+      "kind": "const",
+      "name": "markdown",
+      "value": "renderGuide(data);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 197
+    },
+    {
+      "kind": "const",
+      "name": "failures",
+      "value": "validateGuide(markdown);",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 198
+    },
+    {
+      "kind": "const",
+      "name": "previousPath",
+      "value": "data.previous_guide",
+      "file": "qa-run/scripts/write-business-guide.mjs",
+      "line": 204
+    },
+    {
+      "kind": "const",
+      "name": "args",
+      "value": "process.argv.slice(2);",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 21
+    },
+    {
+      "kind": "function",
+      "name": "getArg",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "DATA_DIR",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 27
+    },
+    {
+      "kind": "function",
+      "name": "resolveKnowledgeDir",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 29
+    },
+    {
+      "kind": "function",
+      "name": "readJSON",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 36
+    },
+    {
+      "kind": "function",
+      "name": "formatList",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 41
+    },
+    {
+      "kind": "function",
+      "name": "formatApiTable",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 46
+    },
+    {
+      "kind": "const",
+      "name": "rows",
+      "value": "endpoints.slice(0, 50).map(e =>",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 48
+    },
+    {
+      "kind": "function",
+      "name": "formatRulesTable",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 59
+    },
+    {
+      "kind": "const",
+      "name": "rows",
+      "value": "rules.slice(0, 40).map(r =>",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 61
+    },
+    {
+      "kind": "function",
+      "name": "formatStateMachines",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 72
+    },
+    {
+      "kind": "const",
+      "name": "states",
+      "value": "m.states.join(' → ');",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 75
+    },
+    {
+      "kind": "const",
+      "name": "transitions",
+      "value": "m.transitions.map(t => `- \\`${t.from}\\` → \\`${t.to}\\``).join('\\n');",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 76
+    },
+    {
+      "kind": "function",
+      "name": "formatModules",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 81
+    },
+    {
+      "kind": "const",
+      "name": "parts",
+      "value": "[];",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 84
+    },
+    {
+      "kind": "function",
+      "name": "main",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 94
+    },
+    {
+      "kind": "const",
+      "name": "knowledgeDir",
+      "value": "resolveKnowledgeDir();",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 95
+    },
+    {
+      "kind": "const",
+      "name": "repoName",
+      "value": "meta?.repoName || REPO_NAME || path.basename(knowledgeDir);",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 113
+    },
+    {
+      "kind": "const",
+      "name": "guide",
+      "value": "`# Business Guide: ${repoName}",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 116
+    },
+    {
+      "kind": "const",
+      "name": "outputPath",
+      "value": "OUTPUT_FILE || path.join(knowledgeDir, 'business-guide.md');",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 248
+    },
+    {
+      "kind": "const",
+      "name": "sectionHeader",
+      "value": "`## Repository: ${repoName}`;",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 263
+    },
+    {
+      "kind": "const",
+      "name": "nextSection",
+      "value": "'## Repository:';",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 264
+    },
+    {
+      "kind": "const",
+      "name": "sectionStart",
+      "value": "systemGuide.indexOf(sectionHeader);",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 265
+    },
+    {
+      "kind": "const",
+      "name": "nextStart",
+      "value": "systemGuide.indexOf(nextSection, sectionStart + sectionHeader.length);",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 268
+    },
+    {
+      "kind": "const",
+      "name": "replacement",
+      "value": "`${sectionHeader}\\n\\n_Cập nhật: ${now}_\\n\\n[Xem chi tiết](${outputPath})\\n\\n`;",
+      "file": "qa-run/scripts/write-repo-business-guide.mjs",
+      "line": 269
+    },
+    {
+      "kind": "const",
+      "name": "runIdMatch",
+      "value": "startStdout.match(/run-\\d+/);",
+      "file": "qa-run/tests/e2e/full-pipeline.spec.mjs",
+      "line": 9
+    },
+    {
+      "kind": "const",
+      "name": "runId",
+      "value": "runIdMatch[0];",
+      "file": "qa-run/tests/e2e/full-pipeline.spec.mjs",
+      "line": 12
+    },
+    {
+      "kind": "const",
+      "name": "wId",
+      "value": "999;",
+      "file": "qa-run/tests/integration/cleanup.spec.mjs",
+      "line": 8
+    },
+    {
+      "kind": "const",
+      "name": "DATA",
+      "value": "process.env.QA_DATA_DIR || process.cwd();",
+      "file": "qa-run/tests/integration/cleanup.spec.mjs",
+      "line": 9
+    },
+    {
+      "kind": "const",
+      "name": "resourceName",
+      "value": "`test_resource_${Date.now()}`;",
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "line": 6
+    },
+    {
+      "kind": "const",
+      "name": "ok1",
+      "value": "acquireAtomicLock(resourceName, 1);",
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "line": 9
+    },
+    {
+      "kind": "const",
+      "name": "ok2",
+      "value": "acquireAtomicLock(resourceName, 2);",
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "line": 13
+    },
+    {
+      "kind": "const",
+      "name": "released",
+      "value": "releaseAtomicLock(resourceName, 1);",
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "line": 17
+    },
+    {
+      "kind": "const",
+      "name": "ok3",
+      "value": "acquireAtomicLock(resourceName, 2);",
+      "file": "qa-run/tests/integration/resource-lock.spec.mjs",
+      "line": 21
+    },
+    {
+      "kind": "const",
+      "name": "observer",
+      "value": "createRuntimeObserver(null);",
+      "file": "qa-run/tests/integration/runtime-observer.spec.mjs",
+      "line": 6
+    },
+    {
+      "kind": "const",
+      "name": "THRESHOLDS",
+      "value": "{",
+      "file": "qa-run/tests/integration/visual-regression.spec.mjs",
+      "line": 5
+    },
+    {
+      "kind": "const",
+      "name": "totalPixels",
+      "value": "1440 * 900;",
+      "file": "qa-run/tests/integration/visual-regression.spec.mjs",
+      "line": 11
+    },
+    {
+      "kind": "const",
+      "name": "diffPixels",
+      "value": "300; // within 500 maxDiffPixels",
+      "file": "qa-run/tests/integration/visual-regression.spec.mjs",
+      "line": 12
+    },
+    {
+      "kind": "const",
+      "name": "diffRatio",
+      "value": "diffPixels / totalPixels;",
+      "file": "qa-run/tests/integration/visual-regression.spec.mjs",
+      "line": 13
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({ actionText: 'Search products', httpMethod: 'GET' });",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 6
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({ actionText: 'Save profile draft', httpMethod: 'POST' });",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 11
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({ actionText: 'Delete user account', httpMethod: 'DELETE' }",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 16
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 31
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({ actionText: 'Checkout credit card', httpMethod: 'POST' })",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 40
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "evaluateActionSafety({ actionText: 'Send email blast to all', httpMethod: 'POST'",
+      "file": "qa-run/tests/unit/action-safety.spec.mjs",
+      "line": 45
+    },
+    {
+      "kind": "class",
+      "name": "IdempotentExporterStore",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 4
+    },
+    {
+      "kind": "const",
+      "name": "key",
+      "value": "this.getLockKey(runId, testId, exporter);",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 14
+    },
+    {
+      "kind": "const",
+      "name": "existing",
+      "value": "this.store.get(key);",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 15
+    },
+    {
+      "kind": "const",
+      "name": "store",
+      "value": "new IdempotentExporterStore();",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 35
+    },
+    {
+      "kind": "const",
+      "name": "start",
+      "value": "store.startExport('run-100', 'TC-001', 'google_sheet');",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 36
+    },
+    {
+      "kind": "const",
+      "name": "store",
+      "value": "new IdempotentExporterStore();",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 44
+    },
+    {
+      "kind": "const",
+      "name": "start1",
+      "value": "store.startExport('run-100', 'TC-001', 'google_sheet');",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 45
+    },
+    {
+      "kind": "const",
+      "name": "start2",
+      "value": "store.startExport('run-100', 'TC-001', 'google_sheet');",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 48
+    },
+    {
+      "kind": "const",
+      "name": "store",
+      "value": "new IdempotentExporterStore();",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 54
+    },
+    {
+      "kind": "const",
+      "name": "concurrent",
+      "value": "store.startExport('run-100', 'TC-002', 'plane');",
+      "file": "qa-run/tests/unit/idempotency.spec.mjs",
+      "line": 57
+    },
+    {
+      "kind": "function",
+      "name": "computeHash",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 5
+    },
+    {
+      "kind": "const",
+      "name": "str",
+      "value": "JSON.stringify(dataObj || {});",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 6
+    },
+    {
+      "kind": "function",
+      "name": "compareKnowledgeHashes",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 10
+    },
+    {
+      "kind": "const",
+      "name": "oldHashes",
+      "value": "oldMap.hashes || {};",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 11
+    },
+    {
+      "kind": "const",
+      "name": "newHashes",
+      "value": "{",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 12
+    },
+    {
+      "kind": "const",
+      "name": "changedAreas",
+      "value": "[];",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 19
+    },
+    {
+      "kind": "const",
+      "name": "map",
+      "value": "{",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 34
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "compareKnowledgeHashes(map, map);",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 44
+    },
+    {
+      "kind": "const",
+      "name": "oldMap",
+      "value": "{",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 50
+    },
+    {
+      "kind": "const",
+      "name": "newMap",
+      "value": "{",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 60
+    },
+    {
+      "kind": "const",
+      "name": "res",
+      "value": "compareKnowledgeHashes(oldMap, newMap);",
+      "file": "qa-run/tests/unit/knowledge-hash.spec.mjs",
+      "line": 64
+    },
+    {
+      "kind": "function",
+      "name": "redactTextContent",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 4
+    },
+    {
+      "kind": "const",
+      "name": "raw",
+      "value": "'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.secretpayload';",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 15
+    },
+    {
+      "kind": "const",
+      "name": "clean",
+      "value": "redactTextContent(raw);",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 16
+    },
+    {
+      "kind": "const",
+      "name": "raw",
+      "value": "'{\"username\": \"admin\", \"password\": \"SuperSecretPassword123!\"}';",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 22
+    },
+    {
+      "kind": "const",
+      "name": "clean",
+      "value": "redactTextContent(raw);",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 23
+    },
+    {
+      "kind": "const",
+      "name": "raw",
+      "value": "'Contact user at john.doe@customer.com for support';",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 29
+    },
+    {
+      "kind": "const",
+      "name": "clean",
+      "value": "redactTextContent(raw);",
+      "file": "qa-run/tests/unit/redaction.spec.mjs",
+      "line": 30
+    }
+  ]
+}

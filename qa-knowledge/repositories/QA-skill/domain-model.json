@@ -1,0 +1,9 @@
+{
+  "tool": "database-domain-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "extractedAt": "2026-07-23T15:30:49.818Z",
+  "totalEntities": 0,
+  "ormUsed": [],
+  "entities": [],
+  "mermaidERD": ""
+}

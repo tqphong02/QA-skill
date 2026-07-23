@@ -1,0 +1,177 @@
+{
+  "tool": "ui-business-reconciler.mjs",
+  "pageSlug": "test-order-detail",
+  "reconciledAt": "2026-07-23T16:35:26.104Z",
+  "totalObservedComponents": 12,
+  "rulesLoadedFromRegistry": 10,
+  "totalConflictsFound": 5,
+  "summary": {
+    "matched": 0,
+    "conflicts": 2,
+    "ambiguous": 3,
+    "unverified": 0,
+    "highRisk": 2
+  },
+  "conflicts": [
+    {
+      "issueId": "UI-BIZ-TEST-ORDER-DETAIL-003",
+      "module": "test-order-detail",
+      "region": "TOOLBAR",
+      "component": "Approve",
+      "type": "PERMISSION_CONFLICT",
+      "angles": {
+        "actualBehavior": "Button \"Approve\" hiển thị trên UI cho role Staff",
+        "implementedRule": "Source code API endpoint PUT /orders/:id/approve yêu cầu role ADMIN hoặc MANAGER",
+        "expectedBusinessBehavior": "Tài liệu SRS quy định chỉ Manager mới được nhìn thấy nút Approve"
+      },
+      "question": "Role Staff có được phép nhìn thấy nút Approve không, hay button phải bị ẩn hoặc disabled",
+      "owner": "BA",
+      "severity": "High",
+      "confidence": "verified",
+      "evidenceBundle": {
+        "screenshotCrop": "/Users/user/QA-skill/qa-run/qa-knowledge/ui-business/test-order-detail/evidence/UI-BIZ-TEST-ORDER-DETAIL-003.png",
+        "selector": "button#approve",
+        "uiState": "PAGE_LOADED",
+        "role": "Role: Staff",
+        "statusRecord": "DRAFT",
+        "docSection": "Section 4.2 Permission Matrix",
+        "sourceFile": "src/order/order.controller.ts:25",
+        "apiEndpoint": "PUT /orders/:id/approve",
+        "runtimePayload": null,
+        "missingEvidence": [
+          "runtimePayload"
+        ]
+      }
+    },
+    {
+      "issueId": "UI-BIZ-TEST-ORDER-DETAIL-004",
+      "module": "test-order-detail",
+      "region": "TOOLBAR",
+      "component": "Save Draft",
+      "type": "AMBIGUOUS",
+      "angles": {
+        "actualBehavior": "UI có cả hai nút Save Draft và Submit",
+        "implementedRule": "Source code lưu status DRAFT vs SUBMITTED",
+        "expectedBusinessBehavior": "Tài liệu chưa mô tả rõ khác biệt về yêu cầu dữ liệu bắt buộc giữa Save Draft và Submit"
+      },
+      "question": "Nút Save Draft và Submit tạo ra trạng thái và yêu cầu dữ liệu bắt buộc khác nhau như thế nào",
+      "owner": "PO",
+      "severity": "Medium",
+      "confidence": "verified",
+      "evidenceBundle": {
+        "screenshotCrop": null,
+        "selector": "button#save-draft",
+        "uiState": "PAGE_LOADED",
+        "role": "Staff",
+        "statusRecord": "DRAFT",
+        "docSection": null,
+        "sourceFile": null,
+        "apiEndpoint": "POST /api/save",
+        "runtimePayload": null,
+        "missingEvidence": [
+          "screenshotCrop",
+          "docSection",
+          "sourceFile",
+          "runtimePayload"
+        ]
+      }
+    },
+    {
+      "issueId": "UI-BIZ-TEST-ORDER-DETAIL-007",
+      "module": "test-order-detail",
+      "region": "TOOLBAR",
+      "component": "Cancel",
+      "type": "AMBIGUOUS",
+      "angles": {
+        "actualBehavior": "UI có nút \"Cancel\"",
+        "implementedRule": "Frontend event handler",
+        "expectedBusinessBehavior": "Tài liệu chưa quy định nút Cancel sẽ reset form hay navigate về trang trước"
+      },
+      "question": "Nút Cancel sẽ reset dữ liệu nhập hay quay lại trang trước",
+      "owner": "BA",
+      "severity": "Low",
+      "confidence": "verified",
+      "evidenceBundle": {
+        "screenshotCrop": null,
+        "selector": "button#cancel",
+        "uiState": "PAGE_LOADED",
+        "role": "Staff",
+        "statusRecord": "DRAFT",
+        "docSection": null,
+        "sourceFile": null,
+        "apiEndpoint": null,
+        "runtimePayload": null,
+        "missingEvidence": [
+          "screenshotCrop",
+          "docSection",
+          "sourceFile",
+          "apiEndpoint",
+          "runtimePayload"
+        ]
+      }
+    },
+    {
+      "issueId": "UI-BIZ-TEST-ORDER-DETAIL-008",
+      "module": "test-order-detail",
+      "region": "TOOLBAR",
+      "component": "Delete",
+      "type": "AMBIGUOUS",
+      "angles": {
+        "actualBehavior": "UI có nút \"Delete\"",
+        "implementedRule": "Source code thực hiện DELETE SQL query trực tiếp",
+        "expectedBusinessBehavior": "Chưa làm rõ xóa là soft delete (lưu kho) hay permanent delete (xóa hẳn)"
+      },
+      "question": "Hành động Delete là soft delete hay permanent delete khỏi cơ sở dữ liệu",
+      "owner": "BA",
+      "severity": "Medium",
+      "confidence": "verified",
+      "evidenceBundle": {
+        "screenshotCrop": null,
+        "selector": "button#delete",
+        "uiState": "PAGE_LOADED",
+        "role": "Staff",
+        "statusRecord": "DRAFT",
+        "docSection": "Section 5.4 Data Retention",
+        "sourceFile": null,
+        "apiEndpoint": "DELETE /orders/:id",
+        "runtimePayload": null,
+        "missingEvidence": [
+          "screenshotCrop",
+          "sourceFile",
+          "runtimePayload"
+        ]
+      }
+    },
+    {
+      "issueId": "UI-BIZ-TEST-ORDER-DETAIL-010",
+      "module": "test-order-detail",
+      "region": "FORM_REGION",
+      "component": "Status",
+      "type": "CONFLICT",
+      "angles": {
+        "actualBehavior": "UI cho phép chọn Status trực tiếp qua dropdown \"Status\"",
+        "implementedRule": "Source code cho phép update status qua PUT /orders/:id",
+        "expectedBusinessBehavior": "Business flow quy định status phải chuyển qua action buttons Submit -> Approve"
+      },
+      "question": "Status được thay đổi trực tiếp qua dropdown hay bắt buộc qua action buttons theo quy trình",
+      "owner": "Dev",
+      "severity": "High",
+      "confidence": "verified",
+      "evidenceBundle": {
+        "screenshotCrop": null,
+        "selector": "select#status",
+        "uiState": "PAGE_LOADED",
+        "role": "Staff",
+        "statusRecord": "DRAFT",
+        "docSection": "Section 3.1 Order Lifecycle",
+        "sourceFile": "src/order/order.service.ts:40",
+        "apiEndpoint": "PUT /orders/:id",
+        "runtimePayload": null,
+        "missingEvidence": [
+          "screenshotCrop",
+          "runtimePayload"
+        ]
+      }
+    }
+  ]
+}

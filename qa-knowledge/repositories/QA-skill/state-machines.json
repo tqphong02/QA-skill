@@ -1,0 +1,20 @@
+{
+  "tool": "state-machine-extractor.mjs",
+  "repoPath": "/Users/user/QA-skill",
+  "extractedAt": "2026-07-23T15:30:49.649Z",
+  "totalStateMachines": 1,
+  "stateMachines": [
+    {
+      "entity": "record",
+      "states": [],
+      "transitions": [
+        {
+          "from": "ANY",
+          "to": "APPROVED",
+          "source": "qa-run/scripts/state-machine-extractor.mjs:88"
+        }
+      ],
+      "sources": []
+    }
+  ]
+}

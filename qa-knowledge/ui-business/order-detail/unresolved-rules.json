@@ -1,0 +1,80 @@
+{
+  "tool": "ui-business-ambiguity-detector.mjs",
+  "pageSlug": "order-detail",
+  "detectedAt": "2026-07-23T16:00:40.378Z",
+  "totalUnresolvedRules": 9,
+  "unresolvedRules": [
+    {
+      "rulePattern": "FRONTEND_BACKEND_VALIDATION_MISMATCH",
+      "field": "Amount",
+      "observedUI": "Form field \"Amount\" là field bắt buộc (required) trên UI",
+      "documentedRule": "Tài liệu SRS không ghi rõ field này có bắt buộc không hay cho phép null",
+      "risk": "Frontend cho nhập nhưng Backend có thể từ chối nếu âm hoặc 0",
+      "question": "Field \"Amount\" là bắt buộc hay optional, và backend chấp nhận giá trị nhỏ nhất là bao nhiêu"
+    },
+    {
+      "rulePattern": "HIDE_VS_DISABLED_PERMISSION_POLICY",
+      "button": "Approve",
+      "observedUI": "Nút \"Approve\" đang hiển thị trên UI",
+      "documentedRule": "Tài liệu chưa quy định khi user không có quyền thì button phải bị ẨN (hidden) hay VÔ HIỆU HÓA (disabled)",
+      "risk": "User thấy nút bấm vào bị lỗi 403 hoặc ngỡ ngàng vì không phản hồi",
+      "question": "Khi user không có quyền, button \"Approve\" nên bị ẩn hoàn toàn hay chỉ disabled"
+    },
+    {
+      "rulePattern": "HIDE_VS_DISABLED_PERMISSION_POLICY",
+      "button": "Delete",
+      "observedUI": "Nút \"Delete\" đang hiển thị trên UI",
+      "documentedRule": "Tài liệu chưa quy định khi user không có quyền thì button phải bị ẨN (hidden) hay VÔ HIỆU HÓA (disabled)",
+      "risk": "User thấy nút bấm vào bị lỗi 403 hoặc ngỡ ngàng vì không phản hồi",
+      "question": "Khi user không có quyền, button \"Delete\" nên bị ẩn hoàn toàn hay chỉ disabled"
+    },
+    {
+      "rulePattern": "NEGATIVE_NUMBER_INPUT_RULE",
+      "field": "Amount",
+      "observedUI": "UI cho phép nhập vào field \"Amount\"",
+      "documentedRule": "Chưa có validation rule chặn số âm trên Frontend",
+      "risk": "Frontend cho nhập số âm nhưng Backend rule chỉ cho phép số dương (> 0)",
+      "question": "Field \"Amount\" có cho phép nhập số âm hoặc bằng 0 không"
+    },
+    {
+      "rulePattern": "MENU_VS_SOURCE_PERMISSION_MISMATCH",
+      "menu": "Payment Settings",
+      "observedUI": "Sidebar có menu \"Payment Settings\"",
+      "documentedRule": "Source code chưa cấu hình permission guard tương ứng cho menu này",
+      "risk": "User click menu nhưng trang trả về 404 hoặc 403",
+      "question": "Menu \"Payment Settings\" dành cho role nào và backend đã có API tương ứng chưa"
+    },
+    {
+      "rulePattern": "PERMISSION_CONFLICT",
+      "component": "Approve",
+      "observedUI": "Nút Approve hiển thị cho role Role: Staff",
+      "documentedRule": "Tài liệu ghi chỉ Manager/Admin được approve",
+      "risk": "Source code permission API chỉ cho phép MANAGER và ADMIN",
+      "question": "Role Staff có được phép nhìn thấy nút Approve không, hay button phải bị ẩn hoặc disabled"
+    },
+    {
+      "rulePattern": "AMBIGUOUS",
+      "component": "Save Draft",
+      "observedUI": "UI có cả hai nút Save Draft và Submit",
+      "documentedRule": "Tài liệu chưa mô tả rõ khác biệt về trạng thái và dữ liệu bắt buộc giữa Save Draft và Submit",
+      "risk": "Source code lưu status DRAFT vs SUBMITTED",
+      "question": "Nút Save Draft và Submit tạo ra trạng thái và yêu cầu dữ liệu bắt buộc khác nhau như thế nào"
+    },
+    {
+      "rulePattern": "AMBIGUOUS",
+      "component": "Cancel",
+      "observedUI": "UI có nút Cancel",
+      "documentedRule": "Tài liệu chưa quy định nút Cancel sẽ reset form hay navigate về trang trước",
+      "risk": "Frontend event handler",
+      "question": "Nút Cancel sẽ reset dữ liệu nhập hay quay lại trang trước"
+    },
+    {
+      "rulePattern": "AMBIGUOUS",
+      "component": "Delete",
+      "observedUI": "UI có nút Delete",
+      "documentedRule": "Chưa làm rõ xóa là soft delete (lưu kho) hay permanent delete (xóa hẳn)",
+      "risk": "Source code thực hiện DELETE query",
+      "question": "Hành động Delete là soft delete hay permanent delete khỏi cơ sở dữ liệu"
+    }
+  ]
+}
