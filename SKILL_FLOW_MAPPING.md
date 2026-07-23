@@ -464,10 +464,183 @@ flowchart TD
 
 ---
 
-### 📦 2. Egonex-AI Understand-Anything (`qa-run/vendor/Understand-Anything`)
-- **Vai trò**: Phân tích Ngữ nghĩa Mã nguồn (Semantic Code Indexing & Repository Knowledge Graph).
-- **Mapping với Các Skill**:
-  - 🟢 **`qa-run`** (`repo-business-discovery.mjs` & `context-builder.mjs`): Xây dựng bản đồ biểu tượng (Symbol Index) & sơ đồ kiến trúc module từ source code.
-  - 🟢 **`business-analysis`**: Đọc `context-pack.json` do Understand-Anything tạo ra để rà soát 18 vùng Senior QA mà không phải đọc file source thô.
   - 🟢 **`testcase-template`**: Đọc danh mục DTO & State Transitions từ Understand-Anything để sinh testcase kiểm thử biên & chuyển trạng thái.
   - 🟢 **`api-contract-qa`**: Đối chiếu định nghĩa API trích xuất bởi Understand-Anything với file OpenAPI / Postman spec.
+
+---
+
+## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 16 Skills
+
+### 1️⃣ `qa-run` (Core Execution Engine & Knowledge Hub)
+- **Đường dẫn**: `qa-run/SKILL.md`
+- **Mục đích**: Trái tim thực thi của hệ thống QA. Chạy baseline discovery, retest bug (`RETEST_PLUS`), exploratory testing, UI business reconciliation, visual audit & sheet execution.
+- **Inputs**: Source code, URL trang web, Google Sheet URL, Plane ticket ID, `qa-knowledge/`.
+- **Outputs**: `system-business-guide.md`, `ui-business-guide.md`, `run-manifest.json`, Screenshots evidence, `context-pack.json`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `doc-to-md` (tài liệu), `google-drive-qa` (SRS trên Drive), `qa-vendor/Understand-Anything` & `qa-vendor/OmniParser`.
+  - 📤 **Chuyển dữ liệu tới**: `business-analysis` (system guide), `testcase-template` (flow rules), `plane-qa` (retest results & evidence), `github-mcp-qa` (PR check).
+
+---
+
+### 2️⃣ `testcase-template` (Testcase Generator & Standardizer)
+- **Đường dẫn**: `testcase-template/SKILL.md`
+- **Mục đích**: Sinh và chuẩn hóa tài liệu Testcase dạng Markdown (trước) và Excel (sau) tuân thủ schema cột cố định.
+- **Inputs**: Flows & rules từ `business-analysis`, `system-business-guide.md`, `ui-business-guide.md`, `context-pack.json`.
+- **Outputs**: `testcases.md`, `testcases.xlsx` (4 sheets, formulas, dropdowns, clean formatting).
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `business-analysis` & `qa-run`.
+  - 📤 **Chuyển dữ liệu tới**: `playwright-pom-automation` (dùng để sinh code POM), `qa-run: SHEET_EXECUTION` (chạy testcase tự động).
+
+---
+
+### 3️⃣ `playwright-pom-automation` (Automation Engineering Scaffold)
+- **Đường dẫn**: `playwright-pom-automation/SKILL.md`
+- **Mục đích**: Quy hoạch dự án tự động hóa Playwright theo Page Object Model (POM). Tách selector khỏi spec test.
+- **Inputs**: Kịch bản testcase từ `testcase-template`.
+- **Outputs**: `selectors/<page>.json`, `pages/<page>.page.mjs`, `tests/<feature>.spec.mjs`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `testcase-template` & OmniParser (định vị phần tử khi DOM mã hóa).
+  - 📤 **Chuyển dữ liệu tới**: Trình thực thi Playwright Test Runner → `qa-run Result Aggregation`.
+
+---
+
+### 4️⃣ `doc-to-md` (Document Converter Engine)
+- **Đường dẫn**: `doc-to-md/SKILL.md`
+- **Mục đích**: Chuyển đổi các file tài liệu thô cục bộ (PDF, DOCX, PPTX, XLSX, HTML, Images) sang Markdown chuẩn.
+- **Inputs**: File nhị phân local.
+- **Outputs**: File `.md` giữ nguyên cấu trúc heading, table và code blocks.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: File local hoặc chat upload.
+  - 📤 **Chuyển dữ liệu tới**: `business-analysis` & `doc-indexer.mjs` (trích xuất section).
+
+---
+
+### 5️⃣ `business-analysis` (Senior QA Requirements & System Flow Analyzer)
+- **Đường dẫn**: `business-analysis/SKILL.md`
+- **Mục đích**: Phân tích tài liệu nghiệp vụ theo góc nhìn Senior Fullstack QA/QC rà soát 18 vùng kiểm thử.
+- **Inputs**: Markdown từ `doc-to-md`, Docs trên `google-drive-qa`, `system-business-guide.md` từ `qa-run`.
+- **Outputs**: `analysis.json`, file `.xmind` (sơ đồ tư duy), `clarification-qna.md` và `clarification-qna.xlsx`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `doc-to-md`, `google-drive-qa`, `qa-run`.
+  - 📤 **Chuyển dữ liệu tới**: `testcase-template` (chốt flow & rules để sinh testcases).
+
+---
+
+### 6️⃣ `pentest-run` (Authorized Security Assessment & Bug Bounty)
+- **Đường dẫn**: `pentest-run/SKILL.md`
+- **Mục đích**: Điều phối pentest được ủy quyền, kiểm tra rủi ro bảo mật (IDOR, SSRF, SSTI, JWT, GraphQL, Race condition).
+- **Inputs**: Phê duyệt ủy quyền `.pentest/engagement.md`, target URL / API endpoints.
+- **Outputs**: Báo cáo lỗ hổng `findings.md`, chứng cứ tái hiện `evidence/`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `api-contract-qa` & `qa-run`.
+  - 📤 **Chuyển dữ liệu tới**: `plane-qa` (log bug bảo mật mức High/Critical) & `qa-run Aggregation`.
+
+---
+
+### 7️⃣ `plane-qa` (Issue Tracker Integration & Bug Lifecycle Manager)
+- **Đường dẫn**: `plane-qa/SKILL.md`
+- **Mục đích**: CRUD ticket trên Plane API, log bug chuẩn template, comment kết quả retest PASS/FAILED/BLOCKED kèm ảnh bằng chứng inline.
+- **Inputs**: Ticket URL, kết quả test từ `qa-run`, `pentest-run` hoặc specialized skills.
+- **Outputs**: Ticket status đã cập nhật (`Done`, `In Progress`, `Todo`), inline retest comments.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run`, `pentest-run`, `performance-qa`, `accessibility-qa`.
+  - 📤 **Chuyển dữ liệu tới**: `github-mcp-qa` (sync trạng thái bug với CI/CD PR).
+
+---
+
+### 8️⃣ `google-drive-qa` (In-Place Drive MCP Integration)
+- **Đường dẫn**: `google-drive-qa/SKILL.md`
+- **Mục đích**: Đọc/Ghi/Cập nhật tài liệu Google Drive, Docs, Sheets, Slides trực tiếp qua MCP mà không cần tải file về đĩa local.
+- **Inputs**: Google Drive URL hoặc File ID.
+- **Outputs**: Nội dung văn bản Docs, bảng tính Sheets, báo cáo Slides remote.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: Link người dùng cung cấp hoặc kết quả test từ `qa-run`.
+  - 📤 **Chuyển dữ liệu tới**: `business-analysis` (đọc SRS remote) & `qa-run` (ghi kết quả test).
+
+---
+
+### 9️⃣ `data-quality-qa` (Database, ETL & Schema Drift QA)
+- **Đường dẫn**: `data-quality-qa/SKILL.md`
+- **Mục đích**: Kiểm thử chất lượng dữ liệu DB, reconciliation ETL/ELT, kiểm tra lệch schema (Schema drift) qua Read-only DB MCP.
+- **Inputs**: DB Read-only connection, ETL pipeline specs.
+- **Outputs**: `data-drift.json`, bằng chứng đối soát dữ liệu.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run` (kiểm tra persistence DB sau khi UI action thành công).
+  - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa`.
+
+---
+
+### 🔟 `ai-quality-qa` (LLM, Chatbot & RAG Evaluator)
+- **Đường dẫn**: `ai-quality-qa/SKILL.md`
+- **Mục đích**: Khảo sát và đánh giá chất lượng mô hình AI, Chatbot, RAG pipeline dựa trên Golden Dataset.
+- **Inputs**: Golden Dataset, RAG prompt contexts, model responses.
+- **Outputs**: Báo cáo Eval Dataset metrics (Accuracy, Hallucination rate, Faithfulness).
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `doc-to-md` (nạp dataset).
+  - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa`.
+
+---
+
+### 11. `accessibility-qa` (WCAG & Accessibility Auditor)
+- **Đường dẫn**: `accessibility-qa/SKILL.md`
+- **Mục đích**: Kiểm thử khả năng truy cập Web Accessibility theo chuẩn WCAG 2.2 bằng axe-core, bàn phím và Screen Reader.
+- **Inputs**: Web page URL, OmniParser Bounding Boxes map.
+- **Outputs**: `a11y-report.json`, danh sách vi phạm accessibility.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run` & `qa-vendor/OmniParser`.
+  - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa`.
+
+---
+
+### 12. `performance-qa` (Load, Stress & Bottleneck Auditor)
+- **Đường dẫn**: `performance-qa/SKILL.md`
+- **Mục đích**: Kiểm thử hiệu năng, k6 workload, Chrome DevTools performance trace, phát hiện bottleneck.
+- **Inputs**: Workload contract (RPS, Virtual Users, SLA thresholds).
+- **Outputs**: `performance-report.json`, Chrome trace metrics (p95 latency, LCP, CLS).
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `jmeter-qa` & `api-contract-qa`.
+  - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa` (log bug nếu vi phạm SLA).
+
+---
+
+### 13. `api-contract-qa` (API Spec & Webhook Contract Validator)
+- **Đường dẫn**: `api-contract-qa/SKILL.md`
+- **Mục đích**: Kiểm tra sự tuân thủ hợp đồng API (OpenAPI, Swagger, Postman, GraphQL, gRPC) so với code thực tế.
+- **Inputs**: File OpenAPI spec, Postman collection, endpoint definitions từ `Understand-Anything`.
+- **Outputs**: `contract-report.json`, danh sách API sai khác (Contract Mismatches).
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run: REPO_BUSINESS_DISCOVERY` & `qa-vendor/Understand-Anything`.
+  - 📤 **Chuyển dữ liệu tới**: `performance-qa`, `pentest-run` & `qa-run Aggregation`.
+
+---
+
+### 14. `mobile-qa` (Android / iOS Mobile App Tester)
+- **Đường dẫn**: `mobile-qa/SKILL.md`
+- **Mục đích**: Kiểm thử ứng dụng di động Android/iOS trên Emulator/Real Device sử dụng Appium framework.
+- **Inputs**: File APK / IPA, Mobile device matrix.
+- **Outputs**: `mobile-report.json`, video recording & appium execution logs.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `testcase-template` (kịch bản test mobile).
+  - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa`.
+
+---
+
+### 15. `jmeter-qa` (JMeter Script & Workload Generator)
+- **Đường dẫn**: `jmeter-qa/SKILL.md`
+- **Mục đích**: Khởi tạo và kiểm tra các file dự án Apache JMeter (`.jmx`) có thể import và chạy trực tiếp.
+- **Inputs**: Workload contract, API endpoints list từ `api-contract-qa`.
+- **Outputs**: File kịch bản kiểm thử hiệu năng `project.jmx`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `api-contract-qa` & `qa-run`.
+  - 📤 **Chuyển dữ liệu tới**: `performance-qa` (để thực thi load test).
+
+---
+
+### 16. `github-mcp-qa` (GitHub API & CI/CD Pipeline Auditor)
+- **Đường dẫn**: `github-mcp-qa/SKILL.md`
+- **Mục đích**: Quản lý repository, Git diff, Pull Requests, Issues và Actions CI/CD pipelines qua GitHub API MCP.
+- **Inputs**: GitHub PR URL, commit hash, test results từ `qa-run`.
+- **Outputs**: Comments trên PR, CI check status (PASS/FAIL), danh sách changed files.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run Aggregation` & `plane-qa`.
+  - 📤 **Chuyển dữ liệu tới**: `qa-run: REPO_BUSINESS_DISCOVERY` (kích hoạt quét incremental theo changed files).
