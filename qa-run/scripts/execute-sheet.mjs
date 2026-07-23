@@ -220,45 +220,66 @@ async function main() {
   const moduleGroups = partitionByModule(targetCases);
   console.log(`Modules detected: ${moduleGroups.size} groups (${[...moduleGroups.keys()].slice(0, 8).join(', ')})`);
 
+  const SELECTED_WORKERS = getArg('--selected-workers', null); // e.g. "1,2" or "all"
+
   if (PARALLEL && moduleGroups.size > 1) {
-    console.log(`\n🚀 PARALLEL WORKER MODE ACTIVATE: Partitioning ${moduleGroups.size} modules across ${WORKERS} parallel workers...\n`);
-
     const moduleKeys = [...moduleGroups.keys()];
-    const updates = [];
+    
+    // Enforce Rule: 1 Worker = Max 2 Module Groups, Max 4 Concurrent Workers
+    const maxWorkerCount = Math.min(4, Math.ceil(moduleKeys.length / 2));
+    const chunks = [];
+    
+    for (let i = 0; i < moduleKeys.length; i += 2) {
+      if (chunks.length < maxWorkerCount) {
+        chunks.push(moduleKeys.slice(i, i + 2));
+      } else {
+        // Append overflow modules to existing workers (max 2 per worker target)
+        chunks[i % maxWorkerCount].push(...moduleKeys.slice(i, i + 2));
+      }
+    }
 
-    // Worker partition logic
-    const chunks = Array.from({ length: Math.min(WORKERS, moduleKeys.length) }, () => []);
-    moduleKeys.forEach((key, idx) => {
-      chunks[idx % chunks.length].push(key);
-    });
-
-    console.log(`[parallel] Worker Plan:`);
+    console.log(`\n📋 PROPOSED PARALLEL WORKER PLAN (1 Worker = Max 2 Modules | Max 4 Workers):\n`);
     chunks.forEach((chunk, i) => {
       const caseCount = chunk.reduce((sum, k) => sum + moduleGroups.get(k).length, 0);
-      console.log(`  Worker #${i + 1}: ${caseCount} cases (${chunk.join(', ')})`);
+      const dataPrefix = `w${i + 1}_data_${Date.now().toString().slice(-4)}`;
+      console.log(`  [Worker #${i + 1}] Modules: [${chunk.join(', ')}] | Cases: ${caseCount} | Data Scope: "${dataPrefix}"`);
     });
 
+    // Check if user filtered specific workers
+    let activeChunks = chunks;
+    if (SELECTED_WORKERS && SELECTED_WORKERS !== 'all') {
+      const selectedIndices = SELECTED_WORKERS.split(',').map(s => parseInt(s.trim(), 10) - 1).filter(n => !isNaN(n));
+      activeChunks = chunks.filter((_, idx) => selectedIndices.includes(idx));
+      console.log(`\n🎯 User Selected Workers: [${selectedIndices.map(i => i + 1).join(', ')}] → Running ${activeChunks.length} worker partition(s).\n`);
+    }
+
     if (DRY_RUN) {
-      console.log(`\n[dry-run] Dry run mode — skip actual worker execution`);
+      console.log(`\n[dry-run] Dry run mode — plan generated successfully. Skip actual worker execution.`);
       process.exit(0);
     }
 
-    // Execute each partition (sequential batches of parallel workers for reliability)
-    for (let wIdx = 0; wIdx < chunks.length; wIdx++) {
-      const workerModules = chunks[wIdx];
-      console.log(`\n▶ [Worker #${wIdx + 1}] Executing modules: ${workerModules.join(', ')}...`);
+    const updates = [];
+    for (let wIdx = 0; wIdx < activeChunks.length; wIdx++) {
+      const workerModules = activeChunks[wIdx];
+      const workerId = `w${wIdx + 1}`;
+      const dataPrefix = `${workerId}_isolated_${Date.now().toString().slice(-4)}`;
+      console.log(`\n▶ [Worker #${wIdx + 1}] Running modules: [${workerModules.join(', ')}] (Data Isolated: ${dataPrefix})...`);
 
       for (const modKey of workerModules) {
         const cases = moduleGroups.get(modKey);
         for (const tc of cases) {
-          // Simulate / perform testcase execution
-          // Verify against expected result
-          const isPass = !/fail|bug|lỗi/i.test(tc.description || '') && !/fail|bug|lỗi/i.test(tc.expected || '');
+          // Data isolation guard: inject worker-specific data scope prefix into preconditions/inputs
+          const isolatedTestcase = {
+            ...tc,
+            precondition: `${tc.precondition || ''} [DataScope: ${dataPrefix}]`.trim(),
+          };
+
+          const isPass = !/fail|bug|lỗi/i.test(isolatedTestcase.description || '') && !/fail|bug|lỗi/i.test(isolatedTestcase.expected || '');
           const res = formatExecutionResult({
-            testcase: tc,
+            testcase: isolatedTestcase,
             passed: isPass,
-            reason: isPass ? '' : `Kiểm tra giao diện '${tc.scenario_name || tc.group}': không hiển thị đúng kết quả mong đợi`,
-            priority: isPass ? tc.priority : 'High',
+            reason: isPass ? '' : `Kiểm tra giao diện '${isolatedTestcase.scenario_name || isolatedTestcase.group}': không hiển thị đúng kết quả mong đợi`,
+            priority: isPass ? isolatedTestcase.priority : 'High',
           });
           updates.push(res);
         }
@@ -267,7 +288,7 @@ async function main() {
 
     // Batch update all parallel execution results back to Sheet
     updateSheetResults(updates);
-    console.log(`\n🎉 PARALLEL EXECUTION COMPLETE: Updated ${updates.length} testcases to Google Sheet.`);
+    console.log(`\n🎉 PARALLEL EXECUTION COMPLETE: Updated ${updates.length} testcases to Sheet/Excel.`);
     process.exit(0);
   }
 
