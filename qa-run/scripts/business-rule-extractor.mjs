@@ -23,6 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 
 const args   = process.argv.slice(2);
 const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
@@ -30,6 +31,40 @@ const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? 
 const REPO_PATH   = path.resolve(getArg('--repo', '.'));
 const OUTPUT_FILE = getArg('--output', null);
 const MAX_FILE_SIZE = 150 * 1024;
+
+function runAstGrepRules(repoPath) {
+  const astRules = [];
+  try {
+    const patterns = [
+      { category: 'state_transition', pattern: '$ENTITY.status = $STATUS' },
+      { category: 'permission', pattern: 'if (!$USER.hasRole($ROLE)) { $$$ }' },
+      { category: 'existence_check', pattern: 'if (!$ENTITY) { throw new $ERR($$$) }' },
+    ];
+    for (const item of patterns) {
+      const res = spawnSync('npx', ['-y', '@ast-grep/cli', 'run', '--pattern', item.pattern, '--json', repoPath], {
+        encoding: 'utf8',
+        timeout: 5000,
+      });
+      if (res.status === 0 && res.stdout) {
+        const matches = JSON.parse(res.stdout);
+        for (const m of (Array.isArray(matches) ? matches : [])) {
+          astRules.push({
+            ruleId: `AST-${item.category.toUpperCase()}-${crypto.randomBytes(3).toString('hex')}`,
+            module: m.file ? path.dirname(m.file) : 'core',
+            category: item.category,
+            condition: (m.text || item.pattern).trim().slice(0, 150),
+            source: m.file || 'ast-grep',
+            confidence: 'verified',
+            extractedBy: 'ast-grep (AST Structural)',
+          });
+        }
+      }
+    }
+  } catch {
+    // Fallback to regex scanner
+  }
+  return astRules;
+}
 
 const SKIP_DIRS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', '.nuxt',

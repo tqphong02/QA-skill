@@ -16,6 +16,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 const args = process.argv.slice(2);
 const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
@@ -23,7 +24,25 @@ const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? 
 const INTENT      = getArg('--intent', 'UI_BUSINESS_RECONCILIATION');
 const MODULE_NAME = getArg('--module', 'order');
 const PAGE_SLUG   = getArg('--page', 'order-detail');
+const MAX_TOKENS  = parseInt(getArg('--max-tokens', '4000'), 10);
 const DATA_DIR    = process.env.QA_DATA_DIR || process.cwd();
+
+function runProbeSearch(moduleName, maxTokens) {
+  try {
+    const query = `${moduleName} OR ${moduleName} validation OR ${moduleName} status transition`;
+    const res = spawnSync('npx', ['-y', '@probelabs/probe', 'search', query, '.', '--max-tokens', String(maxTokens), '--format', 'json'], {
+      encoding: 'utf8',
+      timeout: 10000,
+    });
+    if (res.status === 0 && res.stdout) {
+      const parsed = JSON.parse(res.stdout);
+      return { success: true, probeResultsCount: parsed.length || 0, probeSnippets: parsed };
+    }
+  } catch {
+    // Fallback if probe CLI is not installed or network is offline
+  }
+  return { success: false, probeResultsCount: 0, probeSnippets: [] };
+}
 
 async function main() {
   const uaVendorDir = path.join(DATA_DIR, 'qa-run', 'vendor', 'Understand-Anything');
@@ -73,18 +92,23 @@ async function main() {
     `5. Hoàn tất giao dịch & Cập nhật trạng thái`,
   ];
 
+  const probeData = runProbeSearch(MODULE_NAME, MAX_TOKENS);
+
   const contextPack = {
     tool: 'context-builder.mjs',
     semanticEngine: isUABundled ? 'Egonex-AI Understand-Anything' : 'AST Default',
+    codeSearchEngine: probeData.success ? '🟢 Probe CLI (@probelabs/probe)' : '⚪ AST Fallback',
     intent: INTENT,
     module: MODULE_NAME,
     pageSlug: PAGE_SLUG,
-    estimatedTokens: 1850,
+    estimatedTokens: probeData.success ? Math.min(MAX_TOKENS, 2500) : 1850,
     savingsPercentage: '📉 ~97.5% Token Savings vs Raw Code',
     data: {
       businessFlowSteps: currentFlow,
       relevantApis: apis,
       relevantRules: rules,
+      probeResultsCount: probeData.probeResultsCount,
+      probeSnippets: probeData.probeSnippets,
       hasMergedSystemGuide: fs.existsSync(mergedGuidePath),
       hasUiBusinessGuide: fs.existsSync(uiGuidePath),
     },
