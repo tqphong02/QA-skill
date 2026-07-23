@@ -263,31 +263,15 @@ Lần làm việc tiếp theo:
 #### 🔴 Các Luồng Tốn Token Nhiều Nhất (High Token Cost — Cần Hạn chế / Cache lại)
 1. **Phân tích Source Code trực tiếp bằng AI Prompt** (không qua AST script): Đưa hàng chục nghìn dòng code vào context window (`~80,000 - 150,000 Tokens/lần`).
 2. **Đưa Raw Full HTML DOM / Full Screenshot vào AI Vision**: Gửi toàn bộ cây DOM chưa lọc hoặc ảnh full màn hình 4K (`~30,000 - 60,000 Tokens/lần`).
-3. **Parse PDF / DOCX chưa qua `doc-to-md`**: Nạp file nhị phân lớn hoặc văn bản chưa qua lọc định dạng (`~20,000 - 50,000 Tokens/lần`).
-4. **Full-App Baseline Re-discovery**: Quét lại toàn bộ ứng dụng nhiều lần trong các lần retest nhỏ (`~50,000 Tokens/lần`).
-
-#### 🟢 Các Luồng Siêu Tiết kiệm Token / Không tốn Token (Low/Zero Token Cost — Khuyên dùng)
-1. **Chạy Script Trích xuất Deterministic Node.js / Python** (`0 Token`):
-   - `repo-business-discovery.mjs`: Quét AST/Regex trích xuất API & ERD tự động.
-   - `ui-business-component-extractor.mjs`: Lọc component bằng Stable Selectors (`data-testid`, `aria-label`).
-   - `execute-sheet.mjs`: Thực thi testcase trên Playwright CLI từ Sheet URL.
-2. **Đọc File Caching Memory từ `qa-knowledge/`** (`~1,500 Tokens`):
-   - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
-3. **Gửi Crop Ảnh Bằng chứng Visual (Visual Evidence Crops)** (`~500 - 1,000 Tokens`):
-   - Chỉ cắt đúng vùng component bị conflict (ví dụ: nút Approve bị ẩn/hiện sai) gửi cho AI Vision thay vì gửi full màn hình.
-4. **Q&A Fingerprint & State Hash Lookup** (`0 Token`):
-   - Dùng hash SHA-256 để tra cứu nhanh Q&A đã được BA/PO duyệt mà không cần hỏi lại AI.
-
----
-
-### 📊 Bảng Bối cảnh Tiêu thụ Token Trước & Sau khi Caching Memory
-
-| Tác vụ QA | Chưa có Caching Memory (Raw Read) | Có Caching Memory (`qa-knowledge/`) | Tỷ lệ Tiết kiệm Token |
-|:---|:---:|:---:|:---:|
-| **Retest 1 Bug Ticket** | ~90,000 Tokens *(Đọc lại toàn bộ code & HTML)* | **~2,000 Tokens** *(Chỉ đọc guide của feature bị ảnh hưởng)* | 📉 **Mục tiêu Giảm ~97%** |
-| **Phân tích Mâu thuẫn UI vs BRD** | ~60,000 Tokens *(Gửi full screenshot 4K & full DOM)* | **~3,500 Tokens** *(Chỉ gửi crop component & DOM filtered)* | 📉 **Mục tiêu Giảm ~94%** |
-| **Sinh Testcase cho Feature mới** | ~120,000 Tokens *(Nạp lại toàn bộ file tài liệu PDF gốc)* | **~4,000 Tokens** *(Chỉ đọc system-business-guide.md)* | 📉 **Mục tiêu Giảm ~96%** |
-| **Thực thi Testcase hàng loạt** | ~50,000 Tokens *(AI click từng bước)* | **0 Token AI** *(Chạy hoàn toàn qua Playwright CLI script)* | 📉 **Mục tiêu Giảm 100%** |
+### 🚨 Điều kiện Nghiệm thu Token Optimization Engine:
+- [ ] Không gửi Full DOM thô mặc định cho AI (chỉ dùng Playwright Scoped ARIA Snapshot / `dom-pruner.mjs`).
+- [ ] Không gửi toàn bộ Source Code repository cho AI (chỉ gửi Context Pack do Probe / AST-grep trích xuất).
+- [ ] Tài liệu chỉ lấy đúng Section liên quan đến tính năng đang test (qua Docling & `doc-indexer.mjs`).
+- [ ] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict (`visual-evidence-router.mjs`).
+- [ ] Repo không thay đổi bắt buộc dùng Cache (`artifact-cache.mjs`).
+- [ ] Retest ticket chỉ scan module bị ảnh hưởng (`incremental-discovery.mjs` + SCIP).
+- [ ] Context vượt Budget phải tự cắt gọt và ghi rõ phần đã loại bỏ (`token-budget-manager.mjs`).
+- [ ] Mọi Fallback lên Level cao hơn phải có lý do ghi rõ trong `token-usage.json`.
 
 ---
 
@@ -297,11 +281,11 @@ Lần làm việc tiếp theo:
 ```text
 Script xử lý trước (Level 0)
     ↓
-Chỉ lấy phần thay đổi hoặc có rủi ro (Incremental Scan)
+Chỉ lấy phần thay đổi hoặc có rủi ro (Incremental Scan via SCIP & git diff)
     ↓
-AI chỉ đọc Context đã rút gọn (Context Pack)
+AI chỉ đọc Context đã rút gọn (Context Pack via Probe & ast-grep)
     ↓
-Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision Only)
+Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision via OmniParser Fallback)
 ```
 
 ---
@@ -310,18 +294,41 @@ Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision O
 
 ```mermaid
 flowchart TD
-    L0["Level 0: Deterministic Script (0 AI Token)\n• AST/Regex Scanners & Playwright CLI Execution"] --> L1
+    L0["Level 0: Deterministic Script (0 AI Token)\n• AST/ast-grep Scanners, SCIP, Playwright CLI & Probe CLI"] --> L1
     L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• context-pack.json & dom-pruner output"] --> L2
-    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & changed symbols"] --> L3
+    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & Probe CLI scoped symbols"] --> L3
     L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
-    L4["Level 4: Scoped Fallback (Module / Symbol Boundary)\n• Vẫn giới hạn theo Scope Module, tuyệt đối không dump full repo"]
+    L4["Level 4: Scoped Module Fallback (Repomix Compressed XML)\n• Giới hạn theo Scope Module/Symbol, tuyệt đối không dump full repo"]
 ```
 
-- **Level 0**: Script deterministic hoàn toàn, **0 AI token**.
+- **Level 0**: Script deterministic hoàn toàn, **0 AI token** (dùng `ast-grep`, `SCIP`, `Probe CLI`, Playwright CLI).
 - **Level 1**: AI đọc JSON tóm lược (`context-pack.json` & `dom-pruner.mjs` output).
-- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections).
+- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections & Probe AST snippets).
 - **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`). Giới hạn theo số ảnh crop, kích thước vùng crop và số lần gọi Vision API.
-- **Level 4**: Scoped Fallback — Vẫn giới hạn phạm vi theo Module / Symbol boundary ngay cả khi fallback, **tuyệt đối không dump toàn bộ source code repository**.
+- **Level 4**: Scoped Module Fallback (`Repomix --compress` theo module) — Vẫn giới hạn phạm vi theo Module / Symbol boundary ngay cả khi fallback, **tuyệt đối không dump toàn bộ source code repository**.
+
+---
+
+### 🛠️ Bộ Công cụ Open Source Tối ưu Token Tích hợp Engine
+
+```text
+Source Code
+├── ast-grep              (Trích business rules bằng YAML AST structural patterns - 0 token)
+├── SCIP (scip-typescript) (Truy vết cross-file impact giữa Controller -> Service -> Repo)
+├── Probe (@probelabs/probe)(Tìm kiếm ngữ nghĩa code, lấy context function/class có budget --max-tokens)
+├── Understand Anything   (Chỉ dùng semantic business analysis khi cần ở setup/full scan)
+└── Repomix               (Fallback nén code XML theo module cho Level 4)
+
+Web UI
+├── Playwright ARIA Snapshot (Scoped snapshot theo element #order-form với depth 4)
+├── dom-pruner.mjs        (Rút gọn DOM thô thành Business Components JSON)
+└── OmniParser            (Chỉ dùng làm visual fallback cho Canvas / WebGL / Obfuscated UI)
+
+Documents
+├── Docling               (Convert PDF/DOCX/PPTX giữ nguyên layout/table)
+├── doc-indexer.mjs       (Indexing & Filter Section tài liệu)
+└── SQLite FTS            (Tìm kiếm section tài liệu liên quan đến feature)
+```
 
 ---
 
@@ -330,12 +337,6 @@ flowchart TD
 1. **`artifact-cache.mjs`**: Cache kết quả trích xuất dựa trên phiên bản tổng hợp:
    `CacheKey = MD5(commitHash | fileContentHash | inputHash | parserVersion | adapterVersion | knowledgeSchemaVersion)`
    *(Tránh trường hợp dùng lại cache cũ sai cấu trúc schema).*
-2. **`context-builder.mjs`**: Tự động tích hợp **Egonex-AI Understand-Anything** để xây dựng Semantic Knowledge Graph cho codebase:
-   - Đọc bản đồ biểu tượng (Symbol Index) và cấu trúc module do Understand-Anything phân tích.
-   - Lọc duy nhất API, DTO và Rules liên quan đến Module đang kiểm thử (`--module order`).
-   - Xuất file `context-pack-<module>.json` siêu ngắn gọn (**~1,500 - 3,000 Tokens**) thay cho việc nạp trực tiếp hàng chục nghìn dòng source code thô.
-3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements, frameworks).
-4. **`doc-indexer.mjs`**: Phân tách tài liệu PDF/DOCX (đã qua `doc-to-md`) theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
 5. **`visual-evidence-router.mjs`**: Tự động tích hợp **Microsoft OmniParser** (Screen Parsing Model) để phân tích bounding box của các phần tử giao diện cục bộ (Local Model):
    - Chạy OmniParser phân tích ảnh screenshot thành danh sách cấu trúc JSON chứa tọa độ `[x1, y1, x2, y2]` và nhãn phần tử tương tác (`button`, `input`, `badge`, `menu`).
    - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
