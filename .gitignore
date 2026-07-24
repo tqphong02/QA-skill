@@ -56,5 +56,7 @@ qa-run/vendor/Understand-Anything/dist/
 qa-knowledge/
 **/qa-knowledge/
 
-# Zip Packages
+# Zip Packages & Test Data Contracts
 *.zip
+MISSING_TEST_DATA.md
+test-data.md

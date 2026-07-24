@@ -53,6 +53,85 @@ const MODULE_FILTER = getArg('--module', '');
 const PARALLEL   = args.includes('--parallel') || args.includes('--all');
 const WORKERS    = parseInt(getArg('--workers', '4'), 10);
 const DRY_RUN    = args.includes('--dry-run');
+const DATA_FILE  = getArg('--data-file', 'test-data.md');
+
+function loadProvidedDataFile(filePath) {
+  const provided = {};
+  if (!fs.existsSync(filePath)) return provided;
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const lines = content.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+      const [key, ...valParts] = trimmed.split('=');
+      const k = key.trim();
+      const v = valParts.join('=').trim();
+      if (k && v && v !== '?') {
+        provided[k] = v;
+      }
+    }
+  } catch {}
+  return provided;
+}
+
+function checkAndGenerateMissingDataContract(testcases) {
+  const providedData = loadProvidedDataFile(DATA_FILE);
+  const detectedKeys = new Map();
+
+  for (const tc of testcases) {
+    const moduleName = tc.scenario_name || tc.module || tc.group || 'General';
+    const text = `${tc.precondition || ''} ${tc.procedure || ''} ${tc.description || ''} ${tc.expected || ''}`;
+    
+    if (/email|mail|đăng nhập|tài khoản|user|username/i.test(text)) {
+      if (!detectedKeys.has('email')) detectedKeys.set('email', moduleName);
+      if (!detectedKeys.has('password')) detectedKeys.set('password', moduleName);
+    }
+    if (/url|trang web|domain|base_url/i.test(text)) {
+      if (!detectedKeys.has('app_url')) detectedKeys.set('app_url', moduleName);
+    }
+    if (/thẻ|thanh toán|card|payment/i.test(text)) {
+      if (!detectedKeys.has('payment_card')) detectedKeys.set('payment_card', moduleName);
+    }
+    if (/api|token|secret/i.test(text)) {
+      if (!detectedKeys.has('api_token')) detectedKeys.set('api_token', moduleName);
+    }
+  }
+
+  const missingKeys = [];
+  for (const [key, mod] of detectedKeys.entries()) {
+    if (!providedData[key] && !process.env[key.toUpperCase()]) {
+      missingKeys.push({ key, mod });
+    }
+  }
+
+  if (missingKeys.length > 0) {
+    const missingMdPath = path.resolve('MISSING_TEST_DATA.md');
+    let mdContent = `# ⚠️ PHÁT HIỆN THIẾU DỮ LIỆU KIỂM THỬ (MISSING TEST DATA CONTRACT)\n\n`;
+    mdContent += `> Script tự động quét và phát hiện các biến dữ liệu còn thiếu để chạy testcases.\n`;
+    mdContent += `> Vui lòng mở file này, thay các dấu \`=?\` bằng giá trị thật của bạn và lưu lại.\n\n`;
+
+    const byModule = new Map();
+    for (const item of missingKeys) {
+      if (!byModule.has(item.mod)) byModule.set(item.mod, []);
+      byModule.get(item.mod).push(item.key);
+    }
+
+    for (const [mod, keys] of byModule.entries()) {
+      mdContent += `### Module: ${mod}\n`;
+      for (const k of keys) {
+        mdContent += `${k} = ?\n`;
+      }
+      mdContent += `\n`;
+    }
+
+    fs.writeFileSync(missingMdPath, mdContent, 'utf8');
+    console.log(`\n⚠️ PHÁT HIỆN THIẾU DỮ LIỆU KIỂM THỬ!`);
+    console.log(`📄 Đã tự động tạo file: "${missingMdPath}"`);
+    console.log(`💡 Vui lòng mở file MISSING_TEST_DATA.md, điền các giá trị 'key = ?' rồi chạy lại.`);
+    console.log(`─────────────────────────────────────────────────────────────\n`);
+  }
+}
 
 if (!SHEET_URL) {
   console.error('❌ Thiếu --sheet-url <URL_OR_ID> hoặc --excel-file <PATH_TO_XLSX>');
@@ -229,6 +308,9 @@ async function main() {
     console.log(`⚠️ Không tìm thấy testcase nào trong Sheet.`);
     process.exit(0);
   }
+
+  // Auto-scan and generate MISSING_TEST_DATA.md contract if data is missing
+  checkAndGenerateMissingDataContract(allCases);
 
   // Filter cases if specified
   let targetCases = allCases;
