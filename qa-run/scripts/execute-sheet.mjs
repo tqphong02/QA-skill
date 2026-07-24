@@ -184,7 +184,8 @@ function formatExecutionResult({ testcase, passed, reason, priority }) {
 function partitionByModule(testcases) {
   const groups = new Map();
   for (const tc of testcases) {
-    const key = tc.group || tc.module || 'General';
+    const rawKey = tc.scenario_name || tc.module || tc.group || 'General';
+    const key = rawKey.trim() || 'General';
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(tc);
   }
