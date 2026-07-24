@@ -82,6 +82,20 @@ function readSheetTestcases() {
     const data = JSON.parse(stdout);
     if (isLocal) {
       console.log(`✅ [openpyxl] Đọc thành công ${data.total_testcases} testcases từ file local: ${data.spreadsheet_id}`);
+      console.log(`📌 Header row detected: Line #${data.header_row}`);
+      console.log(`📌 Column mapping:`, JSON.stringify(data.column_mapping));
+      
+      const sampleCases = (data.testcases || []).slice(0, 3);
+      if (sampleCases.length > 0) {
+        console.log(`\n🔍 KẾT QUẢ TRÍCH XUẤT DỮ LIỆU MẪU (PREVIEW 3 DÒNG ĐẦU):`);
+        sampleCases.forEach(tc => {
+          console.log(`  • Row #${tc.row_number} | [ID: ${tc.testcase_id || 'N/A'}] | Scenario: "${tc.scenario_name || tc.module || 'N/A'}"`);
+          console.log(`    - Description: "${tc.description || 'N/A'}"`);
+          console.log(`    - Steps:       "${(tc.procedure || 'N/A').slice(0, 80)}"`);
+          console.log(`    - Expected:    "${(tc.expected || 'N/A').slice(0, 80)}"`);
+        });
+        console.log(`─────────────────────────────────────────────────────────────\n`);
+      }
     }
     return data;
   } catch (err) {
