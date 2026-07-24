@@ -11,6 +11,14 @@ export enum OrderStatus {
 
 @Injectable()
 export class OrderService {
+  private repo: any;
+  private eventEmitter: any;
+  private mailService: any;
+
+  async findAll() {
+    return this.repo.find();
+  }
+
   async findOne(id: string) {
     const order = await this.repo.findOne(id);
     if (!order) throw new NotFoundException('Order not found');
