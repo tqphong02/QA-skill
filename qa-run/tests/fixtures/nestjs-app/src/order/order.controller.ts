@@ -1,5 +1,8 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, Roles } from '@nestjs/common';
-import { OrderService } from './order.service';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, SetMetadata } from '@nestjs/common';
+import { OrderService, CreateOrderDto } from './order.service';
+
+export const Roles = (...roles: string[]) => SetMetadata('roles', roles);
+export class JwtAuthGuard {}
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
