@@ -1,5 +1,4 @@
 import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
-import { Order } from './order.entity';
 
 export enum OrderStatus {
   DRAFT = 'DRAFT',
@@ -10,33 +9,20 @@ export enum OrderStatus {
   CANCELLED = 'CANCELLED',
 }
 
-export interface CreateOrderDto {
-  code: string;
-  amount: number;
-}
-
 @Injectable()
 export class OrderService {
-  private repo: any;
-  private eventEmitter: any;
-  private mailService: any;
-
-  async findAll() {
-    return this.repo.find();
-  }
-
   async findOne(id: string) {
     const order = await this.repo.findOne(id);
     if (!order) throw new NotFoundException('Order not found');
     return order;
   }
 
-  async approve(id: string, user?: any) {
+  async approve(id: string) {
     const order = await this.findOne(id);
     if (order.status !== OrderStatus.PENDING) {
       throw new Error('Cannot approve order not in PENDING status');
     }
-    if (user && !user.hasPermission('order:approve')) {
+    if (!user.hasPermission('order:approve')) {
       throw new ForbiddenException('Insufficient permission to approve order');
     }
     order.status = OrderStatus.APPROVED;

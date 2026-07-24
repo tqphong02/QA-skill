@@ -1,11 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne } from 'typeorm';
 
-export interface User {
-  id: string;
-  email: string;
-  orders: Order[];
-}
-
 @Entity()
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -20,7 +14,7 @@ export class Order {
   @Column('decimal', { precision: 10, scale: 2 })
   amount: number;
 
-  @ManyToOne('User', (user: User) => user.orders)
+  @ManyToOne(() => User, user => user.orders)
   user: User;
 
   @CreateDateColumn()
