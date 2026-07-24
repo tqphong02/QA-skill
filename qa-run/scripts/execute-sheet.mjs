@@ -69,14 +69,23 @@ if (!fs.existsSync(DRIVE_PYTHON_SCRIPT)) {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function readSheetTestcases() {
-  console.log(`[execute-sheet] Đang đọc testcases từ Google Sheet...`);
+  const isLocal = SHEET_URL.endsWith('.xlsx') || fs.existsSync(SHEET_URL);
+  if (isLocal) {
+    console.log(`[execute-sheet] 📂 Đang đọc kịch bản từ file Excel local: "${path.resolve(SHEET_URL)}"...`);
+  } else {
+    console.log(`[execute-sheet] 🌐 Đang đọc kịch bản từ Google Sheet: "${SHEET_URL}"...`);
+  }
   const sheetFlag = SHEET_NAME ? `--sheet-name "${SHEET_NAME}"` : '';
   const cmd = `python3 "${DRIVE_PYTHON_SCRIPT}" read "${SHEET_URL}" ${sheetFlag}`;
   try {
     const stdout = execSync(cmd, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-    return JSON.parse(stdout);
+    const data = JSON.parse(stdout);
+    if (isLocal) {
+      console.log(`✅ [openpyxl] Đọc thành công ${data.total_testcases} testcases từ file local: ${data.spreadsheet_id}`);
+    }
+    return data;
   } catch (err) {
-    console.error(`[execute-sheet] Lỗi đọc Google Sheet:`, err.message);
+    console.error(`[execute-sheet] ❌ Lỗi đọc kịch bản:`, err.message);
     process.exit(1);
   }
 }
