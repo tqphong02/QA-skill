@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "accounts": [
+    {
+      "role": "admin",
+      "usernameEnv": "ADMIN_USERNAME",
+      "passwordEnv": "ADMIN_PASSWORD"
+    },
+    {
+      "role": "manager",
+      "usernameEnv": "MANAGER_USERNAME",
+      "passwordEnv": "MANAGER_PASSWORD"
+    },
+    {
+      "role": "staff",
+      "usernameEnv": "STAFF_USERNAME",
+      "passwordEnv": "STAFF_PASSWORD"
+    }
+  ]
+}

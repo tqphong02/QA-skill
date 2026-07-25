@@ -1,7 +1,7 @@
 // Quét nhiều trang tìm lỗi (HTTP≥400 / console error). Project-agnostic.
 // Routes: QA_ROUTES (csv trong .env) nếu có; ngược lại TỰ DÒ các link nav cùng origin từ trang chủ.
 // Dùng: node <skill>/scripts/sweep.mjs
-import { browser, snap, shot, BASE } from '../lib/driver.mjs';
+import { browser, snap, shot, BASE } from '../../lib/driver.mjs';
 
 const { b, page } = await browser();
 await page.goto(BASE, { waitUntil: 'domcontentloaded' });

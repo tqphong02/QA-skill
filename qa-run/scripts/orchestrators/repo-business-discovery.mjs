@@ -26,6 +26,7 @@ import { execSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveScriptPath, runScript as registryRunScript } from '../registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,7 +43,7 @@ const KNOW_BASE     = path.join(DATA_DIR, 'qa-knowledge', 'repositories');
 const MERGED_DIR    = path.join(DATA_DIR, 'qa-knowledge', 'merged');
 
 function runScript(scriptName, extraArgs = []) {
-  const scriptPath = path.join(__dirname, scriptName);
+  const scriptPath = resolveScriptPath(scriptName);
   if (!fs.existsSync(scriptPath)) {
     console.warn(`[orchestrator] ⚠️  Script không tồn tại: ${scriptName} — bỏ qua`);
     return false;
@@ -183,7 +184,14 @@ async function analyzeRepo(repoPath) {
     console.log('\n[orchestrator] ── Phase 2: Flow, State, Permission, Domain ──');
     runScript('business-flow-builder.mjs',       ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')]);
     runScript('state-machine-extractor.mjs',     ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')]);
-    runScript('permission-matrix-extractor.mjs', ['--repo', repoPath, '--output', path.join(outputDir, 'permission-matrix.json')]);
+    const pmArgs = ['--repo', repoPath, '--output', path.join(outputDir, 'permission-matrix.json')];
+    if (fs.existsSync(path.join(outputDir, 'business-rules.json'))) {
+      pmArgs.push('--req-knowledge', path.join(outputDir, 'business-rules.json'));
+    }
+    if (fs.existsSync(path.join(outputDir, 'runtime-findings.json'))) {
+      pmArgs.push('--runtime-findings', path.join(outputDir, 'runtime-findings.json'));
+    }
+    runScript('permission-matrix-extractor.mjs', pmArgs);
     runScript('database-domain-extractor.mjs',   ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')]);
   }
 
@@ -193,6 +201,9 @@ async function analyzeRepo(repoPath) {
     runScript('repo-runtime-reconciler.mjs',     ['--repo-knowledge', outputDir]);
     runScript('business-qna-generator.mjs',      ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')]);
     runScript('write-repo-business-guide.mjs',   ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')]);
+    if (fs.existsSync(path.join(outputDir, 'permission-matrix.json'))) {
+      runScript('write-rbac-matrix.mjs',         ['--input', path.join(outputDir, 'permission-matrix.json'), '--output', path.join(outputDir, 'rbac-matrix.md')]);
+    }
     runScript('traceability-matrix-generator.mjs', ['--repo', repoName]);
   }
 

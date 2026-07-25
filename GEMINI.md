@@ -17,9 +17,9 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 |---|---|---|
 | Plane URL, ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; chạy `execute-sheet.mjs` cho Sheet execution (dùng `--parallel` khi chạy toàn bộ), baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
-| Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
-| Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `ui-business-reconciliation.mjs --page <slug>`; phân loại 9 kết quả, kiểm tra 10 ambiguity patterns, xuất `ui-business-guide.md` 12 sections |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; chạy `scripts/helpers/execute-sheet.mjs` cho Sheet execution (dùng `--parallel` khi chạy toàn bộ), baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
+| Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --page <slug>`; phân loại 9 kết quả, kiểm tra 10 ambiguity patterns, xuất `ui-business-guide.md` 12 sections |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | Drive, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
@@ -101,7 +101,7 @@ Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc bi
 - Tối ưu token (scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 - Đọc `qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md` trước browser action nếu có
-- Sau mọi run, ghi và validate business guide bằng `scripts/write-business-guide.mjs`
+- Sau mọi run, ghi và validate business guide bằng `scripts/writers/write-business-guide.mjs`
 - Dùng `APP_BASELINE_DISCOVERY` khi khám phá tổng thể hoặc bootstrap app; ghi `coverage_map`; không chạy lại full-app baseline trong retest
 
 ### Nguyên tắc cốt lõi

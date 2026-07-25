@@ -1,0 +1,49 @@
+{
+  "337": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_create_procedure_modal_24-07-2026.png",
+    "conclusion": "AI sinh DSL đúng cấu trúc cho tờ khai 05/KK-TNCN Q4"
+  },
+  "338": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình BCTC kiểm tra lợi nhuận thuần và lưu chuyển tiền tệ chạy thành công"
+  },
+  "340": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình bảng lương tính toán đúng tổng lương năm 2024 và phân tích đầy đủ kết quả"
+  },
+  "341": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Bộ quy trình CCDC chạy thành công và trả kết quả phân tích"
+  },
+  "343": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình TNCN Q3 trả kết quả phân tích đầy đủ không còn bị treo"
+  },
+  "344": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình TNCN Q2 đối chiếu chỉ tiêu và kỳ tính thuế thống nhất"
+  },
+  "345": {
+    "verdict": "FAILED",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "actual": "DSL query compiler ép kiểu ::numeric trên cột chuỗi indicator_code gây lỗi InvalidTextRepresentationError tại backend PostgreSQL",
+    "expected": "DSL query compiler ép kiểu đúng cho chỉ tiêu TNCN và trả về kết quả PASS/FAILED chính xác",
+    "conclusion": "Lỗi DSL compiler ép sai kiểu dữ liệu chỉ tiêu TNCN vẫn còn tái hiện khi chạy lượt kiểm tra"
+  },
+  "346": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình kiểm tra Tổng hợp công nợ phải thu KH bóc tách và đối chiếu trọn vẹn 215 dòng công nợ"
+  },
+  "347": {
+    "verdict": "PASS",
+    "shot": "evidence/retest_w27_runs_24-07-2026.png",
+    "conclusion": "Quy trình kiểm tra Tổng hợp công nợ phải trả NCC chạy chuẩn xác và trả về kết quả đối chiếu đúng kỳ vọng"
+  }
+}

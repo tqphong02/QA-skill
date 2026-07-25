@@ -1,6 +1,6 @@
 // Mở 1 trang bất kỳ, in snapshot gọn + chụp ảnh.
 // Dùng: node <skill>/scripts/explore.mjs <path> [tên-shot] [waitMs]
-import { browser, snap, printSnap, shot, BASE } from '../lib/driver.mjs';
+import { browser, snap, printSnap, shot, BASE } from '../../lib/driver.mjs';
 
 const pathArg = process.argv[2] || '/';
 const shotName = process.argv[3] || ('explore' + pathArg.replace(/\W+/g, '_'));

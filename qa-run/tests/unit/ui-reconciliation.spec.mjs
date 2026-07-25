@@ -4,13 +4,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveScriptPath } from '../../scripts/registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.resolve(__dirname, '../../scripts');
 const DATA_DIR = process.cwd();
 
 function runScript(scriptName, args) {
-  const scriptPath = path.join(SCRIPTS_DIR, scriptName);
+  const scriptPath = resolveScriptPath(scriptName);
   const result = spawnSync('node', [scriptPath, ...args], {
     encoding: 'utf8',
     env: { ...process.env },

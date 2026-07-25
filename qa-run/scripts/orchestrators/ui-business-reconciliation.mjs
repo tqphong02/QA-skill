@@ -26,6 +26,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveScriptPath } from '../registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -37,7 +38,7 @@ const SNAPSHOT   = getArg('--snapshot', null);
 const PAGE_SLUG  = getArg('--page', 'page-ui');
 
 function runScript(scriptName, extraArgs = []) {
-  const scriptPath = path.join(__dirname, scriptName);
+  const scriptPath = resolveScriptPath(scriptName);
   if (!fs.existsSync(scriptPath)) {
     console.warn(`[ui-orchestrator] ⚠️ Script not found: ${scriptName} — skipping`);
     return false;

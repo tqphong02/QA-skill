@@ -1,7 +1,7 @@
 // Probe danh sách endpoint GET tìm 4xx/5xx (dùng cookie phiên). Project-agnostic.
 // Nguồn endpoint (1 path / dòng): file <project>/endpoints.txt, hoặc env QA_ENDPOINTS (csv).
 // Dùng: node <skill>/scripts/api-health.mjs
-import { browser, BASE, DATA } from '../lib/driver.mjs';
+import { browser, BASE, DATA } from '../../lib/driver.mjs';
 import fs from 'fs';
 import path from 'path';
 

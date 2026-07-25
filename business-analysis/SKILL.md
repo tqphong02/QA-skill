@@ -14,6 +14,7 @@ Convert first, reason once, render deterministically
    - Check `qa-knowledge/merged/system-qna.json` — if it exists, load the confirmed Q&A, do not create duplicates
    - Check `qa-knowledge/repositories/<repo>/reconciliation-report.json` — prioritize entries with `result: CONFIRMED`; clearly highlight `CONFLICT`s, do not blindly choose one source
    - Check `qa-knowledge/repositories/<repo>/business-qna.json` — merge existing Q&A, only generate new Q&A for uncovered areas
+   - Check `qa-knowledge/repositories/<repo>/runtime-findings.json` — if it exists, read it first to acknowledge runtime confirmed security/permission CONFLICTs without creating duplicate Q&A
    - If source and doc contradict: record both, mark as `conflict`, and require human confirmation
    - If no knowledge files are found: proceed normally from gate 1
 

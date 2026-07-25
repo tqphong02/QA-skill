@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { evaluateActionSafety, ALLOWED_ACTION_POLICIES } from '../../scripts/attack-surface.mjs';
+import { evaluateActionSafety, ALLOWED_ACTION_POLICIES } from '../../scripts/analysis/attack-surface.mjs';
 
 test('Action Safety: READ_ONLY actions pass automatically', () => {
   const res = evaluateActionSafety({ actionText: 'Search products', httpMethod: 'GET' });

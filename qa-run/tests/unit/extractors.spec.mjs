@@ -4,13 +4,14 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveScriptPath } from '../../scripts/registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPTS_DIR = path.resolve(__dirname, '../../scripts');
 const FIXTURES_DIR = path.resolve(__dirname, '../fixtures');
 
 function runExtractor(scriptName, repoPath) {
-  const scriptPath = path.join(SCRIPTS_DIR, scriptName);
+  const scriptPath = resolveScriptPath(scriptName);
   const tempOut = path.join(FIXTURES_DIR, `temp-${Date.now()}-${Math.random().toString(36).slice(2)}.json`);
   const result = spawnSync('node', [scriptPath, '--repo', repoPath, '--output', tempOut], {
     encoding: 'utf8',
@@ -20,6 +21,10 @@ function runExtractor(scriptName, repoPath) {
   if (fs.existsSync(tempOut)) {
     data = JSON.parse(fs.readFileSync(tempOut, 'utf8'));
     try { fs.unlinkSync(tempOut); } catch {}
+  }
+  const tempMd = tempOut.replace(/\.json$/, '.md');
+  if (fs.existsSync(tempMd)) {
+    try { fs.unlinkSync(tempMd); } catch {}
   }
   return { code: result.status, stdout: result.stdout, stderr: result.stderr, data };
 }
@@ -149,7 +154,7 @@ test('Extractor Test 9: Source indexer quality report & parser tracking', () => 
 test('Extractor Test 10: Full orchestrator discovery run on NestJS fixture', () => {
   const nestFixture = path.join(FIXTURES_DIR, 'nestjs-app');
 
-  const scriptPath = path.join(SCRIPTS_DIR, 'repo-business-discovery.mjs');
+  const scriptPath = resolveScriptPath('repo-business-discovery.mjs');
   const result = spawnSync('node', [scriptPath, '--repo', nestFixture, '--mode', 'full'], {
     encoding: 'utf8',
     env: { ...process.env },

@@ -34,7 +34,7 @@ Read only the file(s) matching the current task:
 
 Apply the following exact order for all models, especially fast or small-context models:
 
-1. **Initialize Run Manifest**: Always call `node scripts/run-manifest.mjs start` before running tests.
+1. **Initialize Run Manifest**: Always call `node scripts/helpers/run-manifest.mjs start` before running tests.
 2. Classify the request before opening the browser: `APP_BASELINE_DISCOVERY`, `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC`, `SHEET_TESTCASE_EXECUTION` or `AUTOMATION_BUILD`.
 3. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
    - **Standard schema is pre-baked** — read [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json); DO NOT rescan headers each time. Schema summary:
@@ -45,12 +45,13 @@ Apply the following exact order for all models, especially fast or small-context
      I=Result  J=Priority  K=Date  L=Tester  M=Notes
      ```
      Columns I-M (idx 8-12) are **write columns**; columns B-H (idx 1-7) are **read-only design**.
-   - Run `node scripts/execute-sheet.mjs --sheet-url <URL>`
+   - Run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL>`
    - For full suite execution -> add `--parallel --workers 4`
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
 4. **[BEFORE TEST — READ knowledge]** Resolve `<project-root>/qa-knowledge/knowledge-index.json` first:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
+   - Read `permission-matrix.json` (machine-readable, NOT `rbac-matrix.md`) when preparing role-based or security tests
    - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, reusable assets
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
    - If NO guide exists at all: run `APP_BASELINE_DISCOVERY` for the feature scope first
@@ -59,13 +60,13 @@ Apply the following exact order for all models, especially fast or small-context
 7. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
 8. Update verdict/evidence into the ledger immediately after each layer; do not conclude if any item lacks a verdict or `BLOCKED/PARTIAL` reason.
 9. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`.
-10. After every run, bundle evidence via `collect-evidence.mjs` and finalize via `run-manifest.mjs finish <RUN_ID>`.
+10. After every run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`.
 11. **[AFTER EVERY RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory, not optional:
     ```bash
     # Step 1: write/merge the knowledge update
-    node scripts/write-business-guide.mjs guide-update.json <project-root>
+    node scripts/writers/write-business-guide.mjs guide-update.json <project-root>
     # Step 2: validate the written guide reads back correctly
-    node scripts/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
+    node scripts/writers/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
     ```
     Minimum facts to record after each run:
     - Confirmed happy flow steps (with routes and roles)
@@ -82,8 +83,8 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 
 ## Knowledge scope decision
 
-- `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
-- `SHEET_TESTCASE_EXECUTION`: always load `qa-knowledge/app-flow-map.json` before interacting. Run `node scripts/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4`.
+- `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
+- `SHEET_TESTCASE_EXECUTION`: always load `qa-knowledge/app-flow-map.json` before interacting. Run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4`.
 - `RETEST_TICKET`: do not rescan the full app. Read index shards for ticket scope. If index/guide is missing, discover enough to create/refresh the feature guide, then run RETEST_PLUS.
 - `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides and expand knowledge exactly in the inspected scope.
 - Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`.
@@ -129,20 +130,25 @@ These must be observed at all times, even before reading any reference file:
 
 ## Scripts reference
 
+> **Lưu ý kiến trúc thư mục**: Toàn bộ script trong `qa-run/scripts/` được chia thành 7 nhóm (`discovery/`, `rbac/`, `ui-reconciliation/`, `writers/`, `analysis/`, `orchestrators/`, `helpers/`). Các orchestrator được hỗ trợ bởi `scripts/registry.mjs` cho phép gọi script con bằng tên ngắn gọn hoặc đầy đủ.
+
 | Script | Purpose |
 |---|---|
-| `scripts/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
-| `scripts/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
-| `scripts/execute-sheet.mjs` | Run testcases from Google Sheet with parallel workers |
-| `scripts/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
-| `scripts/visual-audit.mjs` | Visual Heuristic Audit: overflow/clipping/touch targets/z-index |
-| `scripts/attack-surface.mjs` | Classify Action Safety, auto-inject mutations |
-| `scripts/data-factory.mjs` | Isolate accounts & data namespace per worker |
-| `scripts/validate-knowledge.mjs` | Check knowledge freshness, hash routes & git commit |
-| `scripts/collect-evidence.mjs` | Bundle screenshots, traces, logs into artifact package |
-| `scripts/write-business-guide.mjs` | Deterministic renderer/validator for business guide |
-| `scripts/log-bug.mjs` | Log Plane bug with inline image evidence |
-| `scripts/login.mjs` | Create auth.json |
+| `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
+| `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
+| `scripts/helpers/execute-sheet.mjs` | Run testcases from Google Sheet with parallel workers |
+| `scripts/helpers/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
+| `scripts/helpers/visual-audit.mjs` | Visual Heuristic Audit: overflow/clipping/touch targets/z-index |
+| `scripts/analysis/attack-surface.mjs` | Classify Action Safety, auto-inject mutations |
+| `scripts/rbac/rbac-api-tester.mjs` | Test API endpoints against expected roles (5 conflict types) |
+| `scripts/analysis/finding-reconciler.mjs` | Reconcile runtime evidence into KB and feedback Q&A to BA |
+| `scripts/writers/write-rbac-matrix.mjs` | Generate human-readable RBAC Markdown report with Section 5 |
+| `scripts/helpers/data-factory.mjs` | Isolate accounts & data namespace per worker |
+| `scripts/writers/validate-knowledge.mjs` | Check knowledge freshness, hash routes & git commit |
+| `scripts/helpers/collect-evidence.mjs` | Bundle screenshots, traces, logs into artifact package |
+| `scripts/writers/write-business-guide.mjs` | Deterministic renderer/validator for business guide |
+| `scripts/helpers/log-bug.mjs` | Log Plane bug with inline image evidence |
+| `scripts/helpers/login.mjs` | Create auth.json |
 | `lib/driver.mjs` | Headless browser + screenshot to file |
 | `lib/ui.mjs` | Scope snapshot, network recording, `withRevert` |
 | `lib/assert.mjs` | `check/eq/summary` compact |

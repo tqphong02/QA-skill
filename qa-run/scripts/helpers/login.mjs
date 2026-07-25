@@ -1,6 +1,6 @@
 // Đăng nhập app rồi lưu phiên vào <project>/auth.json để mọi script tái dùng.
 // Cần trong .env của project: QA_BASE_URL, QA_EMAIL, QA_PASSWORD
-import { browser, snap, printSnap, shot, AUTH, BASE } from '../lib/driver.mjs';
+import { browser, snap, printSnap, shot, AUTH, BASE } from '../../lib/driver.mjs';
 
 const EMAIL = process.env.QA_EMAIL;
 const PASS = process.env.QA_PASSWORD;
