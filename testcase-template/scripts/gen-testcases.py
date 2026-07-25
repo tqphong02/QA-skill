@@ -32,9 +32,10 @@ Logic:
 import sys, json, shutil, datetime, os, re
 from copy import copy
 import openpyxl
-from openpyxl.styles import Alignment
+from openpyxl.styles import Alignment, PatternFill, Font
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
+from openpyxl.formatting.rule import CellIsRule
 
 # Canonical test-case type order — cases SORT theo thứ tự này trong mỗi scenario.
 TYPE_ORDER = ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional']
@@ -603,15 +604,43 @@ def main():
                     ws.row_dimensions[current_row].height = 51.0
                     current_row += 1
 
-    # 6. Add data validation cho tất cả data rows
+    # 6. Add data validation và conditional formatting cho tất cả data rows
     if all_data_ranges:
         rmin, rmax = min(all_data_ranges), max(all_data_ranges)
+        # Dropdowns
         dv_i = DataValidation(type='list', formula1='"Pass,Fail,N/A,Untested"', allow_blank=True)
         dv_i.add(f'I{rmin}:I{rmax}')
         ws.add_data_validation(dv_i)
         dv_j = DataValidation(type='list', formula1='"Critical,High,Medium,Low,N/A"', allow_blank=True)
         dv_j.add(f'J{rmin}:J{rmax}')
         ws.add_data_validation(dv_j)
+        
+        # Colors for Results (Col I)
+        colors_i = {
+            'Pass': ('C6EFCE', '006100'),
+            'Fail': ('FFC7CE', '9C0006'),
+            'N/A': ('FFEB9C', '9C6500'),
+            'Untested': ('D9D9D9', '595959')
+        }
+        for val, (bg, fg) in colors_i.items():
+            rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
+                              fill=PatternFill(start_color=bg, end_color=bg, fill_type='solid'),
+                              font=Font(color=fg))
+            ws.conditional_formatting.add(f'I{rmin}:I{rmax}', rule)
+
+        # Colors for Priority (Col J)
+        colors_j = {
+            'Critical': ('FF0000', 'FFFFFF'),
+            'High': ('FFC7CE', '9C0006'),
+            'Medium': ('FFEB9C', '9C6500'),
+            'Low': ('C6EFCE', '006100'),
+            'N/A': ('D9D9D9', '595959')
+        }
+        for val, (bg, fg) in colors_j.items():
+            rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
+                              fill=PatternFill(start_color=bg, end_color=bg, fill_type='solid'),
+                              font=Font(color=fg))
+            ws.conditional_formatting.add(f'J{rmin}:J{rmax}', rule)
 
     # 7. Xoá HẲN các row mẫu còn sót (group headers KHÔNG có trong JSON + sample
     # case rows) thay vì chỉ clear value. Sau bước này, file đầu ra sẽ KHÔNG
@@ -637,11 +666,26 @@ def main():
     if rows_to_delete:
         print(f"  Đã xóa {len(rows_to_delete)} dòng mẫu (group header + sample rows không dùng)")
 
-    # Expand only API rows after deletion; normal testcase row dimensions stay untouched
+    # Fix row_dimensions because delete_rows breaks them (leaves rows hidden).
+    # Re-apply outline levels and unhide all rows, then expand API rows.
     for r in range(10, ws.max_row + 1):
-        if ws.cell(row=r, column=2).value in (None, ''):
-            continue
-        if ws.cell(row=r, column=4).value in api_case_ids:
+        if r not in ws.row_dimensions:
+            ws.row_dimensions[r] = openpyxl.worksheet.dimensions.RowDimension(ws, index=r)
+        ws.row_dimensions[r].hidden = False
+        
+        c3 = ws.cell(row=r, column=3).value
+        c2 = ws.cell(row=r, column=2).value
+        
+        if c3 and str(c3).startswith(('1.1', '1.2', '1.3')):
+            ws.row_dimensions[r].outlineLevel = 0
+        elif c3 and not c2:
+            ws.row_dimensions[r].outlineLevel = 1
+        elif c2:
+            ws.row_dimensions[r].outlineLevel = 2
+        else:
+            ws.row_dimensions[r].outlineLevel = 0
+
+        if c2 not in (None, '') and ws.cell(row=r, column=4).value in api_case_ids:
             line_count = max(
                 str(ws.cell(row=r, column=c).value or '').count('\n') + 1
                 for c in range(5, 9)

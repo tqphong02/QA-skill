@@ -50,7 +50,7 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
    └─ Scenario (SCN-LOG-001)
       └─ Cases — type order
 ```
-**Same feature can exist in both parts** (UI test for display, Functional test for logic).
+**Same feature can exist in both parts** (UI test for display, Functional test for logic). For UI testcases (`kind=ui`), you MUST read [references/ui-testcases.md](references/ui-testcases.md) to follow the UI testing checklist.
 
 **API mode is optional**: only when user requests API testcases, read [references/api-testcases.md](references/api-testcases.md). API cases still go in `1.2. FUNCTION`, use `kind=api` and keep columns B-M. If user does not request API, do not read this reference and continue current flow with `kind=ui` or `kind=function`.
 

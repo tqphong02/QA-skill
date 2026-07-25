@@ -19,6 +19,7 @@
 | 10 | **Compatibility** | Chrome/Edge/Firefox/Safari + mobile/tablet | §11; `compat.mjs` |
 | 11 | **Session-based** | Timebox 30-90' + log tested/bugs/next | §12 |
 | 12 | **API Inspection** | Request/response, status, payload | §13; `api-health.mjs` + `browser_network_requests` |
+| 13 | **Static Testing** | Review UI structure, labels, flows WITHOUT executing — từ snapshot/screenshot | §15; dùng khi không có doc, trước khi click bất kỳ nút nào |
 
 > Cách chọn: xem **luồng hợp nhất** ở SKILL.md section "Chọn kỹ thuật" + §14 dưới đây.
 
@@ -332,3 +333,89 @@ Mục tiêu phiên test là gì?
 - [ ] Probe tái dùng helper, không copy-paste; tên `probe-<ticket>-<aspect>.mjs`.
 - [ ] **Nếu test cross-browser**: đã chạy `compat.mjs` (đừng claim "cross-browser" nếu chỉ chromium qua MCP).
 - [ ] **Bug security** (SQL/XSS/path traversal ở §6): tag `[SECURITY]` + severity H, KHÔNG chỉ là "validation bug" thường.
+
+---
+
+## 15b. Static Testing — đọc UI trước khi chạy (§13 coverage matrix)
+
+**Khi nào:** Không có spec/doc/AC, hoặc là lần đầu tiếp cận feature. Chạy TRƯỚC khi click bất kỳ nút nào.
+
+**Mục đích:** Từ snapshot UI → tự suy ra flow logic và sinh checklist UI + Functional để test có cấu trúc ngay cả khi thiếu tài liệu.
+
+### Quy trình Static Testing (4 bước)
+
+**Bước 1 — Chụp snapshot tổng thể**
+```
+browser_navigate(<page>)
+browser_snapshot()   ← đọc toàn bộ interactive elements + labels + structure
+```
+
+**Bước 2 — Phân tích UI thành 2 nhóm**
+
+Nhìn snapshot, phân loại mọi element vào:
+
+| Nhóm | Bao gồm | Ghi nhận |
+|---|---|---|
+| **UI Layer** | Label, placeholder, icon, layout, color, spacing, responsive hint | Có hiển thị đúng không? Có bị cắt/lệch? |
+| **Functional Layer** | Button, input, dropdown, toggle, link, form, modal trigger | Khi tương tác sẽ làm gì? Có validate gì? |
+
+**Bước 3 — Sinh checklist UI + Functional trực tiếp từ UI**
+
+Dùng template sau, điền vào từ những gì nhìn thấy trong snapshot:
+
+```markdown
+## Static Checklist — <Tên trang/feature> — <ngày>
+_Sinh từ UI observation (không có doc) — phải verify từng dòng khi test_
+
+### 1.1. UI Checklist
+- [ ] [UI-01] Tiêu đề trang hiển thị đúng: "<text quan sát>"
+- [ ] [UI-02] Các label trường input hiển thị đủ và rõ ràng
+- [ ] [UI-03] Placeholder text đúng ngữ cảnh (không bị trống hoặc sai)
+- [ ] [UI-04] Button CTA nổi bật, dễ nhận biết
+- [ ] [UI-05] Không có text bị cắt hoặc overflow
+- [ ] [UI-06] Icon/hình ảnh load thành công (không bị broken)
+- [ ] [UI-07] Spacing/layout nhất quán giữa các section
+- [ ] [UI-08] Responsive: layout không vỡ khi viewport nhỏ hơn
+- [ ] [UI-09] Error state / empty state có hiển thị placeholder phù hợp
+- [ ] [UI-10] Loading state được xử lý (spinner/skeleton, không blank)
+_Thêm các mục UI cụ thể quan sát được từ snapshot..._
+
+### 1.2. Functional Checklist
+- [ ] [FN-01] <Button/action đầu tiên> → hành vi dự kiến: <suy từ label>
+- [ ] [FN-02] <Input field> → validate: required? format? maxlength?
+- [ ] [FN-03] <Dropdown/select> → options đúng, selection thay đổi kết quả gì?
+- [ ] [FN-04] Submit form → thành công → hiển thị gì? thất bại → error ở đâu?
+- [ ] [FN-05] Modal/popup trigger → mở đúng nội dung, đóng được không?
+- [ ] [FN-06] Link/navigation → chuyển đến đúng trang?
+- [ ] [FN-07] Filter/search → kết quả thay đổi đúng?
+- [ ] [FN-08] Delete/remove action → có confirm dialog? xoá đúng record?
+- [ ] [FN-09] Permission: action này có bị giới hạn theo role không?
+- [ ] [FN-10] Data: sau action, data persist khi reload trang?
+_Thêm các mục Functional cụ thể suy ra từ UI elements..._
+```
+
+**Bước 4 — Lưu checklist và chuyển sang test**
+```bash
+# Lưu checklist vào qa-knowledge
+cat > qa-knowledge/checklists/<feature-slug>-static-checklist.md << 'EOF'
+<nội dung checklist đã sinh>
+EOF
+
+# Sau đó bắt đầu test theo từng dòng, đánh dấu [x] PASS hoặc [ ] FAIL + ghi evidence
+```
+
+### Kết hợp với Exploratory/Ad-hoc (no-doc flow)
+
+```
+Không có spec/doc?
+  ↓
+Bước 1: browser_navigate → browser_snapshot (static read)
+Bước 2: Phân tích UI → sinh static checklist (UI + Functional)
+Bước 3: Lưu checklist vào qa-knowledge/checklists/
+Bước 4: Chạy exploratory/ad-hoc THEO checklist (không blind click)
+  → Với mỗi dòng checklist: test → ghi verdict → capture evidence nếu FAIL
+Bước 5: Sau test → merge checklist vào business guide update
+```
+
+> **Lý do quan trọng:** Sinh checklist từ UI TRƯỚC khi click giúp AI có "bản đồ" để test có chủ đích thay vì click bừa. Đây là cách áp dụng Static Testing vào workflow không có doc.
+
