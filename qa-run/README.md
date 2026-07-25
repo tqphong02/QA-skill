@@ -40,6 +40,38 @@ node <skill-root>/scripts/login.mjs  # → auth.json + evidence/ ở đây
 
 Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong thư mục dự án — KHÔNG đụng skill.
 
+### Cấu trúc chuẩn trong dự án
+```text
+<project-root>/
+├── .env
+├── auth.json
+├── evidence/
+│   ├── runs/<run-id>/
+│   └── visual-*/
+├── qa-knowledge/
+│   ├── knowledge-index.json
+│   ├── system-overview.md
+│   ├── flows/
+│   ├── rules/
+│   ├── contracts/
+│   ├── evidence/
+│   ├── app-business-guide.md
+│   ├── app-flow-map.json
+│   ├── checklists/
+│   ├── merged/
+│   ├── repositories/
+│   └── ui-business/
+├── FINDINGS.md
+└── reports/
+```
+
+- Knowledge mới ưu tiên vào `qa-knowledge/knowledge-index.json` và các shard `flows/`, `rules/`, `contracts/`
+- `app-business-guide.md` và `app-flow-map.json` giữ vai trò tương thích hoặc summary
+- Evidence theo run luôn vào `evidence/runs/<run-id>/`
+- Report hoặc export tách riêng vào `reports/`
+- `FINDINGS.md` ở root chỉ giữ summary ngắn của issue đang theo dõi
+- Không để file QA rải ở root nếu đã có thư mục chuẩn phù hợp
+
 ## 🔗 Skill liên quan
 - **playwright-pom-automation** — viết test code deterministic (regression suite, CI)
 - **testcase-template** — sinh test case Excel theo template team

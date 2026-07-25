@@ -1,56 +1,73 @@
-# 📝 QA Report / Comment — Format chuẩn (qa-run)
+# QA Report / Comment Template
 
-> Mục tiêu: report & comment **dễ đọc, tường minh**. Quy tắc số 1: phần **Actual** (và Steps) phải **xuống dòng từng ý** — KHÔNG viết liền 1 đoạn dài "luông tuồng".
+Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, không lẫn nhiều ý vào một đoạn.
 
-## Cấu trúc 1 ticket (PASS hoặc FAIL)
+## Ticket Retest Template
 
 ```markdown
-## <✅/❌> #<id> — <tên ngắn> — <PASS/FAIL>
+## <PASS/FAILED/BLOCKED> — #<id> — <tên ngắn>
 
-**Môi trường:** Web (Chrome) — <URL> — <account>
+**Requirement source:** <Plane URL>
+**Business flow:** <1-2 câu mô tả flow đã xác nhận>
+**Environment:** Web <browser> — <URL> — <account>
 
-**Steps:**
+**Test contract**
+- <role/data/setup 1>
+- <role/data/setup 2>
+
+**AC results**
+1. <AC1 mô tả> — <PASS/FAILED> — <evidence hoặc quan sát 1 dòng>
+2. <AC2 mô tả> — <PASS/FAILED> — <evidence hoặc quan sát 1 dòng>
+
+**Adjacent checks**
+- <impact area 1> — <PASS/FAILED/BLOCKED> — <note ngắn>
+- <impact area 2> — <PASS/FAILED/BLOCKED> — <note ngắn>
+
+**Steps**
 1. <bước 1>
 2. <bước 2>
-3. ...
+3. <bước 3>
 
-**Expected:** <1 câu mong đợi>
+**Expected**
+- <expected 1>
+- <expected 2>
 
-**Actual:**
-- <quan sát 1 — mỗi ý 1 gạch đầu dòng>
+**Actual**
+- <quan sát 1>
 - <quan sát 2>
-- <số liệu cụ thể, vd: Total events 13 → 6>
-- ...
+- <số liệu trước → sau nếu có>
 
-**Ghi chú kỹ thuật (dev):**   ← chỉ khi cần (bug có API/log)
-- Request: `POST /...` body `{...}`
-- Response `200`: `{...}`
-- <root cause 1 dòng>
+**Technical notes**
+- <endpoint/log/network only when needed>
 
-**Kết luận:** <1 câu> → <Done / In Progress / ...>
-
-**Evidence:** `path/a.png`, `path/b.png`
+**Verdict:** <PASS/FAILED/BLOCKED> — <1 câu kết luận>
+**Evidence:**
+- <path/to/evidence-1.png>
+- <path/to/evidence-2.png>
 ```
 
-## Quy tắc bắt buộc
+## Rules
 
-1. **Actual = bullet list**, mỗi quan sát/số liệu một dòng. Tối kỵ gộp tất cả vào 1 paragraph.
-2. **Steps = danh sách đánh số** (`1.` `2.` …), không gộp 1 dòng.
-3. Số liệu nêu rõ **trước → sau** (vd `13 → 6`, `qty 2 → reset 0`).
-4. In đậm nhãn (`**Môi trường:**`, `**Actual:**`) và từ khóa quan trọng (tên filter, toast).
-5. Phần kỹ thuật (endpoint/mã lỗi/response) tách riêng ở **Ghi chú kỹ thuật (dev)**, không trộn vào Actual.
-6. **Kết luận** luôn 1 câu + state đích (Done / In Progress).
-7. Mỗi ticket kết bằng **Evidence** = danh sách path ảnh.
+1. `AC results` phải tách từng AC một dòng, không gộp nhiều AC vào một bullet.
+2. `Steps`, `Expected`, `Actual` đều dùng bullet/numbered list, không viết thành paragraph dài.
+3. Mỗi `Actual` nên là một quan sát hoặc một số liệu trước → sau.
+4. `Technical notes` chỉ ghi khi có API/log/network đủ để hỗ trợ root cause.
+5. `Evidence` luôn là danh sách path ảnh riêng, không nhét vào dòng `Verdict`.
+6. Không đặt dấu `.` cuối câu nếu nội dung dùng cho Plane comment hoặc report human-facing.
 
-## Lưu ý khi post lên Plane (comment_html)
-- Mỗi mục bọc trong thẻ riêng để xuống dòng: dùng `<p>` cho từng nhãn và `<ul><li>…</li></ul>` cho Actual/Steps — **không** nhét cả Actual vào một `<p>` duy nhất.
-- Ví dụ Actual đúng:
-  ```html
-  <p><strong>Actual:</strong></p>
-  <ul>
-    <li>Filter Staff/Event Type/Status/Team đầy đủ &amp; hoạt động.</li>
-    <li>Status = Pending: Total events 13 → 6, In Progress 7 → 0.</li>
-    <li>Combine AND: Booking AND Pending → 6 (giao đúng).</li>
-  </ul>
-  ```
-- Escape: `&` → `&amp;`, `"` → `&quot;`, `<`/`>` trong JSON mẫu → `&lt;`/`&gt;`.
+## Plane comment HTML
+
+- Mỗi khối cần thẻ riêng để giữ xuống dòng ổn định
+- Dùng `<p>` cho nhãn, `<ul><li>…</li></ul>` cho list, không dồn `Actual` vào một `<p>`
+- Escape ký tự đặc biệt: `&` → `&amp;`, `"` → `&quot;`, `<`/`>` → `&lt;`/`&gt;`
+
+## Minimal PASS example
+
+```html
+<p><strong>AC results</strong></p>
+<ul>
+  <li>AC1 — PASS — Ticket flow hoạt động đúng</li>
+  <li>AC2 — PASS — Adjacent control không vỡ</li>
+</ul>
+<p><strong>Verdict:</strong> PASS — Không còn lệch business flow</p>
+```

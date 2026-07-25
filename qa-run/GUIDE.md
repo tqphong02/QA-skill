@@ -142,6 +142,38 @@ Chi tiết: `SKILL.md` §🔁. Skill cũng dùng được với Cursor/Cline/Aid
 └── package.json
 ```
 
+### 📂 Cấu trúc chuẩn trong dự án
+```text
+<project-root>/
+├── .env
+├── auth.json
+├── evidence/
+│   ├── runs/<run-id>/
+│   └── visual-*/
+├── qa-knowledge/
+│   ├── knowledge-index.json
+│   ├── system-overview.md
+│   ├── flows/
+│   ├── rules/
+│   ├── contracts/
+│   ├── evidence/
+│   ├── app-business-guide.md
+│   ├── app-flow-map.json
+│   ├── checklists/
+│   ├── merged/
+│   ├── repositories/
+│   └── ui-business/
+├── FINDINGS.md
+└── reports/
+```
+
+- Knowledge mới ưu tiên vào `qa-knowledge/knowledge-index.json` và các shard `flows/`, `rules/`, `contracts/`
+- `app-business-guide.md` và `app-flow-map.json` giữ vai trò tương thích hoặc summary
+- Evidence theo run luôn vào `evidence/runs/<run-id>/`
+- Report hoặc export tách riêng vào `reports/`
+- `FINDINGS.md` ở root chỉ giữ summary ngắn của issue đang theo dõi
+- Không để file QA rải ở root nếu đã có thư mục chuẩn phù hợp
+
 ---
 
 ## 💬 Câu lệnh mẫu (copy-paste cho AI)

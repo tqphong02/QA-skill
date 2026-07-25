@@ -7,7 +7,7 @@ description: Plan or execute browser QA on an existing project, including app ba
 
 **Core principle:** Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
 
-Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. **Dữ liệu lấy theo thư mục bạn chạy lệnh** (cwd hoặc `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` đều nằm trong thư mục dự án đang test — KHÔNG đụng vào skill. Không giả định engine nằm trong `.claude`, `.codex`, `.gemini` hoặc home directory cụ thể
+Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. **Dữ liệu lấy theo thư mục bạn chạy lệnh** (cwd hoặc `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` đều nằm trong thư mục dự án đang test — KHÔNG đụng vào skill. Không giả định engine nằm trong `.claude`, `.codex`, `.gemini` hoặc home directory cụ thể. Khi load knowledge, ưu tiên `qa-knowledge/knowledge-index.json` rồi mới đi vào file scope cụ thể
 
 > **Khi nào dùng**: khám phá lỗi mới, verify lại bug, poke UI/API ad-hoc trên 1 web app, sanity/risk-based khi cần chạy lặp, regression (bộ TC cố định) đặt ở instance dự án.
 > **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI.
@@ -44,9 +44,12 @@ Output: `qa-knowledge/repositories/<repo-name>/` gồm:
 - `architecture-map.json` — Module → Controller/Service/Repository + integrations
 - `api-contracts.json` — endpoint, method, auth, roles
 - `business-rules.json` — rule có ruleId, category, condition, failureResult, confidence
-- `business-guide.md` *(Phase 3)* — guide tổng hợp 18 sections
+- `knowledge-index.json` — entry index cho scope load, trỏ tới flow/rule/contract shards
+- `system-overview.md` — summary tương thích cho human reading
+- `flows/`, `rules/`, `contracts/`, `evidence/` — shard knowledge theo scope
+- `business-guide.md` *(Phase 3, compatibility)* — guide tổng hợp 18 sections khi cần bàn giao hoặc fallback
 
-Khi có `system-business-guide.md` tại `qa-knowledge/merged/`, `qa-run` và `business-analysis` đọc từ đó để enriched context.
+Khi có `system-business-guide.md` tại `qa-knowledge/merged/`, `qa-run` và `business-analysis` đọc từ đó để enriched context. Khi project đã có `qa-knowledge/knowledge-index.json`, chỉ load các shard mà index trỏ tới thay vì đọc toàn bộ guide lớn
 
 ## UI_BUSINESS_RECONCILIATION (UI vs Source/Docs/Runtime Reconciliation Pipeline)
 
@@ -81,7 +84,7 @@ Output: `qa-knowledge/ui-business/<page-slug>/` gồm:
      - Cột `Result`: **BẮT BUỘC KHỚP CHÍNH XÁC** một trong các giá trị: `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive).
      - Cột `Priority`: **BẮT BUỘC KHỚP CHÍNH XÁC** một trong các giá trị: `Critical`, `High`, `Medium`, `Low`.
      - Cột `Note`: Bắt buộc điền khi Result là `Fail`, `Untest` hoặc `N/A`. **Nội dung Note phải ngắn gọn, ngữ cảnh thủ công dễ hiểu cho người dùng/manual tester (KHÔNG ghi stacktrace, KHÔNG lộ HTTP status code hay JSON thô)**.
-4. Resolve `<project-root>/qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md`; kiểm tra 6 hashes qua `validate-knowledge.mjs --check`
+4. Resolve `<project-root>/qa-knowledge/knowledge-index.json` trước, sau đó chỉ đọc các shard được index trỏ tới; nếu project còn dùng guide tổng thì đọc `app-business-guide.md` / `<feature>-business-guide.md` như lớp tương thích và kiểm tra 6 hashes qua `validate-knowledge.mjs --check`
 5. Với `RETEST_TICKET`, đọc ticket qua `plane-qa`, sau đó tạo ledger đủ 6 dòng: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
 6. Ghi test contract gồm `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` và knowledge đã reuse
 7. Chạy CLI/script cho flow rõ và lặp lại; chỉ dùng browser agent/MCP cho nhánh tương tác chưa hiểu
@@ -93,21 +96,65 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 
 Không suy đoán PASS khi thiếu evidence. Không dừng sau happy path. Không đổi ticket gốc thành FAILED vì một bug mới khác root cause.
 
+## Canonical artifact layout
+
+Mỗi dự án dùng chung một layout cố định để file sinh ra không bị rải lung tung:
+
+```text
+<project-root>/
+├── .env
+├── auth.json
+├── evidence/
+│   ├── runs/
+│   │   └── <run-id>/
+│   │       ├── manifest.json
+│   │       ├── screenshots/
+│   │       ├── logs/
+│   │       └── redacted/
+│   ├── visual-*/
+│   └── .runtime-events.json
+├── qa-knowledge/
+│   ├── knowledge-index.json
+│   ├── system-overview.md
+│   ├── flows/
+│   ├── rules/
+│   ├── contracts/
+│   ├── evidence/
+│   ├── app-business-guide.md
+│   ├── app-flow-map.json
+│   ├── checklists/
+│   ├── merged/
+│   ├── repositories/
+│   └── ui-business/
+├── FINDINGS.md
+└── reports/
+  ├── retest/
+  └── exports/
+```
+
+- `qa-knowledge/` ưu tiên index-first: `knowledge-index.json` là entry point, các shard `flows/`, `rules/`, `contracts/` là nguồn chính; `app-business-guide.md` là lớp tương thích/tổng quan
+- `evidence/runs/<run-id>/` chỉ chứa artifact của một lần chạy, không trộn run khác nhau
+- `FINDINGS.md` ở root chỉ là index ngắn cho bug/live issue hiện hành, không nhét log dài
+- `reports/` dùng cho report PDF hoặc markdown bàn giao nếu dự án cần lưu riêng
+- Không sinh file QA vào thư mục random ngoài các vùng trên trừ khi script hiện hữu bắt buộc để tương thích
+- Nếu có file cũ nằm sai chỗ, ưu tiên move vào đúng thư mục chuẩn trước khi bàn giao
+
 Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và giữ ledger trên disk hoặc trong working notes; không tải toàn bộ snapshot, ảnh hoặc mọi reference vào context.
 
 ## Knowledge scope decision
 
-- `APP_BASELINE_DISCOVERY`: dùng khi user yêu cầu test/khám phá tổng thể web app, bootstrap project chưa có `app-business-guide.md`, hoặc user yêu cầu refresh guide.
+- `APP_BASELINE_DISCOVERY`: dùng khi user yêu cầu test/khám phá tổng thể web app, bootstrap project chưa có `qa-knowledge/knowledge-index.json`, hoặc user yêu cầu refresh index/guide.
   - **Ưu tiên chạy `scripts/extract-flow.mjs` trước** để trích xuất business flow từ DOM + network + JS runtime trong 1 lần quét duy nhất mà không cần đọc source code FE/BE.
-  - Script tự login, duyệt toàn navigation, intercept API calls, map state machine từ status labels, ghi `qa-knowledge/app-flow-map.json` (AI load nhanh) và `qa-knowledge/app-business-guide.md` (human readable).
-  - **Sau khi có guide, mọi run tiếp theo chỉ đọc JSON/MD — 0 browser action cho phase "hiểu context"**; chỉ mở browser khi cần verify thực tế.
+  - Script tự login, duyệt toàn navigation, intercept API calls, map state machine từ status labels, ghi `qa-knowledge/app-flow-map.json` (AI load nhanh) và các shard đầu ra của `qa-knowledge/knowledge-index.json`.
+  - `app-business-guide.md` chỉ giữ vai trò summary tương thích; knowledge chính nằm ở index và các shard được nó trỏ tới.
+  - **Sau khi có index, mọi run tiếp theo chỉ đọc index + shard đúng scope — 0 browser action cho phase "hiểu context"**; chỉ mở browser khi cần verify thực tế.
   - Lập module map trước rồi đi qua flow business chính có thể truy cập, role/state/input/side-effect/integration/UI/UX và coverage gap
 - `SHEET_TESTCASE_EXECUTION`: dùng khi user đưa URL hoặc Spreadsheet ID của Google Sheet chứa bộ testcase.
   - **Đọc business flow trước khi test**: Luôn nạp `qa-knowledge/app-flow-map.json` (hoặc `app-business-guide.md`) để AI hiểu toàn bộ logic business, route, role và state transition của app trước khi tương tác.
   - **Thực thi song song UI/UX & Functional**: Khi user yêu cầu "chạy execution testcase toàn bộ", tự động kích hoạt `--parallel --workers 4`. Các worker phân chia kiểm thử đồng thời cả phần **UI/UX** (layout, overflow, truncation qua `visual-audit.mjs`) và phần **Functional** (business logic, mutation, validation qua `attack-surface.mjs`).
   - Chạy `node scripts/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4` để đọc, phân chia worker và thực thi.
   - Sau khi test xong, tự động cập nhật ngược lại Google Sheet với Result (`Pass`/`Fail`/`N/A`/`Untest`), Priority (`Critical`/`High`/`Medium`/`Low`), và Note (ngữ cảnh thủ công dễ hiểu, KHÔNG ghi stacktrace hay error code khô khan).
-- `RETEST_TICKET`: không quét lại toàn app. Đọc app guide để biết dependency, đọc feature guide để biết flow chi tiết, rồi chạy RETEST_PLUS cho ticket và impacted area. Nếu thiếu guide, chỉ discovery đủ để hiểu feature hiện tại rồi tạo guide
+- `RETEST_TICKET`: không quét lại toàn app. Đọc `knowledge-index.json` để lấy shard liên quan, rồi đọc app/feature guide tương thích nếu có, sau đó chạy RETEST_PLUS cho ticket và impacted area. Nếu thiếu index/guide, chỉ discovery đủ để hiểu feature hiện tại rồi tạo index + shard
 - `SANITY_REGRESSION` và `EXPLORATORY_ADHOC`: reuse guide hiện có và mở rộng knowledge đúng phần scope đã kiểm tra
 - Không gọi baseline là exhaustive nếu chưa đi qua đủ module, role, state hoặc data. Ghi `covered`, `partial`, `blocked` hoặc `not_covered` trong `coverage_map`
 
@@ -122,7 +169,7 @@ Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và
 
 #### Bước 0 — Đọc business guide đã lưu
 - Đọc [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md)
-- Đọc `qa-knowledge/app-business-guide.md` trước nếu có, sau đó đọc đúng `<feature-slug>-business-guide.md`
+- Đọc `qa-knowledge/knowledge-index.json` trước nếu có, rồi chỉ load đúng shard/guide mà index trỏ tới
 - Reuse flow, role/data, route/API, state transition và reusable assets còn đúng
 - Không đọc guide của feature khác và không bỏ verification chỉ vì guide cũ ghi PASS
 
@@ -182,6 +229,7 @@ Một dòng: *"Khám phá <feature> tìm lỗi về <rủi ro>; account <role>; 
 3. **Pattern memory** - đọc business guide khớp feature trước, sau đó mới đọc `FINDINGS.md` + evidence liên quan khi cần
 4. **Parallel agent fan-out** - 3-5 agent probe 1 lúc (chỉ khi user opt-in)
 5. **Charter với risk taxonomy** - H/M/L ưu tiên probe trước
+6. **Screenshot-first evidence** - nếu có ảnh/evidence hình, ưu tiên `visual-evidence-router.mjs` / OmniParser để ground element, label và bounding box trước; chỉ fallback OCR hoặc vision tổng quát khi OmniParser không sẵn hoặc ảnh cần trích ký tự chính xác, không convert toàn bộ PNG/JPG thành markdown
 
 ### 4. UI/UX & Interaction testing
 Khi retest/sanity: luôn rải 2-3 check UX ở khu vực fix (vì fix function đôi khi sinh ra UX issue).
@@ -191,6 +239,7 @@ Khi retest/sanity: luôn rải 2-3 check UX ở khu vực fix (vì fix function 
 2. **Đọc JSON findings** — AI biết chính xác element nào có vấn đề mà không cần snapshot toàn trang
 3. **Embed 2 screenshot** (desktop + mobile) vào context — AI vision phân tích ảnh thực thay vì đoán từ DOM text
 4. **Kiểm tra AI Vision Checklist** trong output JSON — 8 mục cụ thể để AI nhìn vào ảnh
+5. **Nếu screenshot là evidence chính** — chạy OmniParser/`visual-evidence-router.mjs` trước để lấy bounding box + label + interactable state; chỉ OCR khi ảnh chứa text cần đối chiếu chính xác hoặc OmniParser trả về không đủ ngữ cảnh, không dùng `doc-to-md` để đổi ảnh thành markdown
 
 ```bash
 cd <project-root>
@@ -209,6 +258,12 @@ QA_RUN_SKILL_DIR=/path/to/qa-run node /path/to/qa-run/scripts/visual-audit.mjs -
 - Giật lag: long-task > 100ms
 - Spam button: request > 1 trong 1 lần bấm
 
+**Khi có file hình trong evidence**
+- Dùng screenshot như nguồn sự thật trực tiếp cho UI state, không ép thành text trước khi phân tích
+- Nếu ảnh là flow/UI screenshot thì ưu tiên `visual-audit.mjs`, `visual-evidence-router.mjs` hoặc image viewer tool để ground element, label và layout
+- Chỉ chuyển ảnh sang text khi cần OCR nội dung trong ảnh, ví dụ chữ trên banner, toast, modal, QR, hoặc khi không có DOM/network đủ xác minh
+- Không lưu ảnh dưới dạng file text trung gian nếu không cần, vì sẽ làm mất ngữ cảnh visual
+
 
 ### 5. Chọn kỹ thuật (12 kỹ thuật)
 Xem `TESTING-TECHNIQUES.md` để biết chi tiết + coverage matrix.
@@ -216,7 +271,7 @@ Xem `TESTING-TECHNIQUES.md` để biết chi tiết + coverage matrix.
 12 kỹ thuật: Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
 
 **Hard gate cho Exploratory/Ad-hoc (BẮT BUỘC):**
-1. Đọc `qa-knowledge/app-flow-map.json` (hoặc `app-business-guide.md`) để biết module map.
+1. Đọc `qa-knowledge/knowledge-index.json` trước; nếu chưa có thì mới dùng `app-flow-map.json` hoặc `app-business-guide.md` như fallback.
 2. **Tạo Markdown Checklist tự động cho trang/feature**:
    - Chạy `node scripts/generate-checklist.mjs --path /feature-path --feature "feature-name"`
    - Output: `qa-knowledge/checklists/<feature-slug>-checklist.md`
@@ -240,11 +295,19 @@ RETEST_PLUS dùng app/feature guide để giảm khám phá lặp lại và khô
 - Parse URL Plane → gọi API → trích AC, steps, expected, dev notes
 - Lỗi 401/404/403 → báo user check API key + URL
 
+#### Bước 1.5 — Nạp business context trước browser action
+- Đọc [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) trước để biết protocol merge knowledge
+- Đọc `qa-knowledge/knowledge-index.json` rồi chỉ đọc đúng shard/guide cho scope ticket
+- Nếu thiếu guide hoặc guide stale, chỉ mở discovery đủ để tạo/refresh feature guide cho scope ticket, không quét lại full app
+- Rút ra test contract gồm role, state transition, validation, side effect, API/network và impacted dependency trước khi click đầu tiên
+- Nếu chưa mô tả được business flow bằng 1-2 câu rõ ràng, dừng lại và bổ sung context trước khi verify
+
 #### Bước 2 — Trích AC
 - AC chính (happy path): "Khi user làm X thì hệ thống phải Y" → case PHẢI PASS
 - AC phụ (edge case): input rỗng, concurrent, role khác → cũng phải test
 - Repro steps của bug gốc (nếu bug ticket) → chạy lại đúng các bước
 - Khu vực kề bên (AI tự suy luận): tính năng fix nằm trong flow nào? → poke xem có vỡ không
+- Diễn giải AC thành business rule có thể test được, không bám chữ nghĩa mơ hồ trong ticket nếu thiếu ngữ cảnh
 
 #### Bước 3 — Verify từng AC
 Với mỗi AC:
@@ -273,13 +336,14 @@ Adjacent area check trong các lớp trên:
 ```
 ## <✅/❌> #<id> — <tên ngắn> — <PASS/FAILED>
 **Nguồn requirement:** <URL ticket đã fetch>
+**Business flow:** <1-2 câu tóm tắt flow đã xác nhận>
 **AC1 (<mô tả>):** PASS  — <evidence 1 dòng>
 **AC2 (<mô tả>):** FAILED  — <quan sát sai lệch>
-**Adjacent:** PASS — <note>
+**Adjacent:** PASS — <note ngắn>
 **Verdict:** PASS (nếu tất cả AC chính PASS) / FAILED (nếu ≥1 AC chính FAILED)
 ```
 - Ghi `FINDINGS.md` theo format chuẩn (`report/REPORT-TEMPLATE.md`)
-- Merge knowledge đã xác nhận theo `references/KNOWLEDGE_HANDOFF.md`; baseline ghi `app-business-guide.md` và feature guide đã khám phá sâu, retest cập nhật feature guide và chỉ sửa app guide khi có module/dependency/coverage mới
+- Merge knowledge đã xác nhận theo `references/KNOWLEDGE_HANDOFF.md`; ưu tiên cập nhật `knowledge-index.json` và các shard, chỉ dùng `app-business-guide.md` / feature guide như lớp compatibility khi cần bàn giao hoặc fallback
 - Chạy `node scripts/write-business-guide.mjs --check <guide.md>` và đọc lại guide trước khi bàn giao
 - Nếu FAILED → comment evidence và kéo ticket gốc về In Progress
 - Nếu PASS → comment evidence và kéo ticket gốc sang Done
@@ -301,7 +365,7 @@ QA_PROJECT_NAME=MyProject
 ```bash
 cd MyProject/qa
 QA_RUN_SKILL_DIR=/path/to/qa-run node /path/to/qa-run/scripts/extract-flow.mjs
-# Kết quả: qa-knowledge/app-flow-map.json + qa-knowledge/app-business-guide.md
+# Kết quả: qa-knowledge/knowledge-index.json + qa-knowledge/app-flow-map.json + shard guides tương ứng
 ```
 Options:
 ```bash
@@ -356,6 +420,7 @@ Chạy: `cd MyProject/qa && node probe-x.mjs`. Thao tác GHI dữ liệu thật 
 #### 3. Ghi nhận → `FINDINGS.md` (trong thư mục dự án)
 Mỗi bug: **Quan sát → Expected → Evidence:<png> → Severity → TC**. Gom theo root-cause.
 Report & comment theo **format chuẩn** ở `report/REPORT-TEMPLATE.md` — quy tắc số 1: **Actual & Steps phải xuống dòng từng ý (bullet/numbered), KHÔNG viết liền 1 đoạn**.
+Nếu là retest ticket, report phải có đủ: nguồn requirement, business flow, AC-by-AC verdict, adjacent check và evidence paths riêng biệt; không gộp nhiều verdict vào một dòng.
 
 #### 4. Đóng gói / bàn giao — log bug Plane có preview ảnh INLINE
 **Mục tiêu**: mở ticket trên Plane → scroll description → **thấy ảnh preview ngay**, KHÔNG cần bấm tải file về.
