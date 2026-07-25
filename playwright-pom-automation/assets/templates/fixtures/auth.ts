@@ -1,4 +1,4 @@
-import { test as base, type Page, type APIRequestContext, expect } from '@playwright/test';
+import { test as base, type Page, type APIRequestContext, type APIResponse, expect } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import { ApiClient } from './api-client';
@@ -51,7 +51,7 @@ export async function setupStorageState(): Promise<string> {
   const api = new ApiClient(page.request, AUTH_CONFIG.apiBaseUrl);
   const res = await api.post(AUTH_CONFIG.loginPath, AUTH_CONFIG.credentials);
   expect(res.status()).toBe(200);
-  const { accessToken, refreshToken } = await res.json();
+  const { accessToken } = await res.json();
 
   // Set token vào localStorage/cookie tùy project
   await page.goto('/'); // về base URL trước
@@ -78,10 +78,10 @@ type AuthFixtures = {
   authenticatedApi: ApiClient;   // ApiClient kèm token
 };
 
-export const test = base.extend<AUTH_FIXTURES>({
+export const test = base.extend<AuthFixtures>({
   // ─── Fixture: apiToken ───────────────────────────────────
   // Login 1 lần per worker, share token cho mọi test trong file
-  apiToken: async ({ request }: { request: APIRequestContext }, use) => {
+  apiToken: async ({ request }: { request: APIRequestContext }, use: (r: string) => Promise<void>) => {
     const api = new ApiClient(request, AUTH_CONFIG.apiBaseUrl);
     const res = await api.post(AUTH_CONFIG.loginPath, AUTH_CONFIG.credentials);
     expect(res.status()).toBe(200);
@@ -90,7 +90,7 @@ export const test = base.extend<AUTH_FIXTURES>({
   },
 
   // ─── Fixture: authenticatedApi ───────────────────────────
-  authenticatedApi: async ({ request }: { request: APIRequestContext }, use) => {
+  authenticatedApi: async ({ request }: { request: APIRequestContext }, use: (r: ApiClient) => Promise<void>) => {
     const api = new ApiClient(request, AUTH_CONFIG.apiBaseUrl);
     const loginRes = await api.post(AUTH_CONFIG.loginPath, AUTH_CONFIG.credentials);
     expect(loginRes.status()).toBe(200);
@@ -103,7 +103,7 @@ export const test = base.extend<AUTH_FIXTURES>({
 
   // ─── Fixture: authenticatedPage ─────────────────────────
   // Browser context với storageState đã login
-  authenticatedPage: async ({ browser }, use) => {
+  authenticatedPage: async ({ browser }, use: (r: Page) => Promise<void>) => {
     const storageState = await setupStorageState();
     const context = await browser.newContext({ storageState });
     const page = await context.newPage();
@@ -124,19 +124,19 @@ class AuthedApiClient extends ApiClient {
     super(request, baseUrl);
   }
 
-  override get(path: string): Promise<API_RESPONSE> {
+  override get(path: string): Promise<APIResponse> {
     return super.get(path, this.token);
   }
-  override post(path: string, body: unknown): Promise<API_RESPONSE> {
+  override post(path: string, body: unknown): Promise<APIResponse> {
     return super.post(path, body, this.token);
   }
-  override put(path: string, body: unknown): Promise<API_RESPONSE> {
+  override put(path: string, body: unknown): Promise<APIResponse> {
     return super.put(path, body, this.token);
   }
-  override patch(path: string, body: unknown): Promise<API_RESPONSE> {
+  override patch(path: string, body: unknown): Promise<APIResponse> {
     return super.patch(path, body, this.token);
   }
-  override delete(path: string): Promise<API_RESPONSE> {
+  override delete(path: string): Promise<APIResponse> {
     return super.delete(path, this.token);
   }
 }

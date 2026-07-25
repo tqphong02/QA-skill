@@ -6,12 +6,15 @@ import { buildLoginLocators, type LoginLocators } from '../selectors';
  * LoginPage — Page Object mẫu.
  * Locator lấy từ centralized selectors/ folder (single source of truth).
  *
- * Quy ước:
- *  - readonly locator property — expose locator cho spec.
+ * READONLY PATTERN trong TypeScript POM:
+ *  - `private readonly locs` → toàn bộ locator object bất biến sau constructor.
+ *  - Getter (get emailInput) → expose Locator nhưng KHÔNG cho gán đè từ spec.
+ *    Tương đương Java TestNG:  private final By EMAIL = By.id("#email");
  *  - Method chỉ THAO TÁC + TRẢ DATA, KHÔNG expect() ở đây.
  *  - Đổi selector → sửa ở selectors/login.selectors.ts, KHÔNG sửa page này.
  */
 export class LoginPage extends BasePage {
+  // `private readonly` → không thể gán đè từ bên ngoài hoặc trong subclass
   private readonly locs: LoginLocators;
 
   constructor(page: Page) {
@@ -19,13 +22,16 @@ export class LoginPage extends BasePage {
     this.locs = buildLoginLocators(page);
   }
 
-  // Expose locator (readonly-style qua getter)
-  get emailInput(): Locator { return this.locs.emailInput; }
+  // ─── Expose locators qua getter (readonly-style) ───────────────────────────
+  // Caller (spec) chỉ READ được — không thể gán lại:
+  //   loginPage.emailInput = something → TypeScript ERROR ✗
+  // Tương đương Java:  public WebElement getEmailInput() { return emailInput; }
+  get emailInput():    Locator { return this.locs.emailInput; }
   get passwordInput(): Locator { return this.locs.passwordInput; }
-  get submitButton(): Locator { return this.locs.submitButton; }
-  get errorMessage(): Locator { return this.locs.errorMessage; }
+  get submitButton():  Locator { return this.locs.submitButton; }
+  get errorMessage():  Locator { return this.locs.errorMessage; }
 
-  // --- Actions (KHÔNG expect ở đây) ---
+  // ─── Actions (KHÔNG expect ở đây) ─────────────────────────────────────────
 
   async open(): Promise<void> {
     await this.goto('/login');

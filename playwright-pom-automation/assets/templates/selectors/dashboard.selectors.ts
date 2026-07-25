@@ -1,4 +1,4 @@
-import type { Page, Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Centralized selectors cho Dashboard — SINGLE SOURCE OF TRUTH cho mọi locator.

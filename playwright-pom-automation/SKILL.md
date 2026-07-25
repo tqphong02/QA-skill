@@ -97,6 +97,45 @@ protected get loginBtn() {
 }
 ```
 
+### 4b. TypeScript `readonly` pattern (mandatory cho mọi POM)
+
+**Mục đích:** Ngăn selector hoặc locator bị gán đè ngoài ý muốn — tương đương `private final` + `static final` trong Java/TestNG.
+
+| Vị trí | Pattern TypeScript | Tương đương Java |
+|---|---|---|
+| Raw selector string | `export const sel = { id: '#btn' } as const` | `public static final String BTN = "#btn"` |
+| Locator object trong POM | `private readonly locs: LoginLocators` | `private final LoginLocators locs` |
+| Expose locator ra spec | `get submitButton(): Locator { return this.locs.submitButton; }` | `public WebElement getSubmitButton() { return submitButton; }` |
+
+**Rule bắt buộc:**
+- Tất cả selector file dùng `as const` ở object cuối.
+- Tất cả Page Object class dùng `private readonly locs` — **KHÔNG** dùng `public locs` hay `protected locs`.
+- Expose ra ngoài chỉ qua `getter` — không expose raw field public.
+- Spec KHÔNG được import `buildLoginLocators` trực tiếp — phải qua Page Object.
+
+### 4c. Annotations kiểu TestNG (mapping sang Playwright + Allure)
+
+| TestNG Java | Playwright TypeScript | Mục đích |
+|---|---|---|
+| `@Test(groups="smoke")` | `test('name @smoke', ...)` + `--grep @smoke` | Group/tag để filter CI |
+| `@BeforeClass` | `test.beforeAll(async () => {})` | Setup 1 lần cho cả describe block |
+| `@AfterClass` | `test.afterAll(async () => {})` | Teardown / cleanup data sau cả block |
+| `@BeforeMethod` | `test.beforeEach(async ({ page }) => {})` | Reset state trước mỗi test |
+| `@AfterMethod` | `test.afterEach(async ({ page }, info) => {})` | Screenshot on fail, cleanup per-test |
+| `@Test(enabled=false)` | `test.skip(() => condition, 'reason')` | Bỏ qua test theo điều kiện |
+| `@Severity(CRITICAL)` | `allure.severity('critical')` | Mức độ nghiêm trọng của test |
+| `@Feature("Login")` | `allure.feature('Login')` | Nhóm theo chức năng |
+| `@Story("Happy path")` | `allure.story('Happy path')` | Sub-feature / user story |
+| `@Owner("QA Team")` | `allure.owner('QA Team')` | Người sở hữu test |
+| `@Description("...")` | `allure.description('...')` | Mô tả chi tiết |
+| `@Step("Click login")` | `await allure.step('Click login', async () => {})` | Bước test hiện trong report |
+
+**Rule bắt buộc:**
+- Mọi spec file phải có ít nhất `allure.severity` + `allure.feature` + `allure.story`.
+- Mọi test quan trọng phải wrap action chính bằng `allure.step(...)`.
+- `afterEach` phải có block chụp screenshot khi test fail (xem template).
+- Không dùng `test.only()` trong code commit lên CI (bẫy chỉ chạy 1 test).
+
 ### 5. Build Page Object classes (POM conventions)
 | Convention | Details |
 |---|---|

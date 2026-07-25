@@ -21,7 +21,7 @@ import path from 'path';
  *   - Best-effort: KHÔNG throw error nếu cleanup fail
  *   - Dùng standalone API request (không có browser context)
  */
-export default async function globalTeardown(config: FullConfig): Promise<void> {
+export default async function globalTeardown(_config: FullConfig): Promise<void> {
   console.log('\n[global-teardown] Starting...');
 
   const RUN_ID = process.env.RUN_ID || `local-${Date.now()}`;

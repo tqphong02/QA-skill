@@ -1,4 +1,4 @@
-import type { Page, Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Centralized selectors cho Login — SINGLE SOURCE OF TRUTH cho mọi locator.
@@ -9,21 +9,30 @@ import type { Page, Locator } from '@playwright/test';
  *   2. id                      → ổn định nếu frontend set cố định
  *   3. xpath                   → khi cấu trúc phức tạp, dùng ít
  *   4. css class               → tránh (auto-generated, dễ vỡ)
+ *
+ * READONLY PATTERN:
+ *   `as const`          → mọi giá trị tự động thành readonly literal string.
+ *                         TypeScript ngăn gán đè tại compile time:
+ *                         loginSelectors.emailInputId = '...' → ERROR ✗
+ *   Tương đương Java:   public static final String EMAIL_ID = "#email";
  */
 
 // ─────────────────────────────────────────────────────────────
-// RAW selector strings (id / xpath / css) — dùng page.locator(...)
+// RAW selector strings — IMMUTABLE via `as const`
 // ─────────────────────────────────────────────────────────────
 export const loginSelectors = {
   // id (ưu tiên hơn css class)
-  emailInputId: '#email',
+  emailInputId:    '#email',
   passwordInputId: '#password',
-  submitButtonId: '#login-submit',
-  errorMessageId: '#login-error',
+  submitButtonId:  '#login-submit',
+  errorMessageId:  '#login-error',
 
   // xpath — chỉ khi không có id/role ổn định
   rememberCheckboxXpath: '//label[contains(.,"Remember")]/input[@type="checkbox"]',
 } as const;
+
+// Expose kiểu readonly tường minh để dùng khi cần type annotation
+export type LoginSelectorKeys = keyof typeof loginSelectors;
 
 // ─────────────────────────────────────────────────────────────
 // LOCATOR factory — build Playwright Locator từ page.
@@ -31,14 +40,14 @@ export const loginSelectors = {
 // ─────────────────────────────────────────────────────────────
 export const buildLoginLocators = (page: Page) => ({
   // Ưu tiên (role/label) — resilient nhất
-  emailInput: page.getByRole('textbox', { name: /email/i }),
-  passwordInput: page.getByLabel(/password|mật khẩu/i }),
-  submitButton: page.getByRole('button', { name: /sign in|log in|đăng nhập/i }),
-  errorMessage: page.getByRole('alert'),
+  emailInput:    page.getByRole('textbox', { name: /email/i }),
+  passwordInput: page.getByLabel(/password|mật khẩu/i),
+  submitButton:  page.getByRole('button', { name: /sign in|log in|đăng nhập/i }),
+  errorMessage:  page.getByRole('alert'),
 
   // Fallback (id / xpath từ raw strings ở trên)
-  emailById: page.locator(loginSelectors.emailInputId),
-  submitById: page.locator(loginSelectors.submitButtonId),
+  emailById:       page.locator(loginSelectors.emailInputId),
+  submitById:      page.locator(loginSelectors.submitButtonId),
   rememberByXpath: page.locator(loginSelectors.rememberCheckboxXpath),
 
   // data-testid (nếu frontend có set)

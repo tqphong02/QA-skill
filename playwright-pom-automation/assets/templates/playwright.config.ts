@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI, // cấm test.only trên CI
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 4 : undefined,
+  workers: process.env.CI ? 4 : 1,
 
   // Reporter: list (console) + HTML + JUnit + Allure (bật allure-playwright khi đã cài).
   // Allure raw results → reports/allure-results; HTML generate bằng:

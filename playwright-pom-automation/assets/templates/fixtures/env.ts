@@ -12,7 +12,7 @@
  *   - Validate env khi load (fail fast nếu thiếu config)
  */
 
-function required(name: string, fallback?: string): string {
+export function required(name: string, fallback?: string): string {
   const v = process.env[name] ?? fallback;
   if (v === undefined || v === '') {
     throw new Error(
