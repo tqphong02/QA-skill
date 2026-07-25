@@ -9,13 +9,13 @@ Convert first, reason once, render deterministically
 
 ## Hard gates
 
-0. **Trước khi đọc BRD/SRS, kiểm tra knowledge từ REPO_BUSINESS_DISCOVERY:**
-   - Kiểm tra `qa-knowledge/merged/system-business-guide.md` — nếu có, đọc trước để nắm kiến trúc hệ thống
-   - Kiểm tra `qa-knowledge/merged/system-qna.json` — nếu có, load Q&A đã xác nhận, không tạo lại duplicate
-   - Kiểm tra `qa-knowledge/repositories/<repo>/reconciliation-report.json` — ưu tiên entries có `result: CONFIRMED`; hiển thị `CONFLICT` rõ ràng, không tự chọn một nguồn
-   - Kiểm tra `qa-knowledge/repositories/<repo>/business-qna.json` — merge Q&A đã có, chỉ sinh Q&A mới cho phần chưa có
-   - Nếu source và doc mâu thuẫn: ghi cả hai, đánh dấu `conflict`, yêu cầu con người xác nhận
-   - Nếu không tìm thấy bất kỳ knowledge file nào: tiếp tục bình thường từ gate 1
+0. **Before reading the BRD/SRS, check the knowledge base from REPO_BUSINESS_DISCOVERY:**
+   - Check `qa-knowledge/merged/system-business-guide.md` — if it exists, read it first to understand the system architecture
+   - Check `qa-knowledge/merged/system-qna.json` — if it exists, load the confirmed Q&A, do not create duplicates
+   - Check `qa-knowledge/repositories/<repo>/reconciliation-report.json` — prioritize entries with `result: CONFIRMED`; clearly highlight `CONFLICT`s, do not blindly choose one source
+   - Check `qa-knowledge/repositories/<repo>/business-qna.json` — merge existing Q&A, only generate new Q&A for uncovered areas
+   - If source and doc contradict: record both, mark as `conflict`, and require human confirmation
+   - If no knowledge files are found: proceed normally from gate 1
 
 1. Resolve the exact source documents and project output folder
 2. For PDF, DOCX, PPTX, XLSX, HTML or image input, run `doc-to-md/scripts/convert.sh` first

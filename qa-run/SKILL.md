@@ -7,10 +7,10 @@ description: Plan or execute browser QA on an existing project, including app ba
 
 **Core principle:** Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
 
-Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. **Dữ liệu lấy theo thư mục bạn chạy lệnh** (cwd hoặc `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` đều nằm trong thư mục dự án đang test — KHÔNG đụng vào skill. Không giả định engine nằm trong `.claude`, `.codex`, `.gemini` hoặc home directory cụ thể. Khi load knowledge, ưu tiên `qa-knowledge/knowledge-index.json` rồi mới đi vào file scope cụ thể
+Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. **Data is fetched based on the working directory** (cwd or `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` are in the tested project folder — DO NOT mutate the skill folder. Do not assume the engine is located in `.claude`, `.codex`, `.gemini` or a specific home directory. When loading knowledge, prioritize `qa-knowledge/knowledge-index.json` before reading specific scope files
 
-> **Khi nào dùng**: khám phá lỗi mới, verify lại bug, poke UI/API ad-hoc trên 1 web app, sanity/risk-based khi cần chạy lặp, regression (bộ TC cố định) đặt ở instance dự án.
-> **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI.
+> **When to use**: discovering new bugs, verifying bugs, ad-hoc UI/API poking on a web app, sanity/risk-based recurring runs, regression (fixed testcases) placed in the project instance.
+> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI.
 
 ## Enterprise QE Pipeline (15 Tầng Khép kín)
 
@@ -25,80 +25,88 @@ Intent Router → Run Planner & Dependency Graph → Manifest Initializer (run-m
 
 ## REPO_BUSINESS_DISCOVERY (Static Source Code Analysis Pipeline)
 
-Kích hoạt khi user yêu cầu: `Phân tích repo này`, `Học business flow từ source code`, `Quét logic hệ thống`, `Cập nhật knowledge từ repository`, `Tạo business guide từ code`.
+Activated when the user requests: `Analyze this repo`, `Learn business flow from source code`, `Scan system logic`, `Update knowledge from repository`, `Create business guide from code`.
 
 ```bash
-# Phân tích một repo
+# Analyze a repo
 node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode full
 
-# Chỉ cập nhật phần thay đổi
+# Only update changes
 node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode incremental
 
-# Phân tích nhiều repo cùng lúc
+# Analyze multiple repos simultaneously
 node scripts/repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
 ```
 
-Output: `qa-knowledge/repositories/<repo-name>/` gồm:
-- `repo-metadata.json` — loại repo, framework, modules, commit
+Output: `qa-knowledge/repositories/<repo-name>/` includes:
+- `repo-metadata.json` — repo type, framework, modules, commit
 - `symbol-index.json` — class, function, enum, route, decorator, validation
 - `architecture-map.json` — Module → Controller/Service/Repository + integrations
 - `api-contracts.json` — endpoint, method, auth, roles
-- `business-rules.json` — rule có ruleId, category, condition, failureResult, confidence
-- `knowledge-index.json` — entry index cho scope load, trỏ tới flow/rule/contract shards
-- `system-overview.md` — summary tương thích cho human reading
-- `flows/`, `rules/`, `contracts/`, `evidence/` — shard knowledge theo scope
+- `business-rules.json` — rule with ruleId, category, condition, failureResult, confidence
+- `knowledge-index.json` — entry index for scope load, pointing to flow/rule/contract shards
+- `system-overview.md` — compatible summary for human reading
+- `flows/`, `rules/`, `contracts/`, `evidence/` — shard knowledge by scope
 - `business-guide.md` *(Phase 3, compatibility)* — guide tổng hợp 18 sections khi cần bàn giao hoặc fallback
 
-Khi có `system-business-guide.md` tại `qa-knowledge/merged/`, `qa-run` và `business-analysis` đọc từ đó để enriched context. Khi project đã có `qa-knowledge/knowledge-index.json`, chỉ load các shard mà index trỏ tới thay vì đọc toàn bộ guide lớn
+When `system-business-guide.md` exists at `qa-knowledge/merged/`, `qa-run` and `business-analysis` read from it for enriched context. When the project already has `qa-knowledge/knowledge-index.json`, only load the shards pointed to by the index instead of reading the entire large guide
 
 ## UI_BUSINESS_RECONCILIATION (UI vs Source/Docs/Runtime Reconciliation Pipeline)
 
-Kích hoạt khi user yêu cầu: `Từ UI suy ra flow`, `Đối chiếu UI với backend/BRD`, `Tìm mâu thuẫn UI vs Source Code`, `Sinh câu hỏi cho BA/PO/Dev từ UI`.
+Activated when the user requests: `Infer flow from UI`, `Reconcile UI with backend/BRD`, `Find UI vs Source Code conflicts`, `Generate questions for BA/PO/Dev from UI`.
 
 ```bash
-# Quét trang live hoặc snapshot và chạy pipeline 7 bước:
+# Scan a live page or snapshot and run the 7-step pipeline:
 node scripts/ui-business-reconciliation.mjs --page order-detail
 node scripts/ui-business-reconciliation.mjs --url https://app.example.com/orders/123 --page order-detail
 ```
 
-Nguồn đối chiếu 5 tầng ưu tiên: **Runtime Verified → Source Code & API → BRD/SRS Docs → UI Observed → AI Inference**.
+5-tier reconciliation source priority: **Runtime Verified → Source Code & API → BRD/SRS Docs → UI Observed → AI Inference**.
 
-Output: `qa-knowledge/ui-business/<page-slug>/` gồm:
-- `ui-components.json` — Lọc components có ý nghĩa business & intent
+Output: `qa-knowledge/ui-business/<page-slug>/` includes:
+- `ui-components.json` — Filter components with business meaning & intent
 - `observed-flow.json` — UI observed flow & state sequence (DRAFT → SUBMITTED → APPROVED → COMPLETED / CANCELLED)
-- `business-conflicts.json` — Báo cáo phân loại 9 kết quả (`MATCHED`, `UI_ONLY`, `DOC_ONLY`, `CODE_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, `MISSING_TRANSITION`, `PERMISSION_CONFLICT`)
-- `unresolved-rules.json` — Phát hiện 10 ambiguity patterns đặc thù
-- `clarification-qna.json` — Bộ câu hỏi phân định trách nhiệm BA, PO, Dev
-- `ui-business-guide.md` — File Markdown báo cáo 12 sections đầy đủ
+- `business-conflicts.json` — Report classifying 9 results (`MATCHED`, `UI_ONLY`, `DOC_ONLY`, `CODE_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, `MISSING_TRANSITION`, `PERMISSION_CONFLICT`)
+- `unresolved-rules.json` — Detect 10 specific ambiguity patterns
+- `clarification-qna.json` — Clarification questions for BA, PO, Dev
+- `ui-business-guide.md` — Full 12-section Markdown report
 
 ## Cross-model hard gates
 
-Áp dụng nguyên thứ tự sau cho mọi model, đặc biệt model nhanh hoặc context nhỏ:
+Apply the following exact order for all models, especially fast or small-context models:
 
-1. **Khởi tạo Run Manifest**: Luôn gọi `node scripts/run-manifest.mjs start` trước khi chạy test để hỗ trợ truy vết đầy đủ trong phạm vi evidence đã thu thập.
-2. Phân loại yêu cầu trước khi mở browser: `APP_BASELINE_DISCOVERY`, `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC`, `SHEET_TESTCASE_EXECUTION` hoặc `AUTOMATION_BUILD`
-3. Với `SHEET_TESTCASE_EXECUTION` (khi user đưa URL/ID Google Sheet chứa testcase):
+1. **Initialize Run Manifest**: Always call `node scripts/run-manifest.mjs start` before running tests to support full traceability within the collected evidence scope.
+2. Classify the request before opening the browser: `APP_BASELINE_DISCOVERY`, `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC`, `SHEET_TESTCASE_EXECUTION` hoặc `AUTOMATION_BUILD`
+3. Với `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
+   - **Standard schema is pre-baked** — read `references/TESTCASE_SHEET_SCHEMA.json` for columns/rows; DO NOT rescan headers from the Excel/Sheet file each time unless the template uses non-standard custom headers. Schema summary:
+     ```
+     Sheet: "Test cases_App"  |  Header row: 9 (0-indexed: 8)
+     B=Scenario ID  C=Scenario Name  D=Test case ID  E=Description
+     F=Pre-condition  G=Procedure  H=Expected Results
+     I=Result  J=Priority  K=Date  L=Tester  M=Notes
+     ```
+     Columns I-M (idx 8-12) are **write columns** the AI writes back to; columns B-H (idx 1-7) are **read-only design** created by testcase-template.
    - Chạy `node scripts/execute-sheet.mjs --sheet-url <URL>`
-   - Khi user yêu cầu "chạy execution testcase toàn bộ" → thêm flag `--parallel --workers 4` để tự động chia module cho nhiều worker chạy song song (giảm đáng kể nguy cơ xung đột dữ liệu nhờ data-factory namespace).
-   - **Quy định chuẩn hóa kết quả ghi ngược về Sheet**:
-     - Cột `Result`: **BẮT BUỘC KHỚP CHÍNH XÁC** một trong các giá trị: `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive).
-     - Cột `Priority`: **BẮT BUỘC KHỚP CHÍNH XÁC** một trong các giá trị: `Critical`, `High`, `Medium`, `Low`.
-     - Cột `Note`: Bắt buộc điền khi Result là `Fail`, `Untest` hoặc `N/A`. **Nội dung Note phải ngắn gọn, ngữ cảnh thủ công dễ hiểu cho người dùng/manual tester (KHÔNG ghi stacktrace, KHÔNG lộ HTTP status code hay JSON thô)**.
-4. Resolve `<project-root>/qa-knowledge/knowledge-index.json` trước, sau đó chỉ đọc các shard được index trỏ tới; nếu project còn dùng guide tổng thì đọc `app-business-guide.md` / `<feature>-business-guide.md` như lớp tương thích và kiểm tra 6 hashes qua `validate-knowledge.mjs --check`
-5. Với `RETEST_TICKET`, đọc ticket qua `plane-qa`, sau đó tạo ledger đủ 6 dòng: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
-6. Ghi test contract gồm `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` và knowledge đã reuse
-7. Chạy CLI/script cho flow rõ và lặp lại; chỉ dùng browser agent/MCP cho nhánh tương tác chưa hiểu
-8. Cập nhật verdict/evidence vào ledger ngay sau mỗi lớp; không kết luận nếu còn dòng chưa có verdict hoặc lý do `BLOCKED/PARTIAL`
-9. Tách verdict ticket gốc khỏi bug mới rồi áp dụng state map cố định qua `plane-qa`
-10. Sau mọi run, đóng gói evidence sạch secrets qua `collect-evidence.mjs` và chốt manifest qua `run-manifest.mjs finish <RUN_ID>`
+   - When the user requests to run the entire testcase execution -> add the `--parallel --workers 4` flag to automatically split modules across multiple parallel workers (significantly reducing data conflict risk thanks to the data-factory namespace).
+   - **Standard rules for writing results back to the Sheet**:
+     - Column `Result` (col I): **MUST EXACTLY MATCH** one of: `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive).
+     - Column `Priority` (col J): **MUST EXACTLY MATCH** one of: `Critical`, `High`, `Medium`, `Low`.
+     - Column `Note` (col M): Mandatory when Result is `Fail`, `Untest` or `N/A`. **Content must be concise, manual-friendly context (DO NOT write stacktraces, DO NOT expose raw HTTP status codes or raw JSON)**.
+4. Resolve `<project-root>/qa-knowledge/knowledge-index.json` first, then only read the shards pointed to by the index; if the project still uses a monolithic guide, read `app-business-guide.md` / `<feature>-business-guide.md` as a compatibility layer and verify 6 hashes via `validate-knowledge.mjs --check`
+5. Với `RETEST_TICKET`, read the ticket via `plane-qa`, then create a ledger with all 6 items: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX
+6. Write the test contract including `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` and reused knowledge
+7. Run CLI/scripts for clear and repetitive flows; only use the browser agent/MCP for interactive branches that are not yet understood
+8. Update verdict/evidence into the ledger immediately after each layer; do not conclude if any item lacks a verdict or `BLOCKED/PARTIAL` reason
+9. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`
+10. After every run, bundle secrets-scrubbed evidence via `collect-evidence.mjs` and finalize the manifest via `run-manifest.mjs finish <RUN_ID>`
 
 State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
 
-Không suy đoán PASS khi thiếu evidence. Không dừng sau happy path. Không đổi ticket gốc thành FAILED vì một bug mới khác root cause.
+Do not guess PASS when lacking evidence. Do not stop after the happy path. Do not mark the original ticket FAILED due to a new bug with a different root cause.
 
 ## Canonical artifact layout
 
-Mỗi dự án dùng chung một layout cố định để file sinh ra không bị rải lung tung:
+Each project shares a fixed layout so generated files are not scattered:
 
 ```text
 <project-root>/
@@ -132,114 +140,114 @@ Mỗi dự án dùng chung một layout cố định để file sinh ra không b
   └── exports/
 ```
 
-- `qa-knowledge/` ưu tiên index-first: `knowledge-index.json` là entry point, các shard `flows/`, `rules/`, `contracts/` là nguồn chính; `app-business-guide.md` là lớp tương thích/tổng quan
-- `evidence/runs/<run-id>/` chỉ chứa artifact của một lần chạy, không trộn run khác nhau
-- `FINDINGS.md` ở root chỉ là index ngắn cho bug/live issue hiện hành, không nhét log dài
-- `reports/` dùng cho report PDF hoặc markdown bàn giao nếu dự án cần lưu riêng
-- Không sinh file QA vào thư mục random ngoài các vùng trên trừ khi script hiện hữu bắt buộc để tương thích
-- Nếu có file cũ nằm sai chỗ, ưu tiên move vào đúng thư mục chuẩn trước khi bàn giao
+- `qa-knowledge/` prioritize index-first: `knowledge-index.json` is the entry point, shards in `flows/`, `rules/`, `contracts/` are the primary source; `app-business-guide.md` is the compatibility/overview layer
+- `evidence/runs/<run-id>/` contains only artifacts for a single run, do not mix different runs
+- `FINDINGS.md` at the root is merely a short index for current bugs/live issues, do not stuff long logs here
+- `reports/` used for PDF reports or markdown handoffs if the project needs them stored separately
+- Do not generate QA files into random folders outside these zones unless mandated by existing scripts for compatibility
+- If legacy files are misplaced, prioritize moving them to the standard folder before handoff
 
-Khi model có context nhỏ, chỉ đọc phần skill/reference đang cần và giữ ledger trên disk hoặc trong working notes; không tải toàn bộ snapshot, ảnh hoặc mọi reference vào context.
+When the model has a small context, read only the needed skill/reference parts and keep the ledger on disk or in working notes; do not load the entire snapshot, images, or all references into context.
 
 ## Knowledge scope decision
 
-- `APP_BASELINE_DISCOVERY`: dùng khi user yêu cầu test/khám phá tổng thể web app, bootstrap project chưa có `qa-knowledge/knowledge-index.json`, hoặc user yêu cầu refresh index/guide.
-  - **Ưu tiên chạy `scripts/extract-flow.mjs` trước** để trích xuất business flow từ DOM + network + JS runtime trong 1 lần quét duy nhất mà không cần đọc source code FE/BE.
-  - Script tự login, duyệt toàn navigation, intercept API calls, map state machine từ status labels, ghi `qa-knowledge/app-flow-map.json` (AI load nhanh) và các shard đầu ra của `qa-knowledge/knowledge-index.json`.
-  - `app-business-guide.md` chỉ giữ vai trò summary tương thích; knowledge chính nằm ở index và các shard được nó trỏ tới.
-  - **Sau khi có index, mọi run tiếp theo chỉ đọc index + shard đúng scope — 0 browser action cho phase "hiểu context"**; chỉ mở browser khi cần verify thực tế.
-  - Lập module map trước rồi đi qua flow business chính có thể truy cập, role/state/input/side-effect/integration/UI/UX và coverage gap
-- `SHEET_TESTCASE_EXECUTION`: dùng khi user đưa URL hoặc Spreadsheet ID của Google Sheet chứa bộ testcase.
-  - **Đọc business flow trước khi test**: Luôn nạp `qa-knowledge/app-flow-map.json` (hoặc `app-business-guide.md`) để AI hiểu toàn bộ logic business, route, role và state transition của app trước khi tương tác.
-  - **Thực thi song song UI/UX & Functional**: Khi user yêu cầu "chạy execution testcase toàn bộ", tự động kích hoạt `--parallel --workers 4`. Các worker phân chia kiểm thử đồng thời cả phần **UI/UX** (layout, overflow, truncation qua `visual-audit.mjs`) và phần **Functional** (business logic, mutation, validation qua `attack-surface.mjs`).
-  - Chạy `node scripts/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4` để đọc, phân chia worker và thực thi.
-  - Sau khi test xong, tự động cập nhật ngược lại Google Sheet với Result (`Pass`/`Fail`/`N/A`/`Untest`), Priority (`Critical`/`High`/`Medium`/`Low`), và Note (ngữ cảnh thủ công dễ hiểu, KHÔNG ghi stacktrace hay error code khô khan).
-- `RETEST_TICKET`: không quét lại toàn app. Đọc `knowledge-index.json` để lấy shard liên quan, rồi đọc app/feature guide tương thích nếu có, sau đó chạy RETEST_PLUS cho ticket và impacted area. Nếu thiếu index/guide, chỉ discovery đủ để hiểu feature hiện tại rồi tạo index + shard
-- `SANITY_REGRESSION` và `EXPLORATORY_ADHOC`: reuse guide hiện có và mở rộng knowledge đúng phần scope đã kiểm tra
-- Không gọi baseline là exhaustive nếu chưa đi qua đủ module, role, state hoặc data. Ghi `covered`, `partial`, `blocked` hoặc `not_covered` trong `coverage_map`
+- `APP_BASELINE_DISCOVERY`: use when the user requests overall testing/exploration of a web app, bootstrap project lacking `qa-knowledge/knowledge-index.json`, or explicitly requests index/guide refresh.
+  - **Prioritize running `scripts/extract-flow.mjs` first** to extract business flows from DOM + network + JS runtime in a single sweep without reading FE/BE source code.
+  - Script auto-logins, browses all navigation, intercepts API calls, maps state machines from status labels, writes `qa-knowledge/app-flow-map.json` (fast AI load) and output shards of `qa-knowledge/knowledge-index.json`.
+  - `app-business-guide.md` only serves as a compatibility summary; the main knowledge lies in the index and the shards it points to.
+  - **Once the index exists, every subsequent run only reads the index + scope-specific shard — 0 browser actions for the \"understanding context\" phase**; only open the browser when actual verification is needed.
+  - Map modules first, then traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps
+- `SHEET_TESTCASE_EXECUTION`: use when user provides a Google Sheet URL or Spreadsheet ID containing the testcase suite.
+  - **Read business flows before testing**: Always load `qa-knowledge/app-flow-map.json` (or `app-business-guide.md`) so AI understands the entire app business logic, route, role and state transition before interacting.
+  - **Execute UI/UX & Functional in parallel**: When the user requests to run the entire testcase execution, automatically activate `--parallel --workers 4`. Workers divide the testing simultaneously for both **UI/UX** (layout, overflow, truncation via `visual-audit.mjs`) and **Functional** (business logic, mutation, validation via `attack-surface.mjs`).
+  - Run `node scripts/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4` to read, divide workers and execute.
+  - After testing, auto-update back to Google Sheet with Result (`Pass`/`Fail`/`N/A`/`Untest`), Priority (`Critical`/`High`/`Medium`/`Low`), and Note (manual-friendly context, DO NOT write dry stacktraces or error codes).
+- `RETEST_TICKET`: do not rescan the full app. Read `knowledge-index.json` to get relevant shards, then read compatible app/feature guides if available, then run RETEST_PLUS for the ticket and impacted areas. If index/guide is missing, only discover enough to understand the current feature then create the index + shard
+- `SANITY_REGRESSION` và `EXPLORATORY_ADHOC`: reuse existing guides and expand knowledge exactly in the inspected scope
+- Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`
 
 ## The trap this skill exists to prevent
 
-**Test everything every cycle** — running full regression on every change, exhausting time budget, missing real regressions in noise. Skill enforces risk-based, scoped cycles: phân tầng Sanity → Smoke → Regression, chỉ chạy mức cần thiết cho context.
+**Test everything every cycle** — running full regression on every change, exhausting time budget, missing real regressions in noise. Skill enforces risk-based, scoped cycles: tiering Sanity -> Smoke -> Regression, only running what's necessary for the context.
 
 ## Process
 
-### 1. Hiểu ngữ cảnh trước (Nguyên tắc #1)
-"Thông minh" = **không click mù**. AI phải đọc & hiểu logic trước, rồi mới poke. Thứ tự BẮT BUỘC:
+### 1. Understand context first (Principle #1)
+\"Smart\" = **no blind clicking**. AI must read & understand logic first, then poke. MANDATORY order:
 
-#### Bước 0 — Đọc business guide đã lưu
+#### Step 0 — Read saved business guides
 - Đọc [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md)
-- Đọc `qa-knowledge/knowledge-index.json` trước nếu có, rồi chỉ load đúng shard/guide mà index trỏ tới
-- Reuse flow, role/data, route/API, state transition và reusable assets còn đúng
-- Không đọc guide của feature khác và không bỏ verification chỉ vì guide cũ ghi PASS
+- Read `qa-knowledge/knowledge-index.json` first if present, then only load the exact shards/guides the index points to
+- Reuse still-valid flows, roles/data, routes/APIs, state transitions and reusable assets
+- Do not read other features' guides and do not skip verification just because the old guide says PASS
 
-#### Bước A — Đọc requirement / spec / AC (NẾU có)
+#### Step A — Read requirement / spec / AC (IF present)
 - Spec/PRD/ticket/AC (file local, URL, hoặc user paste)
-- Trích thành danh sách requirements có ID: `{ "id":"AC1", "text":"..." }`
-- Nếu KHÔNG có document → **hỏi user** cung cấp, hoặc đồng ý test theo UI hiện có
-- Chi tiết fetch từ Plane: xem `scripts/fetch-plane-issue.sh`
+- Extract into a list of requirements with IDs: `{ "id":"AC1", "text":"..." }`
+- If NO document is provided -> **ask the user** to provide one, or agree to test based on the existing UI
+- Details for fetching from Plane: xem `scripts/fetch-plane-issue.sh`
 
-#### Bước B — Trích xuất "bản đồ logic" trước khi test
-1. **Happy path**: bước 1 → 2 → 3 → … → kết quả
-2. **State / role**: ai được làm gì? (admin/user/guest; pending/active/closed)
-3. **Inputs & ràng buộc**: loại data nào hợp lệ, range, format
-4. **Side-effects**: thao tác này ghi đâu? (DB, API, queue, email, webhook)
-5. **Edge case đáng ngờ**: concurrency, boundary, timeout, role khác
-6. **Integration bên thứ 3**: payment, email, calendar, notification, search, AI
+#### Step B — Extract the \"logic map\" before testing
+1. **Happy path**: step 1 -> 2 -> 3 -> … -> result
+2. **State / role**: who can do what? (admin/user/guest; pending/active/closed)
+3. **Inputs & constraints**: what data is valid, ranges, formats
+4. **Side-effects**: where does this operation write? (DB, API, queue, email, webhook)
+5. **Suspicious edge cases**: concurrency, boundary, timeout, role khác
+6. **3rd party integration**: payment, email, calendar, notification, search, AI
 
-#### Bước C — Form charter (mục tiêu exploratory có chủ đích)
+#### Step C — Form a charter (purposeful exploratory goal)
 Một dòng: *"Khám phá <feature> tìm lỗi về <rủi ro>; account <role>; ~<thời gian>."*
-- Charter tốt nêu rõ **risk** (không phải "test cho vui")
+- A good charter clearly states the **risk** (not just \"testing for fun\")
 
-#### Bước D — Lái UI có định hướng (qua MCP Playwright)
-- Happy path → snapshot từng bước → verify state đổi đúng
-- **Sai lệch có chủ đích** ở mỗi bước: thử input invalid / boundary / concurrency
-- Note lỗi console/HTTP lộ ra (`browser_console_messages`, `browser_network_requests`)
+#### Step D — Goal-oriented UI driving (via MCP Playwright)
+- Happy path -> snapshot every step -> verify state changes correctly
+- **Purposeful deviations** at each step: try invalid / boundary / concurrent inputs
+- Note exposed console/HTTP errors (`browser_console_messages`, `browser_network_requests`)
 
-### 2. Lái UI qua MCP Playwright (Nguyên tắc #2)
+### 2. Drive UI via MCP Playwright (Principle #2)
 
-| Việc cần làm | Cách làm |
+| Task | Method |
 |---|---|
-| Mở trang | `browser_navigate` |
-| Xem DOM tương tác (headings, buttons, inputs, toasts, console err, HTTP≥400) | `browser_snapshot` |
-| Bấm nút / link / text | `browser_click` |
-| Điền form | `browser_fill_form` hoặc `browser_type` |
-| Chạy JS tuỳ ý (probe API, đọc state) | `browser_evaluate` |
-| Chờ text / state | `browser_wait_for` text ổn định (không `wait_for_timeout` cứng) |
-| Test nhiều trang / nhiều endpoint | `browser_tabs` (mở song song) |
-| Xem network + console | `browser_network_requests` / `browser_console_messages` |
-| So sánh baseline | `browser_take_screenshot` (khi cần so pixel) |
+| Open page | `browser_navigate` |
+| View interactive DOM (headings, buttons, inputs, toasts, console err, HTTP>=400) | `browser_snapshot` |
+| Click button / link / text | `browser_click` |
+| Fill form | `browser_fill_form` or `browser_type` |
+| Run arbitrary JS (probe API, read state) | `browser_evaluate` |
+| Wait for text / state | `browser_wait_for` stable text (no hard `wait_for_timeout`) |
+| Test multiple pages / endpoints | `browser_tabs` (open in parallel) |
+| View network + console | `browser_network_requests` / `browser_console_messages` |
+| Compare baseline | `browser_take_screenshot` (when pixel comparison is needed) |
 
-### 3. Tối ưu tốc độ + thông minh
+### 3. Speed & Intelligence Optimization
 
-#### Tăng tốc độ (giảm round-trip, giảm payload)
-| Pattern | Thay vì | Lợi ích |
+#### Increase speed (reduce round-trips, reduce payload)
+| Pattern | Instead of | Benefit |
 |---|---|---|
-| Scope snapshot | snapshot cả trang | Payload nhỏ 5-20× |
-| Batch fill | nhiều lần `browser_type` | 3 round-trip → 1 |
+| Scope snapshot | snapshot full page | Small payload 5-20x |
+| Batch fill | multiple `browser_type` | 3 round-trips -> 1 |
 | Batch evaluate | N lần `browser_evaluate` | 1 round-trip |
-| Wait deterministic | `wait_for_timeout` cứng | Không chờ thừa |
-| Parallel tabs | navigate tuần tự | Probe song song |
-| Block heavy resource | load full assets | 2-5× nhanh hơn |
-| Reuse context | login mỗi probe | Bỏ login |
+| Wait deterministic | `wait_for_timeout` hard | No redundant waiting |
+| Parallel tabs | sequential navigate | Parallel probe |
+| Block heavy resource | load full assets | 2-5x faster |
+| Reuse context | login per probe | Skip login |
 
-#### Tăng thông minh
-1. **Heuristic checklist theo loại feature** - Form/Table/Filter/Auth/Modal/Async/Data
-2. **Cross-verify (KHÔNG chỉ tin snapshot)** - DOM + network + console ≥ 2 nguồn
-3. **Pattern memory** - đọc business guide khớp feature trước, sau đó mới đọc `FINDINGS.md` + evidence liên quan khi cần
-4. **Parallel agent fan-out** - 3-5 agent probe 1 lúc (chỉ khi user opt-in)
-5. **Charter với risk taxonomy** - H/M/L ưu tiên probe trước
-6. **Screenshot-first evidence** - nếu có ảnh/evidence hình, ưu tiên `visual-evidence-router.mjs` / OmniParser để ground element, label và bounding box trước; chỉ fallback OCR hoặc vision tổng quát khi OmniParser không sẵn hoặc ảnh cần trích ký tự chính xác, không convert toàn bộ PNG/JPG thành markdown
+#### Increase intelligence
+1. **Heuristic checklist by feature type** - Form/Table/Filter/Auth/Modal/Async/Data
+2. **Cross-verify (DO NOT only trust snapshot)** - DOM + network + console ≥ 2 sources
+3. **Pattern memory** - read matching feature business guide first, then read `FINDINGS.md` + related evidence when needed
+4. **Parallel agent fan-out** - 3-5 agents probe simultaneously (only when user opts in)
+5. **Charter with risk taxonomy** - H/M/L priority probe first
+6. **Screenshot-first evidence** - if there are image evidences, prioritize `visual-evidence-router.mjs` / OmniParser to ground elements, labels and bounding boxes first; only fallback to OCR or general vision when OmniParser is unavailable or exact characters need extracting, do not convert whole PNG/JPG to markdown
 
 ### 4. UI/UX & Interaction testing
-Khi retest/sanity: luôn rải 2-3 check UX ở khu vực fix (vì fix function đôi khi sinh ra UX issue).
+During retest/sanity: always scatter 2-3 UX checks in the fix area (because functional fixes sometimes cause UX issues).
 
-**Workflow UI/UX đúng:**
-1. **Chạy `visual-audit.mjs` trước** — script tự đo overflow, clipping, touch target, loading state, empty state, z-index conflict trên cả desktop và mobile
-2. **Đọc JSON findings** — AI biết chính xác element nào có vấn đề mà không cần snapshot toàn trang
-3. **Embed 2 screenshot** (desktop + mobile) vào context — AI vision phân tích ảnh thực thay vì đoán từ DOM text
-4. **Kiểm tra AI Vision Checklist** trong output JSON — 8 mục cụ thể để AI nhìn vào ảnh
-5. **Nếu screenshot là evidence chính** — chạy OmniParser/`visual-evidence-router.mjs` trước để lấy bounding box + label + interactable state; chỉ OCR khi ảnh chứa text cần đối chiếu chính xác hoặc OmniParser trả về không đủ ngữ cảnh, không dùng `doc-to-md` để đổi ảnh thành markdown
+**Correct UI/UX workflow:**
+1. **Run `visual-audit.mjs` first** — script automatically measures overflow, clipping, touch targets, loading states, empty states, z-index conflicts on both desktop and mobile
+2. **Read JSON findings** — AI knows exactly which element has issues without full page snapshot
+3. **Embed 2 screenshots** (desktop + mobile) into context — AI vision analyzes real images instead of guessing from DOM text
+4. **Check AI Vision Checklist** in JSON output — 8 specific items for AI to look at in the image
+5. **If screenshot is the main evidence** — run OmniParser/`visual-evidence-router.mjs` first to get bounding box + label + interactable state; only OCR when image contains text needing exact matching or OmniParser lacks context, do not use `doc-to-md` to convert image to markdown
 
 ```bash
 cd <project-root>
@@ -247,113 +255,113 @@ QA_RUN_SKILL_DIR=/path/to/qa-run node /path/to/qa-run/scripts/visual-audit.mjs -
 # Output: evidence/visual-1440-*.png + evidence/visual-375-*.png + evidence/visual-audit-*.json
 ```
 
-**4 lỗi UI hay gặp nhất** (xem `references/UI-BUG-CATALOG.md`):
-1. Action safety (delete không confirm)
-2. Overlap-z-index (modal/tooltip che nút quan trọng)
-3. Overflow-truncation (text bị cắt số tiền/tên/ID)
-4. State-loading (loading state không hiển thị, "0" giả)
+**Top 4 common UI bugs** (see `references/UI-BUG-CATALOG.md`):
+1. Action safety (delete without confirm)
+2. Overlap-z-index (modal/tooltip obscures important button)
+3. Overflow-truncation (text cuts off amount/name/ID)
+4. State-loading (loading state missing, fake \"0\")
 
-**3 loại bug đo được** (xem `browser_evaluate`):
-- Click không ăn: 250ms latency / double-fire / pointer-events:none
-- Giật lag: long-task > 100ms
-- Spam button: request > 1 trong 1 lần bấm
+**3 measurable bug types** (see `browser_evaluate`):
+- Unresponsive click: 250ms latency / double-fire / pointer-events:none
+- Lag/Jitter: long-task > 100ms
+- Spam button: request > 1 in a single click
 
-**Khi có file hình trong evidence**
-- Dùng screenshot như nguồn sự thật trực tiếp cho UI state, không ép thành text trước khi phân tích
-- Nếu ảnh là flow/UI screenshot thì ưu tiên `visual-audit.mjs`, `visual-evidence-router.mjs` hoặc image viewer tool để ground element, label và layout
-- Chỉ chuyển ảnh sang text khi cần OCR nội dung trong ảnh, ví dụ chữ trên banner, toast, modal, QR, hoặc khi không có DOM/network đủ xác minh
-- Không lưu ảnh dưới dạng file text trung gian nếu không cần, vì sẽ làm mất ngữ cảnh visual
+**When image files exist in evidence**
+- Use screenshot as the direct source of truth for UI state, do not force convert to text before analyzing
+- If the image is a flow/UI screenshot, prioritize `visual-audit.mjs`, `visual-evidence-router.mjs` or an image viewer tool to ground elements, labels and layout
+- Only convert image to text when needing OCR for image content, e.g. text on banner, toast, modal, QR, or when DOM/network isn't enough to verify
+- Do not save images as intermediate text files unless necessary, as it loses visual context
 
 
-### 5. Chọn kỹ thuật (12 kỹ thuật)
-Xem `TESTING-TECHNIQUES.md` để biết chi tiết + coverage matrix.
+### 5. Technique Selection (12 techniques)
+See `TESTING-TECHNIQUES.md` for details + coverage matrix.
 
-12 kỹ thuật: Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
+12 techniques: Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
 
-**Hard gate cho Exploratory/Ad-hoc (BẮT BUỘC):**
-1. Đọc `qa-knowledge/knowledge-index.json` trước; nếu chưa có thì mới dùng `app-flow-map.json` hoặc `app-business-guide.md` như fallback.
-2. **Tạo Markdown Checklist tự động cho trang/feature**:
+**Hard gate for Exploratory/Ad-hoc (MANDATORY):**
+1. Read `qa-knowledge/knowledge-index.json` first; only if absent, use `app-flow-map.json` or `app-business-guide.md` as fallback.
+2. **Auto-generate Markdown Checklist for page/feature**:
    - Chạy `node scripts/generate-checklist.mjs --path /feature-path --feature "feature-name"`
    - Output: `qa-knowledge/checklists/<feature-slug>-checklist.md`
-   - Script tự động quét 100% item, button, input field, table, modal trên màn hình và sinh bộ checklist có sẵn mã kiểm thử.
-3. Xác định feature type cần test (Form? Table? Modal? Auth? CRUD? Async? File?) từ `references/ATTACK-TAXONOMY.md` — chọn 3–5 attack vectors ưu tiên.
-4. Với Form/Auth: chạy `attack-surface.mjs` để tự động inject mutations trước khi click thủ công.
-5. Với UI/UX: chạy `visual-audit.mjs` trước — đọc JSON + nhìn ảnh thực.
-6. AI đi qua từng dòng trong file `<feature-slug>-checklist.md` được sinh ra, kiểm thử và đánh dấu `[x]` PASS hoặc `[ ]` FAIL cùng lý do ngắn gọn. Không click mò và không bỏ sót bất kỳ element/button nào trên giao diện.
+   - Script automatically scans 100% of items, buttons, input fields, tables, modals on screen and generates a ready-to-test checklist.
+3. Determine feature type to test (Form? Table? Modal? Auth? CRUD? Async? File?) from `references/ATTACK-TAXONOMY.md` — select 3-5 priority attack vectors.
+4. For Form/Auth: run `attack-surface.mjs` to auto-inject mutations before manual clicking.
+5. For UI/UX: run `visual-audit.mjs` first — read JSON + view real image.
+6. AI goes through each line in the generated `<feature-slug>-checklist.md` file, tests and marks `[x]` PASS or `[ ]` FAIL with a brief reason. Do not blind-click and do not miss any elements/buttons on the UI.
 
 
-### 6. RETEST_PLUS workflow (khi user đưa ticket hoặc yêu cầu retest)
-Đây là case hay gặp nhất: *"Dev báo fix xong rồi, retest giúp ticket này"* → user chỉ paste URL.
+### 6. RETEST_PLUS workflow (when user provides a ticket or requests a retest)
+This is the most common case: *"Dev says fix is done, please retest this ticket"* → user just pastes URL.
 
-RETEST_PLUS dùng app/feature guide để giảm khám phá lặp lại và không tự chạy full-app baseline. Chỉ mở rộng discovery khi ticket chạm vùng chưa có knowledge hoặc guide đã stale.
+RETEST_PLUS uses app/feature guides to reduce redundant exploration and does not auto-run full-app baselines. Only expand discovery when the ticket hits an area lacking knowledge or with a stale guide.
 
-#### Bước 0 — Xác nhận scope
-- Nếu user đã nói rõ "retest #X" / "verify fix #X" → thẳng bước 1
-- Nếu chỉ nói "test #X" → hỏi 1 câu: *"Retest fix #X hay khám phá feature #X để tìm bug mới?"*
+#### Step 0 — Confirm scope
+- If user explicitly states "retest #X" / "verify fix #X" → straight to step 1
+- If only saying "test #X" → ask 1 question: *"Retest fix #X or explore feature #X to find new bugs?"*
 
-#### Bước 1 — Fetch ticket (KHÔNG hỏi lại)
-- Parse URL Plane → gọi API → trích AC, steps, expected, dev notes
-- Lỗi 401/404/403 → báo user check API key + URL
+#### Step 1 — Fetch ticket (DO NOT ask again)
+- Parse Plane URL -> call API -> extract AC, steps, expected, dev notes
+- Error 401/404/403 -> tell user to check API key + URL
 
-#### Bước 1.5 — Nạp business context trước browser action
-- Đọc [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) trước để biết protocol merge knowledge
-- Đọc `qa-knowledge/knowledge-index.json` rồi chỉ đọc đúng shard/guide cho scope ticket
-- Nếu thiếu guide hoặc guide stale, chỉ mở discovery đủ để tạo/refresh feature guide cho scope ticket, không quét lại full app
-- Rút ra test contract gồm role, state transition, validation, side effect, API/network và impacted dependency trước khi click đầu tiên
-- Nếu chưa mô tả được business flow bằng 1-2 câu rõ ràng, dừng lại và bổ sung context trước khi verify
+#### Step 1.5 — Load business context before browser action
+- Read [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) first to know the knowledge merge protocol
+- Read `qa-knowledge/knowledge-index.json` then only read the exact shard/guide for the ticket scope
+- If guide is missing or stale, only open discovery enough to create/refresh feature guide for the ticket scope, do not rescan full app
+- Extract test contract including role, state transition, validation, side effect, API/network and impacted dependency before the first click
+- If the business flow cannot be described in 1-2 clear sentences, stop and add context before verifying
 
-#### Bước 2 — Trích AC
-- AC chính (happy path): "Khi user làm X thì hệ thống phải Y" → case PHẢI PASS
-- AC phụ (edge case): input rỗng, concurrent, role khác → cũng phải test
-- Repro steps của bug gốc (nếu bug ticket) → chạy lại đúng các bước
-- Khu vực kề bên (AI tự suy luận): tính năng fix nằm trong flow nào? → poke xem có vỡ không
-- Diễn giải AC thành business rule có thể test được, không bám chữ nghĩa mơ hồ trong ticket nếu thiếu ngữ cảnh
+#### Step 2 — Extract AC
+- Main AC (happy path): \"When user does X, system must do Y\" -> case MUST PASS
+- Secondary AC (edge case): empty input, concurrent, different role -> must also test
+- Repro steps of original bug (if bug ticket) -> run exact steps again
+- Adjacent area (AI infer): what flow is the fix in? -> poke to see if it breaks
+- Interpret AC into testable business rules, do not stick to ambiguous wording in ticket if context is missing
 
-#### Bước 3 — Verify từng AC
-Với mỗi AC:
-1. Setup điều kiện (login đúng role, clear localStorage, **chuẩn bị data test**)
-2. Thực hiện đúng repro steps (KHÔNG tự ý thêm bước lạ)
-3. Snapshot sau mỗi bước → so với "Expected" trong AC
-4. Verify cả network response (nếu AC liên quan persist/tính toán)
-5. Chấm PASS/FAILED từng AC — KHÔNG gộp "tổng thể OK"
+#### Step 3 — Verify each AC
+For each AC:
+1. Setup conditions (login correct role, clear localStorage, **prepare test data**)
+2. Execute exact repro steps (DO NOT arbitrarily add weird steps)
+3. Snapshot after each step -> compare with \"Expected\" in AC
+4. Verify network response too (if AC involves persist/calculation)
+5. Mark PASS/FAILED for each AC — DO NOT lump into \"overall OK\"
 
-#### Bước 4 — RETEST_PLUS coverage (BẮT BUỘC)
-- Retest đúng flow gốc
-- Sanity happy path chính của module
-- Impacted regression theo vùng fix và dependency
-- Exploratory gồm boundary, negative, alternate sequence, refresh/retry
-- Ad-hoc gồm control lân cận, cancel/reopen, double action, navigation/session phù hợp
-- UI/UX gồm overlap, clipping, overflow, modal/dropdown/popup, viewport, loading/error/focus
+#### Step 4 — RETEST_PLUS coverage (MANDATORY)
+- Retest exact original flow
+- Sanity main happy path of module
+- Impacted regression by fix area and dependency
+- Exploratory includes boundary, negative, alternate sequence, refresh/retry
+- Ad-hoc includes adjacent controls, cancel/reopen, double action, appropriate navigation/session
+- UI/UX includes overlap, clipping, overflow, modal/dropdown/popup, viewport, loading/error/focus
 
-Adjacent area check trong các lớp trên:
-- Click vào các nút/tab/list liên quan → snapshot → có lỗi mới không?
-- Tạo 1 record bằng flow khác (vd import file thay vì form) → có dùng chung validation không?
-- Refresh/back giữa chừng flow → state có bẩn không?
-- Đổi role user (vd guest xem trang admin) → có leak permission không?
-- `browser_console_messages` + `browser_network_requests` cuối phiên → có warning/error lạ không?
+Adjacent area check in the above layers:
+- Click related buttons/tabs/lists -> snapshot -> any new bugs?
+- Create 1 record via different flow (e.g. import file instead of form) -> share validation?
+- Refresh/back mid-flow -> is state dirty?
+- Change user role (e.g. guest views admin page) -> permission leak?
+- `browser_console_messages` + `browser_network_requests` at end of session -> any weird warning/error?
 
-#### Bước 5 — Verdict + report
+#### Step 5 — Verdict + report
 ```
 ## <✅/❌> #<id> — <tên ngắn> — <PASS/FAILED>
-**Nguồn requirement:** <URL ticket đã fetch>
-**Business flow:** <1-2 câu tóm tắt flow đã xác nhận>
-**AC1 (<mô tả>):** PASS  — <evidence 1 dòng>
-**AC2 (<mô tả>):** FAILED  — <quan sát sai lệch>
-**Adjacent:** PASS — <note ngắn>
-**Verdict:** PASS (nếu tất cả AC chính PASS) / FAILED (nếu ≥1 AC chính FAILED)
+**Requirement source:** <URL ticket fetched>
+**Business flow:** <1-2 sentence summary of confirmed flow>
+**AC1 (<mô tả>):** PASS  — <1 line evidence>
+**AC2 (<mô tả>):** FAILED  — <observed deviation>
+**Adjacent:** PASS — <short note>
+**Verdict:** PASS (if all main ACs PASS) / FAILED (if >=1 main AC FAILED)
 ```
-- Ghi `FINDINGS.md` theo format chuẩn (`report/REPORT-TEMPLATE.md`)
-- Merge knowledge đã xác nhận theo `references/KNOWLEDGE_HANDOFF.md`; ưu tiên cập nhật `knowledge-index.json` và các shard, chỉ dùng `app-business-guide.md` / feature guide như lớp compatibility khi cần bàn giao hoặc fallback
-- Chạy `node scripts/write-business-guide.mjs --check <guide.md>` và đọc lại guide trước khi bàn giao
-- Nếu FAILED → comment evidence và kéo ticket gốc về In Progress
-- Nếu PASS → comment evidence và kéo ticket gốc sang Done
-- Nếu BLOCKED → giữ nguyên trạng thái
-- Bug khác root cause → mở bug mới ở Todo
+- Write `FINDINGS.md` in standard format (`report/REPORT-TEMPLATE.md`)
+- Merge confirmed knowledge according to `references/KNOWLEDGE_HANDOFF.md`; prioritize updating `knowledge-index.json` and shards, only use `app-business-guide.md` / feature guide as compatibility layer when handoff or fallback is needed
+- Chạy `node scripts/write-business-guide.mjs --check <guide.md>` and read guide again before handoff
+- If FAILED -> comment evidence and drag original ticket to In Progress
+- If PASS -> comment evidence and drag original ticket to Done
+- If BLOCKED -> keep state
+- Bug with different root cause -> open new bug in Todo
 
-### 7. Quy trình cho 1 dự án
+### 7. Process for 1 project
 
-#### 0. Setup (mỗi dự án 1 lần)
-Trong **thư mục QA của dự án** (vd `MyProject/qa/`), tạo `.env`:
+#### 0. Setup (1 time per project)
+In the **project's QA folder** (vd `MyProject/qa/`), tạo `.env`:
 ```
 QA_BASE_URL=https://app-cua-du-an.com
 QA_EMAIL=...
@@ -361,7 +369,7 @@ QA_PASSWORD=...
 QA_PROJECT_NAME=MyProject
 ```
 
-**Bước 0.1 — Chạy extractor một lần để bootstrap toàn bộ business knowledge:**
+**Step 0.1 — Run extractor once to bootstrap all business knowledge:**
 ```bash
 cd MyProject/qa
 QA_RUN_SKILL_DIR=/path/to/qa-run node /path/to/qa-run/scripts/extract-flow.mjs
@@ -369,38 +377,38 @@ QA_RUN_SKILL_DIR=/path/to/qa-run node /path/to/qa-run/scripts/extract-flow.mjs
 ```
 Options:
 ```bash
---max-pages 20    # giới hạn số trang quét (default: 30)
---wait 1500       # ms chờ sau mỗi navigate (default: 1200)
---reauth          # force login lại dù auth.json đã có
---dry-run         # chỉ in navigation, không ghi file
+--max-pages 20    # limit scanned pages (default: 30)
+--wait 1500       # ms wait after each navigate (default: 1200)
+--reauth          # force re-login even if auth.json exists
+--dry-run         # only print navigation, do not write files
 ```
 
-**Sau khi có guide**, AI sẽ đọc `qa-knowledge/app-flow-map.json` thay vì scan lại —
-tiết kiệm 80–90% token phase "hiểu context", chỉ mở browser khi cần verify thực tế.
+**Sau khi có guide**, AI sẽ đọc `qa-knowledge/app-flow-map.json` instead of rescan —
+saves 80-90% tokens in \"context understanding\" phase, only open browser when actual verification needed.
 
-Rồi (chạy TỪ thư mục đó để data ghi vào đúng dự án) — dùng MCP Playwright để login:
-- `browser_navigate(BASE + '/login')` → `browser_snapshot` → `browser_fill_form` (email/password) → `browser_click` submit → `browser_wait_for` url đổi → lưu cookie (Playwright MCP tự quản session).
+Then (run FROM that folder so data writes to correct project) — use MCP Playwright to login:
+- `browser_navigate(BASE + '/login')` → `browser_snapshot` → `browser_fill_form` (email/password) → `browser_click` submit → `browser_wait_for` url changes -> save cookie (Playwright MCP auto manages session).
 
-> Nếu project cần auth.json để script npm Playwright chạy được (regression/batch): `node scripts/login.mjs` → tạo `auth.json` + `evidence/` ở đây.
+> If project needs auth.json for npm Playwright scripts to run (regression/batch): `node scripts/login.mjs` -> create `auth.json` + `evidence/` here.
 
-#### 1. Khám phá rộng (mặc định: HIỂU trước → LÁI sau)
-Xem @Bước A-D ở trên.
+#### 1. Broad discovery (default: UNDERSTAND first -> DRIVE later)
+See @Step A-D above.
 
-Với `APP_BASELINE_DISCOVERY`, lập coverage ledger theo module và đi qua entry point, happy flow, role/permission, state/persistence, validation/boundary, side effect/integration, API/network và UI/UX có thể quan sát. Mọi module phát hiện được phải có trạng thái `covered`, `partial`, `blocked` hoặc `not_covered` cùng reason/evidence trước khi dừng.
+With `APP_BASELINE_DISCOVERY`, create coverage ledger by module and traverse entry point, happy flow, role/permission, state/persistence, validation/boundary, side effect/integration, API/network and observable UI/UX. Every discovered module must have status `covered`, `partial`, `blocked` or `not_covered` with reason/evidence before stopping.
 
-#### 2. Đào sâu 1 nghi vấn
-**Trước khi đào**: re-load lại bản đồ logic (Nguyên tắc #1 Bước B) cho khu vực nghi vấn.
+#### 2. Deep dive into 1 doubt
+**Before diving**: reload logic map (Principle #1 Step B) for the doubtful area.
 
-**Cách 1** (ưu tiên, nhanh & "thông minh") — dùng MCP Playwright tương tác:
-1. Đặt giả thuyết từ bản đồ logic (không đoán mù) → `browser_click` / `browser_type` / `browser_evaluate` để verify
-2. `browser_snapshot` đọc lại DOM (tránh đoán) — đối chiếu với state expected trong bản đồ
-3. `browser_network_requests` xem response body / status — verify side-effect (DB persist, message queue, webhook)
-4. `browser_wait_for` text xuất hiện hoặc đổi (không sleep cứng)
-5. Khi verdict rõ → `browser_take_screenshot` chỉ bước kết luận → ghi `FINDINGS.md` theo format chuẩn
+**Method 1** (preferred, fast & \"smart\") — use MCP Playwright interactively:
+1. Hypothesize from logic map (no blind guessing) → `browser_click` / `browser_type` / `browser_evaluate` to verify
+2. `browser_snapshot` re-read DOM (avoid guessing) — compare with expected state in map
+3. `browser_network_requests` view response body / status — verify side-effect (DB persist, message queue, webhook)
+4. `browser_wait_for` text appears or changes (không sleep hard)
+5. When verdict is clear -> `browser_take_screenshot` only concluding step -> write `FINDINGS.md` in standard format
 
-**Cách 2** (cần chạy lặp / CI) — viết script ngắn:
+**Method 2** (needs recurring run / CI) — write short script:
 ```js
-// MyProject/qa/probe-x.mjs  — chỉ viết khi cần CHẠY LẶP (risk-based / sanity / regression)
+// MyProject/qa/probe-x.mjs  — only write when RECURRING RUN needed (risk-based / sanity / regression)
 const skillRoot = process.env.QA_RUN_SKILL_DIR;
 if (!skillRoot) throw new Error('QA_RUN_SKILL_DIR is required');
 const { browser, snap, shot, BASE } = await import(`${skillRoot}/lib/driver.mjs`);
@@ -415,45 +423,45 @@ eq('Total sau filter', total, 6);
 check('Backend persist', net.some(c => c.status===200 && !/\[\]/.test(c.body)));
 await shot(page, 'probe-x'); process.exit(summary('#<ticket>') ? 0 : 1);
 ```
-Chạy: `cd MyProject/qa && node probe-x.mjs`. Thao tác GHI dữ liệu thật → bọc `withRevert(mutate, revert)`.
+Chạy: `cd MyProject/qa && node probe-x.mjs`. REAL data WRITE operations -> wrap in `withRevert(mutate, revert)`.
 
-#### 3. Ghi nhận → `FINDINGS.md` (trong thư mục dự án)
-Mỗi bug: **Quan sát → Expected → Evidence:<png> → Severity → TC**. Gom theo root-cause.
-Report & comment theo **format chuẩn** ở `report/REPORT-TEMPLATE.md` — quy tắc số 1: **Actual & Steps phải xuống dòng từng ý (bullet/numbered), KHÔNG viết liền 1 đoạn**.
-Nếu là retest ticket, report phải có đủ: nguồn requirement, business flow, AC-by-AC verdict, adjacent check và evidence paths riêng biệt; không gộp nhiều verdict vào một dòng.
+#### 3. Log -> `FINDINGS.md` (in project folder)
+Each bug: **Quan sát → Expected → Evidence:<png> → Severity → TC**. Group by root-cause.
+Report & comment following **standard format** in `report/REPORT-TEMPLATE.md` — rule number 1: **Actual & Steps must newline each point (bullet/numbered), DO NOT write in a single paragraph**.
+If it's a retest ticket, report must include: requirement source, business flow, AC-by-AC verdict, adjacent check and distinct evidence paths; do not merge multiple verdicts into one line.
 
-#### 4. Đóng gói / bàn giao — log bug Plane có preview ảnh INLINE
-**Mục tiêu**: mở ticket trên Plane → scroll description → **thấy ảnh preview ngay**, KHÔNG cần bấm tải file về.
+#### 4. Package / handoff — log Plane bug with INLINE image preview
+**Mục tiêu**: open Plane ticket -> scroll description -> **see image preview immediately**, NO need to click download file.
 
-**Cách làm** (đã verify với Plane self-hosted):
-1. Upload ảnh lên Plane qua endpoint `issues/{id}/issue-attachments/` (S3 presigned) → trả về asset URL
-2. Trong `description_html`, embed URL đó bằng `<img src="<plane-asset-url>">`
-3. Khi render, Plane sẽ hiển thị ảnh inline trong description + đồng thời liệt kê trong Attachments
+**Method**  (verified with Plane self-hosted):
+1. Upload image to Plane via endpoint `issues/{id}/issue-attachments/` (S3 presigned) → returns asset URL
+2. In `description_html`, embed that URL with `<img src="<plane-asset-url>">`
+3. When rendering, Plane displays image inline in description + simultaneously lists in Attachments
 
-> ⚠️ **KHÔNG dùng base64 data URI** trong description — Plane self-hosted sẽ **strip ảnh khi render**. Phải dùng URL asset sau khi upload.
+> ⚠️ **DO NOT use base64 data URI** in description — Plane self-hosted will **strip image when rendering**. Must use asset URL after upload.
 
-Wrapper script `scripts/log-bug.mjs` đã làm sẵn:
+Wrapper script `scripts/log-bug.mjs` is ready:
 ```bash
 node <project>/qa/log-bug.mjs --title "[W26][Login] Email validation sai" \
   --module "Login" --severity "High" --screenshots "evidence/probe-430.png" \
   --steps "1. Mở /login\n2. Để trống Email\n3. Click Login" \
-  --expected "Hiển thị thông báo yêu cầu nhập Email" \
-  --actual "Không có thông báo, vẫn submit" \
+  --expected "Show prompt requesting Email" \
+  --actual "No prompt, still submitted" \
   --assign "hungtn,phongtq" --state "Todo"
 ```
 
-### 8. Test data — khi THIẾU data
+### 8. Test data — when lacking data
 
-**Khi nào thiếu** (hay gặp):
-- Test filter `Status=Pending` nhưng hệ thống có **0 record Pending**
-- Test edit/delete nhưng **không có record** để sửa/xoá
-- Test boundary nhưng data thực **không chạm biên**
+**When lacking** (common):
+- Test filter `Status=Pending` but system has **0 Pending records**
+- Test edit/delete but **no record** to edit/delete
+- Test boundary but real data **does not touch boundary**
 
 **2 option**:
-- **Hỏi user** (khi cần data thật, không fake được, ambiguous)
-- **Tự tạo** (ưu tiên - qua chính UI/API của app)
+- **Ask user** (when needing real data, unfakeable, ambiguous)
+- **Self-create** (priority - via app's own UI/API)
 
-Tự tạo qua API (nhanh, ưu tiên):
+Self-create qua API (nhanh, ưu tiên):
 ```js
 fetch('/api/events', {
   method: 'POST',
@@ -465,148 +473,148 @@ fetch('/api/events', {
 
 **Quy tắc khi tự tạo**:
 - Idempotent / unique: tên + timestamp
-- Cleanup BẮT BUỘC (withRevert) - KHÔNG để data rác
-- KHÔNG side-effect thật: không gửi mail/WhatsApp/SMS production
-- Volume vừa phải: 1-3 record đủ
-- Role đúng
+- MANDATORY Cleanup (withRevert) - DO NOT leave junk data
+- NO real side-effect: do not send production mail/WhatsApp/SMS
+- Moderate volume: 1-3 records are enough
+- Correct role
 
-Helper tùy chọn: `seed.mjs` ở project - hàm tạo data test + cleanup.
+Optional helper: `seed.mjs` in project - function to create test data + cleanup.
 
-### 9. Token-frugal (BẮT BUỘC giữ khi viết script)
+### 9. Token-frugal (MANDATORY to keep when writing scripts)
 Xem `lib/driver.mjs` + `lib/ui.mjs` + `lib/assert.mjs`:
-- `lib/driver.mjs`: headless, screenshot ra file (không trả bytes ảnh vào context)
-- `lib/ui.mjs`: `snap()` chỉ in phần tử tương tác + text chính + console/HTTP≥400
-- `lib/assert.mjs`: `check/eq/summary` - gọn nhẹ
-- Cắt response body `.slice(0,200)`; in gọn
-- **Quy tắc vàng**: 1 probe = 1 câu hỏi. Đặt tên `probe-<ticket>-<aspect>.mjs`
+- `lib/driver.mjs`: headless, screenshot to file (do not return image bytes into context)
+- `lib/ui.mjs`: `snap()` only print interactive elements + main text + console/HTTP>=400
+- `lib/assert.mjs`: `check/eq/summary` - compact
+- Slice response body `.slice(0,200)`; print compactly
+- **Golden rule**: 1 probe = 1 question. Name it `probe-<ticket>-<aspect>.mjs`
 
 ### 10. Regression (deterministic)
-Bộ TC cố định, chạy lặp tất định, đặt ở instance dự án (vd `MyProject/qa/regression/`). KHÔNG để ở engine global.
+Fixed TC suite, deterministic recurring runs, placed in project instance (e.g. `MyProject/qa/regression/`). DO NOT put in global engine.
 
-Cấu trúc data-driven: `cases.mjs` + `run.mjs`, idempotent (withRevert), verdict CI (`process.exit(summary()?0:1)`). Xem `TESTING-TECHNIQUES.md` §5.
+Data-driven structure: `cases.mjs` + `run.mjs`, idempotent (withRevert), verdict CI (`process.exit(summary()?0:1)`). Xem `TESTING-TECHNIQUES.md` §5.
 
-### 11. Cấu hình API key
-Một lần cấu hình key tại `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill trong repo qa-skill. Xem [README.md](../README.md) mục "API Keys" và `scripts/ai_provider.py`.
+### 11. API key configuration
+Configure key once at `../config/api_keys.json` (gitignored), usable for all 3 skills in qa-skill repo. See [README.md](../README.md) \"API Keys\" section and `scripts/ai_provider.py`.
 
 ### Appendix — ported modules
-Các module đã port:
-- **A.1 Test Data Generator** — format chuẩn `[prefix]_[testName]_[timestamp]_[random]`, helper tại `lib/tdata.mjs`
+Ported modules:
+- **A.1 Test Data Generator** — standard format `[prefix]_[testName]_[timestamp]_[random]`, helper tại `lib/tdata.mjs`
 
-Các concept chưa port (để roadmap): A.2 Flaky Detector, A.2 Locator Healer, A.3 UI/API Flow Generator.
+Unported concepts (for roadmap): A.2 Flaky Detector, A.2 Locator Healer, A.3 UI/API Flow Generator.
 
 ## Red flags
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| `Không tìm thấy .env` | cwd sai | `cd ~/Documents/QA-MDS/<project>` trước khi chạy |
-| `401 Unauthorized` (Plane) | API key sai/expire | Rotate key ở Plane Profile |
-| Skill không xuất hiện | Folder sai vị trí | Chạy `scripts/doctor-agent.sh --agent=<host>` từ repository rồi mở phiên agent mới |
-| AI click mù không hiểu | Skip Bước A-D | BẮT BUỘC đọc spec trước |
-| Push lên GitHub mà lộ auth.json | Quên `.gitignore` | `git rm --cached auth.json` + rotate key |
-| Tự tạo data rác không cleanup | DB pollution, ảnh hưởng test khác | Bọc `withRevert()` hoặc dùng `afterAll` |
-| Click → sleep(500) cứng | Flaky CI | Dùng `browser_wait_for` text xuất hiện |
-| Snapshot full page mỗi lần | Payload lớn, chậm | Scope snapshot: chỉ phần tử tương tác |
-| Ảnh trong bug Plane hiển thị broken | Dùng base64 data URI thay vì URL asset | Upload qua `issues/{id}/issue-attachments/` rồi embed URL |
+| `Cannot find .env` | wrong cwd | `cd ~/Documents/QA-MDS/<project>` before running |
+| `401 Unauthorized` (Plane) | wrong/expired API key | Rotate key in Plane Profile |
+| Skill not appearing | Folder in wrong location | Run `scripts/doctor-agent.sh --agent=<host>` from repository then open new agent session |
+| AI blind clicks without understanding | Skips Step A-D | MANDATORY to read spec first |
+| Push to GitHub but leak auth.json | Forgot `.gitignore` | `git rm --cached auth.json` + rotate key |
+| Self-create data rác không cleanup | DB pollution, affects other tests | Wrap in `withRevert()` or use `afterAll` |
+| Click → sleep(500) hard | Flaky CI | Use `browser_wait_for` text to appear |
+| Snapshot full page every time | Large payload, slow | Scope snapshot: only interactive elements |
+| Image in Plane bug appears broken | Used base64 data URI instead of asset URL | Upload via `issues/{id}/issue-attachments/` then embed URL |
 
 ## Output format
 
-- Comment Plane và testcase prose không có dấu `.` cuối câu và không chèn emoji/icon
-- Giữ nguyên ID, URL, filename, formula, code, decimal number và machine-readable value
-- Comment PASS chỉ có Result + Conclusion + ảnh inline
-- Comment FAILED chỉ thêm Actual + Expected
-- Comment BLOCKED chỉ thêm Blocker
+- Plane comments and testcase prose must have no `.` at end of sentence and no emojis/icons
+- Preserve ID, URL, filename, formula, code, decimal number and machine-readable values
+- PASS comment only has Result + Conclusion + inline image
+- FAILED comment only adds Actual + Expected
+- BLOCKED comment only adds Blocker
 
 ## Common mistakes
 
-- **Fallback Google Antigravity** nếu KHÔNG còn Claude Code + Playwright MCP:
-  - Nếu Claude Code hết quyền dùng, hoặc MCP Playwright bị gỡ/vỡ → **skill vẫn chạy được trên Antigravity** (agentic platform của Google: CLI + IDE + Gemini-in-Chrome). Phần lớn asset của skill là **portable** — chỉ đổi "bộ não lái UI".
+- **Google Antigravity Fallback** if Claude Code + Playwright MCP is NO longer available:
+  - If Claude Code loses access, or Playwright MCP is removed/broken -> **skill still runs on Antigravity** (Google's agentic platform: CLI + IDE + Gemini-in-Chrome). Most skill assets are **portable** — only swapping the \"UI driving brain\".
 
-  - **Asset portable** (chạy ở bất kỳ env có Node ≥ 18):
-    | Asset | Lý do portable |
+  - **Portable assets** (runs in any env with Node >= 18):
+    | Asset | Portability Reason |
     |---|---|
     | `lib/driver.mjs`, `lib/ui.mjs`, `lib/assert.mjs` | Pure Node + playwright npm |
-    | `scripts/sweep.mjs`, `api-health.mjs`, `explore.mjs`, `login.mjs` | Pure Node, gọi `node <script>` |
+    | `scripts/sweep.mjs`, `api-health.mjs`, `explore.mjs`, `login.mjs` | Pure Node, call `node <script>` |
     | `scripts/log-bug.mjs` | Pure `fetch` HTTP → Plane API |
     | `report/export-pdf.sh`, `report/upload-to-drive.py` | Bash/Python stdlib |
-    | **Nguyên tắc #1** (hiểu ngữ cảnh trước khi lái), 5 kỹ thuật testing, workflow retest/sanity | **Methodology** — độc lập tool |
-    | `.env`, `auth.json`, `evidence/` | Nằm trong thư mục dự án, KHÔNG phụ thuộc Claude Code |
+    | **Nguyên tắc #1** (hiểu ngữ cảnh trước khi lái), 5 kỹ thuật testing, workflow retest/sanity | **Methodology** — tool-independent |
+    | `.env`, `auth.json`, `evidence/` | Located in project folder, DOES NOT depend on Claude Code |
 
-  - **Cần đổi (chỉ "bộ não lái UI")**:
-    | Việc | Claude Code (mặc định) | Antigravity (fallback) |
+  - **Needs swapping (only \"UI driving brain\")**:
+    | Task | Claude Code (default) | Antigravity (fallback) |
     |---|---|---|
-    | Lái UI tương tác | `mcp__playwright__browser_*` | **Gemini-in-Chrome** (Antigravity tự điều khiển Chrome) |
-    | Fetch ticket từ URL | `WebFetch` | Antigravity web tool / `curl` trong terminal |
+    | Interactive UI driving | `mcp__playwright__browser_*` | **Gemini-in-Chrome** (Antigravity controls Chrome itself) |
+    | Fetch ticket from URL | `WebFetch` | Antigravity web tool / `curl` in terminal |
     | Agent reasoning | Claude (model này) | Gemini 3 (Antigravity default) |
-    | Chạy probe script | `node scripts/x.mjs` qua Bash tool | `node scripts/x.mjs` qua terminal |
+    | Run probe script | `node scripts/x.mjs` via Bash tool | `node scripts/x.mjs` via terminal |
     | Log bug | `node log-bug.mjs ...` | `node log-bug.mjs ...` |
 
-  - **Workflow trên Antigravity:**
-    1. Mở Antigravity IDE → mở thư mục dự án (vd `MyProject/qa/`)
-    2. Agent (Gemini) tự dùng **Gemini-in-Chrome** để navigate/click/snapshot/probe API
-    3. Khi cần batch/regression → agent chạy `node <skill-root>/scripts/sweep.mjs`
-    4. Khi log bug → agent chạy `node log-bug.mjs ...` (script portable)
-    5. Verdict + report theo cùng format (`report/REPORT-TEMPLATE.md`)
+  - **Workflow on Antigravity:**
+    1. Open Antigravity IDE -> open project folder (vd `MyProject/qa/`)
+    2. Agent (Gemini) uses **Gemini-in-Chrome** itself to navigate/click/snapshot/probe API
+    3. When needing batch/regression -> agent runs `node <skill-root>/scripts/sweep.mjs`
+    4. When logging bug -> agent runs `node log-bug.mjs ...` (portable script)
+    5. Verdict + report in same format (`report/REPORT-TEMPLATE.md`)
 
-  - **Lưu ý khi fallback:**
-    - `auth.json` phải có (Antigravity chạy npm Playwright script cần `auth.json`)
-    - Gemini-in-Chrome của Antigravity **KHÔNG** tự share với playwright headless → phải login lại bằng `login.mjs`
-    - Prompt khác model: Gemini 3 hiểu workflow này nếu prompt rõ
+  - **Notes on fallback:**
+    - `auth.json` must exist (Antigravity running npm Playwright scripts needs `auth.json`)
+    - Antigravity's Gemini-in-Chrome **DOES NOT** auto-share with playwright headless -> must re-login using `login.mjs`
+    - Different model prompt: Gemini 3 understands this workflow if prompted clearly
 
-- **Click mù không đọc spec** — AI sẽ sinh ra verdict sai (PASS nhầm FAILED hoặc ngược lại). BẮT BUỘC đi qua Bước A-D.
+- **Blind clicking without reading spec** — AI generates wrong verdict (mistaking PASS for FAILED or vice versa). MANDATORY to go through Step A-D.
 
-- **Skip adjacent area check** — fix function đôi khi vỡ UI ở chỗ khác. Bước 4 là BẮT BUỘC.
+- **Skip adjacent area check** — functional fixes sometimes break UI elsewhere. Step 4 is MANDATORY.
 
-- **Snapshot full page mỗi lần** — payload lớn, tốn token. Scope snapshot chỉ phần tử tương tác.
+- **Snapshot full page every time** — payload lớn, tốn token. Scope snapshot chỉ phần tử tương tác.
 
-- **Dùng `wait_for_timeout` cứng** — flaky CI. Luôn `browser_wait_for` text/event.
+- **Use hard `wait_for_timeout`** — flaky CI. Always `browser_wait_for` text/event.
 
-- **Hardcode URL/auth vào prompt** — secret leak. Dùng `.env` + auth.json trong thư mục dự án.
+- **Hardcode URL/auth in prompt** — secret leak. Use `.env` + auth.json in project folder.
 
-- **Skip teardown** — khi poke app production với side-effect (DB, queue, mail), wrap trong `withRevert()` để cleanup.
+- **Skip teardown** — when poking production apps with side-effects (DB, queue, mail), wrap in `withRevert()` to cleanup.
 
-- **Không ghi business guide sau run** — AI lần sau phải khám phá lại từ đầu. Luôn merge knowledge còn đúng, ghi guide và validate read-back.
+- **Not writing business guide after run** — AI has to re-explore from scratch next time. Always merge valid knowledge, write guide and validate read-back.
 
-- **Tin guide cũ tuyệt đối** — environment/version có thể đổi. Kiểm tra ngày verify, source và confidence rồi re-verify phần nằm trong scope hiện tại.
+- **Absolute trust in old guides** — environment/version can change. Check verify date, source and confidence then re-verify parts within current scope.
 
-- **Verdict gộp "tổng thể OK"** — che giấu AC failed riêng lẻ. PHẢI chấm PASS/FAILED từng AC.
+- **Lumped \"overall OK\" verdict** — hides individual failed ACs. MUST mark PASS/FAILED per AC.
 
 ## References
 
 ### Scripts (`scripts/`)
-- [scripts/run-manifest.mjs](scripts/run-manifest.mjs) — **khởi tạo & ghi nhận Run Manifest (run_id, environment, git_commit, app_version, data_namespace, duration) để truy vết 100% bug**
-- [scripts/data-factory.mjs](scripts/data-factory.mjs) — **cách ly tài khoản & data namespace cho từng worker, thiết lập quy tắc retry (chỉ retry lỗi hạ tầng, KHÔNG retry assertion fail)**
-- [scripts/validate-knowledge.mjs](scripts/validate-knowledge.mjs) — **kiểm tra độ mới của knowledge, hash routes & git commit, hỗ trợ re-discovery từng module khi app release**
-- [scripts/extract-flow.mjs](scripts/extract-flow.mjs) — **trích xuất business flow từ web app (DOM + network + CDP) → JSON + Markdown, không cần đọc source code**
-- [scripts/generate-checklist.mjs](scripts/generate-checklist.mjs) — **tự động quét 100% item, button, input, table trên màn hình → tạo Markdown Checklist (.md) cho Exploratory & Ad-hoc testing không bỏ sót case**
-- [scripts/attack-surface.mjs](scripts/attack-surface.mjs) — **phân loại Action Safety (READ_ONLY, SAFE_WRITE, DESTRUCTIVE, EXTERNAL_EFFECT, PAYMENT), tự động inject mutations cho READ_ONLY/SAFE_WRITE — 0 token**
-- [scripts/visual-audit.mjs](scripts/visual-audit.mjs) — **Visual Heuristic Audit: đo overflow/clipping/touch target/z-index, chụp ảnh desktop+mobile**
-- [scripts/visual-regression.mjs](scripts/visual-regression.mjs) — **Visual Regression Baseline: so sánh ảnh hiện tại với baseline, pixel diff, mask vùng động, quy trình approve baseline mới**
-- [scripts/journey-audit.mjs](scripts/journey-audit.mjs) — **UX Journey Audit: đánh giá mục tiêu người dùng end-to-end (Next step clarity, visual hierarchy, feedback quality, actionable error guidance)**
-- [scripts/collect-evidence.mjs](scripts/collect-evidence.mjs) — **đóng gói toàn bộ screenshots, traces, logs, manifest thành gói artifact hoàn chỉnh `evidence/bundles/<run_id>/`**
-- [scripts/execute-sheet.mjs](scripts/execute-sheet.mjs) — **chạy testcase từ Google Sheet, phân chia parallel worker song song, batch update kết quả chuẩn hóa**
-- [scripts/login.mjs](scripts/login.mjs) — tạo auth.json
-- [scripts/sweep.mjs](scripts/sweep.mjs) — sweep nhiều trang
+- [scripts/run-manifest.mjs](scripts/run-manifest.mjs) — **initialize & log Run Manifest (run_id, environment, git_commit, app_version, data_namespace, duration) to trace 100% bugs**
+- [scripts/data-factory.mjs](scripts/data-factory.mjs) — **isolate accounts & data namespace for each worker, set retry rules (only retry infra errors, DO NOT retry assertion fails)**
+- [scripts/validate-knowledge.mjs](scripts/validate-knowledge.mjs) — **check knowledge freshness, hash routes & git commit, supports module re-discovery on app release**
+- [scripts/extract-flow.mjs](scripts/extract-flow.mjs) — **extract business flows from web app (DOM + network + CDP) -> JSON + Markdown, no source code reading needed**
+- [scripts/generate-checklist.mjs](scripts/generate-checklist.mjs) — **automatically scan 100% items, buttons, inputs, tables on screen -> create Markdown Checklist (.md) for Exploratory & Ad-hoc testing missing no cases**
+- [scripts/attack-surface.mjs](scripts/attack-surface.mjs) — **classify Action Safety (READ_ONLY, SAFE_WRITE, DESTRUCTIVE, EXTERNAL_EFFECT, PAYMENT), auto-inject mutations for READ_ONLY/SAFE_WRITE — 0 tokens**
+- [scripts/visual-audit.mjs](scripts/visual-audit.mjs) — **Visual Heuristic Audit: measure overflow/clipping/touch targets/z-index, capture desktop+mobile screenshots**
+- [scripts/visual-regression.mjs](scripts/visual-regression.mjs) — **Visual Regression Baseline: compare current image with baseline, pixel diff, mask dynamic areas, new baseline approval process**
+- [scripts/journey-audit.mjs](scripts/journey-audit.mjs) — **UX Journey Audit: evaluate user goals end-to-end (Next step clarity, visual hierarchy, feedback quality, actionable error guidance)**
+- [scripts/collect-evidence.mjs](scripts/collect-evidence.mjs) — **bundle all screenshots, traces, logs, manifest into complete artifact package `evidence/bundles/<run_id>/`**
+- [scripts/execute-sheet.mjs](scripts/execute-sheet.mjs) — **run testcases from Google Sheet, divide parallel workers, batch update standardized results**
+- [scripts/login.mjs](scripts/login.mjs) — create auth.json
+- [scripts/sweep.mjs](scripts/sweep.mjs) — sweep multiple pages
 - [scripts/explore.mjs](scripts/explore.mjs) — exploratory helper
 - [scripts/api-health.mjs](scripts/api-health.mjs) — API probe
 - [scripts/ux-health.mjs](scripts/ux-health.mjs) — UX heuristic check (performance metrics)
 - [scripts/compat.mjs](scripts/compat.mjs) — compat check
 
 ### Libraries (`lib/`)
-- [lib/driver.mjs](lib/driver.mjs) — headless browser + screenshot ra file
+- [lib/driver.mjs](lib/driver.mjs) — headless browser + screenshot to file
 - [lib/ui.mjs](lib/ui.mjs) — scope snapshot, network recording, `withRevert`
-- [lib/assert.mjs](lib/assert.mjs) — `check/eq/summary` gọn nhẹ
+- [lib/assert.mjs](lib/assert.mjs) — `check/eq/summary` compact
 - [lib/tdata.mjs](lib/tdata.mjs) — test data generator `[prefix]_[name]_[ts]_[rand]`
 
 ### Reference docs
-- [references/UI-BUG-CATALOG.md](references/UI-BUG-CATALOG.md) — 4 lỗi UI hay gặp nhất
-- [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) — protocol đọc trước, merge và ghi business guide sau run
-- [scripts/write-business-guide.mjs](scripts/write-business-guide.mjs) — renderer/validator deterministic cho business guide
+- [references/UI-BUG-CATALOG.md](references/UI-BUG-CATALOG.md) — Top 4 common UI bugs
+- [references/KNOWLEDGE_HANDOFF.md](references/KNOWLEDGE_HANDOFF.md) — protocol to read first, merge and write business guide after run
+- [scripts/write-business-guide.mjs](scripts/write-business-guide.mjs) — deterministic renderer/validator for business guide
 - [report/REPORT-TEMPLATE.md](report/REPORT-TEMPLATE.md) — format FINDINGS.md
-- [TESTING-TECHNIQUES.md](TESTING-TECHNIQUES.md) — 12 kỹ thuật testing chi tiết
-- [GUIDE.md](GUIDE.md) — hướng dẫn setup engine
+- [TESTING-TECHNIQUES.md](TESTING-TECHNIQUES.md) — 12 detailed testing techniques
+- [GUIDE.md](GUIDE.md) — engine setup guide
 - [README.md](README.md) — overview qa-run skill
 
 ### Related skills
-- [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — viết deterministic test-as-code (KHÁC với live exploratory này)
-- [testcase-template](../testcase-template/SKILL.md) — document test case Excel (KHÁC với bug hunting này)
-- [doc-to-md](../doc-to-md/SKILL.md) — convert PDF/DOCX sang MD để AI đọc spec
+- [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — write deterministic test-as-code (DIFFERENT from this live exploratory)
+- [testcase-template](../testcase-template/SKILL.md) — document Excel test cases (DIFFERENT from this bug hunting)
+- [doc-to-md](../doc-to-md/SKILL.md) — convert PDF/DOCX to MD for AI to read spec

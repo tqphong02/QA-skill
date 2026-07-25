@@ -5,29 +5,29 @@ description: Generate or review structured testcase documents with an AI-readabl
 
 # Test Case Template
 
-**Core principle:** Cùng một bộ cột — không sáng tạo cột mới.
+**Core principle:** Same set of columns — do not invent new columns.
 
-Template gốc: `assets/Template.xlsx` (1 file chung cho MỌI project). Mọi thông tin project (name, code, modules) configurable từ JSON input. **KHÔNG cần tạo template riêng cho từng project**.
+Original template: `assets/Template.xlsx` (1 shared file for ALL projects). All project information (name, code, modules) is configurable from JSON input. **NO need to create separate templates per project**.
 
-> **Khi nào dùng**: User muốn viết test case Excel theo chuẩn team.
-> **KHÁC** `qa-run` (live exploratory) và `playwright-pom-automation` (code automation `.spec.ts`): skill này = document test case Excel (manual test design).
-> **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py) — KHÔNG cần key nếu dùng Copilot Pro/Antigravity/Claude Code CLI. Member khi git clone code về chạy được ngay với project bất kỳ.
+> **When to use**: User wants to write Excel test cases according to team standards.
+> **DIFFERENT** from `qa-run` (live exploratory) and `playwright-pom-automation` (code automation `.spec.ts`): this skill = document Excel test cases (manual test design).
+> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI. Members can run immediately with any project after git clone.
 
 ## Cross-model hard gates
 
-Áp dụng nguyên thứ tự này cho mọi model:
+Apply this exact order for all models:
 
-1. Chọn mode trước khi viết: mặc định dùng flow UI/FUNCTION hiện tại; chỉ dùng API mode khi user yêu cầu rõ viết testcase API hoặc viết testcase cho endpoint, OpenAPI/Swagger, Postman hay curl; chỉ nhắc đến artifact API thì chưa đủ để đổi mode
-2. Nếu API mode có file nguồn, chạy `scripts/import-api-spec.py` trước; không tự đọc rồi chép endpoint thủ công
-3. Kiểm tra `review_required`; nếu còn item thì dừng Excel generation và lấy expected còn thiếu từ user hoặc tài liệu
-4. Đọc requirement/AC và liệt kê requirement ID trước khi viết case
-5. Chọn đúng UI hoặc FUNCTION theo hành vi cần chứng minh; không gọi một case là UI-only chỉ vì thao tác qua dialog/button
-6. Tách scenario khi khác field, behavior hoặc AC; một scenario chỉ chứa một nhóm chức năng cụ thể
-7. Tạo JSON đúng schema, giữ nguyên Scenario ID, Testcase ID và requirement reference
-8. Chạy `scripts/gen-testcases.py`; script phải tạo `<output>.md` trước `<output>.xlsx` với cùng ngày `Asia/Ho_Chi_Minh`
-9. Đọc lại Markdown trước rồi đối chiếu Excel: số case, Scenario/Testcase ID và nội dung design phải khớp; cột I-M chỉ có ở Excel và để trống
+1. Choose mode before writing: default to current UI/FUNCTION flow; only use API mode when user explicitly requests writing API testcases or writing testcases for endpoints, OpenAPI/Swagger, Postman or curl; merely mentioning API artifacts is not enough to switch modes
+2. If API mode has source files, run `scripts/import-api-spec.py` first; do not manually read and copy endpoints
+3. Check `review_required`; if items remain, stop Excel generation and get missing expected from user or documents
+4. Read requirement/AC and list requirement IDs before writing cases
+5. Choose UI or FUNCTION correctly based on the behavior to prove; do not call a case UI-only just because it operates via dialog/button
+6. Split scenario when field, behavior or AC differs; one scenario contains only one specific functional group
+7. Create JSON with correct schema, preserve Scenario ID, Testcase ID and requirement reference
+8. Run `scripts/gen-testcases.py`; script must create `<output>.md` before `<output>.xlsx` with the same `Asia/Ho_Chi_Minh` date
+9. Read Markdown first then compare with Excel: number of cases, Scenario/Testcase ID and design content must match; columns I-M exist only in Excel and are left blank
 
-Nếu expected chưa có trong requirement, dừng case đó ở trạng thái cần làm rõ; không tự bịa business rule.
+If expected is not in requirements, pause that case in a clarification state; do not fabricate business rules.
 
 ## The trap this skill exists to prevent
 
@@ -35,10 +35,10 @@ Nếu expected chưa có trong requirement, dừng case đó ở trạng thái c
 
 ## Process
 
-### 1. Đọc & trích requirements
-**BẮT BUỘC bám document**. Mỗi case phải trace về 1 AC. Nếu KHÔNG có document → hỏi user. Chi tiết fetch từ Plane: `@references/plane-integration.md`.
+### 1. Read & extract requirements
+**MANDATORY to stick to documents**. Every case must trace to 1 AC. If NO document -> ask user. Plane fetch details: `@references/plane-integration.md`.
 
-### 2. Tổ chức theo 2 phần + type order
+### 2. Organize in 2 parts + type order
 ```
 PHẦN 1 — UI: 1.1. USER INTERFACE (kind=ui)    ← col C, xanh nhạt
 └─ Group (LOGIN, REGISTER...)                 ← col C, group header
@@ -50,30 +50,30 @@ PHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá
    └─ Scenario (SCN-LOG-001)
       └─ Cases — type order
 ```
-**Cùng feature có ở cả 2 phần** (UI test hiển thị, Functional test logic).
+**Same feature can exist in both parts** (UI test for display, Functional test for logic).
 
-**API mode là tùy chọn**: chỉ khi user yêu cầu testcase API, đọc [references/api-testcases.md](references/api-testcases.md). API case vẫn nằm trong `1.2. FUNCTION`, dùng `kind=api` và giữ nguyên các cột B-M. Nếu user không yêu cầu API thì không đọc reference này và tiếp tục flow hiện tại với `kind=ui` hoặc `kind=function`.
+**API mode is optional**: only when user requests API testcases, read [references/api-testcases.md](references/api-testcases.md). API cases still go in `1.2. FUNCTION`, use `kind=api` and keep columns B-M. If user does not request API, do not read this reference and continue current flow with `kind=ui` or `kind=function`.
 
-**Quy tắc 1 scenario = 1 nhóm chức năng cụ thể** (KHÔNG gộp nhiều field/behavior):
-- Tách scenario khi khác **field/input** (email validation ≠ password validation → 2 scenario)
-- Tách scenario khi khác **behavior** (submit-fail ≠ account-lock)
-- Tách scenario khi khác **AC** (AC3 ≠ AC4 ≠ AC5)
-- Cùng `scenario_name` SHARED cho nhiều case CÙNG scenario — nhưng KHÔNG dùng chung scenario_name cho validation của field khác nhau
+**Rule: 1 scenario = 1 specific functional group** (DO NOT group multiple fields/behaviors):
+- Split scenario when **field/input** differs (email validation != password validation -> 2 scenarios)
+- Split scenario when **behavior** differs (submit-fail != account-lock)
+- Split scenario when **AC** differs (AC3 != AC4 != AC5)
+- Same `scenario_name` SHARED across cases IN THE SAME scenario — but DO NOT share scenario_name for validations of different fields
 
-Ví dụ SAI vs ĐÚNG cho trang login:
+WRONG vs CORRECT examples for login page:
 ```
-❌ SAI: 1 scenario "Validation email và password" gộp 6 case
-       (3 case email validation + 2 case password validation + 1 case cả 2 trống)
-       → Tester khó filter, khó coverage check, scenario_name mơ hồ
+❌ WRONG: 1 scenario \"Validation email and password\" groups 6 cases
+       (3 cases email validation + 2 cases password validation + 1 case both empty)
+       -> Hard for tester to filter, hard to check coverage, ambiguous scenario_name
 
-✅ ĐÚNG: tách 2 scenario riêng
-   - SCN-LOG-002 "Validation email"        → case về email (trống, thiếu @, thiếu domain, subdomain)
-   - SCN-LOG-003 "Validation password"     → case về password (trống, cả 2 trống, <8 chars, =8 chars)
-   → Mỗi scenario có 1 nhóm rõ ràng, tester filter được, coverage dễ check
+✅ CORRECT: split 2 separate scenarios
+   - SCN-LOG-002 \"Validation email\"        -> email cases (empty, missing @, missing domain, subdomain)
+   - SCN-LOG-003 \"Validation password\"     -> password cases (empty, both empty, <8 chars, =8 chars)
+   -> Each scenario has 1 clear group, tester can filter, coverage easy to check
 ```
 
-### 3. Gen cases theo type order
-8 loại: `happy → alternative → validation → edge → negative → error → ui → additional`. Chi tiết + ví dụ: `@references/test-types.md`.
+### 3. Gen cases by type order
+8 types: `happy → alternative → validation → edge → negative → error → ui → additional`. Details + examples: `@references/test-types.md`.
 
 ### 4. Build JSON input
 ```json
@@ -94,26 +94,26 @@ Ví dụ SAI vs ĐÚNG cho trang login:
   }]
 }
 ```
-- `scenario_name` (string) — tên nhóm chức năng, **SHARED** cho nhiều case cùng scenario
-- `scenario_id` (string) — mã scenario, vd `SCN-LOG-001`
-- Mỗi case có `type` (1 trong 8) + `req` (trace về AC) - BẮT BUỘC
-- Riêng API mode, mỗi case thêm object `api`; xem [examples/sample-api-input.json](examples/sample-api-input.json). Không có object `api` thì generator dùng nguyên `pre_condition`, `procedure`, `expected` như hiện tại
+- `scenario_name` (string) — functional group name, **SHARED** for multiple cases in same scenario
+- `scenario_id` (string) — scenario code, e.g. `SCN-LOG-001`
+- Each case has `type` (1 of 8) + `req` (trace to AC) - MANDATORY
+- In API mode specifically, each case adds `api` object; see [examples/sample-api-input.json](examples/sample-api-input.json). Without `api` object, generator uses `pre_condition`, `procedure`, `expected` as is
 
-### 5. Chạy script gen
+### 5. Run gen script
 
-Nếu user yêu cầu API testcase từ file hoặc folder nguồn, import trước:
+If user requests API testcases from source file/folder, import first:
 
 ```bash
 python3 scripts/import-api-spec.py api-file output-api.json \
   --project-code CODE --project-name "Project Name"
 ```
 
-Chỉ chạy bước Excel khi command trả exit code `0` và `review_required` trống. Với endpoint/curl không khai báo response status, user có thể xác nhận rồi truyền `--default-success-status 200`; không tự thêm option này nếu chưa được xác nhận.
+Only run Excel step when command returns exit code `0` and `review_required` is empty. For endpoints/curls without declared response status, user can confirm and pass `--default-success-status 200`; do not auto-add this option without confirmation.
 
 ```bash
 python3 scripts/gen-testcases.py input.json OneBrain_Testcases.xlsx
 ```
-→ Script tự sinh `OneBrain_Testcases_<DD-MM-YYYY>.md` trước → copy template → update Cover từ JSON → cleanup → ghi section/group/case rows → hardcode cùng Testcase ID → save `OneBrain_Testcases_<DD-MM-YYYY>.xlsx`.
+-> Script auto-generates `OneBrain_Testcases_<DD-MM-YYYY>.md` first -> copies template -> updates Cover from JSON -> cleanups -> writes section/group/case rows -> hardcodes matching Testcase IDs -> saves `OneBrain_Testcases_<DD-MM-YYYY>.xlsx`.
 
 ### Artifact filename date
 
@@ -123,95 +123,148 @@ python3 scripts/gen-testcases.py input.json OneBrain_Testcases.xlsx
 - Do not rename existing artifacts
 - When the user supplies an exact filename that must remain unchanged, set `QA_PRESERVE_EXACT_FILENAME=1` for the generator
 
-Markdown là bản AI đọc để hiểu testcase mà không cần parse Excel. Đọc [references/markdown-testcases.md](references/markdown-testcases.md) và không chỉnh hai file độc lập.
+Markdown is the AI-readable version to understand testcases without parsing Excel. Read [references/markdown-testcases.md](references/markdown-testcases.md) and do not edit the two files independently.
 
-Với API mode, generator chỉ ánh xạ object `api` vào F/G/H. Testcase thường không có object `api` nên giữ nguyên đường chạy và cách đặt row height hiện tại.
+In API mode, generator only maps the `api` object to F/G/H. Regular testcases lack the `api` object so it keeps the current execution path and row height settings.
 
 ### Output cleanup (auto)
 
-Template gốc `assets/Template.xlsx` cố tình giữ **nhiều group headers mẫu** (REGISTER, LOGIN, HOME, BOOKING, PROFILE, SETTING, NOTIFICATION, DASHBOARD) làm reference cho AI biết cấu trúc + padding rows từ Excel. Khi sinh file output, script tự động:
+Original template `assets/Template.xlsx` intentionally keeps **many sample group headers** (REGISTER, LOGIN, HOME, BOOKING, PROFILE, SETTING, NOTIFICATION, DASHBOARD) as reference for AI to know structure + row padding from Excel. When generating output, script automatically:
 
-1. **Dynamic whitelist**: chỉ giữ group header nào khai báo trong `JSON sections[].groups[].name`. Group mẫu không dùng → xóa hẳn.
-2. **Dynamic group**: tự tạo group/tag chưa có sẵn trong template và cấp đủ dòng cho toàn bộ case
-3. **Delete rows**: dòng trống nào còn sót (group bị bỏ + sample case rows) → `ws.delete_rows()` xóa hoàn toàn, không giữ fill color / row height.
-4. **STT liên tục**: `[CODE-UI-NN]` cho UI (1-4), `[CODE-NN]` cho Functional (5-30) trong cùng file.
+1. **Dynamic whitelist**: only keep group headers declared in `JSON sections[].groups[].name`. Unused sample groups -> deleted completely.
+2. **Dynamic group**: auto-creates groups/tags not already in template and allocates enough rows for all cases
+3. **Delete rows**: any remaining empty rows (skipped groups + sample case rows) -> completely deleted via `ws.delete_rows()`, not keeping fill color / row height.
+4. **Sequential numbering**: `[CODE-UI-NN]` for UI (1-4), `[CODE-NN]` for Functional (5-30) in the same file.
 
-**Kết quả**: file output gọn, chỉ chứa dữ liệu thật của dự án hiện tại (vd demo project với 1 group LOGIN × 2 sections → file ~43 rows thay vì 657 rows như template).
+**Result**: output file is compact, containing only actual data for current project (e.g. demo project with 1 LOGIN group x 2 sections -> file ~43 rows instead of 657 template rows).
 
 ### Column schema (Test cases_App sheet)
 
-| Col | Fill | Ghi chú |
+| Col | Fill | Notes |
 |---|---|---|
-| B | Scenario ID | vd `SCN-LOG-001` |
-| C | **Scenario Name** (shared) | Tên nhóm chức năng, không phải tên test case |
-| D | **Test case ID** (hardcoded) | `[CODE-NN]` (Functional) hoặc `[CODE-UI-NN]` (UI). STT liên tục. |
-| E | **Description** (manual) | Bắt đầu "Xác minh rằng...", KHÔNG có prefix kỹ thuật |
-| F | Pre-condition | Điều kiện trước khi chạy |
-| G | Procedure | Steps đánh số `1. ...\n2. ...` |
-| H | Expected Results | Kết quả mong đợi, đo được |
-| I-M | **TRỐNG** | Tester điền khi execution |
+| B | Scenario ID | e.g. `SCN-LOG-001` |
+| C | **Scenario Name** (shared) | Feature group name, not the test case name |
+| D | **Test case ID** (hardcoded) | `[CODE-NN]` (Functional) or `[CODE-UI-NN]` (UI). Sequential. |
+| E | **Description** (manual) | Start with "Verify that...", NO technical prefix |
+| F | Pre-condition | State/data required before step 1 |
+| G | Procedure | Numbered steps `1. ...\n2. ...` — manual language, detailed enough to execute without interpretation |
+| H | Expected Results | Observable, measurable outcome |
+| I-M | **LEAVE BLANK** | Tester fills during execution |
 
-**Quan trọng**: Cột I, J, K, L, M để trống. Script chỉ apply style, KHÔNG fill value. Tester tự điền khi chạy test thực tế.
+**Important**: Columns I-M are left empty by the generator. Script applies style only — no value fill. Testers fill these when running actual tests.
+
+### Manual-Friendly Writing Rules (MANDATORY for every case)
+
+> **Invariant rule**: Every testcase in this system is written for a **Manual Tester who reads the Excel sheet and executes immediately** — not for developers or API tools.
+
+> **Language rule**: Rule files and skill instructions are written in English for faster AI parsing. However, ALL testcase content written into Excel/Markdown (Description, Pre-condition, Procedure, Expected Results) MUST be in **Vietnamese**, as Testers read and execute from those files.
+
+**1. Description — Use end-user language, written in Vietnamese:**
+- ✅ CORRECT: *Xác minh rằng người dùng không thể đăng nhập khi để trống ô Mật khẩu*
+- ❌ WRONG: *Verify POST /auth/login returns 400 when password=null*
+- ❌ WRONG: *[TC-03][negative] Empty password validation*
+
+**2. Procedure / Steps — Detailed enough for anyone to follow without interpretation:**
+
+Each step must specify: **What to do** + **Where** + **Exact value/content** (if applicable). Never combine multiple actions into one line.
+
+- ✅ CORRECT (Vietnamese content):
+  ```
+  1. Mở trình duyệt và truy cập trang đăng nhập: [URL]/login
+  2. Tại ô "Email", nhập email hợp lệ: test@example.com
+  3. Tại ô "Mật khẩu", để trống (không nhập gì)
+  4. Nhấp vào nút "Đăng nhập"
+  5. Quan sát kết quả hiển thị trên màn hình
+  ```
+- ❌ WRONG: *Nhập email hợp lệ và để trống mật khẩu, click login*
+- ❌ WRONG: *Send request with empty password field*
+
+**3. Expected Results — Observable, measurable, visible to the eye:**
+
+Describe exactly what the Tester sees or can verify after performing the steps. Avoid vague language.
+
+- ✅ CORRECT (Vietnamese content):
+  ```
+  1. Hệ thống không thực hiện đăng nhập
+  2. Dưới ô "Mật khẩu" hiển thị thông báo màu đỏ: "Mật khẩu không được để trống"
+  3. Trang không chuyển hướng, vẫn ở màn hình đăng nhập
+  ```
+- ❌ WRONG: *Hệ thống xử lý đúng*
+- ❌ WRONG: *Response body: {"error": "password required"}*
+
+**4. Forbidden technical language in columns F, G, H (write in Vietnamese instead):**
+
+| Instead of this ❌ | Write this ✅ (Vietnamese) |
+|---|---|
+| `POST /api/login` | Nhấp nút "Đăng nhập" |
+| `HTTP 400 Bad Request` | Hiển thị thông báo lỗi |
+| `response.body.token` | Hệ thống cấp quyền truy cập |
+| `null`, `undefined`, `NaN` | Để trống, không nhập gì |
+| `assert status == 200` | Kiểm tra trang chuyển hướng về Dashboard |
 
 ### Human-readable format
 
-- Không đặt dấu `.` ở cuối Scenario Name, Description, Pre-condition, Procedure hoặc Expected Results
-- Không chèn emoji/icon vào nội dung testcase
-- Giữ nguyên Scenario ID, Testcase ID, requirement ID, URL, filename, formula, code và số thập phân
-- Tên Markdown và Excel mới phải cùng basename có hậu tố `_DD-MM-YYYY`
-- Generator tự validate icon và tự bỏ dấu chấm cuối từng dòng prose
+- No trailing `.` at the end of Scenario Name, Description, Pre-condition, Procedure, or Expected Results
+- No emoji/icons in testcase content
+- Keep Scenario ID, Testcase ID, requirement ID, URL, filename, formula, code, and decimal numbers unchanged
+- New Markdown and Excel filenames must share the same basename with suffix `_DD-MM-YYYY`
+- Generator auto-validates icons and strips trailing dots from prose
 
-### Template structure chi tiết
+### Template structure details
 
-Xem `@references/template-schema.md` để biết chi tiết về 4 sheet (Cover, Test cases_App, Dropdown Keys, Report).
+See `@references/template-schema.md` for details on the 4 sheets (Cover, Test cases_App, Dropdown Keys, Report).
 
 ## Red flags
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| File output > 200 rows cho project nhỏ | Sample rows từ template không bị xóa | Verify dynamic whitelist trong JSON có đầy đủ groups |
-| Test case ID không liên tục (`[BCP-01]`, `[BCP-03]` thiếu `[BCP-02]`) | Hardcoded STT bị lệch khi type order thay đổi | Re-run script; đảm bảo thứ tự type đúng 8 loại chuẩn |
-| Cột I-M bị fill sẵn data | Script apply sai style | Verify branch trong `gen-testcases.py` chỉ apply style, không fill value |
-| Description bắt đầu bằng `[STT]` hoặc `[Type]` | Format manual bị vi phạm | AI phải reformat lại trước khi ghi JSON |
-| Expected result mơ hồ ("hệ thống hoạt động đúng") | Không đo được | Hỏi user để biết expected cụ thể |
-| Tạo thêm cột Method/Endpoint/Status | Phá format testcase hiện tại | Đưa dữ liệu API vào F/G/H theo reference API |
-| Tự bật API mode cho testcase thường | Làm thay đổi cấu hình hiện tại | Chỉ bật khi user yêu cầu API rõ ràng |
-| API case chỉ kiểm tra status code | Thiếu contract và business effect | Kiểm tra body/schema/headers/side-effect khi requirement có định nghĩa |
-| Ghi token, cookie hoặc API key thật | Rò rỉ credential vào workbook | Dùng placeholder như `<valid_token>` |
-| Tự đặt status 200 cho endpoint không có response contract | Bịa expected result | Để importer ghi `review_required` rồi hỏi user hoặc đọc thêm tài liệu |
-| Đọc Swagger thủ công và bỏ sót endpoint | Không deterministic, model yếu dễ sai | Luôn chạy `scripts/import-api-spec.py` |
-| Chỉ tạo Excel, không có Markdown testcase | AI lần sau phải parse workbook lại | Luôn dùng generator để tạo Markdown trước Excel |
-| Markdown và Excel lệch ID/nội dung | Hai artifact được sửa độc lập | Sửa JSON source rồi regenerate cả hai |
+| Output file > 200 rows for a small project | Sample rows from template not deleted | Verify dynamic whitelist in JSON includes all required groups |
+| Non-sequential test case IDs (`[BCP-01]`, `[BCP-03]` missing `[BCP-02]`) | STT offset when type order changes | Re-run script; ensure correct 8-type canonical order |
+| Columns I-M pre-filled with data | Script applied value fill instead of style only | Verify `gen-testcases.py` branch applies style only, no value fill |
+| Description starts with `[STT]` or `[Type]` | Manual format violated | AI must reformat before writing to JSON |
+| Procedure is a single line combining multiple actions | Tester cannot identify where to act | Split each action into its own numbered step; include field/button name and input value |
+| Procedure or Expected uses technical terms (`POST`, `HTTP 400`, `null`, `assert`) | Not manual-tester language | Replace with UI descriptions the tester sees (button names, displayed messages) |
+| Expected result is vague ("system works correctly", "error handled") | Not measurable; tester does not know what to check | State the exact message shown, the page redirected to, or data displayed |
+| Expected result contains JSON body or HTTP status code | Written as an API test; tester cannot verify visually | Replace with what the user sees on the UI |
+| New columns added (Method/Endpoint/Status) | Breaks fixed template format | Put API data into F/G/H per the API reference |
+| API mode auto-enabled for regular testcases | Changes current configuration | Only enable when user explicitly requests API testcases |
+| API case only checks status code | Missing contract and business effect | Also verify body/schema/headers/side-effects when requirement defines them |
+| Real token, cookie, or API key written into workbook | Credential leak into artifact | Use placeholder like `<valid_token>` |
+| Status 200 assumed for endpoint with no response contract | Fabricated expected result | Let importer set `review_required` then ask user or read docs |
+| Swagger read manually with missed endpoints | Non-deterministic; weak models make mistakes | Always run `scripts/import-api-spec.py` |
+| Only Excel created, no Markdown testcase companion | AI must parse workbook next time | Always use generator to create Markdown before Excel |
+| Markdown and Excel content diverge | Two artifacts edited independently | Fix JSON source then regenerate both |
 
 ## Common mistakes
 
-- **Mỗi case BẮT BUỘC có `req` trỏ về 1 AC** (trong Notes ghi `Ref: ACx`). Không có ref → case không trace được, fail coverage check.
+- **Every case MUST have `req` pointing to one AC** (Notes: `Ref: ACx`). No ref → case cannot be traced, fails coverage check.
 
-- **Gộp nhiều field/behavior khác nhau vào 1 scenario** — ví dụ: 1 scenario "Validation email và password" gộp cả email validation + password validation. SAI. Phải tách thành 2 scenario riêng: "Validation email" (case về email) và "Validation password" (case về password). Xem Process step 2 để biết tiêu chí tách cụ thể.
+- **Grouping different fields/behaviors into one scenario** — e.g. one scenario "Email and password validation" combining both. WRONG. Must split into two: "Email validation" and "Password validation". See Process step 2 for split criteria.
 
-- **Case `additional` (ngoài spec)** → flag rõ `Ref: (out-of-spec)` + báo user. Đừng ship như case bình thường.
+- **`additional` cases (outside spec)** → flag clearly with `Ref: (out-of-spec)` and notify user. Do not ship as a normal case.
 
-- **KHÔNG bịa expected result** dựa trên spec mơ hồ — hỏi user. Spec nói "xử lý lỗi hợp lệ" → KHÔNG ĐƯỢC tự định nghĩa "hợp lệ" là gì.
+- **NEVER fabricate expected results** from vague spec — ask user. Spec says "handle error gracefully" → DO NOT self-define what "gracefully" means.
 
-- **Description format MANUAL**: "Xác minh rằng..." không có `[STT]`, `[Type]`, `/` lạ. Format này để tester (người đọc Excel) hiểu nhanh.
+- **Description format MANUAL**: "Verify that..." — no `[STT]`, `[Type]`, stray `/`. This format lets testers reading the Excel understand immediately.
 
-- **Nhiều case CÙNG scenario có thể cùng `scenario_name`** (chia sẻ tên nhóm chức năng). Đừng duplicate tên cho mỗi case. **NHƯNG** không gộp case của field/behavior khác vào cùng scenario — tách ra (xem Process step 2).
+- **Multiple cases in the SAME scenario may share `scenario_name`** (shared feature group name). Don't duplicate names per case. BUT do not merge cases of different fields/behaviors — split them (see Process step 2).
 
-- **Khi git clone về máy mới**: chạy `pip install openpyxl PyYAML` trước. `PyYAML` cần cho Swagger/OpenAPI YAML. API key config 1 lần ở `config/api_keys.json` (gitignored) — dùng chung cho cả 3 skill.
+- **When cloning to a new machine**: run `pip install openpyxl PyYAML` first. `PyYAML` is required for Swagger/OpenAPI YAML. API key configured once in `config/api_keys.json` (gitignored) — shared across all 3 skills.
 
-- **Cấu hình key**: 1 file config chung `../config/api_keys.json` (gitignored), dùng được cho cả 3 skill. Xem [README.md](../README.md) mục "API Keys".
+- **Key configuration**: one shared config file `../config/api_keys.json` (gitignored), usable by all 3 skills. See [README.md](../README.md) section "API Keys".
 
 ## References
 
-- [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), 1 file dùng chung
-- [examples/sample-input.json](examples/sample-input.json) — ví dụ JSON input hoàn chỉnh
-- [examples/sample-api-input.json](examples/sample-api-input.json) — ví dụ tùy chọn chỉ dùng khi user yêu cầu testcase API
+- [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), shared across all projects
+- [examples/sample-input.json](examples/sample-input.json) — complete JSON input example
+- [examples/sample-api-input.json](examples/sample-api-input.json) — optional, used only when user requests API testcases
 - [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)
-- [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer OpenAPI/Swagger/Postman/JSON/curl/source endpoint
-- [references/template-schema.md](references/template-schema.md) — 4 sheet chi tiết (Cover, Test cases_App, Dropdown Keys, Report)
-- [references/test-types.md](references/test-types.md) — 8 loại test case + ví dụ
-- [references/api-testcases.md](references/api-testcases.md) — mapping và coverage chỉ cho API mode
-- [references/markdown-testcases.md](references/markdown-testcases.md) — contract Markdown tạo trước Excel và read order cho AI
-- [references/plane-integration.md](references/plane-integration.md) — fetch AC từ Plane API
+- [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer for OpenAPI/Swagger/Postman/JSON/curl/source endpoints
+- [references/template-schema.md](references/template-schema.md) — 4 sheet details (Cover, Test cases_App, Dropdown Keys, Report)
+- [references/test-types.md](references/test-types.md) — 8 test case types + examples
+- [references/api-testcases.md](references/api-testcases.md) — mapping and coverage for API mode only
+- [references/markdown-testcases.md](references/markdown-testcases.md) — contract: Markdown created before Excel, AI read order
+- [references/plane-integration.md](references/plane-integration.md) — fetch AC from Plane API
 - Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)
 - Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)
+

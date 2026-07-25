@@ -5,12 +5,12 @@ description: Convert local filesystem or chat-uploaded PDF, DOCX, PPTX, XLSX, HT
 
 # Doc to MD
 
-**Core principle:** Chỉ convert file local đúng cấu trúc — không retype thủ công từ PDF và không kéo nguồn Drive về local chỉ để convert.
+**Core principle:** Only convert local files with correct structure — do not retype manually from PDFs and do not pull Drive sources locally just to convert them.
 
-Dùng **MarkItDown** của Microsoft (open-source MIT) để convert PDF, DOCX, PPTX, XLSX, HTML, ảnh (JPG/PNG với OCR) sang Markdown. File được xử lý 100% local (privacy), không upload cloud. **API key**: KHÔNG cần key cho MarkItDown.
+Uses Microsoft's **MarkItDown** (open-source MIT) to convert PDF, DOCX, PPTX, XLSX, HTML, images (JPG/PNG with OCR) to Markdown. Files are processed 100% locally (privacy), no cloud uploads. **API key**: NO key required for MarkItDown.
 
-> **Khi nào dùng**: User upload file tài liệu (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) và muốn AI đọc hiểu nội dung.
-> **Mục đích**: PDF/DOCX gốc khó cho AI parse trực tiếp. Convert sang Markdown trước → AI đọc MD dễ dàng hơn, hiểu sâu hơn.
+> **When to use**: User uploads a document file (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) and wants the AI to read its content.
+> **Purpose**: Raw PDF/DOCX files are hard for AI to parse directly. Convert to Markdown first → AI reads MD much easier and understands deeper context.
 
 ## Source boundary
 
@@ -33,29 +33,29 @@ Verify that the input is an existing local path, then check extension `.pdf`, `.
 
 ### 2. Run converter
 
-**Cách 1 — dùng script trực tiếp:**
+**Method 1 — run script directly:**
 ```bash
-# Convert PDF sang MD (output tự động = input_DD-MM-YYYY.md)
+# Convert PDF to MD (auto output = input_DD-MM-YYYY.md)
 bash <skill-root>/scripts/convert.sh /path/to/file.pdf
 
-# Convert với output base cụ thể; script vẫn thêm date
+# Convert with specific output base; script still appends date
 bash <skill-root>/scripts/convert.sh /path/to/file.docx /tmp/output.md
 
 # Convert Excel
 bash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md
 ```
 
-Resolve `<skill-root>` từ thư mục chứa `SKILL.md` đang được load. Không giả định skill nằm trong `.claude`, `.codex`, `.gemini` hoặc một home directory cụ thể
+Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. Do not assume the skill is located in `.claude`, `.codex`, `.gemini` or a specific home directory.
 
-Mọi Markdown mới dùng hậu tố `_DD-MM-YYYY` theo ngày `Asia/Ho_Chi_Minh`, ví dụ `FRS_20-07-2026.md`. Không thêm date lần hai nếu basename đã có đúng suffix. Không rename file cũ. Nếu user yêu cầu giữ nguyên filename chính xác, chạy với `QA_PRESERVE_EXACT_FILENAME=1`.
+All new Markdown files use the `_DD-MM-YYYY` suffix based on `Asia/Ho_Chi_Minh` time, e.g., `FRS_20-07-2026.md`. Do not append the date twice if the basename already has the correct suffix. Do not rename existing files. If the user explicitly requests keeping the exact filename, run with `QA_PRESERVE_EXACT_FILENAME=1`.
 
-**Cách 2 — AI tự detect và convert** (khi user upload file trong chat):
+**Method 2 — AI auto-detects and converts** (when user uploads a file in chat):
 1. Detect file type (PDF, DOCX, ...)
-2. Chạy `bash <skill-root>/scripts/convert.sh <file>`
-3. Đọc file MD output thay vì file gốc
-4. Phân tích nội dung và trả lời
+2. Run `bash <skill-root>/scripts/convert.sh <file>`
+3. Read the MD output file instead of the original file
+4. Analyze the content and respond
 
-**Ví dụ AI workflow**:
+**AI workflow example**:
 ```python
 import os, subprocess
 skill_root = os.environ['DOC_TO_MD_SKILL_DIR']
@@ -78,27 +78,27 @@ with open('/tmp/spec.md', 'r') as f:
 | PowerPoint | `.pptx`, `.ppt` | ⭐⭐⭐⭐⭐ - slides + notes |
 | Excel | `.xlsx`, `.xls` | ⭐⭐⭐⭐⭐ - tables + sheets |
 | HTML | `.html`, `.htm` | ⭐⭐⭐⭐⭐ |
-| Images | `.jpg`, `.png`, `.gif` | ⭐⭐⭐ - OCR (cần cài Tesseract) |
-| Audio | `.mp3`, `.wav` | ⭐⭐⭐ - transcription (cần cài Whisper) |
+| Images | `.jpg`, `.png`, `.gif` | ⭐⭐⭐ - OCR (requires Tesseract) |
+| Audio | `.mp3`, `.wav` | ⭐⭐⭐ - transcription (requires Whisper) |
 | CSV | `.csv` | ⭐⭐⭐⭐ |
 | JSON/XML | `.json`, `.xml` | ⭐⭐⭐⭐⭐ |
-| ZIP | `.zip` | ⭐⭐⭐ - extract và convert từng file |
+| ZIP | `.zip` | ⭐⭐⭐ - extract and convert each file |
 
 ### 4. Installation
 
-Lần đầu chạy, script tự động install MarkItDown. Nếu fail, install manually:
+First time running, the script auto-installs MarkItDown. If it fails, install manually:
 ```bash
 pip3 install "markitdown[all]"
 ```
 
-Optional dependencies cho từng format:
-- PDF: cần `pdfminer.six` (auto-install với `[all]`)
-- OCR cho ảnh: cần `tesseract` (`brew install tesseract` trên Mac)
-- Audio: cần `ffmpeg` + `whisper`
+Optional dependencies per format:
+- PDF: requires `pdfminer.six` (auto-installed with `[all]`)
+- Image OCR: requires `tesseract` (`brew install tesseract` on Mac)
+- Audio: requires `ffmpeg` + `whisper`
 
 ### 5. Example
 
-**Convert tài liệu:**
+**Document conversion:**
 ```bash
 $ QA_ARTIFACT_DATE=20-07-2026 bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx
 🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS_20-07-2026.md
@@ -107,45 +107,45 @@ $ QA_ARTIFACT_DATE=20-07-2026 bash <skill-root>/scripts/convert.sh /project/spec
 ✅ Done: FRS_20-07-2026.md (45,231 bytes, 1,247 lines)
 ```
 
-**AI dùng sau khi convert:**
+**AI usage after conversion:**
 ```python
 with open('BCP_AI_SRS.md') as f:
     spec = f.read()
-# Trích requirements
-# "FR-M1-01: User đăng ký tài khoản..."
-# → gen test case từ requirement
+# Extract requirements
+# "FR-M1-01: User registers account..."
+# → generate test cases from requirement
 ```
 
 ## Red flags
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| Output MD thiếu table headers | MarkItDown có thể fail với PDF scan | Cài Tesseract OCR hoặc dùng PDF có text layer |
-| Audio transcription trả về text rỗng | Whisper chưa cài hoặc ffmpeg sai path | Verify `ffmpeg` trong PATH, cài `openai-whisper` |
-| Build wheel fail cho `cryptography` trên macOS | OpenSSL dev headers + Rust thiếu | Dùng `--only-binary=:all:` (xem Common mistakes) |
-| PDF > 100 trang convert rất chậm | MarkItDown xử lý tuần tự từng page | Chia nhỏ file hoặc dùng page range filter |
+| Output MD missing table headers | MarkItDown can fail on scanned PDFs | Install Tesseract OCR or use a PDF with a text layer |
+| Audio transcription returns empty text | Whisper not installed or ffmpeg bad path | Verify `ffmpeg` in PATH, install `openai-whisper` |
+| Build wheel fails for `cryptography` on macOS | Missing OpenSSL dev headers + Rust | Use `--only-binary=:all:` (see Common mistakes) |
+| Large PDF > 100 pages converts very slowly | MarkItDown processes each page sequentially | Split file or use a page range filter |
 
 ## Common mistakes
 
-- **macOS — cryptography build error:** `pip3 install "markitdown[all]"` hay fail với `Failed building wheel for cryptography`. Nguyên nhân: cần OpenSSL dev headers + Rust, không có sẵn trên macOS, cài qua brew đụng `/usr/local` (nhiều khi cấm trên máy công ty). **Fix dùng wheel prebuilt:**
+- **macOS — cryptography build error:** `pip3 install "markitdown[all]"` often fails with `Failed building wheel for cryptography`. Cause: OpenSSL dev headers + Rust are missing, and installing via brew hits `/usr/local` permissions (often blocked on corporate laptops). **Fix by using prebuilt wheel:**
   ```bash
   pip3 install --only-binary=:all: "markitdown[all]"
   ```
   Verify: `PYTHON_BIN=/usr/local/bin/python3.11 python3 -c "import cryptography; print('OK', cryptography.__version__)"`
 
-- **Nếu vẫn fail** (Python từ pyenv custom, macOS rất cũ):
-  - `brew install pkgconf openssl` (cần đổi ownership `/usr/local` — không khuyến nghị trên máy công ty)
-  - Hoặc Conda: `conda install -c conda-forge markitdown`
+- **If it still fails** (custom pyenv Python, very old macOS):
+  - `brew install pkgconf openssl` (requires `/usr/local` ownership change — not recommended on corporate laptops)
+  - Or Conda: `conda install -c conda-forge markitdown`
 
-- **Retype thủ công thay vì convert** — mất table structure, sinh typo, tốn thời gian. Luôn chạy convert.sh trước.
+- **Manual retyping instead of converting** — loses table structure, introduces typos, wastes time. Always run `convert.sh` first.
 
-- **Download Drive object rồi convert khi user chỉ yêu cầu đọc/phân tích** — sai source route và tạo snapshot local không cần thiết. Dùng `google-drive` MCP đọc in-place; chỉ convert khi user yêu cầu rõ bản local.
+- **Downloading Drive objects to convert when user only asked to read/analyze** — wrong source route and creates unnecessary local snapshots. Use `google-drive` MCP for in-place reading; only convert when user explicitly requests a local copy.
 
-- **Upload file lên cloud service khác** — MarkItDown xử lý local, privacy được bảo toàn. Đừng upload trừ khi user yêu cầu rõ.
+- **Uploading files to other cloud services** — MarkItDown processes locally, preserving privacy. Do not upload unless the user explicitly requests it.
 
-- **Convert audio mà chưa cài Whisper** — script sẽ silent fail hoặc trả empty. Cài ffmpeg + openai-whisper trước.
+- **Converting audio without Whisper installed** — script will fail silently or return empty. Install ffmpeg + openai-whisper first.
 
-- **Large PDF > 100 trang** — có thể chậm vài giây. Cân nhắc chia nhỏ hoặc chỉ convert phần liên quan.
+- **Large PDFs > 100 pages** — may take several seconds. Consider splitting or converting only relevant sections.
 
 ## References
 

@@ -18,6 +18,43 @@ import re
 import sys
 import argparse
 from datetime import datetime
+from pathlib import Path
+
+# ─── Canonical sheet schema ───────────────────────────────────────────────────
+# Single source of truth: qa-run/references/TESTCASE_SHEET_SCHEMA.json
+# AI and scripts read this file instead of scanning Excel/Sheet headers every run.
+_SCHEMA_SEARCH_PATHS = [
+    Path(__file__).parent.parent.parent / "qa-run" / "references" / "TESTCASE_SHEET_SCHEMA.json",
+    Path(__file__).parent.parent / "references" / "TESTCASE_SHEET_SCHEMA.json",
+    Path(__file__).parent / "TESTCASE_SHEET_SCHEMA.json",
+]
+
+def _load_sheet_schema():
+    for p in _SCHEMA_SEARCH_PATHS:
+        if p.exists():
+            with open(p, encoding="utf-8") as f:
+                return json.load(f)
+    return None
+
+_SHEET_SCHEMA = _load_sheet_schema()
+
+def _default_col_map():
+    """Return the canonical column mapping from schema file, or legacy inline fallback."""
+    if _SHEET_SCHEMA and "column_mapping" in _SHEET_SCHEMA:
+        return dict(_SHEET_SCHEMA["column_mapping"])
+    # Legacy inline fallback (kept for safety if schema file is missing)
+    return {
+        "scenario_id": 1, "scenario_name": 2, "testcase_id": 3,
+        "description": 4, "precondition": 5, "procedure": 6,
+        "expected": 7, "result": 8, "priority": 9, "date": 10,
+        "tester": 11, "note": 12
+    }
+
+def _default_header_row():
+    """Return the 0-indexed header row index from schema, default row 9 (index 8)."""
+    if _SHEET_SCHEMA and "header_row" in _SHEET_SCHEMA:
+        return int(_SHEET_SCHEMA["header_row"]) - 1  # convert 1-indexed → 0-indexed
+    return 8  # row 9, 0-indexed
 
 # Insert current script directory into sys.path to load drive_common
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -239,14 +276,9 @@ def read_testcases(spreadsheet_id, sheet_name=None):
             break
 
     if header_idx == -1:
-        # Default standard template mapping (B=Scenario ID ... I=Result, J=Priority, K=Date, L=Tester, M=Notes)
-        col_map = {
-            "scenario_id": 1, "scenario_name": 2, "testcase_id": 3,
-            "description": 4, "precondition": 5, "procedure": 6,
-            "expected": 7, "result": 8, "priority": 9, "date": 10,
-            "tester": 11, "note": 12
-        }
-        header_idx = 8 # row 9
+        # Canonical schema fallback — loaded from qa-run/references/TESTCASE_SHEET_SCHEMA.json
+        col_map = _default_col_map()
+        header_idx = _default_header_row()
 
     testcases = []
     current_module = "General"

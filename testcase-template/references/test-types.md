@@ -17,12 +17,46 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 | 7 | `ui` | Display/layout (section UI) | element hiển thị đúng |
 | 8 | `additional` | AI thêm ngoài document - **PHẢI flag** | case đoán thêm, KHÔNG trong AC |
 
-## Quy tắc
+## Rules
 
-- Mỗi case **BẮT BUỘC có `req`** (trace về 1 AC) - nếu case `additional` thì ghi `Ref: (out-of-spec)`
-- Case `additional` (không trong doc) → flag rõ, **KHÔNG bịa expected result** dựa trên spec
-- Script tự sort theo type order, AI không cần viết theo thứ tự
-- Description format MANUAL: bắt đầu bằng "Xác minh rằng..." (không có prefix kỹ thuật)
+- Every case **MUST have `req`** (trace to one AC) — if `additional` type, write `Ref: (out-of-spec)`
+- `additional` cases (not in doc) → flag clearly, **DO NOT fabricate expected result** from spec
+- Script auto-sorts by type order; AI does not need to write in order
+- Description format MANUAL: start with "Verify that..." (no technical prefix)
+
+## Manual-Friendly Writing Rules (applies to ALL case types)
+
+> **Invariant rule**: Every testcase in this system is written for a **Manual Tester who reads the Excel sheet and executes immediately** — not for developers or API tools.
+
+> **Language rule**: Rule files (SKILL.md, references/) are in English for faster AI parsing. ALL testcase content in Excel/Markdown (Description, Pre-condition, Procedure, Expected Results) MUST be written in **Vietnamese**.
+
+| Field | Required | Forbidden |
+|---|---|---|
+| **Description (E)** | Start with "Xác minh rằng..." (Vietnamese) + end-user language | Technical prefix, endpoint path, HTTP code |
+| **Procedure (G)** | One action per line; field/button name + exact input value; written in Vietnamese | Combining actions on one line; `POST`, `null`, `assert` |
+| **Expected (H)** | Describe what the Tester sees or can verify visually; written in Vietnamese | JSON body, HTTP status code, vague phrases |
+
+**Procedure — WRONG vs CORRECT:**
+
+```
+❌ WRONG (technical): Send POST /api/login with empty password → expect 400
+✅ CORRECT (Vietnamese manual):
+  1. Mở trình duyệt và truy cập: [URL]/login
+  2. Tại ô "Email", nhập: test@example.com
+  3. Tại ô "Mật khẩu", để trống (không nhập gì)
+  4. Nhấp nút "Đăng nhập"
+  5. Quan sát thông báo xuất hiện dưới ô Mật khẩu
+```
+
+**Expected Results — WRONG vs CORRECT:**
+
+```
+❌ WRONG: {"error": "password required", "status": 400}
+✅ CORRECT (Vietnamese):
+  1. Hệ thống không thực hiện đăng nhập
+  2. Dưới ô "Mật khẩu" hiển thị thông báo màu đỏ: "Mật khẩu không được để trống"
+  3. Trang vẫn ở màn hình đăng nhập, không chuyển hướng
+```
 
 ## Ví dụ JSON input
 

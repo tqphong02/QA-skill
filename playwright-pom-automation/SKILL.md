@@ -5,13 +5,13 @@ description: Use when scaffolding a new Playwright + Page Object Model project, 
 
 # Playwright POM Automation
 
-**Core principle:** Mọi selector phải đi qua Page Object — không viết `page.locator()` trực tiếp trong spec.
+**Core principle:** All selectors must go through a Page Object — never write `page.locator()` directly in spec files.
 
-Bao gồm 4 loại test: **UI · API · Performance · CI/CD**. **Project-agnostic**: KHÔNG hardcode domain/URL/business logic.
+Covers 4 test types: **UI · API · Performance · CI/CD**. **Project-agnostic**: do NOT hardcode domain/URL/business logic.
 
-> **Khi nào dùng**: Khi user muốn automate web/API test hoặc setup test pipeline.
-> **KHÁC** `qa-run` (live AI-driven exploratory) và `testcase-template` (document test case): skill này = **deterministic test-as-code chạy trong CI**.
-> **API key**: dùng chung từ `../config/api_keys.json` (xem scripts/ai_provider.py).
+> **When to use**: When the user wants to automate web/API tests or set up a test pipeline.
+> **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.
+> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py).
 
 ## The trap this skill exists to prevent
 
@@ -20,17 +20,17 @@ Bao gồm 4 loại test: **UI · API · Performance · CI/CD**. **Project-agnost
 ## Process
 
 ### 1. Quick start
-Đọc **Decision tree** dưới → chọn đúng reference → copy template → adapt.
+Read the **Decision tree** below → pick the right reference → copy the template → adapt.
 
 ### 2. Decision tree
 
-| User muốn | Đọc reference | Copy template |
+| What the user wants | Read reference | Copy template |
 |---|---|---|
 | UI test, page object, locator, click/fill flow | `references/ui-testing.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |
 | API test, HTTP request, auth/token, schema | `references/api-testing.md` | `fixtures/api-client.ts`, `tests/api/example.api.spec.ts` |
 | Functional/E2E, business flow spanning UI+API | `references/ui-testing.md` + `references/api-testing.md` | `tests/functional/example.functional.spec.ts` |
 | Perf/load/timing/SLA | `references/performance-testing.md` | `tests/performance/k6-load-test.js` (Tier 2) |
-| Selector repo, locator centralized | (dưới) → `selectors/login.selectors.ts`, `selectors/index.ts` | - |
+| Selector repo, centralized locators | (below) → `selectors/login.selectors.ts`, `selectors/index.ts` | - |
 | Pipeline, CI/CD, Jenkins, GitHub Actions, schedule | `references/cicd.md` | `github-actions-ci.yml`, `Jenkinsfile`, `playwright.config.ts` |
 
 ### 3. Standard project structure (POM, separated folders)
@@ -50,14 +50,14 @@ project-root/
 └── package.json       # scripts: test:ui / test:api / test:functional / lint
 ```
 
-**Khi nào dùng folder nào**:
-- `tests/ui/` - 1 page/component, 1 intent, fast, browser-driven
-- `tests/api/` - 1 endpoint, request-level, không browser
+**When to use which folder**:
+- `tests/ui/` - one page/component, one intent, fast, browser-driven
+- `tests/api/` - one endpoint, request-level, no browser
 - `tests/functional/` - full business flow spanning multiple steps
 - `tests/performance/` - Tier 1 Playwright + Tier 2 k6
 
 ### 4. Define selector strategy (centralized repo)
-**MỌI locator nên sống trong `selectors/`** - single source of truth. Khi UI đổi, update 1 chỗ; page objects + specs auto pick-up.
+**ALL locators must live in `selectors/`** — single source of truth. When UI changes, update one place; page objects and specs pick up automatically.
 
 ```
 selectors/
@@ -67,17 +67,17 @@ selectors/
 └── index.ts           # barrel export
 ```
 
-Mỗi `<feature>.selectors.ts` exports:
-1. **Raw selector strings** - `id`, `xpath`, `css` (user yêu cầu cụ thể)
-2. **Locator factory** - `getByRole/getByLabel/getByTestId` (ưu tiên)
+Each `<feature>.selectors.ts` exports:
+1. **Raw selector strings** - `id`, `xpath`, `css` (when user specifies explicitly)
+2. **Locator factory** - `getByRole/getByLabel/getByTestId` (preferred)
 
-**Strategy priority** (bền vững nhất → dễ vỡ nhất):
-1. `getByRole` / `getByLabel` / `getByTestId` (⭐⭐⭐⭐⭐) - LUÔN ƯU TIÊN 1
+**Strategy priority** (most stable → most brittle):
+1. `getByRole` / `getByLabel` / `getByTestId` (⭐⭐⭐⭐⭐) - ALWAYS FIRST PRIORITY
 2. `id` (`#email`) - ⭐⭐⭐⭐
 3. `xpath` - ⭐⭐
-4. `css class` (`.btn-primary`) - ⭐ - TRÁNH, class thường auto-generated
+4. `css class` (`.btn-primary`) - ⭐ - AVOID, usually auto-generated
 
-**Pattern tốt cho Page Object** (tự-heal khi UI đổi):
+**Pattern for Page Object** (self-healing when UI changes):
 ```typescript
 // pages/base.page.ts
 protected heal(primary, fallbacks, description) {
@@ -98,66 +98,66 @@ protected get loginBtn() {
 ```
 
 ### 5. Build Page Object classes (POM conventions)
-| Convention | Chi tiết |
+| Convention | Details |
 |---|---|
 | 1 class = 1 page | File `login.page.ts` → class `LoginPage` |
-| Locators ở `selectors/` | Page objects import từ `../selectors`. KHÔNG hardcode locator trong page |
-| Action methods KHÔNG `expect()` | Page object = click/fill/read + return. **Assertions ở spec file**. |
+| Locators in `selectors/` | Page objects import from `../selectors`. DO NOT hardcode locator in page |
+| Action methods NO `expect()` | Page object = click/fill/read + return. **Assertions in spec file**. |
 | `BasePage` | Shared helpers: `waitForLoad`, navigation, `waitForResponse`, text extraction |
-| `data-testid` | Đặt tên `<component>-<element>`, thống nhất với FE team |
+| `data-testid` | Name as `<component>-<element>`, consistent with FE team |
 
 ### 6. Add API layer (API testing conventions)
-- Default dùng Playwright `request` fixture (`APIRequestContext`).
-- Validate response schema với `zod` (ưu tiên) — fail fast on contract drift
+- Default to using Playwright `request` fixture (`APIRequestContext`).
+- Validate response schema with `zod` (priority) — fail fast on contract drift
 - Auth/token fixture reusable: login once in `beforeAll`, share `token` / storage state
 - CRUD lifecycle: create → use → **delete in `afterAll`** (no test data pollution)
 
 ### 7. Add performance harness (optional — 2 tiers)
-| Tier | Khi nào | Tool |
+| Tier | When | Tool |
 |---|---|---|
-| 1 (Playwright) | Smoke perf gate, 1 user, trong main suite | Playwright native (`page.timing`, `performance`) |
-| 2 (k6) | Cần >1 user, p95/p99 SLA, chạy riêng | k6 |
+| 1 (Playwright) | Smoke perf gate, 1 user, in main suite | Playwright native (`page.timing`, `performance`) |
+| 2 (k6) | Need >1 user, p95/p99 SLA, run separately | k6 |
 
-**Escalation Tier 1 → 2 khi**: cần >1 concurrent user, p95/p99 threshold formal, standalone CI job.
-Xem `references/performance-testing.md` để biết template + escalation matrix.
+**Escalate Tier 1 → 2 when**: >1 concurrent user needed, formal p95/p99 threshold, standalone CI job.
+See `references/performance-testing.md` for template + escalation matrix.
 
 ### 8. Wire up Allure + CI (reporting & platform-NEUTRAL CI/CD)
 
 **Reporting — Allure:**
-- Annotate với `allure.step()`, `allure.attachment()` trong UI/API/perf tests
+- Annotate with `allure.step()`, `allure.attachment()` in UI/API/perf tests
 - Playwright reporter: `allure-playwright`
-- k6 → Allure qua JSON output + converter (hoặc Grafana cho live dashboard)
-- Cấu trúc `reports/`: `html/`, `allure-results/`, `allure-report/`
+- k6 -> Allure via JSON output + converter (or Grafana for live dashboard)
+- `reports/` structure: `html/`, `allure-results/`, `allure-report/`
 
 **CI/CD — platform selection:**
-| Platform | Khi nào |
+| Platform | When |
 |---|---|
-| **Jenkins** | `Jenkinsfile` exists trong repo |
+| **Jenkins** | `Jenkinsfile` exists in the repo |
 | **GitHub Actions** | `.github/workflows/` exists |
-| **Mới / chưa có** | Hỏi user chọn platform trước khi gen |
+| **New / none** | Ask user to choose platform before generating |
 
-**5 stages chuẩn** (cú pháp khác nhau, logic giống):
+**5 standard stages** (different syntax, same logic):
 1. Checkout code
 2. Install (`npm ci`) + cache `node_modules` & Playwright browsers
 3. Lint (optional, fail-fast)
-4. `test:ui` + `test:api` song song
+4. `test:ui` + `test:api` in parallel
 5. Publish Allure report
 
-**k6**: chạy job/job stage RIÊNG, KHÔNG block main pipeline.
+**k6**: run standalone job/stage, DO NOT block main pipeline.
 
 **Secrets** (token, BASE_URL, TEST_USER/PASS):
 - GitHub Actions → Repository Secrets (`secrets.*`)
 - Jenkins → Credentials (`credentials('id')`)
-- **KHÔNG hardcode** trong pipeline file hoặc commit
+- **DO NOT hardcode** in pipeline file or commit
 
 ### 9. Setup (one-time per project)
 ```bash
 npm init -y
 npm i -D @playwright/test allure-playwright zod
-npx playwright install chromium      # + firefox / webkit nếu cần
-# Tier 2: brew install k6 (mac) / xem `references/performance-testing.md` (Linux/Windows)
+npx playwright install chromium      # + firefox / webkit if needed
+# Tier 2: brew install k6 (mac) / see `references/performance-testing.md` (Linux/Windows)
 
-# Thêm scripts vào package.json
+# Add scripts to package.json
 # "test:ui":        "playwright test --grep @ui"
 # "test:api":       "playwright test --grep @api"
 # "test:functional":"playwright test --grep @functional"
@@ -176,53 +176,53 @@ Filter:
 - `npx playwright test --grep @api`
 - `npx playwright test --grep @functional`
 
-### 11. Self-check trước khi trả file
-- [ ] **Đã tạo `selectors/` repo** cho mỗi page - KHÔNG hardcode locator
-- [ ] Page Object KHÔNG có `expect()` trong action methods
-- [ ] CR**U**D test có `afterAll` cleanup (delete created data)
-- [ ] `data-testid` đặt tên theo convention `<component>-<element>`
-- [ ] CI/CD có 2 platforms: Jenkins + GitHub Actions templates
-- [ ] Secrets qua env vars/credentials, KHÔNG hardcode
-- [ ] Allure annotations (step, attachment) cho UI/API/perf
-- [ ] Tests **sắp theo type order** (nếu có nhiều type)
-- [ ] Cover metadata đúng (đặc biệt **C3 = project code**)
-- [ ] Dropdown I (Results) + J (Priority) hoạt động
-- [ ] Procedure có steps đánh số; Expected cụ thể đo được
+### 11. Self-check before delivering
+- [ ] **`selectors/` repo created** for every page — NO hardcoded locators
+- [ ] Page Object has NO `expect()` in action methods
+- [ ] CRUD tests have `afterAll` cleanup (delete created data)
+- [ ] `data-testid` named by convention `<component>-<element>`
+- [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions
+- [ ] Secrets via env vars/credentials, NOT hardcoded
+- [ ] Allure annotations (step, attachment) for UI/API/perf
+- [ ] Tests **sorted by type order** (if multiple types)
+- [ ] Cover metadata correct (especially **C3 = project code**)
+- [ ] Dropdown I (Results) + J (Priority) working
+- [ ] Procedure has numbered steps; Expected is specific and measurable
 
 ## Red flags
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| Spec dùng `page.locator('.btn-primary')` trực tiếp trong spec | Class CSS auto-generated, brittle | Move vào `selectors/`, dùng `getByRole`/`getByTestId` |
-| Page Object method có `expect()` bên trong | Action methods phải thuần túy return, assertion ở spec | Tách expect ra spec file |
-| Test tạo data nhưng không cleanup | DB pollution, test sau fail vì data cũ | Thêm `afterAll` delete |
-| CI/CD hardcode `API_BASE_URL` hoặc credentials trong YAML | Secret leak, không rotate được | Dùng `secrets.*` (GitHub) hoặc `credentials()` (Jenkins) |
-| Test chỉ assert `status === 200` | Không verify business rule, chỉ check route có respond | Thêm schema validation (zod), check field quan trọng |
-| Tier 1 perf test chạy 50 concurrent user | Playwright không scale được | Escalate lên k6 (Tier 2) |
+| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, use `getByRole`/`getByTestId` |
+| Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |
+| Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Add `afterAll` delete |
+| CI/CD hardcodes `API_BASE_URL` or credentials in YAML | Secret leak, cannot be rotated | Use `secrets.*` (GitHub) or `credentials()` (Jenkins) |
+| Test only asserts `status === 200` | Does not verify business rule, only checks if route responds | Add schema validation (zod), check critical fields |
+| Tier 1 perf test runs 50 concurrent users | Playwright cannot scale | Escalate to k6 (Tier 2) |
 
 ## Common mistakes
 
-- **Project-agnostic**: code mẫu KHÔNG chứa domain/URL/business logic cụ thể. Mỗi project adapt.
+- **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts.
 
-- **Script mới cần test idempotent**: chạy nhiều lần không tạo data rác. Dùng `withRevert()` hoặc cleanup `afterAll`.
+- **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()` or `afterAll` cleanup.
 
-- **JSON config** nếu có thay vì hardcode URL/credentials.
+- **JSON config** where possible instead of hardcoding URL/credentials.
 
-- **Tagging convention**: dùng `@ui`, `@api`, `@functional`, `@performance` để filter. Không tag = không filter được = CI chạy tất cả mỗi lần.
+- **Tagging convention**: use `@ui`, `@api`, `@functional`, `@performance` to filter. No tag = no filter = CI runs everything every time.
 
-- **Allure annotations**: bỏ qua `allure.step()` = report khó debug. Tag mỗi bước có ý nghĩa.
+- **Allure annotations**: skipping `allure.step()` = report hard to debug. Tag every meaningful step.
 
-- **API key**: 1 file config chung `../config/api_keys.json` (gitignored), dùng cho cả 3 skill. Xem [README.md](../README.md).
+- **API key**: one shared config file `../config/api_keys.json` (gitignored), used by all 3 skills. See [README.md](../README.md).
 
-- **Self-check quan trọng**: nhiều khi AI gen xong quên cleanup hook, hardcode secret, hoặc thiếu selector repo. Chạy qua checklist 11 mục trước khi commit.
+- **Self-check is critical**: AI often forgets cleanup hooks, hardcodes secrets, or omits the selector repo. Run through the 11-item checklist before committing.
 
 ## References
 
-### Templates (copy từ `assets/templates/`)
+### Templates (copy from `assets/templates/`)
 - `assets/templates/Jenkinsfile`
 - `assets/templates/github-actions-ci.yml`
 - `assets/templates/playwright.config.ts`
-- `assets/templates/scripts/check-placeholders.sh` — CI guard chống placeholder chưa fill
+- `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders
 - `assets/templates/fixtures/api-client.ts`
 - `assets/templates/pages/base.page.ts`, `pages/example.page.ts`
 - `assets/templates/selectors/index.ts`, `selectors/login.selectors.ts`
@@ -233,10 +233,10 @@ Filter:
 
 ### Reference docs (`references/`)
 - [references/ui-testing.md](references/ui-testing.md) — UI test patterns, page object examples
-- [references/api-testing.md](references/api-testing.md) — API test với zod schema, auth fixtures
+- [references/api-testing.md](references/api-testing.md) — API tests with zod schema, auth fixtures
 - [references/performance-testing.md](references/performance-testing.md) — Playwright perf + k6, escalation matrix
 - [references/cicd.md](references/cicd.md) — Jenkins + GitHub Actions templates, secrets management
 
 ### Related skills
-- [qa-run](../qa-run/SKILL.md) — live AI-driven exploratory (KHÁC với deterministic test-as-code này)
+- [qa-run](../qa-run/SKILL.md) — live AI-driven exploratory (DIFFERENT from this deterministic test-as-code)
 - [testcase-template](../testcase-template/SKILL.md) — document test case Excel (KHÁC với code automation `.spec.ts`)
