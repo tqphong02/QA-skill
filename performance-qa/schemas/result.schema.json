@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Performance QA common result",
+  "type": "object",
+  "required": ["status", "engine", "testType", "environment", "workload", "summary", "thresholds"],
+  "properties": {
+    "status": { "enum": ["PASS", "FAIL", "BLOCKED"] },
+    "engine": { "enum": ["jmeter", "k6"] },
+    "testType": { "type": "string" },
+    "environment": { "type": "string" },
+    "summary": {
+      "type": "object",
+      "required": [
+        "requests",
+        "successful",
+        "failed",
+        "errorRate",
+        "requestsPerSecond",
+        "averageMs",
+        "p90Ms",
+        "p95Ms",
+        "p99Ms"
+      ]
+    },
+    "thresholds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["metric", "expected", "actual", "status"]
+      }
+    }
+  }
+}

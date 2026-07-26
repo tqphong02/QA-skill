@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Performance QA common run config",
+  "type": "object",
+  "required": ["engine", "testType", "target", "workload", "thresholds", "safety", "report"],
+  "properties": {
+    "engine": {
+      "enum": ["auto", "jmeter", "k6"]
+    },
+    "testType": {
+      "enum": ["smoke", "load", "stress", "spike", "soak", "custom"]
+    },
+    "target": {
+      "type": "object",
+      "required": ["environment", "baseUrl"],
+      "properties": {
+        "environment": { "type": "string", "minLength": 1 },
+        "baseUrl": { "type": "string", "pattern": "^https?://" },
+        "owner": { "type": "string" },
+        "authorizationReference": { "type": "string" },
+        "production": { "type": "boolean" }
+      }
+    },
+    "workload": {
+      "type": "object",
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "enum": ["concurrent-users", "request-rate", "total-iterations"]
+        },
+        "users": { "type": "integer", "minimum": 1 },
+        "rampUp": { "type": "string" },
+        "holdDuration": { "type": "string" },
+        "rampDown": { "type": "string" },
+        "thinkTime": { "type": "string" },
+        "targetRate": { "type": "number", "exclusiveMinimum": 0 },
+        "timeUnit": { "type": "string" },
+        "preAllocatedVUs": { "type": "integer", "minimum": 1 },
+        "maxVUs": { "type": "integer", "minimum": 1 },
+        "iterations": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "required": ["p95Ms", "p99Ms", "maxErrorRate"],
+      "properties": {
+        "p95Ms": { "type": "number", "exclusiveMinimum": 0 },
+        "p99Ms": { "type": "number", "exclusiveMinimum": 0 },
+        "maxErrorRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "minRequestsPerSecond": { "type": "number", "minimum": 0 },
+        "abortOnFailure": { "type": "boolean" }
+      }
+    },
+    "requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "method", "path", "expectedStatus"]
+      }
+    }
+  }
+}

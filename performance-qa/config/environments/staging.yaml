@@ -1,0 +1,3 @@
+target:
+  environment: staging
+  production: false

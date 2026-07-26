@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 16 skill
+## 15 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -17,10 +17,9 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [data-quality-qa](./data-quality-qa/SKILL.md) | Database, ETL/ELT, reconciliation, lineage và schema drift | data-quality evidence |
 | [ai-quality-qa](./ai-quality-qa/SKILL.md) | LLM, RAG, agent, structured output, safety và regression | eval dataset + report |
 | [accessibility-qa](./accessibility-qa/SKILL.md) | WCAG 2.2, axe, keyboard và screen reader | accessibility evidence |
-| [performance-qa](./performance-qa/SKILL.md) | Baseline, k6/JMeter workload, threshold và bottleneck | performance report |
+| [performance-qa](./performance-qa/SKILL.md) | Một orchestrator cho JMeter/k6, common config, threshold, report và bottleneck | `.jmx`/k6 + JSON/Markdown/HTML report |
 | [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
 | [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, device matrix và Appium | mobile QA evidence |
-| [jmeter-qa](./jmeter-qa/SKILL.md) | Sinh và kiểm tra JMeter project có thể import | `.jmx` |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram
@@ -61,7 +60,7 @@ cd QA-skill
 # 2c. Claude Code
 ./scripts/setup.sh --agent=claude --profile=core --yes
 
-# Cài đủ 16 skill chuyên sâu khi cần
+# Cài đủ 15 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # Cấp đúng 1 skill cho intern, không kèm nested/vendor skill

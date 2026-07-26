@@ -1,4 +1,8 @@
-# JMeter generator config
+# JMeter engine mapping
+
+Read this reference only when the selected engine is JMeter. The public
+orchestrator accepts the common run config; its adapter converts that config
+to the generator fields documented below.
 
 ## Root fields
 

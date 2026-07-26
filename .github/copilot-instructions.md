@@ -22,6 +22,7 @@ Hard requirements:
 - Authorized pentest work uses `pentest-run`; create `.pentest/engagement.md`, run its doctor and resolve scope, authorization, exclusions and rate limits before any network request
 - GitHub repository API or Actions work uses `github-mcp-qa`; keep Git SSH separate from MCP OAuth/PAT and verify account, repository, and branch before mutation
 - Chrome DevTools or k6 MCP setup uses `performance-qa`; Postman MCP uses `api-contract-qa`; database read-only MCP uses `data-quality-qa`
+- JMeter, `.jmx`, JTL and k6 all use the single public `performance-qa`; select the engine internally from one common config, smoke with one user, and require approval before load
 - A skill file does not prove an MCP is configured, authenticated, loaded, or permitted; run the canonical doctor and report the exact failing layer
 - Treat scanner alerts as `Candidate` until deterministic reproduction and a control comparison confirm them; request approval immediately before Level 2 or Level 3 actions
 - Never enable `/yolo` outside an explicitly authorized isolated lab

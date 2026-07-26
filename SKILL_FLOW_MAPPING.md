@@ -1,6 +1,6 @@
-# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 16 Skills
+# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 15 Skills
 
-Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **16 Skills** trong hệ thống **QA-skill Framework**.
+Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **15 Skills** trong hệ thống **QA-skill Framework**.
 
 ---
 
@@ -44,7 +44,7 @@ flowchart TD
     %% 4. Specialized Testing
     subgraph S4["4. Specialized QA Skills"]
         SEC["pentest-run (Security Assessment)"]
-        PERF["performance-qa & jmeter-qa (k6 / JMeter Load)"]
+        PERF["performance-qa (internal k6 / JMeter engines)"]
         API["api-contract-qa (OpenAPI / Swagger)"]
         ACC["accessibility-qa (WCAG / axe-core)"]
         DBQ["data-quality-qa (Database & Schema Drift)"]
@@ -81,7 +81,7 @@ flowchart TD
 
 ---
 
-## 📊 3. Ma trận Chuyển giao giữa 16 Skills (Data Handover Matrix)
+## 📊 3. Ma trận Chuyển giao giữa 15 Skills (Data Handover Matrix)
 
 | Skill Nguồn (Input) | Luồng Xử lý (Process) | Output Sinh ra (Artifact) | Skill Tiếp nhận (Consumer) | Dữ liệu Chuyển giao |
 |:---|:---|:---|:---|:---|
@@ -96,7 +96,7 @@ flowchart TD
 | **`qa-run`** *(SHEET_EXECUTION)* | Đọc Sheet URL & chạy Playwright CLI | Result + Screenshots | `qa-run Aggregation` | Kết quả thực thi testcase hàng loạt từ Google Sheet |
 | **`qa-run`** *(RETEST_PLUS)* | Chạy 5 bước retest chuyên sâu | `run-manifest.json`<br>`evidence/` screenshots | `plane-qa` | Trạng thái PASS/FAILED/BLOCKED, evidence screenshot crop |
 | **`pentest-run`** | Authorized Security Assessment | `.pentest/engagement.md`<br>Security Findings | `plane-qa`<br>`qa-run Aggregation` | Lỗi bảo mật IDOR, SSRF, SSTI, JWT, GraphQL, Race Condition |
-| **`performance-qa`** / **`jmeter-qa`** | Load & Stress Testing bằng k6 / JMeter | `performance-report.json`<br>File `.jmx` | `qa-run Aggregation` | Chỉ số p95 latency, RPS, error rate, bottleneck |
+| **`performance-qa`** | Orchestrate Load & Stress bằng internal k6/JMeter adapters | `result.json` + `summary.md/html`<br>File `.jmx` hoặc k6 script | `qa-run Aggregation` | Chỉ số p95/p99 latency, RPS, error rate, bottleneck |
 | **`api-contract-qa`** | Validate OpenAPI / Swagger / Postman | `contract-report.json` | `qa-run Aggregation` | Sai khác giữa API spec và implementation thực tế |
 | **`accessibility-qa`** | Web Accessibility Audit (axe-core / WCAG) | `a11y-report.json` | `qa-run Aggregation` | Lỗi vi phạm WCAG, keyboard focus, screen reader |
 | **`data-quality-qa`** | Database ETL & Schema Drift check | `data-drift.json` | `qa-run Aggregation` | Bảng dữ liệu lệch schema, data lineage error |
@@ -121,7 +121,7 @@ flowchart TD
 | **Viết Playwright automation / POM code (`selectors/`, `pages/`)** | `playwright-pom-automation` | Đọc template POM → Scaffold cấu trúc `selectors/`, `pages/`, `tests/` |
 | **Phân tích BRD/SRS, dựng flow hệ thống, tạo XMind hoặc Q&A** | `business-analysis` (+ `doc-to-md` khi nguồn chưa là MD) | Convert đính kèm sang MD → Review 18 vùng Senior QA → Generate XMind + Q&A Markdown + Q&A Excel |
 | **Pentest được ủy quyền, security assessment, IDOR, SSRF, JWT...** | `pentest-run` | Đọc `.pentest/engagement.md` → Chạy `scripts/doctor.sh` trước request mạng |
-| **Performance, load, stress test, k6, Chrome DevTools** | `performance-qa` / `jmeter-qa` | Xác nhận workload contract → Generate JMX / Script k6 |
+| **Performance, load, stress test, k6, JMeter, `.jmx`, JTL, Chrome DevTools** | `performance-qa` | Xác nhận common workload contract → chọn internal engine → smoke một user → approved load |
 | **OpenAPI, Swagger, Postman contract validation** | `api-contract-qa` | Validate spec đối chiếu với implementation thực tế |
 | **WCAG, axe-core, keyboard access, screen reader** | `accessibility-qa` | Kết hợp automated scan với manual interaction |
 | **ETL/ELT, reconciliation, database schema drift** | `data-quality-qa` | Xác nhận nguồn/đích & read-only boundary tại DB role |
@@ -492,7 +492,7 @@ flowchart TD
 
 ---
 
-## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 16 Skills
+## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 15 Skills
 
 ### 1️⃣ `qa-run` (Core Execution Engine & Knowledge Hub)
 - **Đường dẫn**: `qa-run/SKILL.md`
@@ -617,11 +617,11 @@ flowchart TD
 
 ### 12. `performance-qa` (Load, Stress & Bottleneck Auditor)
 - **Đường dẫn**: `performance-qa/SKILL.md`
-- **Mục đích**: Kiểm thử hiệu năng, k6 workload, Chrome DevTools performance trace, phát hiện bottleneck.
-- **Inputs**: Workload contract (RPS, Virtual Users, SLA thresholds).
-- **Outputs**: `performance-report.json`, Chrome trace metrics (p95 latency, LCP, CLS).
+- **Mục đích**: Một public orchestrator chọn internal JMeter/k6 engine, chạy smoke/load, normalize kết quả, Chrome DevTools trace và phát hiện bottleneck.
+- **Inputs**: Common run config (engine, workload model, RPS/Virtual Users, thresholds, authorization, abort conditions).
+- **Outputs**: `.jmx` hoặc k6 script, `result.json`, `summary.md`, `summary.html`, native engine report và Chrome trace metrics.
 - **Mối liên hệ / Mapping**:
-  - 📥 **Nhận dữ liệu từ**: `jmeter-qa` & `api-contract-qa`.
+  - 📥 **Nhận dữ liệu từ**: `api-contract-qa` & `qa-run`; JMeter/k6 là engine nội bộ, không phải skill công khai.
   - 📤 **Chuyển dữ liệu tới**: `qa-run Aggregation` & `plane-qa` (log bug nếu vi phạm SLA).
 
 ---
@@ -648,18 +648,7 @@ flowchart TD
 
 ---
 
-### 15. `jmeter-qa` (JMeter Script & Workload Generator)
-- **Đường dẫn**: `jmeter-qa/SKILL.md`
-- **Mục đích**: Khởi tạo và kiểm tra các file dự án Apache JMeter (`.jmx`) có thể import và chạy trực tiếp.
-- **Inputs**: Workload contract, API endpoints list từ `api-contract-qa`.
-- **Outputs**: File kịch bản kiểm thử hiệu năng `project.jmx`.
-- **Mối liên hệ / Mapping**:
-  - 📥 **Nhận dữ liệu từ**: `api-contract-qa` & `qa-run`.
-  - 📤 **Chuyển dữ liệu tới**: `performance-qa` (để thực thi load test).
-
----
-
-### 16. `github-mcp-qa` (GitHub API & CI/CD Pipeline Auditor)
+### 15. `github-mcp-qa` (GitHub API & CI/CD Pipeline Auditor)
 - **Đường dẫn**: `github-mcp-qa/SKILL.md`
 - **Mục đích**: Quản lý repository, Git diff, Pull Requests, Issues và Actions CI/CD pipelines qua GitHub API MCP.
 - **Inputs**: GitHub PR URL, commit hash, test results từ `qa-run`.

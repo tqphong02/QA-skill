@@ -40,7 +40,7 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 16 skill.
+Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 15 skill.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
@@ -221,9 +221,10 @@ warn_if_node_too_old() {
 
 # ==== Skills resolution ====
 CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa")
-SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "jmeter-qa")
+SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa")
 FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
 DEFAULT_SKILLS=("${CORE_SKILLS[@]}")
+RETIRED_SKILLS=("jmeter-qa")
 
 resolve_profile() {
   local requested="${1:-core}"
@@ -306,6 +307,30 @@ sync_profile_visibility() {
     log_info "  Profile core đã đưa $moved skill chuyên sâu ra ngoài discovery"
     log_info "  Chạy --profile=full để cài lại khi cần"
   fi
+}
+
+retire_legacy_skills() {
+  local stash_dir
+  stash_dir="$(dirname "$SKILLS_DIR")/qa-skill-disabled"
+  local stamp
+  stamp=$(date '+%Y%m%d%H%M%S')
+
+  for skill in "${RETIRED_SKILLS[@]}"; do
+    local src="$SKILLS_DIR/$skill"
+    [[ -e "$src" ]] || continue
+    local dst="$stash_dir/${skill}-merged-into-performance-qa-${stamp}"
+    if [[ "$DRY_RUN" -eq 1 ]]; then
+      log_dry "retire $src → $dst"
+      continue
+    fi
+    mkdir -p "$stash_dir"
+    if mv "$src" "$dst"; then
+      log_ok "retired $skill → $dst"
+    else
+      log_err "Không retire được legacy skill $skill"
+      return 1
+    fi
+  done
 }
 
 # ==== Copy skill (with excludes) ====

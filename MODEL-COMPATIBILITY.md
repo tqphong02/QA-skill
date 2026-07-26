@@ -38,7 +38,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Audit accessibility trang login` | accessibility-qa | Chạy axe ở state đúng rồi kiểm keyboard, focus, zoom và manual gaps |
 | `Đánh giá chatbot RAG` | ai-quality-qa | Xác định golden dataset, groundedness, tool-call và safety metric trước run |
 | `Test mobile app trên Android và iOS` | mobile-qa | Chốt device matrix, lifecycle và capability Appium trước execution |
-| `Tạo JMeter JMX cho API` | jmeter-qa + performance-qa | Tạo workload contract, generate JMX, validate bằng JMeter thật trước load |
+| `Tạo JMeter JMX cho API` | performance-qa | Chọn internal JMeter adapter, tạo common workload contract, generate JMX, smoke một thread rồi mới approved load |
 | `GitHub MCP đã có skill nhưng không dùng được` | github-mcp-qa | Chạy doctor và phân biệt skill, config, auth, loaded tools và repository permission |
 | `Cài skill core cho Codex` | installer | Chạy `setup.sh --agent=codex --profile=core`, cài 9 skill thường dùng rồi mở phiên mới |
 | `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity --profile=full`, kiểm tra skill và MCP, không ghi credential vào repo |

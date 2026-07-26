@@ -1,0 +1,53 @@
+engine: auto
+testType: load
+
+target:
+  environment: qa
+  baseUrl: https://qa.example.com
+  owner: system-owner
+  authorizationReference: PERF-APPROVAL-001
+  production: false
+
+workload:
+  model: concurrent-users
+  users: 10
+  rampUp: 30s
+  holdDuration: 2m
+  rampDown: 30s
+  thinkTime: 1s
+
+thresholds:
+  p95Ms: 1000
+  p99Ms: 2000
+  maxErrorRate: 0.01
+  minRequestsPerSecond: 1
+  abortOnFailure: false
+
+testData:
+  file: data/users.csv
+  variables: email,password
+  uniquePerUser: true
+
+script:
+  path: null
+
+requests:
+  - name: Health
+    method: GET
+    path: /health
+    expectedStatus: 200
+    responseContains: ok
+
+safety:
+  maxUsers: 100
+  abortConditions:
+    - error rate exceeds the agreed limit
+    - service health check fails
+  cleanup: no mutated test data
+  monitoring: service dashboard
+
+report:
+  html: true
+  markdown: true
+  json: true
+  keepRawResult: true

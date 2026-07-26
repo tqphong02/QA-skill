@@ -28,7 +28,7 @@ Read [references/POSTMAN_MCP.md](references/POSTMAN_MCP.md) before installing, a
 - Use Postman MCP for workspace, collection, specification, mock, and monitor management; use Newman or Postman CLI for reproducible execution
 - Use Schemathesis or another schema-driven runner only when installed and approved by the project
 - Use `testcase-template` when the user asks to produce testcase Markdown or Excel; keep execution in this skill
-- Route performance behavior to `performance-qa` or `jmeter-qa`
+- Route performance behavior, JMeter and k6 work to the single public `performance-qa`
 - Route exploit-focused authorization testing to `pentest-run`
 
 ## Workflow

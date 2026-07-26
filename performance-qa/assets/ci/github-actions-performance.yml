@@ -1,0 +1,41 @@
+name: performance-test
+
+on:
+  workflow_dispatch:
+    inputs:
+      config:
+        description: Common performance run config
+        required: true
+        default: run-config.yaml
+
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    environment: performance-load
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install PyYAML
+      - name: Install the approved engine
+        run: echo "Install k6 or JMeter using the project-pinned version"
+      - name: Validate and prepare
+        run: |
+          python3 performance-qa/scripts/performance_orchestrator.py validate --config "${{ inputs.config }}"
+          python3 performance-qa/scripts/performance_orchestrator.py prepare \
+            --config "${{ inputs.config }}" \
+            --project-root . \
+            --output-root artifacts > prepare.json
+      - name: Smoke then approved load
+        run: |
+          RUN_DIR=$(python3 -c "import json; print(json.load(open('prepare.json'))['runDir'])")
+          python3 performance-qa/scripts/performance_orchestrator.py run \
+            --run-dir "$RUN_DIR" \
+            --approve-load
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-artifacts
+          path: artifacts/

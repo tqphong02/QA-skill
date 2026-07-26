@@ -1,5 +1,5 @@
 {
-  "name": "API smoke and load",
+  "name": "API smoke and load (engine fixture)",
   "base_url": "https://staging.example.com",
   "threads": 1,
   "ramp_up_seconds": 1,

@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-16 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
+15 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 16 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
+Repo này phân phối 15 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
 
 ## Cross-model deterministic mode
 
@@ -44,10 +44,10 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Database, ETL/ELT, reconciliation, lineage, freshness, schema drift hoặc Database read-only MCP | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary thật ở DB role |
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
 | WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
-| Latency, load, stress, spike, soak, k6, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Xác nhận workload contract và stop condition |
+| Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition |
 | OpenAPI, Swagger, Postman, Postman MCP, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
 | Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
-| Tạo/import/chạy JMeter `.jmx` | `jmeter-qa/SKILL.md` + `performance-qa/SKILL.md` | Tạo workload contract rồi generate JMX |
+| Tạo/import/chạy JMeter `.jmx` | `performance-qa/SKILL.md` | Dùng internal JMeter adapter; smoke một thread trước approved load |
 
 ### Hard gates
 
@@ -65,6 +65,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 ### Invariant bắt buộc
 
 - `DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
+- `performance-qa` là public skill duy nhất cho performance; JMeter và k6 là engine nội bộ dùng chung config, smoke gate và result schema
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; vẫn giữ ledger RETEST_PLUS 6 dòng riêng
 - Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; chỉ thêm Original Retest và Plane action cho row có ticket/previous failure
 - Không được tự thay business flow thiếu bằng flow generic; test contract phải copy từ Business Execution Brief `READY` cùng source hash

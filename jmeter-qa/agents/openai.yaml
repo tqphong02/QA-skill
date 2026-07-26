@@ -1,4 +1,0 @@
-interface:
-  display_name: "JMeter QA"
-  short_description: "Generate portable JMeter load test projects"
-  default_prompt: "Use $jmeter-qa to generate an importable JMeter project for these API flows."

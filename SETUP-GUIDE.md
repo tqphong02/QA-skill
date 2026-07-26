@@ -1,6 +1,6 @@
 # Setup QA-skill trên máy mới
 
-Repository phân phối 16 skill. Profile `core` cài 9 skill thường dùng và là mặc định; profile `full` cài đủ 16 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
+Repository phân phối 15 skill. Profile `core` cài 9 skill thường dùng và là mặc định; profile `full` cài đủ 15 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
 
 ## 1. Yêu cầu
 
@@ -64,7 +64,7 @@ Repository có `.agents/mcp_config.json` làm workspace MCP template. Mọi serv
 
 Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa` và `github-mcp-qa`
 
-Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa` và `jmeter-qa`
+Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa` và `mobile-qa`
 
 ```bash
 ./scripts/setup.sh --agent=antigravity --profile=full --yes

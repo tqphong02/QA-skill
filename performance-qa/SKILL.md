@@ -1,69 +1,102 @@
 ---
 name: performance-qa
-description: Design and execute safe web, API, service, and data-pipeline performance baselines; define SLIs/thresholds; analyze frontend traces and Core Web Vitals; generate k6 or JMeter workloads; identify bottlenecks; and produce evidence. Trigger on latency, throughput, concurrency, load, stress, spike, soak, scalability, performance regression, bottleneck, Chrome DevTools MCP, or k6 MCP; do not require the skill name. Resolve the workload contract and stop conditions before load.
+description: Orchestrate safe performance testing with JMeter or k6 from one common run config, including engine auto-discovery, workload design, smoke gating, load/stress/spike/soak execution, JMX or k6 generation, JTL/k6 result normalization, shared PASS/FAIL thresholds, HTML/Markdown/JSON reports, frontend traces, and bottleneck analysis. Trigger on performance, latency, throughput, concurrency, virtual users, request rate, load, stress, spike, soak, scalability, performance regression, JMeter, `.jmx`, Thread Group, JTL, k6, k6 script, Chrome DevTools MCP, k6 MCP, or bottleneck; do not require the skill name. A bare `.jmx` or k6 `.js`/`.ts` file is a safe inspect/validate request, not authorization to run load.
 ---
 
 # Performance QA
 
-Select the smallest tool that answers the performance question. Load tests are state-changing operational actions even when requests are logically read-only.
+Use one public skill and two internal engines. Never ask the user or intern to
+select a separate JMeter skill.
+
+## Deterministic flow
+
+1. Run `python3 scripts/performance_orchestrator.py doctor`
+2. Run `python3 scripts/performance_orchestrator.py discover --root <project-root>`
+3. Resolve engine:
+   - Exact `.jmx` → JMeter
+   - Exact k6 `.js`, `.ts`, or `.mjs` → k6
+   - `engine: auto` with exactly one discovered engine → that engine
+   - Both engines or no script → ask only for the engine; do not guess
+4. Copy [assets/run-config.example.yaml](assets/run-config.example.yaml) or run:
+   ```bash
+   python3 scripts/performance_orchestrator.py wizard --output run-config.yaml
+   ```
+5. Ask only fields required by the chosen workload model:
+   - `concurrent-users`: users, ramp-up, hold, ramp-down, think time
+   - `request-rate`: target rate, time unit, pre-allocated VUs, max VUs, duration
+   - `total-iterations`: iterations, users, max duration, think time
+6. Resolve p95, p99, maximum error rate, minimum throughput and abort behavior
+7. Validate, display, and prepare without executing:
+   ```bash
+   python3 scripts/performance_orchestrator.py validate --config run-config.yaml
+   python3 scripts/performance_orchestrator.py prepare \
+     --config run-config.yaml \
+     --project-root <project-root> \
+     --output-root artifacts
+   ```
+8. Read back `run-config.yaml` and `run-plan.json`; show engine, target, workload,
+   thresholds, approvals, smoke command, main command and artifact paths
+9. Immediately before execution, obtain the approvals required below, then run:
+   ```bash
+   python3 scripts/performance_orchestrator.py run \
+     --run-dir artifacts/<run-id> \
+     --approve-load
+   ```
+10. The runner must execute one-user smoke first. Main load cannot start when
+    smoke fails
+11. Parse JTL or k6 JSON into `result.json`; generate `summary.md`,
+    `summary.html`, engine-native report and redacted logs
+12. Correlate latency/errors with CPU, memory, database, pool, queue, network,
+    cache and downstream evidence before naming a bottleneck
 
 ## Hard gates
 
-1. Resolve exact environment, owner approval, workload, user journey, data, exclusions, rate limit, duration, rollback, monitoring, and abort thresholds
-2. Never run load against production without written authorization naming the target and workload
-3. Capture idle health and baseline before adding concurrency
-4. Start with one user and increase load in controlled stages
-5. Stop on elevated error rate, service instability, resource saturation, or the agreed abort condition
-6. Keep client-side saturation separate from server-side bottlenecks
-7. Never compare runs with different environments, datasets, caches, or workload models without disclosing the difference
+1. Resolve exact environment, owner, written authorization reference, target,
+   workload, request mix/business flow, data, exclusions, cleanup, monitoring
+   and abort conditions before load
+2. A bare `.jmx`, JTL, k6 script or result file authorizes safe inspection only
+3. Never run production without written authorization naming target and workload
+   plus explicit approval immediately before execution
+4. Any workload above one user, any request-rate load, and stress/spike/soak
+   require `--approve-load` immediately before the main run
+5. More than `safety.maxUsers` (default 100) also requires
+   `--approve-high-load`; production also requires `--approve-production`
+6. Never hardcode passwords, tokens, cookies, API keys or private keys in config,
+   JMX, k6 script, commands, logs or reports; use environment placeholders
+7. Always capture idle health and run one user/one iteration before load
+8. Stop when smoke fails, service health fails, connectivity is lost, resource
+   saturation appears, or an agreed abort condition is met
+9. Assert status and business response under load; a fast incorrect response is
+   a failure
+10. Do not compare runs whose environment, dataset, cache state or workload model
+    differs without disclosing the difference
+11. JMeter GUI is for import/debug only; evidence-bearing runs use non-GUI mode
+12. MCP/runtime availability never grants load authorization
 
-Read [references/TOOL_ROUTING.md](references/TOOL_ROUTING.md) before choosing a runner. Start each engagement from [assets/performance-contract.example.json](assets/performance-contract.example.json).
+## Engine resources
 
-Read [references/MCP_SETUP.md](references/MCP_SETUP.md) before installing or diagnosing Chrome DevTools MCP or k6 MCP. Run `../github-mcp-qa/scripts/doctor-stack.sh chrome-devtools k6` after configuration.
-
-## Tool routing
-
-- Use Playwright timing for one-user browser smoke and navigation timing
-- Use Chrome DevTools MCP for frontend trace, network waterfall, LCP, INP, CLS, long tasks, and runtime bottlenecks
-- Reuse `../playwright-pom-automation/assets/templates/tests/performance/k6-load-test.js` for k6 API load; do not create a competing k6 framework
-- Use k6 MCP when available for authoring, validation, and controlled execution
-- Treat MCP configuration as separate from load authorization; an available k6 tool never bypasses the workload contract or approval gate
-- Route a requested importable `.jmx` project to `jmeter-qa`
-- Use Grafana MCP in read-only mode only when the project already exposes relevant metrics and logs
-
-## Workflow
-
-### 1. Define workload and SLIs
-
-Record arrival or concurrency model, endpoint mix, think time, test data, authentication, cache state, warm-up, stages, duration, expected throughput, and SLIs such as p50, p90, p95, p99, error rate, request rate, queue time, and resource utilization.
-
-### 2. Establish baseline
-
-Verify service health and run one-user smoke. Capture client and server timestamps, response correctness, environment version, dataset size, and monitoring availability.
-
-### 3. Run controlled stages
-
-Use warm-up, baseline, target, and recovery stages. Stress, spike, soak, concurrency, destructive data setup, or high-volume runs require explicit approval immediately before execution.
-
-### 4. Validate correctness under load
-
-Assert status, schema, business outcome, and data cleanup. A fast incorrect response is a failure. Avoid coordinated omission by choosing the correct arrival model for the expected traffic.
-
-### 5. Correlate bottlenecks
-
-Compare latency and error changes with CPU, memory, database, pool, queue, network, browser main thread, cache, and downstream dependencies. Mark a bottleneck as suspected until a controlled comparison supports it.
-
-### 6. Report
-
-Include contract, environment, workload stages, thresholds, results by percentile, errors, throughput, monitoring correlation, test-data impact, abort events, recovery, limitations, and reproducible commands.
+- Read [references/COMMON_CONFIG.md](references/COMMON_CONFIG.md) when defining or
+  validating the common config
+- Read [references/JMETER.md](references/JMETER.md) only for JMeter generation,
+  correlation, Thread Group or JMX import details
+- Read [references/K6.md](references/K6.md) only for k6 scenarios and environment
+  mapping
+- Read [references/RESULTS.md](references/RESULTS.md) when normalizing, comparing
+  or interpreting reports
+- Read [references/TOOL_ROUTING.md](references/TOOL_ROUTING.md) for browser
+  timing, Chrome DevTools, Grafana and runner selection
+- Read [references/MCP_SETUP.md](references/MCP_SETUP.md) only for Chrome
+  DevTools MCP or k6 MCP setup/diagnosis
 
 ## Completion checks
 
-- Authorization and abort thresholds are recorded
-- Baseline and recovery health are captured
-- Workload and dataset are reproducible
-- Functional assertions ran under load
-- Percentiles and error rate have verdicts
-- Client saturation was checked
-- Cleanup is verified
-- Bottleneck claims have correlated evidence
+- One common config and exact engine are recorded
+- Authorization, workload and abort conditions are complete
+- Generated JMX parses or generated k6 script passes static preparation
+- One-user smoke passed before main load
+- Raw and native engine outputs are retained when requested
+- `result.json`, `summary.md` and `summary.html` agree on PASS/FAIL
+- p95, p99, error rate and throughput have threshold verdicts
+- Slow endpoints and top errors are reported when native data provides them
+- Cleanup and recovery health are verified
+- Bottleneck claims have correlated evidence and limitations

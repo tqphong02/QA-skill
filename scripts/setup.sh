@@ -130,6 +130,7 @@ else
 fi
 
 # ==== Step 5: Copy skills ====
+retire_legacy_skills
 sync_profile_visibility "$PROFILE" "$ONLY_SKILLS"
 log_step "Copying ${#SKILLS[@]} QA skills"
 for skill in "${SKILLS[@]}"; do
