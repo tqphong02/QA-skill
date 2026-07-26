@@ -5,6 +5,8 @@ description: Configure, authenticate, diagnose, and operate Postman through its 
 
 # Postman
 
+Read [QUICK_REF.md](QUICK_REF.md) for UI marketplace installation, free API key generation, and quick authentication steps.
+
 Use the official remote Postman MCP server. Bootstrap the connection deterministically before attempting Postman operations.
 
 ## First-use bootstrap
