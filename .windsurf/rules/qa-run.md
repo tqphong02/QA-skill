@@ -17,7 +17,9 @@ Compose internal layers: DISCOVERY_CORE = Scoped Business Discovery + Explorator
 - Chọn kỹ thuật test
 - Chạy sanity / regression
 - Retest ticket tự chạy RETEST_PLUS gồm Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
-- Đọc `app-business-guide.md` rồi guide khớp feature trước browser action; dùng `APP_BASELINE_DISCOVERY` cho lần khám phá tổng thể, còn retest không lặp lại full-app baseline
+- Chạy `scripts/helpers/context-builder.mjs` theo đúng feature scope trước normal browser action; chỉ chạy khi Business Execution Brief là `READY`
+- `NEEDS_DISCOVERY` chỉ cho scoped discovery, `BLOCKED` phải dừng đúng trường thiếu; không tự thay flow thiếu bằng flow generic
+- Dùng `APP_BASELINE_DISCOVERY` cho lần khám phá tổng thể, còn retest không lặp lại full-app baseline
 
 ## Không dùng
 - Viết script automation mới (→ `playwright-pom-automation`)

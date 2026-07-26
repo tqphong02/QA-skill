@@ -56,9 +56,30 @@ Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; v
 
 Apply the following exact order for all models, especially fast or small-context models:
 
-1. **Initialize Run Manifest**: Always call `node scripts/helpers/run-manifest.mjs start` before running tests.
-2. Select the user entrypoint, expand its complete workflow stack, and initialize a ledger row for every required layer before opening the browser. If the route exits to another skill, stop `qa-run`.
-3. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
+1. Select the user entrypoint, expand its complete workflow stack, and initialize a ledger row for every required layer before opening the browser. If the route exits to another skill, stop `qa-run`.
+2. **[BEFORE BROWSER — BUILD business context]** Derive the narrow feature slug from the ticket, Sheet row, URL, or user scope, then run:
+   ```bash
+   node scripts/helpers/context-builder.mjs \
+     --intent <RETEST_TICKET|SHEET_TESTCASE_EXECUTION|SANITY_REGRESSION|EXPLORATORY_ADHOC> \
+     --scope <feature-slug> \
+     --target <route-or-ticket-url-if-known> \
+     --expected <ticket-or-testcase-expected-if-known> \
+     --role <role-if-known> \
+     --impact <comma-separated-impacted-areas-if-known>
+   ```
+   Read both generated files under `qa-knowledge/context/`. `Business Execution Brief` is the machine gate, not an optional summary:
+   - `READY` → use its exact `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, source hashes and known issues
+   - `NEEDS_DISCOVERY` → run only `SCOPED_BUSINESS_DISCOVERY`, update knowledge, then rebuild the brief
+   - `BLOCKED` → stop normal execution and report `missing_required`; never invent a route, role, rule, flow or expected result
+   - Discovery modes may start without `READY` only to produce the missing knowledge. No normal browser action is allowed before the desired run's brief is `READY`
+3. **Initialize Run Manifest** only after the business gate:
+   ```bash
+   node scripts/helpers/run-manifest.mjs start \
+     --mode <MODE> \
+     --business-context qa-knowledge/context/business-execution-brief.json
+   ```
+   `run-manifest.mjs` must reject every non-discovery run whose brief is missing, invalid or not `READY`.
+4. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
    - **Standard schema is pre-baked** — read [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json); DO NOT rescan headers each time. Schema summary:
      ```
      Sheet: "Test cases_App"  |  Header row: 9 (0-indexed: 8)
@@ -72,20 +93,20 @@ Apply the following exact order for all models, especially fast or small-context
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
    - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
    - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
-4. **[BEFORE TEST — READ knowledge]** Resolve `<project-root>/qa-knowledge/knowledge-index.json` first:
+5. **[BEFORE TEST — VERIFY loaded knowledge]** The brief builder must resolve `<project-root>/qa-knowledge/knowledge-index.json` first:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
    - Read `permission-matrix.json` (machine-readable, NOT `rbac-matrix.md`) when preparing role-based or security tests
    - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, reusable assets
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
-   - If NO guide exists at all: run `APP_BASELINE_DISCOVERY` for the feature scope first
-5. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
-6. Write the test contract including `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` and reused knowledge.
-7. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
-8. Update verdict/evidence into the ledger immediately after each layer; do not conclude if any item lacks a verdict or `BLOCKED/PARTIAL` reason.
-9. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`.
-10. After every run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`.
-11. **[AFTER EVERY RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory, not optional:
+   - If NO guide exists at all: run scoped discovery for a retest; use `APP_BASELINE_DISCOVERY` only for an explicit full-app/bootstrap request
+6. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
+7. Copy the test contract from the `READY` brief. Do not rewrite it from memory or replace missing fields with generic steps.
+8. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
+9. Update verdict/evidence into the ledger immediately after each layer; do not conclude if any item lacks a verdict or `BLOCKED/PARTIAL` reason.
+10. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`.
+11. After every run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`.
+12. **[AFTER EVERY RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory, not optional:
     ```bash
     # Step 1: write/merge the knowledge update
     node scripts/writers/write-business-guide.mjs guide-update.json <project-root>
@@ -158,6 +179,7 @@ These must be observed at all times, even before reading any reference file:
 
 | Script | Purpose |
 |---|---|
+| `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
 | `scripts/helpers/execute-sheet.mjs` | Run testcases from Google Sheet with parallel workers |

@@ -398,7 +398,7 @@ Mọi phiên test tự động ghi nhận chỉ số thực tế để làm cơ 
 2. dom-pruner.mjs              (Rút gọn DOM thành Business Components)
 3. doc-indexer.mjs             (Indexing & Filter Section tài liệu)
 4. incremental-discovery.mjs   (Scan theo module/route hash thay đổi)
-5. context-builder.mjs         (Gom context pack tinh gọn per intent)
+5. context-builder.mjs         (Tạo và validate Business Execution Brief theo scope)
 6. visual-evidence-router.mjs  (Điều phối crop ảnh nghi ngờ cho Vision)
 7. token-budget-manager.mjs    (Token budget guard & Real tokenizer metric)
 ```
@@ -423,7 +423,7 @@ Script xử lý trước (Level 0)
     ↓
 Chỉ lấy phần thay đổi hoặc có rủi ro (Incremental)
     ↓
-AI chỉ đọc Context đã rút gọn (Context Pack)
+AI chỉ đọc Business Execution Brief đã validate
     ↓
 Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision)
 ```
@@ -435,14 +435,14 @@ Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision)
 ```mermaid
 flowchart TD
     L0["Level 0: Deterministic Script (0 AI Token)\n• AST/Regex Scanners & Playwright CLI Execution"] --> L1
-    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• context-pack.json & dom-pruner output"] --> L2
+    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• business-execution-brief.json & dom-pruner output"] --> L2
     L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & changed symbols"] --> L3
     L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
     L4["Level 4: Full Screenshot / Full Source Code\n• Chỉ dùng khi Level 0 - Level 3 bị FAIL"]
 ```
 
 - **Level 0**: Script deterministic hoàn toàn, **0 AI token**.
-- **Level 1**: AI đọc JSON tóm lược (`context-pack.json` & `dom-pruner.mjs` output).
+- **Level 1**: AI đọc JSON tóm lược (`business-execution-brief.json` & `dom-pruner.mjs` output).
 - **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections).
 - **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`).
 - **Level 4**: Full screenshot hoặc full source code **CHỈ KHI THỰC SỰ CẦN THIẾT**.
@@ -452,7 +452,7 @@ flowchart TD
 ### 🛠️ Bộ Script Hỗ trợ Tối ưu Token (`qa-run/scripts/`)
 
 1. **`artifact-cache.mjs`**: Cache kết quả trích xuất theo commit hash, file content hash và input hash. Nếu file không đổi, không phân tích lại.
-2. **`context-builder.mjs`**: Nhận Intent & Module hiện tại, gom đúng kiến thức liên quan, loại trùng và tạo `context-pack.json` tinh gọn.
+2. **`context-builder.mjs`**: Nhận Intent & feature scope, đọc knowledge thực tế, tạo `business-execution-brief.json` và trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED`; không sinh flow fallback.
 3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements).
 4. **`doc-indexer.mjs`**: Chia nhỏ tài liệu PDF/DOCX theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
 5. **`visual-evidence-router.mjs`**: Tự động quyết định vùng visual nào thực sự cần gửi cho AI Vision (chỉ crop region khi DOM audit nghi ngờ).

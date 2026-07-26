@@ -5,8 +5,9 @@
 ## Enterprise QE Pipeline (15 Layers)
 
 ```
-Intent Router → Run Planner & Dependency Graph → Manifest Initializer (run-manifest.mjs)
-  → Safety Guard (Default BLOCKED) → Knowledge Validator (validate-knowledge.mjs)
+Intent Router → Run Planner & Dependency Graph → Business Context Gate (context-builder.mjs)
+  → Manifest Initializer (run-manifest.mjs) → Safety Guard (Default BLOCKED)
+  → Knowledge Validator (validate-knowledge.mjs)
   → Worker Account & Data Isolation (data-factory.mjs) → Runtime Observer (runtime-observer.mjs)
   → Executors (Checklist / Mutation / Visual Audit / Visual Regression / UX Journey)
   → Evidence Redaction & Packaging (collect-evidence.mjs) → AI Analyzer & Oracle

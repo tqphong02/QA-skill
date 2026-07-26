@@ -235,23 +235,17 @@ Flash models often skip the knowledge cycle entirely, causing the AI to re-explo
 ### Before test — READ in this exact order
 
 ```
-Step 1: Check if qa-knowledge/knowledge-index.json exists
-  YES → Read only the shard keys matching the current feature/ticket
-        (e.g. "login" scope → load flows/login.json + rules/login.json only)
-  NO  → Check if app-business-guide.md exists
-          YES → Read the relevant section for this feature only
-          NO  → Run APP_BASELINE_DISCOVERY before testing anything
+Step 1: Run the deterministic builder:
+  node scripts/helpers/context-builder.mjs --intent <intent> --scope <feature-slug>
+  Add --target, --expected, --role and --impact when the ticket/testcase supplies them
 
-Step 2: From what you loaded, extract:
-  - Routes/URLs for the feature (do not navigate blind)
-  - Role required (which account to use)
-  - State precondition (what state must exist before test)
-  - Key business rules (what must always be true)
-  - Known issues (do not re-report already-known bugs)
-  - Reusable assets (existing test accounts, data setup steps, locators)
+Step 2: Read qa-knowledge/context/business-execution-brief.json:
+  READY → use its execution_contract exactly
+  NEEDS_DISCOVERY → run scoped discovery, write knowledge, rebuild
+  BLOCKED → report missing_required and do not open the browser for normal execution
 
-Step 3: Write a 3-line test contract before first browser action:
-  "Feature: <name> | Route: <url> | Role: <account> | Key rule: <rule>"
+Step 3: Copy Target, Role/Data, Original flow, Expected, Impact area and Stop condition
+  from the READY brief. Never replace a missing field with a generic five-step flow.
 ```
 
 ### After every run — WRITE in this exact order
@@ -300,8 +294,8 @@ Step 2: Build the guide-update.json — minimum required fields:
 
 ```
 Step 3: Run write + validate:
-  node scripts/write-business-guide.mjs guide-update.json <project-root>
-  node scripts/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
+  node scripts/writers/write-business-guide.mjs guide-update.json <project-root>
+  node scripts/writers/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
 
 Step 4: Confirm: read back the first 20 lines of the written guide.
   If the last_verified date and latest_run verdict are correct → DONE
@@ -317,4 +311,3 @@ Step 4: Confirm: read back the first 20 lines of the written guide.
 | Skips writing guide → next run re-explores | Double token cost, loses learning | Gate 11 is mandatory, not optional |
 | Overwrites guide without `merge_confirmed: true` | Loses old business rules | Script will reject; set merge_confirmed |
 | Writes "seems to work" in notes | Useless guide for next session | Write specific: route, observed state, rule |
-

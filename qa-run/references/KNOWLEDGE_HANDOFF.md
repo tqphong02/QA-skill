@@ -26,12 +26,14 @@ Không bắt Claude đọc toàn bộ guide lớn nếu `knowledge-index.json` �
 ## Trước khi test
 
 1. Resolve project root và feature slug từ request, ticket, URL hoặc cwd
-2. Đọc `knowledge-index.json` trước nếu có, sau đó chỉ đọc shard hoặc guide mà index trỏ tới
-3. Trích phần còn dùng được vào test contract trước browser action
-4. Kiểm tra `Environment`, `Last verified`, source và confidence trước khi tin dữ liệu
-5. Reuse route, locator, role/data, state transition và reusable assets đã xác nhận
-6. Không bỏ retest hoặc verification bắt buộc chỉ vì guide cũ ghi PASS
-7. Không đọc toàn bộ mọi feature guide; chỉ đọc shard hoặc guide khớp ticket/scope
+2. Chạy `node scripts/helpers/context-builder.mjs --intent <intent> --scope <feature-slug>`; truyền thêm `--target`, `--expected`, `--role`, `--impact` khi ticket hoặc testcase đã cung cấp
+3. Đọc `qa-knowledge/context/business-execution-brief.json` và `.md`; không tự tóm tắt lại bằng trí nhớ
+4. Chỉ tiếp tục normal test khi brief là `READY`; `NEEDS_DISCOVERY` chỉ cho phép scoped discovery, còn `BLOCKED` phải báo đúng `missing_required`
+5. Brief phải có route, role/data, precondition, happy flow, business rule, expected result và impact area cần thiết cho intent
+6. Kiểm tra source hash, `Environment`, `Last verified`, source và confidence trước khi tin dữ liệu
+7. Reuse route, locator, role/data, state transition và reusable assets đã xác nhận
+8. Không bỏ retest hoặc verification bắt buộc chỉ vì guide cũ ghi PASS
+9. Không đọc toàn bộ mọi feature guide; builder chỉ đọc shard hoặc guide khớp ticket/scope
 
 Nếu retest không có guide/index, khám phá đủ feature và impacted flow rồi tạo index + shard sau run. Không tự mở rộng thành full-app baseline
 
@@ -49,8 +51,8 @@ Nếu user yêu cầu khám phá tổng thể hoặc project chưa có knowledge
 Tạo JSON update đầy đủ rồi chạy:
 
 ```bash
-node scripts/write-business-guide.mjs guide-update.json <project-root>
-node scripts/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
+node scripts/writers/write-business-guide.mjs guide-update.json <project-root>
+node scripts/writers/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
 ```
 
 JSON update tối thiểu:

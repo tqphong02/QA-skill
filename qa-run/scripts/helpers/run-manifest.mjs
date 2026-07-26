@@ -20,6 +20,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -27,7 +28,6 @@ const DATA = process.env.QA_DATA_DIR || process.cwd();
 try { process.loadEnvFile(path.join(DATA, '.env')); } catch { /* optional */ }
 
 const EVID = path.join(DATA, 'evidence');
-fs.mkdirSync(EVID, { recursive: true });
 
 const args = process.argv.slice(2);
 const command = args[0] || 'start';
@@ -50,6 +50,42 @@ function getGitBranch() {
 }
 
 if (command === 'start') {
+  const testMode = getArg('--mode', 'EXPLORATORY_ADHOC').toUpperCase();
+  const discoveryModes = new Set([
+    'APP_BASELINE_DISCOVERY',
+    'REPO_BUSINESS_DISCOVERY',
+    'UI_BUSINESS_RECONCILIATION',
+    'SCOPED_BUSINESS_DISCOVERY',
+  ]);
+  const businessContextPath = path.resolve(getArg(
+    '--business-context',
+    path.join(DATA, 'qa-knowledge', 'context', 'business-execution-brief.json'),
+  ));
+
+  let businessContext = null;
+  if (fs.existsSync(businessContextPath)) {
+    try {
+      businessContext = JSON.parse(fs.readFileSync(businessContextPath, 'utf8'));
+    } catch {
+      console.error(`[run-manifest] BLOCKED: invalid business context JSON at ${businessContextPath}`);
+      process.exit(2);
+    }
+  }
+
+  if (!discoveryModes.has(testMode)) {
+    if (!businessContext) {
+      console.error(`[run-manifest] BLOCKED: business execution brief is missing at ${businessContextPath}`);
+      console.error('Run scripts/helpers/context-builder.mjs and resolve the brief before browser testing');
+      process.exit(2);
+    }
+    if (businessContext.status !== 'READY') {
+      console.error(`[run-manifest] BLOCKED: business execution brief status=${businessContext.status}`);
+      console.error(`Missing: ${(businessContext.missing_required || []).join(', ') || 'unknown'}`);
+      process.exit(2);
+    }
+  }
+
+  fs.mkdirSync(EVID, { recursive: true });
   const runId = `run-${Date.now()}`;
   const manifest = {
     run_id: runId,
@@ -64,8 +100,17 @@ if (command === 'start') {
     account_roles: [process.env.QA_EMAIL || 'default_user'],
     test_data_namespace: `ns-${Date.now().toString(36)}`,
     worker_count: parseInt(getArg('--workers', '1'), 10),
-    test_mode: getArg('--mode', 'EXPLORATORY'),
-    knowledge_version: 'app-flow-map.json',
+    test_mode: testMode,
+    knowledge_version: businessContext?.source_files?.map(source => source.sha256_12).join(',') || 'discovery',
+    business_context: businessContext ? {
+      path: path.relative(DATA, businessContextPath),
+      status: businessContext.status,
+      scope: businessContext.scope,
+      sha256_12: crypto.createHash('sha256')
+        .update(fs.readFileSync(businessContextPath))
+        .digest('hex')
+        .slice(0, 12),
+    } : null,
     started_time: new Date().toISOString(),
     finished_time: null,
     duration_ms: null,

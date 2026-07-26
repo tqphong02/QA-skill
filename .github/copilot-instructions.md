@@ -28,6 +28,8 @@ Hard requirements:
 - API testcase mode is opt-in only when the user explicitly asks to write API testcases or testcases for an endpoint, OpenAPI/Swagger, Postman collection, or curl request; merely mentioning an API artifact does not switch modes
 - For API testcase files, run `testcase-template/scripts/import-api-spec.py` first and do not generate Excel while `review_required` is non-empty
 - Testcase generation must write the complete same-basename Markdown before Excel; future agents read Markdown first
-- Browser QA reads the matching `qa-knowledge/*-business-guide.md` before testing and rewrites/validates it with `write-business-guide.mjs` after every run
+- Browser QA runs `qa-run/scripts/helpers/context-builder.mjs` for the exact feature scope and requires a `READY` Business Execution Brief before normal browser action; `NEEDS_DISCOVERY` permits scoped discovery only and `BLOCKED` must stop on the named missing fields
+- Copy Target, Role/Data, Original flow, Expected and Impact area from the READY brief; never replace missing business logic with a generic flow
+- After every run, rewrite and validate matching knowledge with `scripts/writers/write-business-guide.mjs`
 - Plane comments, testcase prose, and human-readable Drive CRUD content have no terminal `.` and no emoji/icon
 - Never guess a workspace, target ID, expected result, permission, or successful mutation
