@@ -1,428 +1,611 @@
 #!/usr/bin/env node
 /**
- * execute-sheet.mjs — Google Sheet Test Case Executor & Parallel Worker Manager
+ * execute-sheet.mjs — evidence-gated Sheet testcase worker orchestrator
  *
- * Tự động đọc test cases từ Google Sheet URL/ID, phân chia theo module,
- * chạy thực thi (đơn lẻ hoặc song song parallel workers),
- * và cập nhật kết quả lại Google Sheet theo quy định chuẩn:
- *   - Result:   Pass | Fail | N/A | Untest
- *   - Priority: Critical | High | Medium | Low
- *   - Note:     Nội dung giải thích thủ công, thân thiện người dùng (KHÔNG technical, KHÔNG stacktrace)
+ * This script reads testcases, groups them by functional area, proposes worker
+ * assignments, requires an explicit worker selection, and writes back only
+ * validated execution results that contain the required evidence
  *
- * Usage:
- *   # Chạy testcase trong Sheet
- *   QA_RUN_SKILL_DIR=/path/to/qa-run node execute-sheet.mjs --sheet-url <URL>
+ * Planning:
+ *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 --plan-only
  *
- *   # Chạy toàn bộ song song (Parallel execution)
- *   QA_RUN_SKILL_DIR=/path/to/qa-run node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4
+ * Execute with an external Node worker:
+ *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 \
+ *     --selected-workers all --worker-script ./run-sheet-worker.mjs
  *
- *   # Chạy riêng 1 module cụ thể
- *   node execute-sheet.mjs --sheet-url <URL> --module "LOGIN"
+ * Import evidence-backed results collected by browser/agent workers:
+ *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 \
+ *     --selected-workers all --results-file ./worker-results.json
  */
 
-import { execSync, spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import process from 'node:process';
+import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SCRIPT_PATH = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(SCRIPT_PATH);
+const DEFAULT_SHEET_NAME = 'Test cases_App';
+const MAX_CONCURRENT_WORKERS = 4;
+const MAX_GROUPS_PER_ASSIGNMENT = 2;
+const VALID_RESULTS = new Set(['Pass', 'Fail', 'N/A', 'Untest']);
+const VALID_PRIORITIES = new Set(['Critical', 'High', 'Medium', 'Low']);
 
-const SKILL_DIR = process.env.QA_RUN_SKILL_DIR
-  || path.resolve(__dirname, '..');
-const DATA = process.env.QA_DATA_DIR || process.cwd();
+const args = process.argv.slice(2);
+const getArg = (flag, fallback = undefined) => {
+  const index = args.indexOf(flag);
+  return index !== -1 ? args[index + 1] : fallback;
+};
 
-// Load .env from project root
-try { process.loadEnvFile(path.join(DATA, '.env')); } catch { /* optional */ }
-
-const BASE = (process.env.QA_BASE_URL || '').replace(/\/$/, '');
-const EVID = path.join(DATA, 'evidence');
-fs.mkdirSync(EVID, { recursive: true });
-
+const DATA = path.resolve(process.env.QA_DATA_DIR || process.cwd());
+const SKILL_DIR = path.resolve(process.env.QA_RUN_SKILL_DIR || path.join(__dirname, '../..'));
+const EVIDENCE_DIR = path.join(DATA, 'evidence');
 const localPythonScript = path.join(__dirname, 'drive_sheet_execute.py');
 const sharedPythonScript = path.join(path.resolve(SKILL_DIR, '..', 'google-drive-qa', 'scripts'), 'drive_sheet_execute.py');
 const DRIVE_PYTHON_SCRIPT = fs.existsSync(localPythonScript) ? localPythonScript : sharedPythonScript;
 
-// ─── CLI Args ─────────────────────────────────────────────────────────────────
+function sanitizeRunId(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || `sheet-${Date.now()}`;
+}
 
-const args = process.argv.slice(2);
-const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
+function validateWorkerCount(value) {
+  const count = Number.parseInt(String(value), 10);
+  if (!Number.isInteger(count) || count < 1 || count > MAX_CONCURRENT_WORKERS) {
+    throw new Error(`--workers phải nằm trong khoảng 1-${MAX_CONCURRENT_WORKERS}`);
+  }
+  return count;
+}
 
-const SHEET_URL  = getArg('--sheet-url', getArg('--excel-file', getArg('--file', args[0])));
-const SHEET_NAME = getArg('--sheet-name', '');
-const MODULE_FILTER = getArg('--module', '');
-const PARALLEL   = args.includes('--parallel') || args.includes('--all');
-const WORKERS    = parseInt(getArg('--workers', '4'), 10);
-const DRY_RUN    = args.includes('--dry-run');
-const DATA_FILE  = getArg('--data-file', 'test-data.md');
+function resolveDataPath(value) {
+  if (!value) return '';
+  return path.isAbsolute(value) ? value : path.resolve(DATA, value);
+}
 
 function loadProvidedDataFile(filePath) {
   const provided = {};
-  if (!fs.existsSync(filePath)) return provided;
-  try {
-    const content = fs.readFileSync(filePath, 'utf8');
-    const lines = content.split('\n');
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('#') || !trimmed.includes('=')) continue;
-      const [key, ...valParts] = trimmed.split('=');
-      const k = key.trim();
-      const v = valParts.join('=').trim();
-      if (k && v && v !== '?') {
-        provided[k] = v;
-      }
+  if (!filePath || !fs.existsSync(filePath)) return provided;
+
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+    const [key, ...valueParts] = trimmed.split('=');
+    const normalizedKey = key.trim();
+    const normalizedValue = valueParts.join('=').trim();
+    if (normalizedKey && normalizedValue && normalizedValue !== '?') {
+      provided[normalizedKey] = normalizedValue;
     }
-  } catch {}
+  }
   return provided;
 }
 
-function checkAndGenerateMissingDataContract(testcases) {
-  const providedData = loadProvidedDataFile(DATA_FILE);
+function checkAndGenerateMissingDataContract(testcases, dataFile) {
+  const providedData = loadProvidedDataFile(dataFile);
   const detectedKeys = new Map();
 
-  for (const tc of testcases) {
-    const moduleName = tc.scenario_name || tc.module || tc.group || 'General';
-    const text = `${tc.precondition || ''} ${tc.procedure || ''} ${tc.description || ''} ${tc.expected || ''}`;
-    
+  for (const testcase of testcases) {
+    const groupName = functionalGroupOf(testcase);
+    const text = [
+      testcase.precondition,
+      testcase.procedure,
+      testcase.description,
+      testcase.expected,
+    ].filter(Boolean).join(' ');
+
     if (/email|mail|đăng nhập|tài khoản|user|username/i.test(text)) {
-      if (!detectedKeys.has('email')) detectedKeys.set('email', moduleName);
-      if (!detectedKeys.has('password')) detectedKeys.set('password', moduleName);
+      if (!detectedKeys.has('email')) detectedKeys.set('email', groupName);
+      if (!detectedKeys.has('password')) detectedKeys.set('password', groupName);
     }
-    if (/url|trang web|domain|base_url/i.test(text)) {
-      if (!detectedKeys.has('app_url')) detectedKeys.set('app_url', moduleName);
+    if (/url|trang web|domain|base_url/i.test(text) && !detectedKeys.has('app_url')) {
+      detectedKeys.set('app_url', groupName);
     }
-    if (/thẻ|thanh toán|card|payment/i.test(text)) {
-      if (!detectedKeys.has('payment_card')) detectedKeys.set('payment_card', moduleName);
+    if (/thẻ|thanh toán|card|payment/i.test(text) && !detectedKeys.has('payment_card')) {
+      detectedKeys.set('payment_card', groupName);
     }
-    if (/api|token|secret/i.test(text)) {
-      if (!detectedKeys.has('api_token')) detectedKeys.set('api_token', moduleName);
-    }
-  }
-
-  const missingKeys = [];
-  for (const [key, mod] of detectedKeys.entries()) {
-    if (!providedData[key] && !process.env[key.toUpperCase()]) {
-      missingKeys.push({ key, mod });
+    if (/api|token|secret/i.test(text) && !detectedKeys.has('api_token')) {
+      detectedKeys.set('api_token', groupName);
     }
   }
 
-  if (missingKeys.length > 0) {
-    const missingMdPath = path.resolve('MISSING_TEST_DATA.md');
-    let mdContent = `# ⚠️ PHÁT HIỆN THIẾU DỮ LIỆU KIỂM THỬ (MISSING TEST DATA CONTRACT)\n\n`;
-    mdContent += `> Script tự động quét và phát hiện các biến dữ liệu còn thiếu để chạy testcases.\n`;
-    mdContent += `> Vui lòng mở file này, thay các dấu \`=?\` bằng giá trị thật của bạn và lưu lại.\n\n`;
+  const missingKeys = [...detectedKeys.entries()]
+    .filter(([key]) => !providedData[key] && !process.env[key.toUpperCase()])
+    .map(([key, group]) => ({ key, group }));
 
-    const byModule = new Map();
-    for (const item of missingKeys) {
-      if (!byModule.has(item.mod)) byModule.set(item.mod, []);
-      byModule.get(item.mod).push(item.key);
-    }
+  if (!missingKeys.length) return null;
 
-    for (const [mod, keys] of byModule.entries()) {
-      mdContent += `### Module: ${mod}\n`;
-      for (const k of keys) {
-        mdContent += `${k} = ?\n`;
-      }
-      mdContent += `\n`;
-    }
-
-    fs.writeFileSync(missingMdPath, mdContent, 'utf8');
-    console.log(`\n⚠️ PHÁT HIỆN THIẾU DỮ LIỆU KIỂM THỬ!`);
-    console.log(`📄 Đã tự động tạo file: "${missingMdPath}"`);
-    console.log(`💡 Vui lòng mở file MISSING_TEST_DATA.md, điền các giá trị 'key = ?' rồi chạy lại.`);
-    console.log(`─────────────────────────────────────────────────────────────\n`);
+  const byGroup = new Map();
+  for (const item of missingKeys) {
+    if (!byGroup.has(item.group)) byGroup.set(item.group, []);
+    byGroup.get(item.group).push(item.key);
   }
+
+  const lines = [
+    '# MISSING TEST DATA CONTRACT',
+    '',
+    '> Điền các giá trị `key = ?` trước khi chạy worker cần dữ liệu tương ứng',
+    '',
+  ];
+  for (const [group, keys] of byGroup.entries()) {
+    lines.push(`### Functional group: ${group}`);
+    for (const key of keys) lines.push(`${key} = ?`);
+    lines.push('');
+  }
+
+  const outputPath = path.join(DATA, 'MISSING_TEST_DATA.md');
+  fs.writeFileSync(outputPath, `${lines.join('\n')}\n`, 'utf8');
+  return outputPath;
 }
 
-if (!SHEET_URL) {
-  console.error('❌ Thiếu --sheet-url <URL_OR_ID> hoặc --excel-file <PATH_TO_XLSX>');
-  console.error('Ví dụ Google Sheet: node execute-sheet.mjs --sheet-url "https://docs.google.com/spreadsheets/d/1xxx/edit"');
-  console.error('Ví dụ Excel Local:   node execute-sheet.mjs --excel-file "./my-testcases.xlsx"');
-  process.exit(1);
-}
-
-if (!fs.existsSync(DRIVE_PYTHON_SCRIPT)) {
-  console.error(`❌ Không tìm thấy script python: ${DRIVE_PYTHON_SCRIPT}`);
-  process.exit(1);
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function readSheetTestcases() {
-  const isLocal = SHEET_URL.endsWith('.xlsx') || fs.existsSync(SHEET_URL);
-  if (isLocal) {
-    console.log(`[execute-sheet] 📂 Đang đọc kịch bản từ file Excel local: "${path.resolve(SHEET_URL)}"...`);
-  } else {
-    console.log(`[execute-sheet] 🌐 Đang đọc kịch bản từ Google Sheet: "${SHEET_URL}"...`);
+function runPythonJson(commandArgs) {
+  const result = spawnSync('python3', [DRIVE_PYTHON_SCRIPT, ...commandArgs], {
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) {
+    throw new Error((result.stderr || result.stdout || 'Python Sheet helper failed').trim());
   }
-  const sheetFlag = SHEET_NAME ? `--sheet-name "${SHEET_NAME}"` : '';
-  const cmd = `python3 "${DRIVE_PYTHON_SCRIPT}" read "${SHEET_URL}" ${sheetFlag}`;
   try {
-    const stdout = execSync(cmd, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
-    const data = JSON.parse(stdout);
-    if (isLocal) {
-      console.log(`✅ [openpyxl] Đọc thành công ${data.total_testcases} testcases từ file local: ${data.spreadsheet_id}`);
-      console.log(`📌 Header row detected: Line #${data.header_row}`);
-      console.log(`📌 Column mapping:`, JSON.stringify(data.column_mapping));
-      
-      const sampleCases = (data.testcases || []).slice(0, 3);
-      if (sampleCases.length > 0) {
-        console.log(`\n🔍 KẾT QUẢ TRÍCH XUẤT DỮ LIỆU MẪU (PREVIEW 3 DÒNG ĐẦU):`);
-        sampleCases.forEach(tc => {
-          console.log(`  • Row #${tc.row_number} | [ID: ${tc.testcase_id || 'N/A'}] | Scenario: "${tc.scenario_name || tc.module || 'N/A'}"`);
-          console.log(`    - Description: "${tc.description || 'N/A'}"`);
-          console.log(`    - Steps:       "${(tc.procedure || 'N/A').slice(0, 80)}"`);
-          console.log(`    - Expected:    "${(tc.expected || 'N/A').slice(0, 80)}"`);
-        });
-        console.log(`─────────────────────────────────────────────────────────────\n`);
-      }
-    }
-    return data;
-  } catch (err) {
-    console.error(`[execute-sheet] ❌ Lỗi đọc kịch bản:`, err.message);
-    process.exit(1);
+    return JSON.parse(result.stdout);
+  } catch {
+    throw new Error(`Sheet helper trả về JSON không hợp lệ: ${result.stdout.slice(0, 500)}`);
   }
 }
 
-const EXPORTED_KEYS_FILE = path.join(EVID, '.exported-keys.json');
+function readSheetTestcases(source, sheetName) {
+  const isLocal = source.toLowerCase().endsWith('.xlsx') || fs.existsSync(source);
+  console.log(isLocal
+    ? `[execute-sheet] Đọc testcase từ Excel: ${path.resolve(source)}`
+    : `[execute-sheet] Đọc testcase từ Google Sheet: ${source}`);
 
-function isAlreadyExported(idempotencyKey) {
-  if (!fs.existsSync(EXPORTED_KEYS_FILE)) return false;
+  const commandArgs = ['read', source];
+  if (sheetName) commandArgs.push('--sheet-name', sheetName);
+  return runPythonJson(commandArgs);
+}
+
+function getExportedKeysFile() {
+  return path.join(EVIDENCE_DIR, '.exported-keys.json');
+}
+
+function readExportedKeys() {
+  const filePath = getExportedKeysFile();
+  if (!fs.existsSync(filePath)) return [];
   try {
-    const keys = JSON.parse(fs.readFileSync(EXPORTED_KEYS_FILE, 'utf8'));
-    return keys.includes(idempotencyKey);
-  } catch { return false; }
-}
-
-function markAsExported(idempotencyKey) {
-  let keys = [];
-  if (fs.existsSync(EXPORTED_KEYS_FILE)) {
-    try { keys = JSON.parse(fs.readFileSync(EXPORTED_KEYS_FILE, 'utf8')); } catch {}
-  }
-  if (!keys.includes(idempotencyKey)) {
-    keys.push(idempotencyKey);
-    fs.writeFileSync(EXPORTED_KEYS_FILE, JSON.stringify(keys.slice(-1000), null, 2), 'utf8');
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 
-function updateSheetResults(updates, runId = 'run-default') {
-  const filteredUpdates = updates.filter(u => {
-    const key = `${runId}:${u.testcase_id || u.row_number}:google_sheet`;
-    if (isAlreadyExported(key)) {
-      console.log(`[idempotency] Skip already exported testcase: ${key}`);
-      return false;
-    }
-    markAsExported(key);
-    return true;
+function markUpdatesAsExported(keys) {
+  const merged = [...new Set([...readExportedKeys(), ...keys])].slice(-5000);
+  fs.writeFileSync(getExportedKeysFile(), JSON.stringify(merged, null, 2), 'utf8');
+}
+
+function updateSheetResults(source, sheetName, updates, runId) {
+  const existingKeys = new Set(readExportedKeys());
+  const pending = updates.filter((update) => {
+    const key = `${runId}:row-${update.row_number}:sheet`;
+    return !existingKeys.has(key);
   });
 
-  if (!filteredUpdates.length) {
-    console.log(`[execute-sheet] ℹ️ All testcases already exported for this run — skipping redundant update.`);
-    return;
+  if (!pending.length) {
+    console.log('[execute-sheet] Không có kết quả mới cần write-back');
+    return { updated_count: 0, errors: [] };
   }
 
-  console.log(`[execute-sheet] Đang cập nhật ${filteredUpdates.length} kết quả lên Google Sheet (Idempotent)...`);
-  const tmpJson = path.join(EVID, `.sheet-update-${Date.now()}.json`);
-  fs.writeFileSync(tmpJson, JSON.stringify(filteredUpdates, null, 2), 'utf8');
+  const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+  fs.mkdirSync(runDir, { recursive: true });
+  const updateFile = path.join(runDir, 'sheet-updates.json');
+  fs.writeFileSync(updateFile, JSON.stringify(pending, null, 2), 'utf8');
 
-  const sheetFlag = SHEET_NAME ? `--sheet-name "${SHEET_NAME}"` : '';
-  const cmd = `python3 "${DRIVE_PYTHON_SCRIPT}" update "${SHEET_URL}" --updates "${tmpJson}" ${sheetFlag}`;
-  try {
-    const stdout = execSync(cmd, { encoding: 'utf8' });
-    const res = JSON.parse(stdout);
-    console.log(`✅ Cập nhật thành công ${res.updated_count} testcase trên Sheet.`);
-    if (res.errors?.length) {
-      console.warn(`⚠️ Cảnh báo:`, res.errors);
-    }
-  } catch (err) {
-    console.error(`❌ Lỗi cập nhật Google Sheet:`, err.message);
-  } finally {
-    try { fs.unlinkSync(tmpJson); } catch {}
+  const commandArgs = ['update', source, '--updates', updateFile];
+  if (sheetName) commandArgs.push('--sheet-name', sheetName);
+  const response = runPythonJson(commandArgs);
+  const errors = Array.isArray(response.errors) ? response.errors : [];
+
+  if (response.updated_count !== pending.length || errors.length) {
+    throw new Error(
+      `Write-back không đầy đủ: expected=${pending.length}, updated=${response.updated_count || 0}, errors=${errors.join(' | ')}`,
+    );
   }
+
+  const exportedKeys = pending.map(
+    (update) => `${runId}:row-${update.row_number}:sheet`,
+  );
+  markUpdatesAsExported(exportedKeys);
+  return response;
 }
 
-/**
- * Format result, priority, and user-friendly note strictly according to rules:
- *   Result: Pass | Fail | N/A | Untest
- *   Priority: Critical | High | Medium | Low
- *   Note: Non-technical human-readable text
- */
-function formatExecutionResult({ testcase, passed, reason, priority }) {
-  let result = passed === true ? 'Pass' : passed === false ? 'Fail' : passed === 'N/A' ? 'N/A' : 'Untest';
-
-  let prio = priority || testcase.priority || 'Medium';
-  prio = prio.charAt(0).toUpperCase() + prio.slice(1).toLowerCase();
-  if (!['Critical', 'High', 'Medium', 'Low'].includes(prio)) prio = 'Medium';
-
-  let note = '';
-  if (result === 'Fail') {
-    note = reason || `Khi thực hiện '${testcase.description || testcase.testcase_id}', hệ thống không trả về kết quả như mong đợi ('${testcase.expected}')`;
-  } else if (result === 'Untest') {
-    note = reason || 'Chưa thể kiểm thử do thiếu dữ liệu hoặc điều kiện môi trường';
-  } else if (result === 'N/A') {
-    note = reason || 'Kịch bản không áp dụng cho phiên bản hiện tại';
-  }
-
-  // Clean technical jargon
-  note = note
-    .replace(/Internal Server Error:?.*/gi, 'Hệ thống gặp lỗi xử lý máy chủ')
-    .replace(/HTTP\s*(?:status\s*)?[45]\d\d.*/gi, 'Hành động không nhận được phản hồi hợp lệ từ ứng dụng')
-    .replace(/NullPointerException.*/gi, 'Dữ liệu trả về bị thiếu hoặc không đúng định dạng')
-    .replace(/[\u1F300-\u1FAFF\u2600-\u27BF]/g, '')
-    .trim();
-
-  return {
-    row_number: testcase.row_number,
-    testcase_id: testcase.testcase_id,
-    result,
-    priority: prio,
-    note,
-    tester: process.env.QA_TESTER_NAME || 'QA Agent',
-    date: new Date().toISOString().slice(0, 10),
-  };
+export function functionalGroupOf(testcase) {
+  const candidates = [
+    testcase.group,
+    testcase.scenario_name,
+    testcase.module,
+    'General',
+  ];
+  const useful = candidates.find((value) => {
+    const normalized = String(value || '').trim();
+    return normalized && !/^general$/i.test(normalized);
+  });
+  return String(useful || candidates.find(Boolean) || 'General').trim();
 }
 
-// ─── Parallel Worker Partitioning ─────────────────────────────────────────────
-
-function partitionByModule(testcases) {
+export function partitionByFunctionalGroup(testcases) {
   const groups = new Map();
-  for (const tc of testcases) {
-    const rawKey = tc.scenario_name || tc.module || tc.group || 'General';
-    const key = rawKey.trim() || 'General';
+  for (const testcase of testcases) {
+    const key = functionalGroupOf(testcase);
     if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(tc);
+    groups.get(key).push(testcase);
   }
   return groups;
 }
 
-// ─── Main Execution ───────────────────────────────────────────────────────────
+export function buildWorkerAssignments(
+  moduleGroups,
+  { parallel = true, maxGroupsPerAssignment = MAX_GROUPS_PER_ASSIGNMENT, runId = 'run' } = {},
+) {
+  const entries = [...moduleGroups.entries()];
+  if (!entries.length) return [];
+  const groupLimit = parallel ? maxGroupsPerAssignment : entries.length;
+  const assignments = [];
 
-async function main() {
-  const sheetData = readSheetTestcases();
-  const allCases  = sheetData.testcases || [];
-
-  console.log(`\n══════ SHEET TESTCASE EXECUTION ═════════════════════════`);
-  console.log(`Sheet Name:  ${sheetData.sheet_name}`);
-  console.log(`Total Cases: ${allCases.length}`);
-
-  if (!allCases.length) {
-    console.log(`⚠️ Không tìm thấy testcase nào trong Sheet.`);
-    process.exit(0);
-  }
-
-  // Auto-scan and generate MISSING_TEST_DATA.md contract if data is missing
-  checkAndGenerateMissingDataContract(allCases);
-
-  // Filter cases if specified
-  let targetCases = allCases;
-  if (MODULE_FILTER) {
-    targetCases = allCases.filter(c =>
-      (c.group || '').toLowerCase().includes(MODULE_FILTER.toLowerCase()) ||
-      (c.module || '').toLowerCase().includes(MODULE_FILTER.toLowerCase()) ||
-      (c.scenario_name || '').toLowerCase().includes(MODULE_FILTER.toLowerCase())
-    );
-    console.log(`Module Filter: "${MODULE_FILTER}" → ${targetCases.length} cases`);
-  }
-
-  const moduleGroups = partitionByModule(targetCases);
-  console.log(`Modules detected: ${moduleGroups.size} groups (${[...moduleGroups.keys()].slice(0, 8).join(', ')})`);
-
-  const SELECTED_WORKERS = getArg('--selected-workers', null); // e.g. "1,2" or "all"
-
-  if (PARALLEL && moduleGroups.size > 1) {
-    const moduleKeys = [...moduleGroups.keys()];
-    
-    // Enforce Rule: 1 Worker = Max 2 Module Groups, Max 4 Concurrent Workers
-    const maxWorkerCount = Math.min(4, Math.ceil(moduleKeys.length / 2));
-    const chunks = [];
-    
-    for (let i = 0; i < moduleKeys.length; i += 2) {
-      if (chunks.length < maxWorkerCount) {
-        chunks.push(moduleKeys.slice(i, i + 2));
-      } else {
-        // Append overflow modules to existing workers (max 2 per worker target)
-        chunks[i % maxWorkerCount].push(...moduleKeys.slice(i, i + 2));
-      }
-    }
-
-    console.log(`\n📋 PROPOSED PARALLEL WORKER PLAN (1 Worker = Max 2 Modules | Max 4 Workers):\n`);
-    chunks.forEach((chunk, i) => {
-      const caseCount = chunk.reduce((sum, k) => sum + moduleGroups.get(k).length, 0);
-      const dataPrefix = `w${i + 1}_data_${Date.now().toString().slice(-4)}`;
-      console.log(`  [Worker #${i + 1}] Modules: [${chunk.join(', ')}] | Cases: ${caseCount} | Data Scope: "${dataPrefix}"`);
+  for (let index = 0; index < entries.length; index += groupLimit) {
+    const chunk = entries.slice(index, index + groupLimit);
+    const id = assignments.length + 1;
+    assignments.push({
+      id,
+      functional_groups: chunk.map(([group]) => group),
+      testcase_count: chunk.reduce((total, [, cases]) => total + cases.length, 0),
+      data_scope: `w${id}_${sanitizeRunId(runId)}`,
+      testcases: chunk.flatMap(([, cases]) => cases),
     });
-
-    // Check if user filtered specific workers
-    let activeChunks = chunks;
-    if (SELECTED_WORKERS && SELECTED_WORKERS !== 'all') {
-      const selectedIndices = SELECTED_WORKERS.split(',').map(s => parseInt(s.trim(), 10) - 1).filter(n => !isNaN(n));
-      activeChunks = chunks.filter((_, idx) => selectedIndices.includes(idx));
-      console.log(`\n🎯 User Selected Workers: [${selectedIndices.map(i => i + 1).join(', ')}] → Running ${activeChunks.length} worker partition(s).\n`);
-    }
-
-    if (DRY_RUN) {
-      console.log(`\n[dry-run] Dry run mode — plan generated successfully. Skip actual worker execution.`);
-      process.exit(0);
-    }
-
-    const updates = [];
-    for (let wIdx = 0; wIdx < activeChunks.length; wIdx++) {
-      const workerModules = activeChunks[wIdx];
-      const workerId = `w${wIdx + 1}`;
-      const dataPrefix = `${workerId}_isolated_${Date.now().toString().slice(-4)}`;
-      console.log(`\n▶ [Worker #${wIdx + 1}] Running modules: [${workerModules.join(', ')}] (Data Isolated: ${dataPrefix})...`);
-
-      for (const modKey of workerModules) {
-        const cases = moduleGroups.get(modKey);
-        for (const tc of cases) {
-          // Data isolation guard: inject worker-specific data scope prefix into preconditions/inputs
-          const isolatedTestcase = {
-            ...tc,
-            precondition: `${tc.precondition || ''} [DataScope: ${dataPrefix}]`.trim(),
-          };
-
-          const isPass = !/fail|bug|lỗi/i.test(isolatedTestcase.description || '') && !/fail|bug|lỗi/i.test(isolatedTestcase.expected || '');
-          const res = formatExecutionResult({
-            testcase: isolatedTestcase,
-            passed: isPass,
-            reason: isPass ? '' : `Kiểm tra giao diện '${isolatedTestcase.scenario_name || isolatedTestcase.group}': không hiển thị đúng kết quả mong đợi`,
-            priority: isPass ? isolatedTestcase.priority : 'High',
-          });
-          updates.push(res);
-        }
-      }
-    }
-
-    // Batch update all parallel execution results back to Sheet
-    updateSheetResults(updates);
-    console.log(`\n🎉 PARALLEL EXECUTION COMPLETE: Updated ${updates.length} testcases to Sheet/Excel.`);
-    process.exit(0);
   }
-
-  // ── Single Execution Mode ───────────────────────────────────────────────────
-  console.log(`\n▶ Single Execution Mode (${targetCases.length} cases)...`);
-  const updates = [];
-
-  for (const tc of targetCases) {
-    console.log(`  [${tc.testcase_id || ('Row ' + tc.row_number)}] ${tc.description?.slice(0, 60)}...`);
-
-    // In live execution, we evaluate testcase against app
-    const isPass = true; // Default evaluation
-    const res = formatExecutionResult({
-      testcase: tc,
-      passed: isPass,
-      priority: tc.priority,
-    });
-    updates.push(res);
-  }
-
-  if (!DRY_RUN && updates.length) {
-    updateSheetResults(updates);
-  }
-
-  console.log(`\nDONE — Executed and updated ${updates.length} testcases.`);
+  return assignments;
 }
 
-main().catch(err => {
-  console.error('[execute-sheet] FATAL:', err.message);
-  process.exit(1);
-});
+export function parseWorkerSelection(input, assignments) {
+  const normalized = String(input || '').trim().toLowerCase();
+  if (!normalized) throw new Error('Chưa chọn worker');
+  if (['cancel', 'c', 'hủy', 'huy'].includes(normalized)) return [];
+  if (['all', 'a', 'tất cả', 'tat ca'].includes(normalized)) return assignments;
+
+  const selectedIds = [...new Set(
+    normalized
+      .replace(/worker|#/g, '')
+      .split(',')
+      .map((value) => Number.parseInt(value.trim(), 10))
+      .filter(Number.isInteger),
+  )];
+  if (!selectedIds.length) {
+    throw new Error('Lựa chọn không hợp lệ; dùng all hoặc danh sách như 1,2');
+  }
+
+  const knownIds = new Set(assignments.map((assignment) => assignment.id));
+  const unknown = selectedIds.filter((id) => !knownIds.has(id));
+  if (unknown.length) throw new Error(`Worker không tồn tại: ${unknown.join(', ')}`);
+  return assignments.filter((assignment) => selectedIds.includes(assignment.id));
+}
+
+export async function resolveWorkerSelection(
+  assignments,
+  { selectedWorkers, interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY), ask } = {},
+) {
+  if (selectedWorkers) return parseWorkerSelection(selectedWorkers, assignments);
+  if (!interactive) {
+    throw new Error(
+      'Cần xác nhận worker trước khi chạy; dùng --selected-workers all hoặc --selected-workers 1,2',
+    );
+  }
+
+  if (ask) return parseWorkerSelection(await ask(assignments), assignments);
+  const interfaceHandle = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await interfaceHandle.question(
+      '\nChạy tất cả worker theo nhóm chức năng hay chọn worker? [all / 1,2 / cancel]: ',
+    );
+    return parseWorkerSelection(answer, assignments);
+  } finally {
+    interfaceHandle.close();
+  }
+}
+
+function cleanNote(note) {
+  return String(note || '')
+    .replace(/Internal Server Error:?.*/gi, 'Hệ thống gặp lỗi xử lý máy chủ')
+    .replace(/HTTP\s*(?:status\s*)?[45]\d\d.*/gi, 'Hành động không nhận được phản hồi hợp lệ từ ứng dụng')
+    .replace(/NullPointerException.*/gi, 'Dữ liệu trả về bị thiếu hoặc không đúng định dạng')
+    .replace(/[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/gu, '')
+    .trim()
+    .replace(/\.+$/g, '');
+}
+
+function normalizeEvidence(evidence) {
+  const values = Array.isArray(evidence) ? evidence : [evidence];
+  return values.map((value) => String(value || '').trim()).filter(Boolean);
+}
+
+function resultKey(value) {
+  if (value?.row_number !== undefined && value?.row_number !== null) {
+    return `row:${Number(value.row_number)}`;
+  }
+  return `id:${String(value?.testcase_id || '').trim()}`;
+}
+
+export function validateWorkerResults(rawResults, assignedTestcases, { requireComplete = true } = {}) {
+  const resultList = Array.isArray(rawResults) ? rawResults : rawResults?.results;
+  if (!Array.isArray(resultList)) throw new Error('Worker result phải là array hoặc object có field results');
+
+  const assignedByKey = new Map();
+  for (const testcase of assignedTestcases) {
+    assignedByKey.set(resultKey(testcase), testcase);
+    if (testcase.testcase_id) assignedByKey.set(`id:${String(testcase.testcase_id).trim()}`, testcase);
+  }
+
+  const seenRows = new Set();
+  const normalized = [];
+  for (const raw of resultList) {
+    const testcase = assignedByKey.get(resultKey(raw));
+    if (!testcase) {
+      throw new Error(`Kết quả không thuộc assignment: ${raw.testcase_id || raw.row_number || 'unknown'}`);
+    }
+
+    const rowKey = `row:${Number(testcase.row_number)}`;
+    if (seenRows.has(rowKey)) throw new Error(`Kết quả trùng cho row ${testcase.row_number}`);
+    seenRows.add(rowKey);
+
+    if (!VALID_RESULTS.has(raw.result)) {
+      throw new Error(`Result không hợp lệ cho ${testcase.testcase_id || rowKey}: ${raw.result}`);
+    }
+    const priority = raw.priority || testcase.priority || 'Medium';
+    if (!VALID_PRIORITIES.has(priority)) {
+      throw new Error(`Priority không hợp lệ cho ${testcase.testcase_id || rowKey}: ${priority}`);
+    }
+
+    const note = cleanNote(raw.note);
+    const evidence = normalizeEvidence(raw.evidence);
+    if (['Pass', 'Fail'].includes(raw.result) && !evidence.length) {
+      throw new Error(`Thiếu evidence cho ${raw.result}: ${testcase.testcase_id || rowKey}`);
+    }
+    if (['Fail', 'N/A', 'Untest'].includes(raw.result) && !note) {
+      throw new Error(`Thiếu Note cho ${raw.result}: ${testcase.testcase_id || rowKey}`);
+    }
+
+    normalized.push({
+      row_number: testcase.row_number,
+      testcase_id: testcase.testcase_id,
+      result: raw.result,
+      priority,
+      note,
+      tester: raw.tester || process.env.QA_TESTER_NAME || 'QA Agent',
+      date: raw.date || new Date().toISOString().slice(0, 10),
+      evidence,
+    });
+  }
+
+  if (requireComplete) {
+    const missing = assignedTestcases.filter(
+      (testcase) => !seenRows.has(`row:${Number(testcase.row_number)}`),
+    );
+    if (missing.length) {
+      throw new Error(
+        `Worker chưa trả kết quả cho ${missing.length} testcase: ${missing
+          .slice(0, 10)
+          .map((testcase) => testcase.testcase_id || `row ${testcase.row_number}`)
+          .join(', ')}`,
+      );
+    }
+  }
+
+  return normalized;
+}
+
+export async function runWithConcurrency(items, concurrency, handler) {
+  const limit = validateWorkerCount(concurrency);
+  const results = new Array(items.length);
+  let nextIndex = 0;
+
+  async function consume() {
+    while (nextIndex < items.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await handler(items[currentIndex], currentIndex);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, () => consume()),
+  );
+  return results;
+}
+
+function writeExecutionPlan({
+  runId,
+  source,
+  sheetData,
+  assignments,
+  maxConcurrentWorkers,
+}) {
+  const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+  fs.mkdirSync(runDir, { recursive: true });
+  const planPath = path.join(runDir, 'sheet-worker-plan.json');
+  const plan = {
+    schema_version: 1,
+    run_id: runId,
+    source,
+    sheet_name: sheetData.sheet_name,
+    header_row: sheetData.header_row,
+    max_concurrent_workers: maxConcurrentWorkers,
+    max_functional_groups_per_assignment: MAX_GROUPS_PER_ASSIGNMENT,
+    assignments,
+  };
+  fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
+  return planPath;
+}
+
+function printWorkerPlan(assignments, maxConcurrentWorkers) {
+  console.log('\nPROPOSED FUNCTIONAL WORKER PLAN');
+  console.log(`Concurrency limit: ${maxConcurrentWorkers}`);
+  for (const assignment of assignments) {
+    console.log(
+      `  [Worker ${assignment.id}] Groups: [${assignment.functional_groups.join(', ')}] | Cases: ${assignment.testcase_count} | Data scope: ${assignment.data_scope}`,
+    );
+  }
+}
+
+function loadResultFile(filePath) {
+  if (!fs.existsSync(filePath)) throw new Error(`Không tìm thấy results file: ${filePath}`);
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function runWorkerProcess(workerScript, assignment, runDir) {
+  return new Promise((resolve, reject) => {
+    const workerDir = path.join(runDir, 'workers');
+    fs.mkdirSync(workerDir, { recursive: true });
+    const assignmentPath = path.join(workerDir, `worker-${assignment.id}-assignment.json`);
+    const resultPath = path.join(workerDir, `worker-${assignment.id}-results.json`);
+    fs.writeFileSync(assignmentPath, JSON.stringify(assignment, null, 2), 'utf8');
+
+    const child = spawn(
+      process.execPath,
+      [workerScript, '--assignment', assignmentPath, '--result', resultPath],
+      {
+        cwd: DATA,
+        env: {
+          ...process.env,
+          QA_WORKER_ID: String(assignment.id),
+          QA_WORKER_ASSIGNMENT: assignmentPath,
+          QA_WORKER_RESULT: resultPath,
+          QA_DATA_SCOPE: assignment.data_scope,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => { stdout += chunk; });
+    child.stderr.on('data', (chunk) => { stderr += chunk; });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (stdout.trim()) console.log(`[Worker ${assignment.id}] ${stdout.trim()}`);
+      if (code !== 0) {
+        reject(new Error(`Worker ${assignment.id} thất bại (${code}): ${stderr.trim()}`));
+        return;
+      }
+      if (!fs.existsSync(resultPath)) {
+        reject(new Error(`Worker ${assignment.id} không tạo result file: ${resultPath}`));
+        return;
+      }
+      try {
+        resolve(validateWorkerResults(loadResultFile(resultPath), assignment.testcases));
+      } catch (error) {
+        reject(new Error(`Worker ${assignment.id}: ${error.message}`));
+      }
+    });
+  });
+}
+
+async function main() {
+  const source = getArg('--sheet-url', getArg('--excel-file', getArg('--file', args[0])));
+  if (!source) {
+    throw new Error('Thiếu --sheet-url <URL_OR_ID> hoặc --excel-file <PATH_TO_XLSX>');
+  }
+  if (!fs.existsSync(DRIVE_PYTHON_SCRIPT)) {
+    throw new Error(`Không tìm thấy Sheet helper: ${DRIVE_PYTHON_SCRIPT}`);
+  }
+
+  try {
+    process.loadEnvFile(path.join(DATA, '.env'));
+  } catch {
+    // Project .env is optional
+  }
+  fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
+
+  const parallel = args.includes('--parallel') || args.includes('--all');
+  const planOnly = args.includes('--plan-only') || args.includes('--dry-run');
+  const workerCount = validateWorkerCount(getArg('--workers', parallel ? '4' : '1'));
+  const selectedWorkers = getArg('--selected-workers', args.includes('--yes') ? 'all' : '');
+  const sheetName = getArg('--sheet-name', DEFAULT_SHEET_NAME);
+  const moduleFilter = getArg('--module', '');
+  const resultsFile = resolveDataPath(getArg('--results-file', ''));
+  const workerScript = resolveDataPath(getArg('--worker-script', ''));
+  const dataFile = resolveDataPath(getArg('--data-file', 'test-data.md'));
+  const runId = sanitizeRunId(getArg('--run-id', `sheet-${new Date().toISOString().replace(/\D/g, '').slice(0, 17)}`));
+
+  const sheetData = readSheetTestcases(source, sheetName);
+  const allCases = Array.isArray(sheetData.testcases) ? sheetData.testcases : [];
+  if (!allCases.length) throw new Error(`Không tìm thấy testcase trong tab ${sheetData.sheet_name || sheetName}`);
+
+  let targetCases = allCases;
+  if (moduleFilter) {
+    const needle = moduleFilter.toLowerCase();
+    targetCases = allCases.filter(
+      (testcase) => functionalGroupOf(testcase).toLowerCase().includes(needle),
+    );
+    if (!targetCases.length) throw new Error(`Không tìm thấy functional group: ${moduleFilter}`);
+  }
+
+  const missingDataPath = checkAndGenerateMissingDataContract(targetCases, dataFile);
+  if (missingDataPath) console.log(`[execute-sheet] Thiếu test data: ${missingDataPath}`);
+
+  const groups = partitionByFunctionalGroup(targetCases);
+  const assignments = buildWorkerAssignments(groups, { parallel, runId });
+  printWorkerPlan(assignments, workerCount);
+  const planPath = writeExecutionPlan({
+    runId,
+    source,
+    sheetData,
+    assignments,
+    maxConcurrentWorkers: workerCount,
+  });
+  console.log(`Plan: ${planPath}`);
+
+  if (planOnly) {
+    console.log('[plan-only] Chưa chạy worker và chưa write-back kết quả');
+    return;
+  }
+
+  const selectedAssignments = await resolveWorkerSelection(assignments, { selectedWorkers });
+  if (!selectedAssignments.length) {
+    console.log('Đã hủy execution');
+    return;
+  }
+  console.log(`Selected workers: ${selectedAssignments.map(({ id }) => id).join(', ')}`);
+
+  const selectedCases = selectedAssignments.flatMap(({ testcases }) => testcases);
+  let validatedResults;
+  if (resultsFile) {
+    validatedResults = validateWorkerResults(loadResultFile(resultsFile), selectedCases);
+  } else if (workerScript) {
+    if (!fs.existsSync(workerScript)) throw new Error(`Không tìm thấy worker script: ${workerScript}`);
+    const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+    const workerResults = await runWithConcurrency(
+      selectedAssignments,
+      workerCount,
+      (assignment) => runWorkerProcess(workerScript, assignment, runDir),
+    );
+    validatedResults = workerResults.flat();
+  } else {
+    throw new Error(
+      'Đã chọn worker nhưng chưa có executor; cung cấp --worker-script hoặc --results-file có evidence',
+    );
+  }
+
+  const response = updateSheetResults(source, sheetData.sheet_name, validatedResults, runId);
+  console.log(`Write-back hoàn tất: ${response.updated_count} testcase`);
+}
+
+const isDirectRun = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(SCRIPT_PATH);
+if (isDirectRun) {
+  main().catch((error) => {
+    console.error(`[execute-sheet] BLOCKED: ${error.message}`);
+    process.exitCode = 2;
+  });
+}

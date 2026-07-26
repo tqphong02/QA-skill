@@ -45,7 +45,7 @@ flowchart TD
     subgraph S4["4. Specialized QA Skills"]
         SEC["pentest-run (Security Assessment)"]
         PERF["performance-qa (internal k6 / JMeter engines)"]
-        POSTMAN["postman (MCP Bootstrap & Operations)"]
+        POSTMAN["postman (MCP + Postman CLI + Newman)"]
         API["api-contract-qa (OpenAPI / Swagger)"]
         ACC["accessibility-qa (WCAG / axe-core)"]
         DBQ["data-quality-qa (Database & Schema Drift)"]
@@ -99,7 +99,7 @@ flowchart TD
 | **`qa-run`** *(RETEST_PLUS)* | Chạy 5 bước retest chuyên sâu | `run-manifest.json`<br>`evidence/` screenshots | `plane-qa` | Trạng thái PASS/FAILED/BLOCKED, evidence screenshot crop |
 | **`pentest-run`** | Authorized Security Assessment | `.pentest/engagement.md`<br>Security Findings | `plane-qa`<br>`qa-run Aggregation` | Lỗi bảo mật IDOR, SSRF, SSTI, JWT, GraphQL, Race Condition |
 | **`performance-qa`** | Orchestrate Load & Stress bằng internal k6/JMeter adapters | `result.json` + `summary.md/html`<br>File `.jmx` hoặc k6 script | `qa-run Aggregation` | Chỉ số p95/p99 latency, RPS, error rate, bottleneck |
-| **`postman`** | Bootstrap OAuth MCP và vận hành Postman resources | MCP connection + verified workspace/collection/spec | `api-contract-qa` | Account, workspace và Postman artifact đã resolve |
+| **`postman`** | Bootstrap OAuth MCP và chạy collection bằng Postman CLI/Newman | MCP connection + JSON/JUnit/console evidence | `api-contract-qa` | Account, workspace, collection context và execution result |
 | **`api-contract-qa`** | Validate OpenAPI / Swagger / Postman | `contract-report.json` | `qa-run Aggregation` | Sai khác giữa API spec và implementation thực tế |
 | **`accessibility-qa`** | Web Accessibility Audit (axe-core / WCAG) | `a11y-report.json` | `qa-run Aggregation` | Lỗi vi phạm WCAG, keyboard focus, screen reader |
 | **`data-quality-qa`** | Database ETL & Schema Drift check | `data-drift.json` | `qa-run Aggregation` | Bảng dữ liệu lệch schema, data lineage error |
@@ -117,7 +117,7 @@ flowchart TD
 | **Retest, re-test, verify bug/ticket** | `plane-qa` + `qa-run` | Plane doctor/read → Kích hoạt **RETEST_PLUS** (Retest flow gốc + Sanity + Impacted Regression + Exploratory + UI/UX Audit) |
 | **"Test thử trang này, chưa có testcase..." / Săn bug ad-hoc** | `qa-run: EXPLORATORY_ADHOC` | Đọc knowledge có sẵn → Sinh dynamic checklist → Safe mutation → Visual audit → Log bug |
 | **"Học toàn bộ web app này..." / Bootstrap app baseline** | `qa-run: APP_BASELINE_DISCOVERY` | Quét menu, route, API → Lưu `app-flow-map.json` & `app-business-guide.md` với `coverage_map` |
-| **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Chạy `execute-sheet.mjs --parallel` → Thực thi Playwright → Ghi kết quả + screenshot vào Sheet |
+| **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo functional worker plan → Hỏi user chọn all/worker ID/cancel → Delegate nhóm đã chọn → Chỉ ghi kết quả có evidence vào Sheet |
 | **Phân tích repo, học business flow từ source code** | `qa-run: REPO_BUSINESS_DISCOVERY` | Chạy `repo-business-discovery.mjs --repo <path> --mode full` → Merge vào `system-business-guide.md` & `system-qna.json` |
 | **Từ UI suy ra flow, đối chiếu Code + Docs + Runtime, tìm mâu thuẫn** | `qa-run: UI_BUSINESS_RECONCILIATION` | Chạy `ui-business-reconciliation.mjs --page <slug>` → Phân loại 9 kết quả, 10 ambiguity patterns → Xuất `ui-business-guide.md` & `clarification-qna.json` |
 | **Viết/sửa/review testcase, Scenario ID/Name** | `testcase-template` | Đọc testcase Markdown cũ nếu có → Generator tạo Markdown trước, Excel sau |
@@ -125,7 +125,7 @@ flowchart TD
 | **Phân tích BRD/SRS, dựng flow hệ thống, tạo XMind hoặc Q&A** | `business-analysis` (+ `doc-to-md` khi nguồn chưa là MD) | Convert đính kèm sang MD → Review 18 vùng Senior QA → Generate XMind + Q&A Markdown + Q&A Excel |
 | **Pentest được ủy quyền, security assessment, IDOR, SSRF, JWT...** | `pentest-run` | Đọc `.pentest/engagement.md` → Chạy `scripts/doctor.sh` trước request mạng |
 | **Performance, load, stress test, k6, JMeter, `.jmx`, JTL, Chrome DevTools** | `performance-qa` | Xác nhận common workload contract → chọn internal engine → smoke một user → approved load |
-| **Postman setup, MCP, OAuth, workspace, collection, environment, spec, mock hoặc monitor** | `postman` | Chạy bootstrap idempotent → OAuth → smoke test workspace read-only |
+| **Postman setup, MCP/CLI, Newman, OAuth, collection run, workspace, environment, spec, mock hoặc monitor** | `postman` | Bootstrap MCP → runtime doctor → Postman CLI ưu tiên, Newman v2 fallback |
 | **OpenAPI, Swagger, Postman contract validation** | `api-contract-qa` | Validate spec đối chiếu với implementation thực tế |
 | **WCAG, axe-core, keyboard access, screen reader** | `accessibility-qa` | Kết hợp automated scan với manual interaction |
 | **ETL/ELT, reconciliation, database schema drift** | `data-quality-qa` | Xác nhận nguồn/đích & read-only boundary tại DB role |
@@ -173,10 +173,11 @@ File SRS/BRD (PDF/Drive)
 ```text
 Google Sheet URL chứa Testcases
   └─► qa-run (SHEET_EXECUTION)
-       ├─► Chạy execute-sheet.mjs --parallel
-       ├─► Trình duyệt Playwright đọc các bước action & expected result
-       ├─► Bắt Screenshot Evidence cho mỗi bước
-       └─► Cập nhật trực tiếp trạng thái PASS / FAILED kèm link ảnh vào Google Sheet
+       ├─► Chạy execute-sheet.mjs --parallel --workers 4 --plan-only
+       ├─► Hiển thị mapping Worker → Functional groups → Testcase count
+       ├─► Hỏi user chọn all, worker ID hoặc cancel
+       ├─► Delegate nhóm đã chọn và thu evidence-backed result JSON
+       └─► Validate đủ result/evidence rồi mới cập nhật Google Sheet
 ```
 
 ### 5️⃣ Flow 5: Retest Bug Lifecycle (`RETEST_PLUS` -> Plane Update)
@@ -279,7 +280,7 @@ Lần làm việc tiếp theo:
 1. **Chạy Script Trích xuất Deterministic Node.js / Python CLI (`0 Token AI`)**:
    - `repo-business-discovery.mjs`: ast-grep & AST Scanners trích xuất API & ERD tự động.
    - `visual-evidence-router.mjs`: Microsoft OmniParser phân tích Bounding Boxes cục bộ (`omni-parsed-boxes.json`).
-   - `execute-sheet.mjs`: Thực thi kịch bản testcase tự động qua Playwright CLI.
+   - `execute-sheet.mjs`: Lập functional worker plan, bắt buộc chọn worker và chỉ import/write-back kết quả có evidence.
 2. **Đọc File Caching Memory từ `qa-knowledge/` (`~1,500 Tokens`)**:
    - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
 3. **Targeted Visual Evidence Cropping (`~500 - 1,000 Tokens`)**:
@@ -663,11 +664,11 @@ flowchart TD
 
 ---
 
-### 16. `postman` (Postman MCP Bootstrap & Operations)
+### 16. `postman` (Postman MCP, CLI & Newman)
 - **Đường dẫn**: `postman/SKILL.md`
-- **Mục đích**: Tự cấu hình Postman MCP, điều phối OAuth và quản lý workspace, collection, environment, specification, mock hoặc monitor.
-- **Inputs**: Active agent host và Postman account được người dùng chọn trong OAuth.
-- **Outputs**: MCP connection đã verify cùng Postman resource ID và workspace context.
+- **Mục đích**: Tự cấu hình Postman MCP, điều phối OAuth, quản lý resource và chạy collection bằng Postman CLI/Newman.
+- **Inputs**: Active agent host, Postman account, collection path/ID và environment/data file tùy chọn.
+- **Outputs**: MCP connection, Postman resource context, console log, JSON/JUnit report và process exit code.
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: User request hoặc API artifact cần resolve trong Postman.
   - 📤 **Chuyển dữ liệu tới**: `api-contract-qa`, `testcase-template` hoặc collection runner.

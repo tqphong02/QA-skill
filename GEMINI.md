@@ -31,7 +31,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 |---|---|---|
 | Plane URL (`projects.metasolutions.ai`, path có `/issues/` hoặc `/work-items/`), ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor; bare URL/ID thì đọc ticket |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; chạy `scripts/helpers/execute-sheet.mjs` cho Sheet execution (dùng `--parallel` khi chạy toàn bộ), baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; tạo worker plan bằng `scripts/helpers/execute-sheet.mjs --parallel --workers 4 --plan-only`, hỏi user chọn all/worker ID/cancel rồi chỉ chạy nhóm đã chọn; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
 | Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --page <slug>`; phân loại 9 kết quả, kiểm tra 10 ambiguity patterns, xuất `ui-business-guide.md` 12 sections |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
@@ -45,7 +45,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
 | WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
 | Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition |
-| Postman setup, Postman MCP, OAuth, workspace, collection, environment, spec, mock hoặc monitor operation | `postman/SKILL.md` | Chạy bootstrap idempotent, OAuth rồi smoke test workspace read-only |
+| Postman setup, Postman MCP/CLI, Newman, OAuth, collection run, workspace, environment, spec, mock hoặc monitor operation | `postman/SKILL.md` | Bootstrap MCP, chạy runtime doctor, ưu tiên Postman CLI và chỉ fallback Newman cho collection v2/v2.1 |
 | OpenAPI, Swagger, Postman contract/collection validation, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
 | Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
 | Tạo/import/chạy JMeter `.jmx` | `performance-qa/SKILL.md` | Dùng internal JMeter adapter; smoke một thread trước approved load |
@@ -119,6 +119,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 ### Phải làm
 - Phân tầng Sanity → Smoke → Regression (không full regression mỗi cycle)
 - Mọi yêu cầu retest ticket tự chạy RETEST_PLUS gồm retest flow gốc, sanity, impacted regression, exploratory, ad-hoc và UI/UX
+- Sheet testcase execution phải tạo plan theo functional group, hỏi user chọn `all`, worker ID hoặc `cancel`, rồi delegate mỗi assignment đã chọn cho browser sub-agent/worker độc lập nếu host hỗ trợ parallel agents
+- Chỉ write-back kết quả worker có evidence hợp lệ; `--workers` là concurrency limit thực từ 1 đến 4 và không được suy đoán Pass/Fail từ nội dung testcase
 - Tối ưu token (scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 - Đọc `qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md` trước browser action nếu có

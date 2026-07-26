@@ -22,7 +22,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Retest failed ticket ABC-1` | plane-qa + qa-run | FAILED, comment Actual/Expected, kéo `In Progress` |
 | `Retest pass ticket ABC-1` | plane-qa + qa-run | PASS, comment Result/Conclusion, kéo `Done` |
 | `Test feature này không có doc/testcase` | qa-run | Chạy DISCOVERY_CORE gồm Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX, cập nhật business guide sau run |
-| `Chạy execution testcase toàn bộ từ <Sheet URL>` | qa-run + google-drive-qa | Chạy SHEET_EXECUTION_PLUS gồm Sheet cases + Sanity + Impacted Regression + DISCOVERY_CORE, dùng `execute-sheet.mjs --parallel --workers 4`, batch update Result/Priority/Note; chỉ thêm Original Retest/Plane action cho row có ticket hoặc previous failure |
+| `Chạy execution testcase toàn bộ từ <Sheet URL>` | qa-run + google-drive-qa | Chạy `execute-sheet.mjs --parallel --workers 4 --plan-only`, hiển thị functional worker plan và hỏi user chọn all/worker ID/cancel; delegate nhóm đã chọn, chỉ batch update Result/Priority/Note khi có evidence hợp lệ, rồi hoàn tất SHEET_EXECUTION_PLUS |
 | `Khám phá tổng thể web app này` | qa-run | Chạy APP_BASELINE_DISCOVERY, tạo app-business-guide.md với coverage_map và feature guide cho vùng đã khám phá sâu |
 | `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
 | `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |
@@ -34,6 +34,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Kết nối Chrome DevTools MCP` | performance-qa | Dùng package chính chủ, isolated profile, doctor rồi smoke test read-only |
 | `Kết nối k6 MCP và chạy load` | performance-qa | Cấu hình MCP nhưng vẫn bắt đầu một user; load cần contract, approval và abort condition |
 | `Kết nối Postman MCP` | postman | Bootstrap remote endpoint chính chủ, OAuth, mở phiên mới rồi liệt kê workspace read-only |
+| `Chạy Postman collection bằng CLI` | postman | Runtime doctor, ưu tiên Postman CLI; Newman chỉ fallback cho v2/v2.1; giữ exit code và report |
 | `Kết nối database MCP` | data-quality-qa | Không chọn connector khi chưa biết engine; DB role thật phải read-only, có row limit và timeout |
 | `Audit accessibility trang login` | accessibility-qa | Chạy axe ở state đúng rồi kiểm keyboard, focus, zoom và manual gaps |
 | `Đánh giá chatbot RAG` | ai-quality-qa | Xác định golden dataset, groundedness, tool-call và safety metric trước run |

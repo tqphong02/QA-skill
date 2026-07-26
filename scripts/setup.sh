@@ -149,8 +149,10 @@ fi
 # ==== Step 7: Install Python deps ====
 if [[ "$SKIP_DEPS" -eq 1 ]]; then
   log_step "Skipping pip install (--skip-deps)"
-else
+elif requires_python_packages "${SKILLS[@]}"; then
   install_python_deps
+else
+  log_step "Skipping general Python packages (selected skills use stdlib only)"
 fi
 
 # ==== Step 8: Setup AI config ====

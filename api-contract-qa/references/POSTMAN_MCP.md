@@ -37,7 +37,7 @@ Tài liệu chính chủ: <https://learning.postman.com/docs/reference/postman-a
 Ưu tiên cài skill và tự merge global config:
 
 ```bash
-./scripts/setup.sh --agent=antigravity --only=postman --skip-deps --yes
+./scripts/setup.sh --agent=antigravity --only=postman --yes
 ```
 
 Bootstrap giữ nguyên các MCP khác và backup config cũ. Nếu cần cấu hình thủ công, bật entry `postman` trong `.agents/mcp_config.json` hoặc thêm vào `~/.gemini/config/mcp_config.json`:

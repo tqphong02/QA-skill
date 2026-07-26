@@ -32,7 +32,7 @@ SHEET_EXECUTION_PLUS =
 |---|---|---|
 | Exploratory, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/PIPELINE.md](references/PIPELINE.md) |
@@ -88,8 +88,19 @@ Apply the following exact order for all models, especially fast or small-context
      I=Result  J=Priority  K=Date  L=Tester  M=Notes
      ```
      Columns I-M (idx 8-12) are **write columns**; columns B-H (idx 1-7) are **read-only design**.
-   - Run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL>`
-   - For full suite execution -> add `--parallel --workers 4`
+   - Generate the functional-group worker plan first:
+     ```bash
+     node scripts/helpers/execute-sheet.mjs \
+       --sheet-url <URL> \
+       --parallel \
+       --workers 4 \
+       --plan-only
+     ```
+   - Read `evidence/runs/<run-id>/sheet-worker-plan.json`, show the exact Worker → Functional groups → testcase count mapping, then **ask the user** whether to run `all`, selected worker IDs such as `1,2`, or `cancel`. Do not silently choose all workers
+   - After the user selects workers, delegate each selected assignment to an independent browser sub-agent/worker when the host supports parallel agents, concurrently up to `--workers`; one assignment contains at most two functional groups and extra assignments run in later waves
+   - Every worker must return JSON matching [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json). `Pass` and `Fail` require evidence; `Fail`, `Untest`, and `N/A` require Note
+   - Merge the worker outputs and import them with `--results-file <JSON> --selected-workers <all|1,2>`, or supply a real external executor with `--worker-script <PATH>`. Without either input, execution is `BLOCKED` and no Sheet cell may be changed
+   - `--workers` is the real concurrency limit, from 1 to 4. It does not authorize a worker selection
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
    - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
    - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
@@ -129,7 +140,7 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 ## Knowledge scope decision
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
-- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4`, then finish every `SHEET_EXECUTION_PLUS` layer.
+- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the functional worker plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 --plan-only`, ask the user to select `all`, worker IDs, or `cancel`, then run only the selected workers and import evidence-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
 - `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
 - `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope.
 - Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`.
@@ -182,7 +193,7 @@ These must be observed at all times, even before reading any reference file:
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
-| `scripts/helpers/execute-sheet.mjs` | Run testcases from Google Sheet with parallel workers |
+| `scripts/helpers/execute-sheet.mjs` | Plan functional-group workers, require selection, run/import evidence-backed results, and write back validated verdicts |
 | `scripts/helpers/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
 | `scripts/helpers/visual-audit.mjs` | Visual Heuristic Audit: overflow/clipping/touch targets/z-index |
 | `scripts/analysis/attack-surface.mjs` | Classify Action Safety, auto-inject mutations |

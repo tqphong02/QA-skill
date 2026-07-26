@@ -17,6 +17,9 @@ import os
 import re
 import sys
 import argparse
+import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import datetime
 
 # Insert current script directory into sys.path to load drive_common
@@ -29,6 +32,9 @@ from googleapiclient.discovery import build
 
 VALID_RESULTS = {"Pass", "Fail", "N/A", "Untest", "Untested"}
 VALID_PRIORITIES = {"Critical", "High", "Medium", "Low"}
+SPREADSHEET_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+DOCUMENT_REL_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+PACKAGE_REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 
 def is_local_excel(url_or_id):
     return url_or_id.endswith('.xlsx') or os.path.isfile(url_or_id)
@@ -78,7 +84,29 @@ def sanitize_note(note_text):
 
     # Remove trailing dots or emojis if any
     text = re.sub(r"[\u1F300-\u1FAFF\u2600-\u27BF]", "", text).strip()
-    return text
+    return text.rstrip(".")
+
+def normalize_result(value):
+    normalized = str(value or "Untest").strip().lower()
+    if normalized == "pass":
+        return "Pass"
+    if normalized == "fail":
+        return "Fail"
+    if normalized in ("n/a", "na"):
+        return "N/A"
+    if normalized in ("untest", "untested"):
+        return "Untest"
+    return "Untest"
+
+def normalize_priority(value):
+    normalized = str(value or "Medium").strip().lower()
+    if normalized == "critical":
+        return "Critical"
+    if normalized == "high":
+        return "High"
+    if normalized == "low":
+        return "Low"
+    return "Medium"
 
 def parse_header_indices(header_row):
     """Locate column 0-indexed positions for testcase fields."""
@@ -99,36 +127,57 @@ def parse_header_indices(header_row):
         elif "notes" == val or "note" == val: mapping["note"] = idx
     return mapping
 
+def is_testcase_header(mapping):
+    """Reject metadata rows such as a standalone DESCRIPTION label."""
+    keys = set(mapping)
+    return (
+        "testcase_id" in keys
+        and len(keys) >= 3
+        and bool(keys.intersection({"description", "procedure", "expected"}))
+    )
+
+def find_header(rows):
+    for idx, row in enumerate(rows):
+        mapping = parse_header_indices(row)
+        if is_testcase_header(mapping):
+            return idx, mapping
+    return -1, {}
+
+def choose_testcase_sheet(sheet_names, requested=None):
+    if requested:
+        for name in sheet_names:
+            if name.lower() == requested.lower():
+                return name
+        raise ValueError(f"Sheet not found: {requested}")
+
+    for name in sheet_names:
+        if name.lower() == "test cases_app":
+            return name
+    for name in sheet_names:
+        if "test cases" in name.lower():
+            return name
+    return sheet_names[0]
+
 def read_local_excel(filepath, sheet_name=None):
     import openpyxl
     wb = openpyxl.load_workbook(filepath, data_only=True)
-    target_sheet = sheet_name or wb.sheetnames[0]
-    if sheet_name:
-        for name in wb.sheetnames:
-            if name.lower() == sheet_name.lower():
-                target_sheet = name
-                break
+    target_sheet = choose_testcase_sheet(wb.sheetnames, sheet_name)
     ws = wb[target_sheet]
     rows = []
     for r in ws.iter_rows(values_only=True):
         rows.append([str(c) if c is not None else "" for c in r])
 
-    header_idx = -1
-    col_map = {}
-    for idx, r in enumerate(rows):
-        mapping = parse_header_indices(r)
-        if "testcase_id" in mapping or "description" in mapping:
-            header_idx = idx
-            col_map = mapping
-            break
+    header_idx, col_map = find_header(rows)
 
     if header_idx == -1:
-        header_idx = 0
-        col_map = parse_header_indices(rows[0]) if rows else {}
+        raise ValueError(
+            f"Testcase header not found in sheet '{target_sheet}'; "
+            "expected Test case ID plus Description/Procedure/Expected Results"
+        )
 
     testcases = []
-    current_module = "GENERAL"
-    current_group = ""
+    current_module = "General"
+    current_group = "General"
 
     for r_idx in range(header_idx + 1, len(rows)):
         row = rows[r_idx]
@@ -138,10 +187,19 @@ def read_local_excel(filepath, sheet_name=None):
                 return str(row[idx]).strip()
             return ""
 
-        tc_id = get_col("testcase_id")
-        desc = get_col("description")
-        if not tc_id and not desc:
+        col_c = get_col("scenario_name") or (row[2] if len(row) > 2 else "")
+        if col_c and not get_col("testcase_id") and not get_col("description"):
+            if "1." in col_c or "USER INTERFACE" in col_c.upper() or "FUNCTION" in col_c.upper():
+                current_module = col_c
+                current_group = "General"
+            else:
+                current_group = col_c
             continue
+
+        tc_id = get_col("testcase_id")
+        if not tc_id:
+            continue
+        desc = get_col("description")
 
         testcases.append({
             "row_number": r_idx + 1,
@@ -170,31 +228,130 @@ def read_local_excel(filepath, sheet_name=None):
         "testcases": testcases,
     }
 
+def column_letter(column_index):
+    letters = ""
+    current = column_index + 1
+    while current:
+        current, remainder = divmod(current - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+def resolve_worksheet_archive_path(archive, sheet_name):
+    workbook_root = ET.fromstring(archive.read("xl/workbook.xml"))
+    rel_id = None
+    for sheet in workbook_root.findall(f".//{{{SPREADSHEET_NS}}}sheet"):
+        if sheet.attrib.get("name", "").lower() == sheet_name.lower():
+            rel_id = sheet.attrib.get(f"{{{DOCUMENT_REL_NS}}}id")
+            break
+    if not rel_id:
+        raise ValueError(f"Sheet not found in workbook archive: {sheet_name}")
+
+    relationships = ET.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+    target = None
+    for relationship in relationships.findall(f"{{{PACKAGE_REL_NS}}}Relationship"):
+        if relationship.attrib.get("Id") == rel_id:
+            target = relationship.attrib.get("Target")
+            break
+    if not target:
+        raise ValueError(f"Worksheet relationship not found: {rel_id}")
+
+    normalized = target.lstrip("/")
+    return normalized if normalized.startswith("xl/") else f"xl/{normalized}"
+
+def set_inline_string_cell(sheet_root, coordinate, row_number, value):
+    sheet_data = sheet_root.find(f"{{{SPREADSHEET_NS}}}sheetData")
+    if sheet_data is None:
+        raise ValueError("Worksheet XML has no sheetData")
+
+    row = sheet_data.find(f"{{{SPREADSHEET_NS}}}row[@r='{row_number}']")
+    if row is None:
+        row = ET.SubElement(sheet_data, f"{{{SPREADSHEET_NS}}}row", {"r": str(row_number)})
+
+    cell = row.find(f"{{{SPREADSHEET_NS}}}c[@r='{coordinate}']")
+    if cell is None:
+        cell = ET.SubElement(row, f"{{{SPREADSHEET_NS}}}c", {"r": coordinate})
+
+    for child in list(cell):
+        cell.remove(child)
+    cell.set("t", "inlineStr")
+    inline = ET.SubElement(cell, f"{{{SPREADSHEET_NS}}}is")
+    text = ET.SubElement(inline, f"{{{SPREADSHEET_NS}}}t")
+    text.text = str(value or "")
+
+def patch_local_excel_cells(filepath, sheet_name, changes):
+    """Patch only target cells so formula cached values elsewhere remain intact."""
+    source_path = os.path.abspath(filepath)
+    source_mode = os.stat(source_path).st_mode
+    temp_handle, temp_path = tempfile.mkstemp(
+        prefix=".sheet-update-",
+        suffix=".xlsx",
+        dir=os.path.dirname(source_path),
+    )
+    os.close(temp_handle)
+
+    try:
+        with zipfile.ZipFile(source_path, "r") as source_archive:
+            worksheet_path = resolve_worksheet_archive_path(source_archive, sheet_name)
+            sheet_root = ET.fromstring(source_archive.read(worksheet_path))
+            for coordinate, row_number, value in changes:
+                set_inline_string_cell(sheet_root, coordinate, row_number, value)
+            updated_sheet_xml = ET.tostring(
+                sheet_root,
+                encoding="utf-8",
+                xml_declaration=True,
+            )
+
+            with zipfile.ZipFile(temp_path, "w") as target_archive:
+                for item in source_archive.infolist():
+                    payload = (
+                        updated_sheet_xml
+                        if item.filename == worksheet_path
+                        else source_archive.read(item.filename)
+                    )
+                    target_archive.writestr(item, payload)
+        os.chmod(temp_path, source_mode)
+        os.replace(temp_path, source_path)
+    finally:
+        if os.path.exists(temp_path):
+            os.unlink(temp_path)
+
 def update_local_excel(filepath, updates, sheet_name=None):
-    import openpyxl
     data_info = read_local_excel(filepath, sheet_name)
     target_sheet = data_info["sheet_name"]
     col_map = data_info["column_mapping"]
     tc_by_row = {tc["row_number"]: tc for tc in data_info["testcases"]}
 
-    wb = openpyxl.load_workbook(filepath)
-    ws = wb[target_sheet]
-
     today_str = datetime.now().strftime("%Y-%m-%d")
     updated_count = 0
+    errors = []
+    changes = []
 
     for up in updates:
         row_num = up.get("row_number")
-        if row_num and row_num in tc_by_row:
-            if "result" in col_map: ws.cell(row=row_num, column=col_map["result"] + 1, value=up.get("result", "Untest"))
-            if "priority" in col_map: ws.cell(row=row_num, column=col_map["priority"] + 1, value=up.get("priority", "Medium"))
-            if "date" in col_map: ws.cell(row=row_num, column=col_map["date"] + 1, value=today_str)
-            if "tester" in col_map: ws.cell(row=row_num, column=col_map["tester"] + 1, value=up.get("tester", "AI-Agent"))
-            if "note" in col_map: ws.cell(row=row_num, column=col_map["note"] + 1, value=sanitize_note(up.get("note", "")))
-            updated_count += 1
+        if not row_num or row_num not in tc_by_row:
+            errors.append(f"Testcase not found for update: row={row_num}")
+            continue
 
-    wb.save(filepath)
-    return {"status": "success", "updated_count": updated_count, "errors": []}
+        values = {
+            "result": normalize_result(up.get("result")),
+            "priority": normalize_priority(up.get("priority")),
+            "date": up.get("date", today_str),
+            "tester": up.get("tester", "QA Agent"),
+            "note": sanitize_note(up.get("note", "")),
+        }
+        if values["result"] in ("Fail", "Untest", "N/A") and not values["note"]:
+            values["note"] = f"Thực thi {values['result']}: chưa đạt kết quả kỳ vọng"
+
+        for key, value in values.items():
+            if key not in col_map:
+                continue
+            coordinate = f"{column_letter(col_map[key])}{row_num}"
+            changes.append((coordinate, row_num, value))
+        updated_count += 1
+
+    if changes:
+        patch_local_excel_cells(filepath, target_sheet, changes)
+    return {"status": "success", "updated_count": updated_count, "errors": errors}
 
 def read_testcases(spreadsheet_id, sheet_name=None):
     if is_local_excel(spreadsheet_id):
@@ -205,21 +362,10 @@ def read_testcases(spreadsheet_id, sheet_name=None):
     if not sheets:
         raise ValueError("Spreadsheet has no sheets")
 
-    target_sheet = None
-    if sheet_name:
-        for s in sheets:
-            if s["properties"]["title"].lower() == sheet_name.lower():
-                target_sheet = s["properties"]["title"]
-                break
-
-    if not target_sheet:
-        # Prefer "Test cases_App" or first sheet
-        for s in sheets:
-            if "test cases" in s["properties"]["title"].lower():
-                target_sheet = s["properties"]["title"]
-                break
-        if not target_sheet:
-            target_sheet = sheets[0]["properties"]["title"]
+    target_sheet = choose_testcase_sheet(
+        [sheet["properties"]["title"] for sheet in sheets],
+        sheet_name,
+    )
 
     range_name = f"'{target_sheet}'!A1:Z2000"
     res = service.spreadsheets().values().get(spreadsheetId=spreadsheet_id, range=range_name).execute()
@@ -229,14 +375,7 @@ def read_testcases(spreadsheet_id, sheet_name=None):
         return {"sheet_name": target_sheet, "testcases": []}
 
     # Find header row
-    header_idx = -1
-    col_map = {}
-    for i, r in enumerate(rows):
-        m = parse_header_indices(r)
-        if "testcase_id" in m or "description" in m or ("scenario_id" in m and "expected" in m):
-            header_idx = i
-            col_map = m
-            break
+    header_idx, col_map = find_header(rows)
 
     if header_idx == -1:
         # Default standard template mapping (B=Scenario ID ... I=Result, J=Priority, K=Date, L=Tester, M=Notes)
@@ -263,16 +402,17 @@ def read_testcases(spreadsheet_id, sheet_name=None):
         # Section header check (e.g. "1.1. USER INTERFACE" or "GROUP: LOGIN")
         col_c = get_col("scenario_name") or (row[2] if len(row) > 2 else "")
         if col_c and not get_col("testcase_id") and not get_col("description"):
-            if "1." in col_c or "USER INTERFACE" in col_c or "FUNCTION" in col_c:
+            if "1." in col_c or "USER INTERFACE" in col_c.upper() or "FUNCTION" in col_c.upper():
                 current_module = col_c
+                current_group = "General"
             else:
                 current_group = col_c
             continue
 
         tc_id = get_col("testcase_id")
-        desc = get_col("description")
-        if not tc_id and not desc:
+        if not tc_id:
             continue
+        desc = get_col("description")
 
         testcases.append({
             "row_number": r_idx + 1, # 1-indexed for Sheet
@@ -334,20 +474,10 @@ def update_testcase_results(spreadsheet_id, updates, sheet_name=None):
         r_num = target_tc["row_number"]
 
         # Validate Result value
-        res_val = str(up.get("result", "Untest")).strip()
-        if res_val.lower() == "pass": res_val = "Pass"
-        elif res_val.lower() == "fail": res_val = "Fail"
-        elif res_val.lower() in ("n/a", "na"): res_val = "N/A"
-        elif res_val.lower() in ("untest", "untested"): res_val = "Untest"
-        else: res_val = "Untest"
+        res_val = normalize_result(up.get("result"))
 
         # Validate Priority value
-        prio_val = str(up.get("priority", "Medium")).strip()
-        if prio_val.lower() == "critical": prio_val = "Critical"
-        elif prio_val.lower() == "high": prio_val = "High"
-        elif prio_val.lower() == "medium": prio_val = "Medium"
-        elif prio_val.lower() == "low": prio_val = "Low"
-        else: prio_val = "Medium"
+        prio_val = normalize_priority(up.get("priority"))
 
         # Note sanitization
         note_val = sanitize_note(up.get("note", ""))

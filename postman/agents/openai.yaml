@@ -1,7 +1,7 @@
 interface:
   display_name: "Postman"
-  short_description: "Connect and operate Postman through MCP"
-  default_prompt: "Use $postman to connect Postman and list my accessible workspaces."
+  short_description: "Run Postman through MCP, CLI, and Newman"
+  default_prompt: "Use $postman to connect Postman, verify both CLIs, and run this collection."
 
 dependencies:
   tools:

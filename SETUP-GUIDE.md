@@ -95,10 +95,10 @@ PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` k
 Cài riêng Postman cho Antigravity:
 
 ```bash
-./scripts/setup.sh --agent=antigravity --only=postman --skip-deps --yes
+./scripts/setup.sh --agent=antigravity --only=postman --yes
 ```
 
-Sau lệnh này người dùng chỉ cần restart Antigravity, chạy `/mcp` và đăng nhập Postman. Dùng `--skip-mcp-setup` nếu chỉ muốn copy skill mà không thay đổi MCP config
+Sau lệnh này installer cài local Postman CLI và Newman, rồi người dùng chỉ cần restart Antigravity, chạy `/mcp` và đăng nhập Postman. Dùng `--skip-mcp-setup` nếu không muốn thay đổi MCP config; dùng `--skip-deps` nếu không muốn cài hai CLI
 
 Installer chỉ expose `qa-run/SKILL.md`. `vendor`, `tests` và mọi nested `SKILL.md` không được đưa vào thư mục discovery, nên chọn `qa-run` không làm xuất hiện thêm các skill `understand-*`.
 

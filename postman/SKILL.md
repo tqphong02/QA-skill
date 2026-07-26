@@ -1,13 +1,13 @@
 ---
 name: postman
-description: Configure, authenticate, diagnose, and operate Postman through its official MCP server, including workspaces, collections, environments, specifications, mocks, and monitors. Trigger on Postman setup, Postman MCP, Postman OAuth, missing Postman tools or skill, workspace or collection management, or requests to connect an agent to Postman; do not require the skill name.
+description: Configure, authenticate, diagnose, and operate Postman through its official MCP server, Postman CLI, and Newman, including workspaces, collections, environments, specifications, mocks, monitors, local collection execution, reports, and CI-ready test runs. Trigger on Postman setup, Postman MCP or OAuth, Postman CLI, Newman, collection run, missing Postman tools or skill, workspace or collection management, or requests to connect an agent to Postman; do not require the skill name.
 ---
 
 # Postman
 
 Read [QUICK_REF.md](QUICK_REF.md) for UI marketplace installation, free API key generation, and quick authentication steps.
 
-Use the official remote Postman MCP server. Bootstrap the connection deterministically before attempting Postman operations.
+Use the official remote Postman MCP server for resource management. Use the bundled Postman CLI and Newman runtimes for reproducible collection execution.
 
 ## First-use bootstrap
 
@@ -36,6 +36,38 @@ List the Postman workspaces available to the active account without changing any
 
 OAuth consent is the only required user interaction for the US endpoint. Never request, print, or store the user's Postman password. Never commit API keys, access tokens, refresh tokens, cookies, or OAuth browser data
 
+## Collection runtime
+
+Run the runtime doctor before collection execution:
+
+```bash
+python3 scripts/runner.py doctor
+```
+
+Use the unified runner instead of assembling CLI commands manually:
+
+```bash
+python3 scripts/runner.py run <collection-path-or-id> \
+  --environment <environment-path-or-id> \
+  --bail \
+  --report-dir evidence/postman
+```
+
+Engine selection is deterministic:
+
+1. Prefer Postman CLI for every supported collection
+2. Fall back to Newman only for JSON collection v2 or v2.1
+3. Block Newman for Postman v3 YAML collections
+4. Preserve the selected engine's exit code for CI
+
+The runner creates `console.log` when `--report-dir` is supplied. For compatible v2 collections it also creates `report.json` and `junit.xml`. Authenticate the Postman CLI only when a cloud collection ID, cloud result upload, monitor, or another authenticated command requires it:
+
+```bash
+python3 scripts/runner.py login
+```
+
+Local collection paths do not require a Postman API key. Do not place API keys in collection URLs or command arguments; use the Postman CLI login flow or a protected CI secret
+
 ## Endpoint selection
 
 - Use `minimal` by default for workspaces, collections, environments, and specifications
@@ -57,7 +89,7 @@ python3 scripts/bootstrap.py --agent=<agent> --mode=<minimal|code|full> --replac
 4. Execute only the requested Postman operation
 5. Read the object back and verify its ID, parent workspace, name, and changed content
 
-Route contract validation against a live implementation to `api-contract-qa`. Route explicit testcase document creation to `testcase-template`. Use Newman or Postman CLI for reproducible collection execution when available
+Route contract validation against a live implementation to `api-contract-qa`. Route explicit testcase document creation to `testcase-template`. Execute collections through `scripts/runner.py`
 
 ## Failure classification
 
@@ -66,6 +98,7 @@ Route contract validation against a live implementation to `api-contract-qa`. Ro
 - `auth_required`: complete OAuth with the intended Postman account
 - `workspace_permission_denied`: verify account, team, and workspace membership
 - `tool_not_enabled`: switch endpoint mode only when the requested operation requires it
-- `runtime_missing`: install or repair the selected agent runtime
+- `runtime_missing`: run dependency setup, then `scripts/runner.py doctor`
+- `incompatible engine=newman collection=v3`: use Postman CLI
 
 Do not report the integration as working based only on valid JSON. Require a successful read-only Postman response

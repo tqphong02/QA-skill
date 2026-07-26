@@ -37,3 +37,22 @@ Ngay sau khi trạng thái chuyển sang Connected, thực hiện lệnh kiểm 
 ```text
 Dùng Postman MCP liệt kê danh sách workspace hiện tại mà không thay đổi dữ liệu
 ```
+
+### 5. Kiểm tra Postman CLI và Newman
+
+Setup mặc định cài cả hai runtime cục bộ trong skill. Chạy:
+
+```bash
+python3 scripts/runner.py doctor
+```
+
+Chạy collection với Postman CLI ưu tiên và Newman fallback:
+
+```bash
+python3 scripts/runner.py run collection.json \
+  --environment environment.json \
+  --bail \
+  --report-dir evidence/postman
+```
+
+Newman chỉ dùng cho collection JSON v2/v2.1. Collection v3 YAML phải chạy bằng Postman CLI

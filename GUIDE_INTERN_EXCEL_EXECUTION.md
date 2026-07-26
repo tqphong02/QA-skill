@@ -28,9 +28,10 @@ Skill `qa-run` hoạt động độc lập 100%, chứa sẵn tất cả các sc
 qa-run/
 ├── SKILL.md                          # Thông tin quy chuẩn skill
 └── scripts/
-    ├── execute-sheet.mjs             # Script điều phối chính (Node.js)
-    ├── drive_sheet_execute.py        # Script đọc/ghi file Excel local .xlsx (Python)
-    └── drive_common.py               # Thư viện phụ trợ
+    └── helpers/
+        ├── execute-sheet.mjs          # Script điều phối chính (Node.js)
+        ├── drive_sheet_execute.py     # Script đọc/ghi file Excel local .xlsx (Python)
+        └── drive_common.py            # Thư viện phụ trợ
 ```
 
 ---
@@ -42,24 +43,24 @@ Bạn có thể truyền **bất kỳ đường dẫn file Excel `.xlsx` nào tr
 ### 🔹 Ví dụ 1: File Excel nằm ở bất kỳ đâu trên máy cá nhân
 ```bash
 # Đường dẫn tuyệt đối trên macOS / Linux:
-node qa-run/scripts/execute-sheet.mjs --excel-file "/Users/intern/Downloads/KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "/Users/intern/Downloads/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 
 # Đường dẫn tuyệt đối trên Windows:
-node qa-run/scripts/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 ```
 
 ### 🔹 Ví dụ 2: File Excel nằm ngay trong thư mục làm việc (Đường dẫn tương đối)
 ```bash
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App"
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 ```
 
 ### 🔹 Ví dụ 3: Chạy Lọc theo Module Cụ Thể
 ```bash
 # Chỉ chạy duy nhất Module LOGIN:
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN"
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN" --plan-only
 
 # Chỉ chạy duy nhất Module ORDER:
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER"
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER" --plan-only
 ```
 
 ---
@@ -69,26 +70,37 @@ node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --mod
 Khi file Excel có nhiều Module (ví dụ: `LOGIN`, `PRODUCT`, `CART`, `CHECKOUT`, `PROFILE`...), bạn có thể kích hoạt chế độ **Parallel Workers** để chia các module cho nhiều trình duyệt Playwright chạy đồng thời:
 
 ```bash
-# Kích hoạt 4 Workers chạy song song chia theo các Module:
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 4
+# Bước 1: tạo worker plan, chưa chạy và chưa sửa Excel
+node qa-run/scripts/helpers/execute-sheet.mjs \
+  --excel-file "./KichBanKiemThu.xlsx" \
+  --parallel \
+  --workers 4 \
+  --plan-only
 
-# Kích hoạt 8 Workers cho các máy cấu hình mạnh:
-node qa-run/scripts/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --parallel --workers 8
+# Bước 2: sau khi xem plan, chọn worker và import kết quả đã có evidence
+node qa-run/scripts/helpers/execute-sheet.mjs \
+  --excel-file "./KichBanKiemThu.xlsx" \
+  --parallel \
+  --workers 4 \
+  --selected-workers all \
+  --results-file "./worker-results.json"
 ```
 
 ### 🧠 Cơ chế Chia Module của Multi-Worker Engine:
-1. Script tự động gom nhóm các testcases trong Excel theo cột `Module` hoặc `Group`.
-2. Phân chia đều các nhóm Module vào `N` Workers (`Worker #1`, `Worker #2`, `Worker #3`, `Worker #4`).
-3. Các Workers mở nhiều cửa sổ trình duyệt Playwright độc lập để chạy đồng thời.
-4. Tự động ghi nhận và batch-update kết quả `Pass`/`Fail` về lại file Excel sau khi tất cả Workers hoàn thành.
+1. Script đọc đúng tab `Test cases_App`, header row 9 và gom testcase theo functional group
+2. Mỗi assignment chứa tối đa hai functional groups; `--workers` giới hạn concurrency từ 1 đến 4
+3. Script hiển thị plan và bắt buộc chọn `all`, worker ID như `1,2`, hoặc `cancel`
+4. Browser worker/sub-agent thực thi testcase và trả JSON có evidence
+5. Script chỉ batch-update khi kết quả đủ testcase, đúng schema và `Pass`/`Fail` có evidence
+6. Nếu thiếu lựa chọn, executor hoặc evidence thì dừng `BLOCKED` và không sửa Excel
 
 ---
 
 ## 📊 4. Kết quả Sau khi Chạy
 1. **File Excel của Intern được Cập nhật Trực tiếp**:
-   - Cột `Result`: Tự động điền `Pass` hoặc `Fail`.
+   - Cột `Result`: Chỉ điền `Pass`, `Fail`, `N/A` hoặc `Untest` sau validation.
    - Cột `Date`: Ngày thực thi `YYYY-MM-DD`.
-   - Cột `Tester`: Ghi nhận `AI-Agent / Playwright`.
+   - Cột `Tester`: Ghi nhận tester do worker cung cấp.
    - Cột `Note`: Lời giải thích kết quả ngắn gọn, dễ hiểu.
 2. **Ảnh Bằng chứng Evidence**:
-   - Tự động chụp ảnh màn hình lưu tại thư mục `evidence/`.
+   - Worker phải cung cấp đường dẫn hoặc URL evidence cho mọi kết quả `Pass` và `Fail`.

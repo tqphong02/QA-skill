@@ -455,6 +455,14 @@ install_node_deps() {
 }
 
 # ==== Install Python deps ====
+requires_python_packages() {
+  local skill
+  for skill in "$@"; do
+    [[ "$skill" == "postman" ]] || return 0
+  done
+  return 1
+}
+
 install_python_deps() {
   local py_bin=""
   for py in python3.11 python3.12 python3.10 python3 "/usr/bin/python3"; do
@@ -600,11 +608,23 @@ setup_selected_integrations() {
   fi
 
   local bootstrap="$SKILLS_DIR/postman/scripts/bootstrap.py"
+  local runner="$SKILLS_DIR/postman/scripts/runner.py"
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
     bootstrap="$REPO_DIR/postman/scripts/bootstrap.py"
-    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" --dry-run
+    runner="$REPO_DIR/postman/scripts/runner.py"
+    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" --dry-run || return 1
+    if [[ "${SKIP_DEPS:-0}" -eq 1 ]]; then
+      log_warn "Postman CLI/Newman không được auto-install do --skip-deps"
+    else
+      log_dry "$py_bin $runner doctor"
+    fi
   else
-    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT"
+    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" || return 1
+    if [[ "${SKIP_DEPS:-0}" -eq 1 ]]; then
+      log_warn "Postman CLI/Newman không được auto-install do --skip-deps"
+    else
+      "$py_bin" "$runner" doctor || return 1
+    fi
   fi
 }
 
@@ -625,7 +645,7 @@ verify_installation() {
   fi
 
   # 2. Python deps smoke
-  if [[ -n "$py_bin" ]]; then
+  if [[ -n "$py_bin" ]] && requires_python_packages "${SKILLS[@]}"; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
       log_dry "$py_bin -c 'import openpyxl, markitdown, yaml'"
     else

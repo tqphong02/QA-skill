@@ -423,6 +423,7 @@ REQUIRED = {
         "retire_legacy_skills",
         '"postman"',
         "setup_selected_integrations",
+        "runner.py",
     ],
     "performance-qa/SKILL.md": [
         "references/MCP_SETUP.md",
@@ -495,15 +496,34 @@ REQUIRED = {
     ],
     "postman/SKILL.md": [
         "scripts/bootstrap.py",
-        "Postman OAuth",
+        "scripts/runner.py",
+        "OAuth consent",
         "read-only workspace listing",
         "mcp_not_configured",
+        "Newman",
     ],
     "postman/scripts/bootstrap.py": [
         "https://mcp.postman.com/minimal",
         "mcpServers",
         "read_back",
         "backup",
+    ],
+    "postman/scripts/runner.py": [
+        "postman-cli",
+        "newman",
+        "collection=v3",
+        "report.json",
+        "junit.xml",
+        "safe_command",
+    ],
+    "postman/package.json": [
+        '"newman": "6.2.2"',
+        '"postman-cli": "1.44.0"',
+    ],
+    "postman/package-lock.json": [
+        '"newman": "6.2.2"',
+        '"postman-cli": "1.44.0"',
+        '"lockfileVersion": 3',
     ],
     "data-quality-qa/SKILL.md": [
         "references/DATABASE_MCP.md",
@@ -655,6 +675,7 @@ def main():
         "testcase-template/scripts/import-api-spec.py",
         "business-analysis/scripts/render-qa.py",
         "postman/scripts/bootstrap.py",
+        "postman/scripts/runner.py",
     ):
         path = ROOT / relative
         if path.is_file():
@@ -668,6 +689,8 @@ def main():
         "testcase-template/examples/sample-api-input.json",
         "business-analysis/examples/sample-analysis.json",
         "business-analysis/package.json",
+        "postman/package.json",
+        "postman/package-lock.json",
         ".agents/mcp_config.json",
         "qa-run/references/TESTCASE_SHEET_SCHEMA.json",
     ):

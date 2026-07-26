@@ -25,7 +25,7 @@ Route Postman MCP installation, authentication, diagnosis, and workspace operati
 
 - Run `scripts/check_openapi.py` for a deterministic OpenAPI 3 structural preflight
 - Use project-native Playwright API tests or start from [assets/api-contract.spec.ts](assets/api-contract.spec.ts) for stable regression
-- Use Postman MCP for workspace, collection, specification, mock, and monitor management; use Newman or Postman CLI for reproducible execution
+- Use Postman MCP for workspace, collection, specification, mock, and monitor management; execute collections through `postman/scripts/runner.py`
 - Use Schemathesis or another schema-driven runner only when installed and approved by the project
 - Use `testcase-template` when the user asks to produce testcase Markdown or Excel; keep execution in this skill
 - Route performance behavior, JMeter and k6 work to the single public `performance-qa`
