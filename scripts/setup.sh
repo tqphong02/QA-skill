@@ -44,6 +44,7 @@ TARGET_AGENT="${QA_SKILL_AGENT:-auto}"
 PROFILE="${QA_SKILL_PROFILE:-core}"
 SKILLS_DIR="${SKILLS_DIR:-}"
 SKIP_DEPS="${SKIP_DEPS:-0}"
+SKIP_MCP_SETUP="${SKIP_MCP_SETUP:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 ONLY_SKILLS=""
 YES="${YES:-0}"
@@ -53,6 +54,7 @@ NO_COLOR="${NO_COLOR:-}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-deps)       SKIP_DEPS=1; shift ;;
+    --skip-mcp-setup)  SKIP_MCP_SETUP=1; shift ;;
     --dry-run)         DRY_RUN=1; shift ;;
     --profile=*)       PROFILE="${1#*=}"; shift ;;
     --profile)         PROFILE="${2:-}"; shift 2 ;;
@@ -154,10 +156,13 @@ fi
 # ==== Step 8: Setup AI config ====
 setup_ai_config
 
-# ==== Step 9: Verify ====
+# ==== Step 9: Setup selected MCP integrations ====
+setup_selected_integrations "${SKILLS[@]}" || exit 1
+
+# ==== Step 10: Verify ====
 verify_installation
 
-# ==== Step 10: Summary ====
+# ==== Step 11: Summary ====
 print_summary "${SKILLS[@]}"
 
 trap - EXIT  # Clear error trap for clean exit

@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-15 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
+16 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 15 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
+Repo này phân phối 16 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
 
 ## Cross-model deterministic mode
 
@@ -45,7 +45,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
 | WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
 | Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition |
-| OpenAPI, Swagger, Postman, Postman MCP, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
+| Postman setup, Postman MCP, OAuth, workspace, collection, environment, spec, mock hoặc monitor operation | `postman/SKILL.md` | Chạy bootstrap idempotent, OAuth rồi smoke test workspace read-only |
+| OpenAPI, Swagger, Postman contract/collection validation, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
 | Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
 | Tạo/import/chạy JMeter `.jmx` | `performance-qa/SKILL.md` | Dùng internal JMeter adapter; smoke một thread trước approved load |
 

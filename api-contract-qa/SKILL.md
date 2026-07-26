@@ -1,6 +1,6 @@
 ---
 name: api-contract-qa
-description: Validate REST, OpenAPI, Swagger, Postman, GraphQL, gRPC, and webhook contracts against implementations, including schema, status, headers, auth, pagination, idempotency, compatibility, negative behavior, and evidence. Trigger on an API spec URL/file, swagger.json, openapi.yaml, Postman collection/MCP, GraphQL schema, proto, webhook contract, contract test, implementation-versus-spec check, or breaking-change review; do not require the skill name. Route explicit requests to write testcase documents to testcase-template instead.
+description: Validate REST, OpenAPI, Swagger, Postman collection, GraphQL, gRPC, and webhook contracts against implementations, including schema, status, headers, auth, pagination, idempotency, compatibility, negative behavior, and evidence. Trigger on an API spec URL/file, swagger.json, openapi.yaml, Postman collection or specification used for contract verification, GraphQL schema, proto, webhook contract, contract test, implementation-versus-spec check, or breaking-change review; do not require the skill name. Route Postman MCP setup and operations to postman and explicit testcase documents to testcase-template.
 ---
 
 # API Contract QA
@@ -19,7 +19,7 @@ Verify both the specification and the observable implementation. A valid OpenAPI
 
 Read [references/CONTRACT_MATRIX.md](references/CONTRACT_MATRIX.md) when designing endpoint coverage.
 
-Read [references/POSTMAN_MCP.md](references/POSTMAN_MCP.md) before installing, authenticating, or diagnosing Postman MCP. Run `../github-mcp-qa/scripts/doctor-stack.sh postman` after configuration.
+Route Postman MCP installation, authentication, diagnosis, and workspace operations to `postman`. Read [references/POSTMAN_MCP.md](references/POSTMAN_MCP.md) when the Postman connection affects contract execution. Run `../github-mcp-qa/scripts/doctor-stack.sh postman` after configuration.
 
 ## Tool routing
 

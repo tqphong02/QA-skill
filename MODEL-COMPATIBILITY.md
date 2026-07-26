@@ -33,14 +33,14 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Log bug mới lên Plane <URL>` | plane-qa | Doctor URL workspace, dry-run, tạo ở `Todo`, read-back |
 | `Kết nối Chrome DevTools MCP` | performance-qa | Dùng package chính chủ, isolated profile, doctor rồi smoke test read-only |
 | `Kết nối k6 MCP và chạy load` | performance-qa | Cấu hình MCP nhưng vẫn bắt đầu một user; load cần contract, approval và abort condition |
-| `Kết nối Postman MCP` | api-contract-qa | Dùng remote endpoint chính chủ, OAuth, mở phiên mới rồi liệt kê workspace read-only |
+| `Kết nối Postman MCP` | postman | Bootstrap remote endpoint chính chủ, OAuth, mở phiên mới rồi liệt kê workspace read-only |
 | `Kết nối database MCP` | data-quality-qa | Không chọn connector khi chưa biết engine; DB role thật phải read-only, có row limit và timeout |
 | `Audit accessibility trang login` | accessibility-qa | Chạy axe ở state đúng rồi kiểm keyboard, focus, zoom và manual gaps |
 | `Đánh giá chatbot RAG` | ai-quality-qa | Xác định golden dataset, groundedness, tool-call và safety metric trước run |
 | `Test mobile app trên Android và iOS` | mobile-qa | Chốt device matrix, lifecycle và capability Appium trước execution |
 | `Tạo JMeter JMX cho API` | performance-qa | Chọn internal JMeter adapter, tạo common workload contract, generate JMX, smoke một thread rồi mới approved load |
 | `GitHub MCP đã có skill nhưng không dùng được` | github-mcp-qa | Chạy doctor và phân biệt skill, config, auth, loaded tools và repository permission |
-| `Cài skill core cho Codex` | installer | Chạy `setup.sh --agent=codex --profile=core`, cài 9 skill thường dùng rồi mở phiên mới |
+| `Cài skill core cho Codex` | installer | Chạy `setup.sh --agent=codex --profile=core`, cài 10 skill thường dùng rồi mở phiên mới |
 | `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity --profile=full`, kiểm tra skill và MCP, không ghi credential vào repo |
 | `Cài riêng qa-run cho intern` | installer | Chạy `setup.sh --agent=<host> --only=qa-run`; package chỉ có 1 `SKILL.md`, không có vendor, tests hoặc nested skill |
 | `Cài skill trên Windows` | installer | Dùng `setup.ps1 -Agent <host> -Profile core`, Git Bash hoặc WSL và đúng home directory của host |

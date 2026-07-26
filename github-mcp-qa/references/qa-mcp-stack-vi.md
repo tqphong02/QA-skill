@@ -38,7 +38,7 @@ Sau khi thêm hoặc đổi MCP, mở phiên host mới rồi chạy smoke test 
 | GitHub MCP | `github-mcp-qa` | cấu hình đúng endpoint, OAuth/PAT hợp lệ, đọc được repository đã chọn |
 | Chrome DevTools MCP | `performance-qa` | server khởi động, mở được isolated Chrome, đọc console/network read-only |
 | k6 MCP | `performance-qa` | `k6 x mcp` chạy được; load vẫn bị chặn bởi workload contract |
-| Postman MCP | `api-contract-qa` | OAuth/API key hợp lệ, liệt kê được workspace read-only |
+| Postman MCP | `postman` | OAuth/API key hợp lệ, liệt kê được workspace read-only |
 | Database read-only MCP | `data-quality-qa` | DB role thật chỉ có quyền đọc, MCP readonly, row limit và query timeout đều bật |
 
 Playwright đã đủ cho browser flow và UI automation. Chỉ bật Chrome DevTools khi cần network waterfall, console diagnosis, trace, Lighthouse hoặc Core Web Vitals để tránh nạp tool không cần thiết.
@@ -61,7 +61,7 @@ OAuth/PAT của MCP độc lập với Git SSH. Chọn [guide Codex](codex-githu
 
 ### Postman
 
-Đọc [api-contract-qa/references/POSTMAN_MCP.md](../../api-contract-qa/references/POSTMAN_MCP.md). Bắt đầu bằng endpoint `minimal`; chỉ dùng `full` khi cần quản lý collection, mock hoặc monitor.
+Đọc [postman/SKILL.md](../../postman/SKILL.md) để bootstrap và vận hành MCP. Đọc [api-contract-qa/references/POSTMAN_MCP.md](../../api-contract-qa/references/POSTMAN_MCP.md) khi validate API contract. Bắt đầu bằng endpoint `minimal`; chỉ dùng `full` khi tool bắt buộc không có trong minimal.
 
 ### Database read-only
 

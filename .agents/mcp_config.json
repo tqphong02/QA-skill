@@ -32,7 +32,7 @@
     },
     "postman": {
       "serverUrl": "https://mcp.postman.com/minimal",
-      "disabled": true
+      "disabled": false
     },
     "github": {
       "serverUrl": "https://api.githubcopilot.com/mcp/",

@@ -1,6 +1,6 @@
-# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 15 Skills
+# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 16 Skills
 
-Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **15 Skills** trong hệ thống **QA-skill Framework**.
+Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **16 Skills** trong hệ thống **QA-skill Framework**.
 
 ---
 
@@ -45,6 +45,7 @@ flowchart TD
     subgraph S4["4. Specialized QA Skills"]
         SEC["pentest-run (Security Assessment)"]
         PERF["performance-qa (internal k6 / JMeter engines)"]
+        POSTMAN["postman (MCP Bootstrap & Operations)"]
         API["api-contract-qa (OpenAPI / Swagger)"]
         ACC["accessibility-qa (WCAG / axe-core)"]
         DBQ["data-quality-qa (Database & Schema Drift)"]
@@ -69,6 +70,7 @@ flowchart TD
     TCT --> EX_SHEET
     TCT --> POM_GEN
     POM_GEN --> POM_EXEC
+    POSTMAN --> API
     
     EX_SHEET & EX_EXPLORATORY & EX_RETEST & POM_EXEC & S4 --> AGG
     
@@ -81,7 +83,7 @@ flowchart TD
 
 ---
 
-## 📊 3. Ma trận Chuyển giao giữa 15 Skills (Data Handover Matrix)
+## 📊 3. Ma trận Chuyển giao giữa 16 Skills (Data Handover Matrix)
 
 | Skill Nguồn (Input) | Luồng Xử lý (Process) | Output Sinh ra (Artifact) | Skill Tiếp nhận (Consumer) | Dữ liệu Chuyển giao |
 |:---|:---|:---|:---|:---|
@@ -97,6 +99,7 @@ flowchart TD
 | **`qa-run`** *(RETEST_PLUS)* | Chạy 5 bước retest chuyên sâu | `run-manifest.json`<br>`evidence/` screenshots | `plane-qa` | Trạng thái PASS/FAILED/BLOCKED, evidence screenshot crop |
 | **`pentest-run`** | Authorized Security Assessment | `.pentest/engagement.md`<br>Security Findings | `plane-qa`<br>`qa-run Aggregation` | Lỗi bảo mật IDOR, SSRF, SSTI, JWT, GraphQL, Race Condition |
 | **`performance-qa`** | Orchestrate Load & Stress bằng internal k6/JMeter adapters | `result.json` + `summary.md/html`<br>File `.jmx` hoặc k6 script | `qa-run Aggregation` | Chỉ số p95/p99 latency, RPS, error rate, bottleneck |
+| **`postman`** | Bootstrap OAuth MCP và vận hành Postman resources | MCP connection + verified workspace/collection/spec | `api-contract-qa` | Account, workspace và Postman artifact đã resolve |
 | **`api-contract-qa`** | Validate OpenAPI / Swagger / Postman | `contract-report.json` | `qa-run Aggregation` | Sai khác giữa API spec và implementation thực tế |
 | **`accessibility-qa`** | Web Accessibility Audit (axe-core / WCAG) | `a11y-report.json` | `qa-run Aggregation` | Lỗi vi phạm WCAG, keyboard focus, screen reader |
 | **`data-quality-qa`** | Database ETL & Schema Drift check | `data-drift.json` | `qa-run Aggregation` | Bảng dữ liệu lệch schema, data lineage error |
@@ -122,6 +125,7 @@ flowchart TD
 | **Phân tích BRD/SRS, dựng flow hệ thống, tạo XMind hoặc Q&A** | `business-analysis` (+ `doc-to-md` khi nguồn chưa là MD) | Convert đính kèm sang MD → Review 18 vùng Senior QA → Generate XMind + Q&A Markdown + Q&A Excel |
 | **Pentest được ủy quyền, security assessment, IDOR, SSRF, JWT...** | `pentest-run` | Đọc `.pentest/engagement.md` → Chạy `scripts/doctor.sh` trước request mạng |
 | **Performance, load, stress test, k6, JMeter, `.jmx`, JTL, Chrome DevTools** | `performance-qa` | Xác nhận common workload contract → chọn internal engine → smoke một user → approved load |
+| **Postman setup, MCP, OAuth, workspace, collection, environment, spec, mock hoặc monitor** | `postman` | Chạy bootstrap idempotent → OAuth → smoke test workspace read-only |
 | **OpenAPI, Swagger, Postman contract validation** | `api-contract-qa` | Validate spec đối chiếu với implementation thực tế |
 | **WCAG, axe-core, keyboard access, screen reader** | `accessibility-qa` | Kết hợp automated scan với manual interaction |
 | **ETL/ELT, reconciliation, database schema drift** | `data-quality-qa` | Xác nhận nguồn/đích & read-only boundary tại DB role |
@@ -492,7 +496,7 @@ flowchart TD
 
 ---
 
-## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 15 Skills
+## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 16 Skills
 
 ### 1️⃣ `qa-run` (Core Execution Engine & Knowledge Hub)
 - **Đường dẫn**: `qa-run/SKILL.md`
@@ -656,3 +660,14 @@ flowchart TD
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: `qa-run Aggregation` & `plane-qa`.
   - 📤 **Chuyển dữ liệu tới**: `qa-run: REPO_BUSINESS_DISCOVERY` (kích hoạt quét incremental theo changed files).
+
+---
+
+### 16. `postman` (Postman MCP Bootstrap & Operations)
+- **Đường dẫn**: `postman/SKILL.md`
+- **Mục đích**: Tự cấu hình Postman MCP, điều phối OAuth và quản lý workspace, collection, environment, specification, mock hoặc monitor.
+- **Inputs**: Active agent host và Postman account được người dùng chọn trong OAuth.
+- **Outputs**: MCP connection đã verify cùng Postman resource ID và workspace context.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: User request hoặc API artifact cần resolve trong Postman.
+  - 📤 **Chuyển dữ liệu tới**: `api-contract-qa`, `testcase-template` hoặc collection runner.

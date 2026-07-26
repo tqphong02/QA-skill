@@ -8,6 +8,8 @@ description: Orchestrate safe performance testing with JMeter or k6 from one com
 Use one public skill and two internal engines. Never ask the user or intern to
 select a separate JMeter skill.
 
+For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
+
 ## Deterministic flow
 
 1. Run `python3 scripts/performance_orchestrator.py doctor`

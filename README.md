@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 15 skill
+## 16 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -19,6 +19,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [accessibility-qa](./accessibility-qa/SKILL.md) | WCAG 2.2, axe, keyboard và screen reader | accessibility evidence |
 | [performance-qa](./performance-qa/SKILL.md) | Một orchestrator cho JMeter/k6, common config, threshold, report và bottleneck | `.jmx`/k6 + JSON/Markdown/HTML report |
 | [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
+| [postman](./postman/SKILL.md) | Tự cấu hình OAuth MCP và vận hành workspace/collection/spec Postman | Postman MCP connection + verified operation |
 | [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, device matrix và Appium | mobile QA evidence |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
@@ -29,6 +30,8 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 Sơ đồ luồng & mapping chi tiết giữa các skill: [SKILL_FLOW_MAPPING.md](./SKILL_FLOW_MAPPING.md)
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)
+
+Hướng dẫn dùng skill performance cho JMeter/k6: [performance-qa/GUIDE.md](./performance-qa/GUIDE.md)
 
 Hướng dẫn phân biệt skill với MCP và kết nối QA MCP stack: [qa-mcp-stack-vi.md](./github-mcp-qa/references/qa-mcp-stack-vi.md)
 
@@ -60,8 +63,11 @@ cd QA-skill
 # 2c. Claude Code
 ./scripts/setup.sh --agent=claude --profile=core --yes
 
-# Cài đủ 15 skill chuyên sâu khi cần
+# Cài đủ 16 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
+
+# Chỉ cài Postman skill + tự merge MCP config
+./scripts/setup.sh --agent=antigravity --only=postman --skip-deps --yes
 
 # Cấp đúng 1 skill cho intern, không kèm nested/vendor skill
 ./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
@@ -94,6 +100,8 @@ Windows PowerShell:
 ```
 
 Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `plane-qa/ACCOUNT-PROFILE.example.md` và `google-drive-qa/ACCOUNT-PROFILE.example.md`.
+
+Với Postman trên Antigravity, setup tự thêm hoặc bật `mcpServers.postman` trong global config và giữ nguyên các MCP khác. Sau setup, restart Antigravity, chạy `/mcp` và đăng nhập Postman qua OAuth; không cần nhập API key hoặc sửa JSON
 
 Google Drive MCP lần đầu cần cấu hình Google Cloud project, APIs, Audience, scopes và OAuth Desktop client theo [GOOGLE_CLOUD_OAUTH_SETUP.md](./google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md)
 

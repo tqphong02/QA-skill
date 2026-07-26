@@ -1,0 +1,15 @@
+interface:
+  display_name: "Postman"
+  short_description: "Connect and operate Postman through MCP"
+  default_prompt: "Use $postman to connect Postman and list my accessible workspaces."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "postman"
+      description: "Official Postman MCP server"
+      transport: "streamable_http"
+      url: "https://mcp.postman.com/minimal"
+
+policy:
+  allow_implicit_invocation: true

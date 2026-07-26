@@ -40,10 +40,11 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 15 skill.
+Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 16 skill.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
+  --skip-mcp-setup      Không tự cấu hình MCP cho integration skill đã chọn
   --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
   --profile=<name>      core hoặc full; mặc định core
   --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
@@ -58,6 +59,7 @@ Environment variables:
   QA_SKILL_PROFILE      Giá trị mặc định cho --profile
   SKILLS_DIR            Override thư mục discovery
   SKIP_DEPS=1           Tương đương --skip-deps
+  SKIP_MCP_SETUP=1      Tương đương --skip-mcp-setup
   NO_COLOR=1            Tắt màu
 
 Examples:
@@ -220,7 +222,7 @@ warn_if_node_too_old() {
 }
 
 # ==== Skills resolution ====
-CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa")
+CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa" "postman")
 SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa")
 FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
 DEFAULT_SKILLS=("${CORE_SKILLS[@]}")
@@ -563,6 +565,49 @@ setup_ai_config() {
   esac
 }
 
+# ==== Selected MCP integrations ====
+setup_selected_integrations() {
+  local skills=("$@")
+  local has_postman=0
+  local skill
+  for skill in "${skills[@]}"; do
+    [[ "$skill" == "postman" ]] && has_postman=1
+  done
+  [[ "$has_postman" -eq 1 ]] || return 0
+
+  log_step "Postman MCP bootstrap"
+  if [[ "${SKIP_MCP_SETUP:-0}" -eq 1 ]]; then
+    log_warn "Skipping Postman MCP configuration (--skip-mcp-setup)"
+    return 0
+  fi
+
+  case "${TARGET_AGENT:-}" in
+    antigravity|codex) ;;
+    *)
+      log_warn "Postman skill đã cài; MCP auto-setup chưa hỗ trợ agent ${TARGET_AGENT:-unknown}"
+      return 0
+      ;;
+  esac
+
+  local py_bin=""
+  local py
+  for py in python3.11 python3.12 python3.10 python3; do
+    command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
+  done
+  if [[ -z "$py_bin" ]]; then
+    log_err "Không có Python để cấu hình Postman MCP"
+    return 1
+  fi
+
+  local bootstrap="$SKILLS_DIR/postman/scripts/bootstrap.py"
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    bootstrap="$REPO_DIR/postman/scripts/bootstrap.py"
+    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" --dry-run
+  else
+    "$py_bin" "$bootstrap" --agent="$TARGET_AGENT"
+  fi
+}
+
 # ==== Verify ====
 verify_installation() {
   log_step "Verify"
@@ -618,6 +663,7 @@ print_plan() {
   log_info "  Skills dir:     $SKILLS_DIR"
   log_info "  Skills to setup: $*"
   log_info "  Skip deps:       $([[ ${SKIP_DEPS:-0} -eq 1 ]] && echo yes || echo no)"
+  log_info "  Skip MCP setup:  $([[ ${SKIP_MCP_SETUP:-0} -eq 1 ]] && echo yes || echo no)"
   log_info "  Dry run:         $([[ ${DRY_RUN:-0} -eq 1 ]] && echo yes || echo no)"
   log_info "  Non-interactive: $([[ ${YES:-0} -eq 1 ]] && echo yes || echo no)"
 }
@@ -658,6 +704,16 @@ print_summary() {
   fi
   if selected_skill "qa-run"; then
     printf '  %d. Test qa-run:         cd <project>/qa && node %s/qa-run/scripts/login.mjs\n' "$next_step" "$SKILLS_DIR"
+    next_step=$((next_step + 1))
+  fi
+  if selected_skill "postman"; then
+    if [[ "$TARGET_AGENT" == "antigravity" ]]; then
+      printf '  %d. Postman OAuth:       restart Antigravity, chạy /mcp và đăng nhập Postman\n' "$next_step"
+    elif [[ "$TARGET_AGENT" == "codex" ]]; then
+      printf '  %d. Postman OAuth:       codex mcp login postman\n' "$next_step"
+    else
+      printf '  %d. Postman MCP:         cấu hình bằng MCP manager của %s\n' "$next_step" "$TARGET_AGENT"
+    fi
     next_step=$((next_step + 1))
   fi
 

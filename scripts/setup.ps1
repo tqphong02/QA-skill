@@ -6,6 +6,7 @@ param(
     [string]$Profile = "core",
     [string]$Only = "",
     [switch]$SkipDeps,
+    [switch]$SkipMcpSetup,
     [switch]$DryRun,
     [switch]$Yes
 )
@@ -34,6 +35,7 @@ $repoPosix = $repoDir.Replace("\", "/")
 $arguments = @("--agent=$Agent", "--profile=$Profile")
 if ($Only) { $arguments += "--only=$Only" }
 if ($SkipDeps) { $arguments += "--skip-deps" }
+if ($SkipMcpSetup) { $arguments += "--skip-mcp-setup" }
 if ($DryRun) { $arguments += "--dry-run" }
 if ($Yes) { $arguments += "--yes" }
 

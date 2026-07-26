@@ -1,6 +1,6 @@
 # Setup QA-skill trên máy mới
 
-Repository phân phối 15 skill. Profile `core` cài 9 skill thường dùng và là mặc định; profile `full` cài đủ 15 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
+Repository phân phối 16 skill. Profile `core` cài 10 skill thường dùng và là mặc định; profile `full` cài đủ 16 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
 
 ## 1. Yêu cầu
 
@@ -53,7 +53,9 @@ Target là `${CODEX_HOME:-$HOME/.codex}/skills`
 
 Target global của Antigravity IDE là `~/.gemini/config/skills`. Mở phiên mới rồi chạy `/skills`
 
-Repository có `.agents/mcp_config.json` làm workspace MCP template. Mọi server mặc định `disabled` và không chứa credential
+Repository có `.agents/mcp_config.json` làm workspace MCP template. Postman remote MCP được bật để khởi tạo OAuth; các server khác mặc định `disabled` và template không chứa credential
+
+Khi profile có `postman`, installer tự merge và bật Postman remote MCP trong `~/.gemini/config/mcp_config.json`, giữ nguyên các server khác và backup config cũ. Restart Antigravity, chạy `/mcp` rồi hoàn tất OAuth bằng account Postman
 
 ### Windows PowerShell
 
@@ -62,7 +64,7 @@ Repository có `.agents/mcp_config.json` làm workspace MCP template. Mọi serv
 .\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
 .\scripts\setup.ps1 -Agent claude -Profile core -Yes
 
-Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa` và `github-mcp-qa`
+Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa`, `github-mcp-qa` và `postman`
 
 Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa` và `mobile-qa`
 
@@ -70,7 +72,7 @@ Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `pe
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 ```
 
-Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 7 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
+Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 6 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
 ```
 
 PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
@@ -89,6 +91,14 @@ PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` k
 ```bash
 ./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
 ```
+
+Cài riêng Postman cho Antigravity:
+
+```bash
+./scripts/setup.sh --agent=antigravity --only=postman --skip-deps --yes
+```
+
+Sau lệnh này người dùng chỉ cần restart Antigravity, chạy `/mcp` và đăng nhập Postman. Dùng `--skip-mcp-setup` nếu chỉ muốn copy skill mà không thay đổi MCP config
 
 Installer chỉ expose `qa-run/SKILL.md`. `vendor`, `tests` và mọi nested `SKILL.md` không được đưa vào thư mục discovery, nên chọn `qa-run` không làm xuất hiện thêm các skill `understand-*`.
 
@@ -138,7 +148,8 @@ Hướng dẫn chi tiết:
 - GitHub Codex: `github-mcp-qa/references/codex-github-mcp-vi.md`
 - GitHub Antigravity: `github-mcp-qa/references/antigravity-github-mcp-vi.md`
 - Chrome DevTools và k6: `performance-qa/references/MCP_SETUP.md`
-- Postman: `api-contract-qa/references/POSTMAN_MCP.md`
+- Postman bootstrap và operations: `postman/SKILL.md`
+- Postman contract validation: `api-contract-qa/references/POSTMAN_MCP.md`
 - Database read-only: `data-quality-qa/references/DATABASE_MCP.md`
 
 Sau khi thêm hoặc đổi MCP, mở phiên agent mới. Codex kiểm tra bằng `codex mcp list`; Antigravity kiểm tra bằng `/mcp`. Trạng thái `configured` không tự chứng minh auth, permission hoặc tool loading đã thành công

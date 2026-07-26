@@ -28,7 +28,8 @@ has_name() {
 
 runtime_check() {
   case "$1" in
-    chrome-devtools|google-drive|playwright|postman|database-readonly) command -v npx >/dev/null 2>&1 ;;
+    chrome-devtools|google-drive|playwright|database-readonly) command -v npx >/dev/null 2>&1 ;;
+    postman) return 0 ;;
     github) [[ "$AGENT" == "antigravity" ]] || command -v codex >/dev/null 2>&1 ;;
     k6) command -v k6 >/dev/null 2>&1 ;;
   esac

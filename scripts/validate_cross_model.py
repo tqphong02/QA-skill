@@ -24,6 +24,7 @@ SKILLS = (
     "performance-qa",
     "plane-qa",
     "playwright-pom-automation",
+    "postman",
     "qa-run",
     "testcase-template",
 )
@@ -420,6 +421,8 @@ REQUIRED = {
         "-mindepth 2 -type f -name 'SKILL.md' -delete",
         'RETIRED_SKILLS=("jmeter-qa")',
         "retire_legacy_skills",
+        '"postman"',
+        "setup_selected_integrations",
     ],
     "performance-qa/SKILL.md": [
         "references/MCP_SETUP.md",
@@ -489,6 +492,18 @@ REQUIRED = {
         "https://mcp.postman.com/minimal",
         "codex mcp login postman",
         "mcp_not_loaded",
+    ],
+    "postman/SKILL.md": [
+        "scripts/bootstrap.py",
+        "Postman OAuth",
+        "read-only workspace listing",
+        "mcp_not_configured",
+    ],
+    "postman/scripts/bootstrap.py": [
+        "https://mcp.postman.com/minimal",
+        "mcpServers",
+        "read_back",
+        "backup",
     ],
     "data-quality-qa/SKILL.md": [
         "references/DATABASE_MCP.md",
@@ -639,6 +654,7 @@ def main():
         "testcase-template/scripts/gen-testcases.py",
         "testcase-template/scripts/import-api-spec.py",
         "business-analysis/scripts/render-qa.py",
+        "postman/scripts/bootstrap.py",
     ):
         path = ROOT / relative
         if path.is_file():
@@ -663,8 +679,12 @@ def main():
 
     mcp_template = json.loads((ROOT / ".agents/mcp_config.json").read_text(encoding="utf-8"))
     for name, server in mcp_template.get("mcpServers", {}).items():
-        if server.get("disabled") is not True:
-            failures.append(f".agents/mcp_config.json: {name} must default to disabled")
+        expected_disabled = name != "postman"
+        if server.get("disabled") is not expected_disabled:
+            expected = "disabled" if expected_disabled else "enabled"
+            failures.append(
+                f".agents/mcp_config.json: {name} must default to {expected}"
+            )
         serialized = json.dumps(server).lower()
         if any(token in serialized for token in ("bearer ", "github_pat_", "plane_pat_", "password")):
             failures.append(f".agents/mcp_config.json: possible credential in {name}")
