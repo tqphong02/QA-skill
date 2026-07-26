@@ -1,0 +1,4 @@
+id,name,amount,event_time,note
+DQ-001,Nguyễn An,1234.75,2026-07-26T08:30:00+07:00,updated
+DQ-002,Zoë,0.10,2026-07-26T01:30:00Z,baseline
+DQ-003,李明,99.99,2026-07-26T09:45:00+07:00,incremental

@@ -23,6 +23,14 @@ def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
         if reader.fieldnames is None:
             raise ValueError(f"CSV has no header: {path}")
         fields = [field.strip() for field in reader.fieldnames]
+        if any(not field for field in fields):
+            raise ValueError(f"CSV has an empty header: {path}")
+        duplicate_fields = sorted(field for field, count in Counter(fields).items() if count > 1)
+        if duplicate_fields:
+            raise ValueError(
+                f"CSV has duplicate headers after normalization: {', '.join(duplicate_fields)}"
+            )
+        reader.fieldnames = fields
         rows = []
         for raw in reader:
             rows.append({field: (raw.get(field) or "").strip() for field in fields})
@@ -47,6 +55,18 @@ def profile_nulls(rows: list[dict[str, str]], fields: list[str], null_values: se
 
 def sample(items: Iterable[object], limit: int) -> list[object]:
     return list(items)[:limit]
+
+
+def redact_key(value: str) -> str:
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+    return f"sha256:{digest}"
+
+
+def redact_duplicate_sample(items: Iterable[tuple[str, int]], limit: int) -> list[dict[str, object]]:
+    return [
+        {"key_hash": redact_key(key), "count": count}
+        for key, count in list(items)[:limit]
+    ]
 
 
 def reconcile(args: argparse.Namespace) -> tuple[dict[str, object], bool]:
@@ -98,6 +118,21 @@ def reconcile(args: argparse.Namespace) -> tuple[dict[str, object], bool]:
         for row in target_rows:
             target_by_key[key_for(row, keys)].append(row)
 
+        source_missing_key_count = sum(
+            1 for row in source_rows if any(not row.get(key, "").strip() for key in keys)
+        )
+        target_missing_key_count = sum(
+            1 for row in target_rows if any(not row.get(key, "").strip() for key in keys)
+        )
+        add_check(
+            "business_key_presence",
+            source_missing_key_count == 0 and target_missing_key_count == 0,
+            {
+                "source_missing_key_count": source_missing_key_count,
+                "target_missing_key_count": target_missing_key_count,
+            },
+        )
+
         source_duplicates = {key: len(rows) for key, rows in source_by_key.items() if len(rows) > 1}
         target_duplicates = {key: len(rows) for key, rows in target_by_key.items() if len(rows) > 1}
         add_check(
@@ -106,8 +141,12 @@ def reconcile(args: argparse.Namespace) -> tuple[dict[str, object], bool]:
             {
                 "source_duplicate_count": len(source_duplicates),
                 "target_duplicate_count": len(target_duplicates),
-                "source_sample": sample(sorted(source_duplicates.items()), args.sample_limit),
-                "target_sample": sample(sorted(target_duplicates.items()), args.sample_limit),
+                "source_sample": redact_duplicate_sample(
+                    sorted(source_duplicates.items()), args.sample_limit
+                ),
+                "target_sample": redact_duplicate_sample(
+                    sorted(target_duplicates.items()), args.sample_limit
+                ),
             },
         )
 
@@ -125,9 +164,11 @@ def reconcile(args: argparse.Namespace) -> tuple[dict[str, object], bool]:
             "missing_key_count": len(missing_keys),
             "unexpected_key_count": len(unexpected_keys),
             "changed_key_count": len(changed_keys),
-            "missing_key_sample": sample(missing_keys, args.sample_limit),
-            "unexpected_key_sample": sample(unexpected_keys, args.sample_limit),
-            "changed_key_sample": sample(changed_keys, args.sample_limit),
+            "missing_key_sample": [redact_key(key) for key in sample(missing_keys, args.sample_limit)],
+            "unexpected_key_sample": [
+                redact_key(key) for key in sample(unexpected_keys, args.sample_limit)
+            ],
+            "changed_key_sample": [redact_key(key) for key in sample(changed_keys, args.sample_limit)],
         }
         add_check("row_values", not missing_keys and not unexpected_keys and not changed_keys, mismatch_detail)
     else:
@@ -167,6 +208,8 @@ def main() -> int:
     parser.add_argument("--sample-limit", type=int, default=20)
     parser.add_argument("--output", help="Optional JSON report path")
     args = parser.parse_args()
+    if args.sample_limit < 0:
+        parser.error("--sample-limit must be non-negative")
     try:
         report, passed = reconcile(args)
     except (OSError, ValueError, csv.Error) as exc:
