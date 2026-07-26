@@ -32,6 +32,10 @@ SKILLS = (
 REQUIRED = {
     "AGENTS.md": [
         "Cross-model deterministic mode",
+        "URL/artifact-first dispatch",
+        "Chỉ có Plane URL hoặc ticket ID",
+        "Chỉ có Drive/Docs/Sheets/Slides URL hoặc ID",
+        "link đứng một mình không cấp quyền write",
         "PASS → `Done`",
         "FAILED → `In Progress`",
         "BLOCKED → giữ nguyên trạng thái",
@@ -50,9 +54,15 @@ REQUIRED = {
         "Chrome DevTools MCP",
         "Postman MCP",
         "mcp_not_configured",
+        "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
+        "Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`",
     ],
     "GEMINI.md": [
         "Cross-model deterministic mode",
+        "URL/artifact-first dispatch",
+        "Chỉ có Plane URL hoặc ticket ID",
+        "Chỉ có Drive/Docs/Sheets/Slides URL hoặc ID",
+        "link đứng một mình không cấp quyền write",
         "PASS → `Done`",
         "RETEST_PLUS",
         "google-drive-qa/SKILL.md",
@@ -68,8 +78,13 @@ REQUIRED = {
         "Chrome DevTools MCP",
         "Postman MCP",
         "mcp_not_configured",
+        "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
+        "Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`",
     ],
     ".github/copilot-instructions.md": [
+        "bare Plane URL/ticket ID",
+        "bare Drive/Docs/Sheets/Slides URL/ID",
+        "bare link authorizes read-only inspection only",
         "RETEST_PLUS",
         "PASS moves to `Done`",
         "Drive MCP",
@@ -83,8 +98,13 @@ REQUIRED = {
         "control comparison",
         "Chrome DevTools or k6 MCP",
         "exact failing layer",
+        "`DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
+        "Sheet execution composes Sheet Testcase Execution + Sanity + Impacted Regression",
     ],
     "MODEL-COMPATIBILITY.md": [
+        "| `<Plane URL>`",
+        "| `<Plane ticket ID>`",
+        "| `<Drive/Docs/Sheets/Slides URL>`",
         "Retest <Plane URL>",
         "Test feature này không có doc/testcase",
         "Update Google Sheet <URL>",
@@ -101,6 +121,7 @@ REQUIRED = {
         "Test mobile app trên Android và iOS",
         "Tạo JMeter JMX cho API",
         "GitHub MCP đã có skill nhưng không dùng được",
+        "Cài riêng qa-run cho intern",
     ],
     "PENTEST-RUN-GUIDE.md": [
         "Engagement contract bắt buộc",
@@ -116,27 +137,53 @@ REQUIRED = {
     ],
     "qa-run/SKILL.md": [
         "Cross-model hard gates",
+        "Workflow composition router",
+        "DISCOVERY_CORE =",
+        "RETEST_PLUS =",
+        "SHEET_EXECUTION_PLUS =",
+        "Create a ledger row for every expanded layer",
+        "Never load or expose `vendor/**/SKILL.md`",
+        "a Plane ticket URL with validation language",
         "Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX",
         "PASS → Done",
         "FAILED → In Progress",
-        "references/KNOWLEDGE_HANDOFF.md",
-        "scripts/write-business-guide.mjs",
+        "scripts/writers/write-business-guide.mjs",
         "qa-knowledge/",
         "APP_BASELINE_DISCOVERY",
         "coverage_map",
     ],
+    "qa-run/references/RETEST-PLUS.md": [
+        "RETEST_PLUS composes `Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE`",
+        "Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
+        "do not auto-run full-app baselines",
+        "scripts/writers/write-business-guide.mjs",
+    ],
+    "qa-run/references/PROCESS-GUIDE.md": [
+        "DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
+        "RETEST_PLUS",
+        "SHEET_EXECUTION_PLUS",
+        "Full-app Business Discovery is reserved for `APP_BASELINE_DISCOVERY`",
+    ],
+    "qa-run/references/TESTCASE_SHEET_SCHEMA.json": [
+        '"name": "SHEET_EXECUTION_PLUS"',
+        '"Scoped Business Discovery"',
+        '"Original Retest only for rows linked to a Plane ticket or previous failure"',
+        '"Do not comment or change Plane state without an exact ticket"',
+    ],
     "testcase-template/SKILL.md": [
         "Cross-model hard gates",
-        "Không đặt dấu `.`",
-        "Không chèn emoji/icon",
-        "chỉ dùng API mode khi user yêu cầu rõ viết testcase API",
+        "No trailing `.`",
+        "No emoji/icons",
+        "only use API mode when user explicitly requests writing API testcases",
         "references/api-testcases.md",
         "scripts/import-api-spec.py",
         "references/markdown-testcases.md",
-        "tạo `<output>.md` trước `<output>.xlsx`",
+        "create `<output>.md` before `<output>.xlsx`",
     ],
     "plane-qa/SKILL.md": [
         "Cross-model hard gates",
+        "A Plane URL or ticket ID by itself is a complete read request",
+        "plane-qa read → qa-run RETEST_PLUS → plane-qa comment/state",
         "PASS → Done",
         "FAILED → In Progress",
         "new bug → Todo",
@@ -148,6 +195,8 @@ REQUIRED = {
     ],
     "google-drive-qa/SKILL.md": [
         "Cross-model hard gates",
+        "A Drive URL or ID by itself is a complete safe-read request",
+        "bare URL authorizes read-only inspection, not mutation",
         "google-drive` MCP",
         "references/GOOGLE_CLOUD_OAUTH_SETUP.md",
         "Read the affected object back",
@@ -204,7 +253,7 @@ REQUIRED = {
         "app-business-guide.md",
         "coverage_map",
     ],
-    "qa-run/scripts/write-business-guide.mjs": [
+    "qa-run/scripts/writers/write-business-guide.mjs": [
         "BUSINESS GUIDE WRITTEN",
         "BUSINESS GUIDE PASS",
         "Latest QA run",
@@ -319,6 +368,10 @@ REQUIRED = {
         "resolve_skills_dir",
         "${CODEX_HOME:-$HOME/.codex}/skills",
         "$HOME/.gemini/config/skills",
+        "--exclude='qa-knowledge'",
+        "--exclude='vendor'",
+        "--exclude='tests'",
+        "-mindepth 2 -type f -name 'SKILL.md' -delete",
     ],
     "performance-qa/SKILL.md": [
         "references/MCP_SETUP.md",
@@ -368,6 +421,14 @@ REQUIRED = {
         "Git\\bin\\bash.exe",
         '"--agent=$Agent"',
         '"--profile=$Profile"',
+    ],
+    "SETUP-GUIDE.md": [
+        "--only=qa-run --skip-deps --yes",
+        "không làm xuất hiện thêm các skill `understand-*`",
+    ],
+    "README.md": [
+        "Cấp đúng 1 skill cho intern",
+        "--only=qa-run --skip-deps --yes",
     ],
     "scripts/doctor-codex.sh": [
         "${CODEX_HOME:-$HOME/.codex}/skills",
@@ -493,6 +554,7 @@ def main():
         "business-analysis/examples/sample-analysis.json",
         "business-analysis/package.json",
         ".agents/mcp_config.json",
+        "qa-run/references/TESTCASE_SHEET_SCHEMA.json",
     ):
         path = ROOT / relative
         try:
@@ -510,7 +572,12 @@ def main():
 
     forbidden_paths = ("/Users/" + "user", "/Users/" + "<user>")
     for path in ROOT.rglob("*"):
-        if not path.is_file() or ".git" in path.parts or "node_modules" in path.parts:
+        if (
+            not path.is_file()
+            or ".git" in path.parts
+            or "node_modules" in path.parts
+            or ("qa-run" in path.parts and "qa-knowledge" in path.parts)
+        ):
             continue
         if path == Path(__file__).resolve():
             continue
@@ -526,6 +593,11 @@ def main():
         text = (ROOT / skill / "SKILL.md").read_text(encoding="utf-8")
         if "Use when Codex" in text or "Codex needs" in text or "Codex receives" in text:
             failures.append(f"{skill}/SKILL.md: description is not agent-neutral")
+        frontmatter = text.split("---", 2)[1] if text.startswith("---") else ""
+        if "do not require the skill name" not in frontmatter:
+            failures.append(
+                f"{skill}/SKILL.md: description must say the user need not name the skill"
+            )
 
     if failures:
         print("CROSS-MODEL CONTRACT FAILED")

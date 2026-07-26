@@ -1,6 +1,6 @@
 ---
 name: mobile-qa
-description: Plan and execute Android and iOS QA across apps, simulators, emulators, and real devices with Appium, platform-native tooling, device matrices, gestures, permissions, interruptions, accessibility, networking, lifecycle, and evidence. Use when an AI coding agent receives an APK, AAB, IPA, mobile build, Appium request, Android/iOS bug, or real-device regression scope.
+description: Plan and execute Android/iOS QA across apps, simulators, emulators, and real devices with Appium and native tooling, covering device matrices, gestures, permissions, interruptions, accessibility, networking, lifecycle, and evidence. Trigger on APK, AAB, IPA, mobile build, Appium, Android/iOS bug, emulator/simulator, real device, or mobile regression; do not require the skill name. Select the device matrix and lifecycle scope before execution.
 ---
 
 # Mobile QA

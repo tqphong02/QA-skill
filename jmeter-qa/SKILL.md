@@ -1,6 +1,6 @@
 ---
 name: jmeter-qa
-description: Generate, validate, import, and run portable Apache JMeter test plans for HTTP and API performance testing. Use when an AI coding agent needs to create a `.jmx` project from endpoint flows, curl-like requests, JSON configuration, CSV test data, assertions, token extraction, thread groups, ramp-up, duration, or thresholds so the user can open it in JMeter GUI and execute it in GUI or non-GUI mode.
+description: Generate, validate, import, and run portable Apache JMeter `.jmx` plans for HTTP/API performance testing. Trigger on JMeter, `.jmx`, endpoint flows, curl-like requests, CSV data, assertions, token extraction, thread groups, ramp-up, duration, or thresholds; do not require the skill name. A supplied `.jmx` alone is enough to load this skill for safe inspection/validation. Use performance-qa for the workload contract before executing load.
 ---
 
 # JMeter QA

@@ -1,6 +1,6 @@
 ---
 name: performance-qa
-description: Design and execute safe web, API, service, and data-pipeline performance baselines; define SLIs and thresholds; analyze frontend traces and Core Web Vitals; generate k6 or JMeter workloads; identify bottlenecks; and produce reproducible performance evidence. Use for latency, throughput, concurrency, load, stress, spike, soak, scalability, performance regression, Chrome DevTools MCP, or k6 MCP installation and diagnosis.
+description: Design and execute safe web, API, service, and data-pipeline performance baselines; define SLIs/thresholds; analyze frontend traces and Core Web Vitals; generate k6 or JMeter workloads; identify bottlenecks; and produce evidence. Trigger on latency, throughput, concurrency, load, stress, spike, soak, scalability, performance regression, bottleneck, Chrome DevTools MCP, or k6 MCP; do not require the skill name. Resolve the workload contract and stop conditions before load.
 ---
 
 # Performance QA

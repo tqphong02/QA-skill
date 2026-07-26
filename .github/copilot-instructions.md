@@ -4,8 +4,15 @@ Read [`../AGENTS.md`](../AGENTS.md) as the canonical router and cross-model exec
 
 Hard requirements:
 
+- Route from raw URLs, IDs, filenames, extensions, and task verbs before asking for clarification; the user never has to name a skill
+- A bare Plane URL/ticket ID means `plane-qa` doctor + read; a bare Drive/Docs/Sheets/Slides URL/ID means `google-drive-qa` resolve + read; a bare GitHub resource URL means `github-mcp-qa` read-only inspection
+- A bare link authorizes read-only inspection only; infer external writes only from explicit mutation language
+- After routing, start the safe read/doctor action instead of merely describing the skill or asking the user to invoke `$skill-name`
 - Load the exact matched `SKILL.md` before searching project files
 - Plane ticket retest order is `plane-qa doctor/read → qa-run RETEST_PLUS → plane-qa comment/state`
+- `DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
+- RETEST_PLUS composes Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`
+- Sheet execution composes Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; add Original Retest and Plane actions only for a linked ticket or previous failure
 - RETEST_PLUS includes Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, and UI/UX
 - General app exploration uses `APP_BASELINE_DISCOVERY` and writes `qa-knowledge/app-business-guide.md` with a `coverage_map`; ticket retest reads it but does not repeat the full baseline
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`

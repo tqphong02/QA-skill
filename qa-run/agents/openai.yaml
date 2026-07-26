@@ -1,4 +1,4 @@
 interface:
   display_name: "QA Run"
   short_description: "Chạy browser QA và lưu business knowledge"
-  default_prompt: "Use $qa-run to execute the requested browser QA scope and update its business guide."
+  default_prompt: "Use $qa-run as one public skill with composed layers. Expand DISCOVERY_CORE for exploratory work, RETEST_PLUS for Plane retests, or SHEET_EXECUTION_PLUS for Sheet runs, then complete every required ledger row."

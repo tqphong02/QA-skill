@@ -1,6 +1,6 @@
 ---
 name: accessibility-qa
-description: Audit web accessibility with WCAG 2.2, axe-core, Playwright, keyboard-only navigation, focus management, zoom, reflow, contrast, semantics, forms, dynamic content, and screen-reader checks. Use when an AI coding agent needs an accessibility baseline, regression, evidence, remediation report, or accessible user-flow verification for a web application.
+description: Audit web accessibility with WCAG 2.2, axe-core, Playwright, keyboard-only navigation, focus, zoom, reflow, contrast, semantics, forms, dynamic content, and screen readers. Trigger on accessibility, a11y, WCAG, axe, keyboard, focus, screen reader, contrast, accessible-flow verification, accessibility regression, or remediation reporting; do not require the skill name. Combine automated scanning with manual interaction.
 ---
 
 # Accessibility QA

@@ -64,6 +64,9 @@ cd QA-skill
 # Cài đủ 16 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 
+# Cấp đúng 1 skill cho intern, không kèm nested/vendor skill
+./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
+
 # 3. Export Plane API key trước khi mở agent
 export PLANE_API_KEY="plane_pat_xxx"
 

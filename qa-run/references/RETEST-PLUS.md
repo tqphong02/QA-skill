@@ -2,7 +2,9 @@
 
 > Read this file when: user provides a ticket URL or requests a retest. This is the most common case: "Dev says fix is done, please retest this ticket."
 
-RETEST_PLUS uses app/feature guides to reduce redundant exploration and does not auto-run full-app baselines. Only expand discovery when the ticket hits an area lacking knowledge or with a stale guide.
+RETEST_PLUS composes `Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE`, where `DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`.
+
+Use app/feature guides to reduce redundant exploration and do not auto-run full-app baselines. Scope Business Discovery to the ticket and impacted dependencies; only expand when the ticket hits an area lacking knowledge or with a stale guide.
 
 ## Step 0 — Confirm scope
 - If user explicitly states "retest #X" / "verify fix #X" → straight to Step 1
@@ -18,6 +20,7 @@ RETEST_PLUS uses app/feature guides to reduce redundant exploration and does not
 - If guide is missing or stale, only open discovery enough to create/refresh feature guide for the ticket scope, do not rescan full app
 - Extract test contract including role, state transition, validation, side effect, API/network and impacted dependency before the first click
 - If the business flow cannot be described in 1-2 clear sentences, stop and add context before verifying
+- Record the Business Discovery foundation separately from the six RETEST_PLUS verdict rows; it must identify the scoped flow, roles, states, rules and impacted dependencies before execution
 
 ## Step 2 — Extract AC
 - Main AC (happy path): "When user does X, system must do Y" -> case MUST PASS
@@ -42,6 +45,8 @@ For each AC:
 - Ad-hoc includes adjacent controls, cancel/reopen, double action, appropriate navigation/session
 - UI/UX includes overlap, clipping, overflow, modal/dropdown/popup, viewport, loading/error/focus
 
+All six rows are required even though Exploratory, Ad-hoc and UI/UX are also part of `DISCOVERY_CORE`. Reuse the same scoped business context rather than duplicating discovery work.
+
 Adjacent area check in the above layers:
 - Click related buttons/tabs/lists -> snapshot -> any new bugs?
 - Create 1 record via different flow (e.g. import file instead of form) -> share validation?
@@ -63,7 +68,7 @@ Adjacent area check in the above layers:
 
 - Write `FINDINGS.md` in standard format (`report/REPORT-TEMPLATE.md`)
 - Merge confirmed knowledge according to [KNOWLEDGE_HANDOFF.md](KNOWLEDGE_HANDOFF.md); prioritize updating `knowledge-index.json` and shards
-- Run `node scripts/write-business-guide.mjs --check <guide.md>` and read guide again before handoff
+- Run `node scripts/writers/write-business-guide.mjs --check <guide.md>` and read guide again before handoff
 - If FAILED -> comment evidence and drag original ticket to **In Progress**
 - If PASS -> comment evidence and drag original ticket to **Done**
 - If BLOCKED -> keep state unchanged

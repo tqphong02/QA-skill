@@ -1,6 +1,6 @@
 ---
 name: business-analysis
-description: Analyze business requirements and system documents as a senior fullstack QA/QC tester, after converting non-Markdown sources through doc-to-md. Use when the user wants a connected system flow, editable XMind business map, prerequisites, related functions, requirement gap analysis, clarification questions, Q&A Markdown, or Q&A Excel before testcase design or browser testing. Produces a Vietnamese business flow with real XMind relationship arrows and matching Q&A deliverables from one hidden validated JSON source
+description: Analyze BRD, SRS, FRS, requirements, and system documents as a senior fullstack QA/QC tester after local non-Markdown sources pass through doc-to-md. Trigger on business flow, requirement analysis, editable XMind map, prerequisites, related functions, ambiguity or gap analysis, clarification questions, Q&A Markdown, or Q&A Excel; do not require the skill name. For Drive URLs, use google-drive-qa to access the source first. Produce the Vietnamese XMind and matching Q&A deliverables from one validated JSON source before testcase design or browser testing
 ---
 
 # Business Analysis

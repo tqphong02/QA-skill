@@ -331,7 +331,8 @@ copy_skill() {
   # Detect Windows-style src to make sure $dst exists as a dir already
   # rsync if available (macOS có sẵn, Linux thường có), fallback cp
   if command -v rsync >/dev/null 2>&1; then
-    rsync -a --exclude='node_modules' --exclude='evidence' --exclude='.env' \
+    rsync -a --exclude='node_modules' --exclude='evidence' --exclude='qa-knowledge' \
+      --exclude='vendor' --exclude='tests' --exclude='.env' \
       --exclude='auth.json' --exclude='.DS_Store' --exclude='__pycache__' \
       --exclude='*.pyc' --exclude='dist' --exclude='build' \
       --exclude='*.bak' --exclude='*.tmp' \
@@ -341,11 +342,15 @@ copy_skill() {
     # since 'cp -R src/.' is non-POSIX; we use 'cp -R src dst').
     cp -R "$src"/* "$dst"/ 2>/dev/null || cp -R "$src" "$dst"
     # Cleanup excludes (best-effort)
-    for exclude in node_modules evidence '.env' auth.json '.DS_Store' __pycache__; do
+    for exclude in node_modules evidence qa-knowledge vendor tests '.env' auth.json '.DS_Store' __pycache__; do
       rm -rf "$dst/$exclude" 2>/dev/null || true
     done
     find "$dst" -name '*.pyc' -delete 2>/dev/null || true
   fi
+
+  # Only the selected top-level skill is public. Bundled examples, templates or
+  # third-party sources must not register additional user-selectable skills.
+  find "$dst" -mindepth 2 -type f -name 'SKILL.md' -delete 2>/dev/null || true
   log_ok "$1 → $dst"
 }
 
@@ -595,6 +600,15 @@ print_plan() {
 # ==== Summary ====
 print_summary() {
   local skills=("$@")
+  selected_skill() {
+    local expected="$1"
+    local installed
+    for installed in "${skills[@]}"; do
+      [[ "$installed" == "$expected" ]] && return 0
+    done
+    return 1
+  }
+
   printf '\n%s%s=== Setup complete ===%s\n\n' "$C_BOLD" "$C_OK" "$C_RST"
   printf '  %-30s %s\n' "Skill" "Path"
   printf '  %-30s %s\n' "-----" "----"
@@ -608,19 +622,29 @@ print_summary() {
     fi
     printf '  %-30s %s [%s]\n' "$skill" "$path" "$status"
   done
-  cat <<EOF
+  printf '\nNext steps:\n'
+  local next_step=1
+  printf '  %d. Mở %s mới và kiểm tra %d skill đã chọn\n' "$next_step" "$TARGET_AGENT" "${#skills[@]}"
+  next_step=$((next_step + 1))
 
-Next steps:
-  1. Mở $TARGET_AGENT mới và kiểm tra ${#skills[@]} skill đã chọn
-  2. Test doc-to-md:      $SKILLS_DIR/doc-to-md/scripts/convert.sh <file.pdf>
-  3. Test qa-run:         cd <project>/qa && node $SKILLS_DIR/qa-run/scripts/login.mjs
-  4. Agent doctor:        bash $REPO_DIR/scripts/doctor-agent.sh --agent=$TARGET_AGENT
-EOF
+  if selected_skill "doc-to-md"; then
+    printf '  %d. Test doc-to-md:      %s/doc-to-md/scripts/convert.sh <file.pdf>\n' "$next_step" "$SKILLS_DIR"
+    next_step=$((next_step + 1))
+  fi
+  if selected_skill "qa-run"; then
+    printf '  %d. Test qa-run:         cd <project>/qa && node %s/qa-run/scripts/login.mjs\n' "$next_step" "$SKILLS_DIR"
+    next_step=$((next_step + 1))
+  fi
 
-  if [[ "$TARGET_AGENT" == "codex" || "$TARGET_AGENT" == "antigravity" ]]; then
-    printf '  5. QA MCP stack:        bash %s/github-mcp-qa/scripts/doctor-stack.sh --agent=%s\n' "$SKILLS_DIR" "$TARGET_AGENT"
-  else
-    printf '%s\n' '  5. MCP:                 cấu hình và kiểm tra bằng MCP manager của Claude'
+  printf '  %d. Agent doctor:        bash %s/scripts/doctor-agent.sh --agent=%s\n' "$next_step" "$REPO_DIR" "$TARGET_AGENT"
+  next_step=$((next_step + 1))
+
+  if selected_skill "github-mcp-qa"; then
+    if [[ "$TARGET_AGENT" == "codex" || "$TARGET_AGENT" == "antigravity" ]]; then
+      printf '  %d. QA MCP stack:        bash %s/github-mcp-qa/scripts/doctor-stack.sh --agent=%s\n' "$next_step" "$SKILLS_DIR" "$TARGET_AGENT"
+    else
+      printf '  %d. MCP:                 cấu hình và kiểm tra bằng MCP manager của Claude\n' "$next_step"
+    fi
   fi
 
   cat <<EOF

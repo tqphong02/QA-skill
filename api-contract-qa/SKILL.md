@@ -1,6 +1,6 @@
 ---
 name: api-contract-qa
-description: Validate REST, OpenAPI, Swagger, Postman, GraphQL, gRPC, and webhook contracts against running implementations; check schema, status, headers, authentication, pagination, idempotency, compatibility, negative behavior, and evidence. Use when an AI coding agent needs API contract testing, implementation-versus-spec verification, breaking-change review, deterministic API regression, API quality reporting, or Postman MCP installation and diagnosis rather than only writing testcase documents.
+description: Validate REST, OpenAPI, Swagger, Postman, GraphQL, gRPC, and webhook contracts against implementations, including schema, status, headers, auth, pagination, idempotency, compatibility, negative behavior, and evidence. Trigger on an API spec URL/file, swagger.json, openapi.yaml, Postman collection/MCP, GraphQL schema, proto, webhook contract, contract test, implementation-versus-spec check, or breaking-change review; do not require the skill name. Route explicit requests to write testcase documents to testcase-template instead.
 ---
 
 # API Contract QA

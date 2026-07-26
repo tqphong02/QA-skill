@@ -1,6 +1,6 @@
 ---
 name: testcase-template
-description: Generate or review structured testcase documents with an AI-readable Markdown testcase companion created before the Excel workbook. Keep Markdown and Excel testcase IDs/content synchronized from one JSON source. Use the existing UI and functional flow by default. Enable the optional API flow only when explicitly requested. Not for exploratory testing notes or bug reports.
+description: Generate, edit, or review structured testcase documents with complete Markdown created before Excel and synchronized IDs/content from one JSON source. Trigger on write/create/review testcase, test case, test scenario, Scenario ID/Name, testcase Excel/CSV/Markdown, or explicit API testcase requests for endpoints, OpenAPI/Swagger, Postman, or curl; do not require the skill name. Use UI/functional flow by default and enable API mode only when explicitly requested. Not for exploratory notes or bug reports.
 ---
 
 # Test Case Template
@@ -267,4 +267,3 @@ See `@references/template-schema.md` for details on the 4 sheets (Cover, Test ca
 - [references/plane-integration.md](references/plane-integration.md) — fetch AC from Plane API
 - Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)
 - Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)
-

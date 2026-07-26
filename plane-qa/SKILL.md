@@ -1,6 +1,6 @@
 ---
 name: plane-qa
-description: Manage and read Plane QA work items across multiple workspaces, detect workspace/project/ticket context from Plane URLs, validate the matching API key, log bug tickets, post PASS, FAILED, or BLOCKED retest comments, embed screenshot evidence, and write daily or test reports. Use when the user mentions Plane, supplies a Plane workspace or ticket URL, references a ticket such as PROJ-102, logs or updates a bug, comments a retest result, pastes evidence images, or reads a QA report. Use the bundled doctor before assuming an expired token or asking for login credentials.
+description: Manage and read Plane QA tickets, bugs, comments, evidence, states, and reports across workspaces. Trigger whenever the user mentions Plane, provides any Plane URL or ticket ID such as PROJ-102, asks to retest or verify a ticket, log or update a bug, post PASS/FAILED/BLOCKED, or read a QA report; do not require the skill name. A Plane URL or ticket ID by itself is a complete read request; parse it, run the bundled doctor, and read the ticket. For retest, route plane-qa read → qa-run RETEST_PLUS → plane-qa comment/state.
 ---
 
 # Plane QA
@@ -13,24 +13,29 @@ If `ACCOUNT-PROFILE.md` exists beside this file, read it before choosing a defau
 
 Use these gates literally on every model. Do not compress, reorder, or infer around them:
 
-1. Resolve the exact target from the supplied URL; only use configured defaults when no URL was supplied
-2. Run `scripts/doctor.sh` before every live read or write
-3. Read the matching format reference before drafting content
-4. Run the canonical script in dry-run mode when it supports `--dry-run`
-5. Perform the explicitly requested write
-6. Read back the ticket or comment and verify workspace, ticket reference, content, evidence count, and state
+1. Treat a bare Plane URL or ticket ID as an implicit request to inspect/read that ticket; do not ask which skill to use or stop after explaining the skill
+2. Resolve the exact target from the supplied URL; only use configured defaults when no URL was supplied
+3. Run `scripts/doctor.sh` before every live read or write
+4. Read the matching format reference before drafting content
+5. Run the canonical script in dry-run mode when it supports `--dry-run`
+6. Perform only the explicitly requested write; a bare URL authorizes read-only inspection, not mutation
+7. Read back the ticket or comment and verify workspace, ticket reference, content, evidence count, and state
 
 Use this state map without interpretation: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`. If a named state cannot be resolved, stop and report `BLOCKED`; never choose a similar-looking state.
 
 ## Route the request
 
-1. For any live Plane read or write, run `bash scripts/doctor.sh --url '<Plane URL>'` when the user supplied a URL. Otherwise run `bash scripts/doctor.sh`.
-2. Read [references/MULTI_WORKSPACE.md](references/MULTI_WORKSPACE.md) when the user has multiple workspaces or supplies a Plane URL.
-3. For reading a ticket or report, read [references/READING_PLANE.md](references/READING_PLANE.md) and preserve the source section order.
-4. For creating or rewriting a bug, read [BUG_FORMAT.md](BUG_FORMAT.md) completely before drafting or posting.
-5. For retest comments, PASS/FAILED/BLOCKED verdicts, or inline evidence, read [references/COMMENT_FORMAT.md](references/COMMENT_FORMAT.md) completely.
-6. For daily or cycle reports, read [REPORT_FORMAT.md](REPORT_FORMAT.md) completely. Do not apply the bug template to a report.
-7. Treat create, update, comment, assign, archive, and delete operations as external writes. Show the final payload or a dry run and obtain confirmation before executing unless the user explicitly asked to perform that exact write.
+1. Classify before acting:
+   - Plane URL or ticket ID only → doctor and read the exact ticket
+   - Plane URL or ticket ID plus retest, re-test, verify, kiểm tra lại, PASS, FAILED, or BLOCKED → doctor/read, then `qa-run` RETEST_PLUS, then return here for comment/state
+   - Log/create/update/comment/state/report language → the matching explicit Plane operation
+2. For any live Plane read or write, run `bash scripts/doctor.sh --url '<Plane URL>'` when the user supplied a URL. Otherwise run `bash scripts/doctor.sh`.
+3. Read [references/MULTI_WORKSPACE.md](references/MULTI_WORKSPACE.md) when the user has multiple workspaces or supplies a Plane URL.
+4. For reading a ticket or report, read [references/READING_PLANE.md](references/READING_PLANE.md) and preserve the source section order.
+5. For creating or rewriting a bug, read [BUG_FORMAT.md](BUG_FORMAT.md) completely before drafting or posting.
+6. For retest comments, PASS/FAILED/BLOCKED verdicts, or inline evidence, read [references/COMMENT_FORMAT.md](references/COMMENT_FORMAT.md) completely.
+7. For daily or cycle reports, read [REPORT_FORMAT.md](REPORT_FORMAT.md) completely. Do not apply the bug template to a report.
+8. Treat create, update, comment, assign, archive, and delete operations as external writes. Show the final payload or a dry run and obtain confirmation before executing unless the user explicitly asked to perform that exact write.
 
 ## Authentication
 

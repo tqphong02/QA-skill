@@ -84,6 +84,14 @@ PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` k
   --yes
 ```
 
+Để intern chỉ nhận đúng một skill:
+
+```bash
+./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
+```
+
+Installer chỉ expose `qa-run/SKILL.md`. `vendor`, `tests` và mọi nested `SKILL.md` không được đưa vào thư mục discovery, nên chọn `qa-run` không làm xuất hiện thêm các skill `understand-*`.
+
 ### Dry-run
 
 ```bash

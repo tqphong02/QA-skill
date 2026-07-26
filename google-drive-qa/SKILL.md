@@ -1,6 +1,6 @@
 ---
 name: google-drive-qa
-description: Perform full CRUD on Google Drive files and folders, Google Docs, Sheets, Slides, permissions, QA evidence, and reports. Use when the user mentions Google Drive, a drive.google.com link, a Drive folder or file ID, wants to create, read, search, update, rename, move, copy, upload, download, share, or delete Drive content, or when a previous Drive action failed because OAuth or MCP access expired. Check the MCP and authentication route before searching elsewhere.
+description: Perform CRUD on Google Drive files/folders, Docs, Sheets, Slides, permissions, QA evidence, and reports. Trigger whenever the user mentions Drive or provides a drive.google.com or docs.google.com URL, file/folder ID, Sheet/Doc/Slide, or asks to create, read, search, update, rename, move, copy, upload, download, share, or delete Drive content; do not require the skill name. A Drive URL or ID by itself is a complete safe-read request; resolve it through the Drive MCP and read its metadata/content. Never infer a write from a bare link.
 ---
 
 # Google Drive QA
@@ -13,28 +13,34 @@ If `ACCOUNT-PROFILE.md` exists beside this file, read it before selecting the Go
 
 Use these gates literally on every model:
 
-1. Parse an exact Drive URL or ID before searching by name
-2. Read `references/ROUTING.md` and `references/CRUD.md`
-3. Use the `google-drive` MCP for private Drive and native Docs, Sheets, or Slides CRUD
-4. Resolve one exact object before a write; stop for ambiguity instead of selecting the first search result
-5. Perform only the requested CRUD operation
-6. Read the affected object back and verify its ID, name, parent/location, and changed content or permission
+1. Treat a bare Drive, Docs, Sheets, or Slides URL/ID as an implicit request to resolve and read that exact object; do not ask which skill to use or stop after explaining the skill
+2. Parse an exact Drive URL or ID before searching by name
+3. Read `references/ROUTING.md` and `references/CRUD.md`
+4. Use the `google-drive` MCP for private Drive and native Docs, Sheets, or Slides CRUD
+5. Resolve one exact object before a write; stop for ambiguity instead of selecting the first search result
+6. Perform only the requested CRUD operation; a bare URL authorizes read-only inspection, not mutation
+7. Read the affected object back and verify its ID, name, parent/location, and changed content or permission
 
 Never substitute web search or a local same-named file for private Drive content. Never test deletion on real data.
 
 ## Route the request
 
-1. Read [references/ROUTING.md](references/ROUTING.md).
-2. Read [references/CRUD.md](references/CRUD.md) for every Drive create, read, update, delete, permission, or native Google file request.
-3. For private Drive access, use the configured `google-drive` MCP or the pre-built Python CLI scripts in `scripts/drive_crud.py`.
-4. For Python CLI operations without MCP, run `python3 scripts/drive_crud.py <C|R|U|D> [options]`.
+1. Classify before acting:
+   - Drive/Docs/Sheets/Slides URL or ID only → resolve and read metadata plus accessible content
+   - URL/ID plus read/summarize/analyze language → perform that read-only operation
+   - URL/ID plus explicit create/update/rename/move/copy/upload/share/delete language → perform only that mutation after exact-target checks
+   - Google Sheet URL plus execute/run testcase language → use `qa-run` `SHEET_TESTCASE_EXECUTION`, with this skill handling Sheet CRUD
+2. Read [references/ROUTING.md](references/ROUTING.md).
+3. Read [references/CRUD.md](references/CRUD.md) for every Drive create, read, update, delete, permission, or native Google file request.
+4. For private Drive access, use the configured `google-drive` MCP or the pre-built Python CLI scripts in `scripts/drive_crud.py`.
+5. For Python CLI operations without MCP, run `python3 scripts/drive_crud.py <C|R|U|D> [options]`.
    - Read (`R`): `python3 scripts/drive_read.py <FILE_ID_OR_URL>` (exports & reads Docs, Sheets, Word, Excel, PDF directly from Cloud).
    - Create (`C`): `python3 scripts/drive_create.py --file <path> --folder-id <id> [--convert]` (uploads or creates items; `--convert` converts Word/Excel to Doc/Sheet).
    - Update (`U`): `python3 scripts/drive_update.py <FILE_ID_OR_URL> [--name <name>] [--move-to <folder_id>]`.
    - Delete (`D`): `python3 scripts/drive_delete.py <FILE_ID_OR_URL> [--permanent] [--yes]`.
-5. For first-time Google Cloud and OAuth setup, read [references/GOOGLE_CLOUD_OAUTH_SETUP.md](references/GOOGLE_CLOUD_OAUTH_SETUP.md).
-6. For an authentication error, read [references/AUTH.md](references/AUTH.md) and report the exact failing layer: MCP unavailable, OAuth credential missing, access token expired, refresh revoked, scope insufficient, or object permission denied.
-7. Read [references/REPORTS.md](references/REPORTS.md) before summarizing or uploading QA reports.
+6. For first-time Google Cloud and OAuth setup, read [references/GOOGLE_CLOUD_OAUTH_SETUP.md](references/GOOGLE_CLOUD_OAUTH_SETUP.md).
+7. For an authentication error, read [references/AUTH.md](references/AUTH.md) and report the exact failing layer: MCP unavailable, OAuth credential missing, access token expired, refresh revoked, scope insufficient, or object permission denied.
+8. Read [references/REPORTS.md](references/REPORTS.md) before summarizing or uploading QA reports.
 
 ## MCP rules
 

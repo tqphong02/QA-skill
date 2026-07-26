@@ -1,12 +1,16 @@
 ---
 trigger: model_decision
-description: Use when planning or running a QA cycle, choosing techniques, or signing off a release.
+description: Plane ticket retest triggers plane-qa read then RETEST_PLUS; use for browser QA, sanity, regression, exploratory and UI UX
 ---
 
 # QA Run
 
 Load the full skill body when the trigger matches:
 - Skill file: [`qa-run/SKILL.md`](../../qa-run/SKILL.md)
+
+Do not require the user to name this skill. Retest, re-test, verify ticket, or a Plane URL with validation language triggers RETEST_PLUS
+
+Compose internal layers: DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX; RETEST_PLUS and SHEET_EXECUTION_PLUS add their required layers on top
 
 ## Khi nào áp dụng
 - Lên kế hoạch / thực thi chu trình QA

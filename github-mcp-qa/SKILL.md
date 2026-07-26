@@ -1,6 +1,6 @@
 ---
 name: github-mcp-qa
-description: Configure and operate GitHub's official MCP server for repository, Git, pull request, issue, Actions CI/CD, code-quality, and security QA workflows across Codex, Antigravity, and Claude. Use when an AI coding agent needs to install or diagnose GitHub MCP, authenticate with OAuth or PAT, switch personal/company accounts, inspect or change GitHub resources, create or monitor CI pipelines, or distinguish GitHub API authentication from local Git SSH authentication.
+description: Configure and operate GitHub's official MCP server for repositories, pull requests, issues, Actions CI/CD, code-quality, and security QA across supported agents. Trigger on GitHub, github.com repository/PR/issue/Actions URLs, GitHub MCP, OAuth/PAT, account switching, repository API reads/writes, or CI monitoring; do not require the skill name. A GitHub URL by itself is a safe-read request to identify and inspect that exact resource. Keep GitHub API authentication separate from local Git SSH authentication and never infer a mutation from a bare URL.
 ---
 
 # GitHub MCP QA

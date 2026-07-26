@@ -16,17 +16,20 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 
 | Prompt tối thiểu | Routing bắt buộc | Kết quả quyết định bắt buộc |
 |---|---|---|
-| `Retest <Plane URL>` | plane-qa → qa-run → plane-qa | Doctor đúng workspace, chạy đủ RETEST_PLUS, comment ngắn, state theo verdict |
+| `<Plane URL>` | plane-qa | Không hỏi user chọn skill; parse URL, chạy doctor và đọc đúng ticket |
+| `<Plane ticket ID>` | plane-qa | Không hỏi user chọn skill; chạy doctor và đọc đúng ticket |
+| `Retest <Plane URL>` | plane-qa → qa-run → plane-qa | Doctor đúng workspace, chạy Scoped Business Discovery rồi đủ RETEST_PLUS, comment ngắn, state theo verdict |
 | `Retest failed ticket ABC-1` | plane-qa + qa-run | FAILED, comment Actual/Expected, kéo `In Progress` |
 | `Retest pass ticket ABC-1` | plane-qa + qa-run | PASS, comment Result/Conclusion, kéo `Done` |
-| `Test feature này không có doc/testcase` | qa-run | Đọc guide khớp feature nếu có, vẫn chạy exploratory/ad-hoc/UI/UX, cập nhật business guide sau run |
-| `Chạy execution testcase toàn bộ từ <Sheet URL>` | qa-run + google-drive-qa | Đọc app-flow-map.json hiểu business logic, chạy execute-sheet.mjs --parallel --workers 4 thực thi song song UI/UX vả Functional, batch update kết quả Pass/Fail/N/A/Untest, Priority, Note chuẩn lên Sheet |
+| `Test feature này không có doc/testcase` | qa-run | Chạy DISCOVERY_CORE gồm Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX, cập nhật business guide sau run |
+| `Chạy execution testcase toàn bộ từ <Sheet URL>` | qa-run + google-drive-qa | Chạy SHEET_EXECUTION_PLUS gồm Sheet cases + Sanity + Impacted Regression + DISCOVERY_CORE, dùng `execute-sheet.mjs --parallel --workers 4`, batch update Result/Priority/Note; chỉ thêm Original Retest/Plane action cho row có ticket hoặc previous failure |
 | `Khám phá tổng thể web app này` | qa-run | Chạy APP_BASELINE_DISCOVERY, tạo app-business-guide.md với coverage_map và feature guide cho vùng đã khám phá sâu |
 | `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
 | `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |
 | `Đọc BRD này, vẽ business flow XMind và tạo Q&A` | doc-to-md → business-analysis | Convert Markdown trước, review đủ 18 vùng, sinh `.xmind`, Q&A `.md` và `.xlsx` có ID khớp |
 | `Pentest target này, tôi có quyền kiểm tra` | pentest-run | Tạo engagement contract, chạy doctor, passive trước, xin duyệt trước Level 2, chỉ confirm finding có control comparison |
 | `Update Google Sheet <URL>` | google-drive-qa | Resolve exact ID, dùng Drive MCP, update đúng range, read-back |
+| `<Drive/Docs/Sheets/Slides URL>` | google-drive-qa | Không hỏi user chọn skill; resolve exact ID và đọc metadata/nội dung, không tự write |
 | `Log bug mới lên Plane <URL>` | plane-qa | Doctor URL workspace, dry-run, tạo ở `Todo`, read-back |
 | `Kết nối Chrome DevTools MCP` | performance-qa | Dùng package chính chủ, isolated profile, doctor rồi smoke test read-only |
 | `Kết nối k6 MCP và chạy load` | performance-qa | Cấu hình MCP nhưng vẫn bắt đầu một user; load cần contract, approval và abort condition |
@@ -39,6 +42,7 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `GitHub MCP đã có skill nhưng không dùng được` | github-mcp-qa | Chạy doctor và phân biệt skill, config, auth, loaded tools và repository permission |
 | `Cài skill core cho Codex` | installer | Chạy `setup.sh --agent=codex --profile=core`, cài 9 skill thường dùng rồi mở phiên mới |
 | `Cài toàn bộ skill cho Antigravity` | installer | Chạy `setup.sh --agent=antigravity --profile=full`, kiểm tra skill và MCP, không ghi credential vào repo |
+| `Cài riêng qa-run cho intern` | installer | Chạy `setup.sh --agent=<host> --only=qa-run`; package chỉ có 1 `SKILL.md`, không có vendor, tests hoặc nested skill |
 | `Cài skill trên Windows` | installer | Dùng `setup.ps1 -Agent <host> -Profile core`, Git Bash hoặc WSL và đúng home directory của host |
 
 ## Pass criteria cho một model

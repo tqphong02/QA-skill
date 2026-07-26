@@ -2,6 +2,14 @@
 
 > Read this file when: executing any QA run that requires understanding the step-by-step process, MCP Playwright commands, speed optimization patterns, or UI/UX audit workflow.
 
+## Shared composition
+
+`DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`
+
+- `Scoped Business Discovery` reads existing knowledge, verifies the current flow/roles/states/rules, fills only missing or stale facts, and writes the confirmed delta after the run
+- `RETEST_PLUS` and `SHEET_EXECUTION_PLUS` both reuse `DISCOVERY_CORE`; do not rerun the same discovery separately for each layer
+- Full-app Business Discovery is reserved for `APP_BASELINE_DISCOVERY`; ticket and Sheet runs use the affected feature and dependency scope
+
 ## Step 1 — Understand context first (Principle #1)
 
 "Smart" = **no blind clicking**. AI must read & understand logic first, then poke. MANDATORY order:

@@ -1,6 +1,6 @@
 ---
 name: ai-quality-qa
-description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, extraction, and generative AI features for correctness, groundedness, safety, structured-output validity, regression, latency, reliability, and cost. Use when an AI coding agent needs to design golden datasets, run repeatable AI evaluations, compare prompts or models, inspect LangSmith-style traces, or produce evidence for OneBrain AI behavior.
+description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, extraction, and generative AI features for correctness, groundedness, safety, structured-output validity, regression, latency, reliability, and cost. Trigger on AI quality, prompt/model comparison, hallucination, RAG grounding, agent/tool behavior, golden dataset, repeatable evals, traces, or AI regression evidence; do not require the skill name. Define the golden dataset and metrics before running an evaluation.
 ---
 
 # AI Quality QA

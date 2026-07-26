@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Plan or execute browser QA on an existing project, including app baseline discovery to learn business flows and logic, ticket retest, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence capture, release sign-off, and persistent business-flow knowledge handoff. Read the app guide then matching feature guide before testing and update affected guides after every run. Every ticket retest automatically runs RETEST_PLUS. Not for writing new automation scripts or creating testcase documents.
+description: Execute browser QA for app discovery, Plane ticket retest, Sheet testcase execution, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence, release sign-off, and business-flow knowledge handoff. Trigger on retest, re-test, verify bug/ticket, a Plane ticket URL with validation language, a Sheet URL with execute/run language, sanity, regression, exploratory, ad-hoc, UI/UX, or business discovery; do not require the skill name. Compose shared discovery/exploratory layers into RETEST_PLUS and SHEET_EXECUTION_PLUS. Not for writing automation or testcase documents.
 ---
 
 # QA Run
@@ -12,30 +12,52 @@ Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. **Da
 > **When to use**: discovering new bugs, verifying bugs, ad-hoc UI/API poking on a web app, sanity/risk-based recurring runs, regression (fixed testcases) placed in the project instance.
 > **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI.
 
-## Reference Router
+## Workflow composition router
 
-Read only the file(s) matching the current task:
+Choose one entrypoint, then expand every required layer in its stack. Layers are internal capabilities of the single public `qa-run` skill, not separate skills.
 
-> **Model note**: If running on a fast or small-context model (Gemini Flash, GPT-4o-mini, etc.), ALWAYS load [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md) alongside the task-specific file below. Do not skip this even if the task seems simple.
+```text
+DISCOVERY_CORE =
+  Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 
-| Situation | File to read |
-|---|---|
-| Running full QA pipeline, REPO_BUSINESS_DISCOVERY or UI_BUSINESS_RECONCILIATION | [references/PIPELINE.md](references/PIPELINE.md) |
-| Executing UI testing — Steps A-D, charter, UI/UX audit, technique selection | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Choosing MCP/Playwright tool or optimizing speed and intelligence | [references/MCP-CHEATSHEET.md](references/MCP-CHEATSHEET.md) |
-| Retesting a bug ticket or running impacted regression | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) |
-| Setting up QA for a new project, deep dive, logging bugs, handoff to Plane | [references/PROJECT-SETUP.md](references/PROJECT-SETUP.md) |
-| Preparing test data or optimizing token usage | [references/TEST-DATA.md](references/TEST-DATA.md) |
-| Encountering a common workflow error or troubleshooting | [references/COMMON-MISTAKES.md](references/COMMON-MISTAKES.md) |
-| Playwright MCP unavailable or switching to Antigravity | [references/ANTIGRAVITY-FALLBACK.md](references/ANTIGRAVITY-FALLBACK.md) |
-| Using fast/small model, getting shallow verdicts, or model hallucinates PASS | [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md) |
+RETEST_PLUS =
+  Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE
+
+SHEET_EXECUTION_PLUS =
+  Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE
+  + Original Retest only for rows linked to a ticket or previous failure
+```
+
+| User entrypoint | Required stack | Read now |
+|---|---|---|
+| Exploratory, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/PIPELINE.md](references/PIPELINE.md) |
+| Reconcile UI with source, docs or runtime | `UI_BUSINESS_RECONCILIATION + DISCOVERY_CORE` | [references/PIPELINE.md](references/PIPELINE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Write Playwright automation or POM | Exit `qa-run` | Route to `playwright-pom-automation` |
+
+Create a ledger row for every expanded layer. Do not conclude the parent workflow while any required layer lacks `PASS`, `FAILED`, `BLOCKED`, `PARTIAL`, or `N/A` with a reason.
+
+Load optional references only when their condition occurs:
+
+- Tool choice is unresolved → [references/MCP-CHEATSHEET.md](references/MCP-CHEATSHEET.md)
+- Project accounts, environment or Plane handoff must be bootstrapped → [references/PROJECT-SETUP.md](references/PROJECT-SETUP.md)
+- Test data is the current blocker → [references/TEST-DATA.md](references/TEST-DATA.md)
+- A workflow step failed → [references/COMMON-MISTAKES.md](references/COMMON-MISTAKES.md)
+- Playwright was proven unavailable → [references/ANTIGRAVITY-FALLBACK.md](references/ANTIGRAVITY-FALLBACK.md)
+- A verdict is shallow, contradictory or unsupported → [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md)
+
+Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; vendor code is an optional development dependency, not a user-selectable QA skill.
 
 ## Cross-model hard gates
 
 Apply the following exact order for all models, especially fast or small-context models:
 
 1. **Initialize Run Manifest**: Always call `node scripts/helpers/run-manifest.mjs start` before running tests.
-2. Classify the request before opening the browser: `APP_BASELINE_DISCOVERY`, `RETEST_TICKET`, `SANITY_REGRESSION`, `EXPLORATORY_ADHOC`, `SHEET_TESTCASE_EXECUTION` or `AUTOMATION_BUILD`.
+2. Select the user entrypoint, expand its complete workflow stack, and initialize a ledger row for every required layer before opening the browser. If the route exits to another skill, stop `qa-run`.
 3. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
    - **Standard schema is pre-baked** — read [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json); DO NOT rescan headers each time. Schema summary:
      ```
@@ -48,6 +70,8 @@ Apply the following exact order for all models, especially fast or small-context
    - Run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL>`
    - For full suite execution -> add `--parallel --workers 4`
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
+   - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
+   - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
 4. **[BEFORE TEST — READ knowledge]** Resolve `<project-root>/qa-knowledge/knowledge-index.json` first:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
@@ -55,7 +79,7 @@ Apply the following exact order for all models, especially fast or small-context
    - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, reusable assets
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
    - If NO guide exists at all: run `APP_BASELINE_DISCOVERY` for the feature scope first
-5. With `RETEST_TICKET` -> read ticket via `plane-qa`, create a ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
+5. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
 6. Write the test contract including `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, `Stop condition` and reused knowledge.
 7. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
 8. Update verdict/evidence into the ledger immediately after each layer; do not conclude if any item lacks a verdict or `BLOCKED/PARTIAL` reason.
@@ -84,9 +108,9 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 ## Knowledge scope decision
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
-- `SHEET_TESTCASE_EXECUTION`: always load `qa-knowledge/app-flow-map.json` before interacting. Run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4`.
-- `RETEST_TICKET`: do not rescan the full app. Read index shards for ticket scope. If index/guide is missing, discover enough to create/refresh the feature guide, then run RETEST_PLUS.
-- `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides and expand knowledge exactly in the inspected scope.
+- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, run `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4`, then finish every `SHEET_EXECUTION_PLUS` layer.
+- `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
+- `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope.
 - Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`.
 
 ## Critical red flags (hard stop)
@@ -94,7 +118,7 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 These must be observed at all times, even before reading any reference file:
 
 - **DO NOT run destructive tests** (delete, drop, wipe data) without explicit user authorization
-- **DO NOT skip any hard gate** — all 10 gates above are mandatory regardless of context or time pressure
+- **DO NOT skip any hard gate** — all gates above are mandatory regardless of context or time pressure
 - **DO NOT conclude PASS when lacking evidence** — absence of visible error is not evidence of passing
 - **DO NOT use fallback (Antigravity/CLI) as a substitute for MCP** without first confirming MCP is genuinely unavailable
 - **DO NOT overwrite existing artifacts** (`auth.json`, `evidence/`, `qa-knowledge/`) without reading the existing content first

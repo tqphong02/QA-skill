@@ -54,6 +54,21 @@
 
   "note_required_when_result": ["Fail", "Untest", "N/A"],
 
+  "workflow_composition": {
+    "name": "SHEET_EXECUTION_PLUS",
+    "required_layers": [
+      "Sheet Testcase Execution",
+      "Sanity",
+      "Impacted Regression",
+      "Scoped Business Discovery",
+      "Exploratory",
+      "Ad-hoc",
+      "UI/UX"
+    ],
+    "conditional_layer": "Original Retest only for rows linked to a Plane ticket or previous failure",
+    "plane_mutation_rule": "Do not comment or change Plane state without an exact ticket"
+  },
+
   "cover_sheet": {
     "sheet_name": "Cover",
     "cells": {

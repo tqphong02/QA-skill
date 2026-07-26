@@ -1,6 +1,6 @@
 ---
 name: playwright-pom-automation
-description: Use when scaffolding a new Playwright + Page Object Model project, writing UI/API/performance tests, or setting up CI for a QA project. Not for ad-hoc exploratory clicks or production app debugging.
+description: Scaffold or extend Playwright Page Object Model automation for UI, API, or performance tests and QA CI. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.
 ---
 
 # Playwright POM Automation
