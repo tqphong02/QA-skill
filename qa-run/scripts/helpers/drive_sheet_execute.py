@@ -83,7 +83,7 @@ def sanitize_note(note_text):
     text = re.sub(r"at\s+[a-zA-Z0-9_.]+\([a-zA-Z0-9_.]+:\d+\)", "", text) # java stacklines
 
     # Remove trailing dots or emojis if any
-    text = re.sub(r"[\u1F300-\u1FAFF\u2600-\u27BF]", "", text).strip()
+    text = re.sub(r"[\U0001F300-\U0001FAFF\u2600-\u27BF]", "", text).strip()
     return text.rstrip(".")
 
 def normalize_result(value):

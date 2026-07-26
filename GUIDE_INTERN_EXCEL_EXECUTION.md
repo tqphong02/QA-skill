@@ -57,10 +57,10 @@ node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xls
 ### 🔹 Ví dụ 3: Chạy Lọc theo Module Cụ Thể
 ```bash
 # Chỉ chạy duy nhất Module LOGIN:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN" --plan-only
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN" --parallel --plan-only
 
 # Chỉ chạy duy nhất Module ORDER:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER" --plan-only
+node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER" --parallel --plan-only
 ```
 
 ---
@@ -74,25 +74,28 @@ Khi file Excel có nhiều Module (ví dụ: `LOGIN`, `PRODUCT`, `CART`, `CHECKO
 node qa-run/scripts/helpers/execute-sheet.mjs \
   --excel-file "./KichBanKiemThu.xlsx" \
   --parallel \
-  --workers 4 \
   --plan-only
 
-# Bước 2: sau khi xem plan, chọn worker và import kết quả đã có evidence
+# Bước 2: xác nhận module, nhập số worker đã chọn và import kết quả có ảnh/video
 node qa-run/scripts/helpers/execute-sheet.mjs \
   --excel-file "./KichBanKiemThu.xlsx" \
+  --module "LOGIN" \
+  --confirmed-module "LOGIN" \
   --parallel \
-  --workers 4 \
+  --workers 2 \
   --selected-workers all \
   --results-file "./worker-results.json"
 ```
 
 ### 🧠 Cơ chế Chia Module của Multi-Worker Engine:
 1. Script đọc đúng tab `Test cases_App`, header row 9 và gom testcase theo functional group
-2. Mỗi assignment chứa tối đa hai functional groups; `--workers` giới hạn concurrency từ 1 đến 4
-3. Script hiển thị plan và bắt buộc chọn `all`, worker ID như `1,2`, hoặc `cancel`
-4. Browser worker/sub-agent thực thi testcase và trả JSON có evidence
-5. Script chỉ batch-update khi kết quả đủ testcase, đúng schema và `Pass`/`Fail` có evidence
-6. Nếu thiếu lựa chọn, executor hoặc evidence thì dừng `BLOCKED` và không sửa Excel
+2. Script hiển thị requested/resolved/available module và bắt buộc xác nhận chính xác module
+3. User chọn số worker từ 1 đến 4; một module như `LOGIN` được shard testcase theo số worker này
+4. User tiếp tục chọn `all`, worker ID như `1,2`, hoặc `cancel`
+5. Browser worker/sub-agent thực thi testcase; mỗi `Pass`/`Fail` phải có screenshot hoặc video
+6. Script append media reference vào Note và chỉ batch-update khi đủ testcase, đúng schema, file evidence tồn tại
+7. Nếu thiếu module confirmation, worker count, worker selection, executor hoặc visual evidence thì dừng `BLOCKED` và không sửa Excel
+8. Media được tách theo `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`; JSON plan/result/write-back nằm ở `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`
 
 ---
 
@@ -103,4 +106,4 @@ node qa-run/scripts/helpers/execute-sheet.mjs \
    - Cột `Tester`: Ghi nhận tester do worker cung cấp.
    - Cột `Note`: Lời giải thích kết quả ngắn gọn, dễ hiểu.
 2. **Ảnh Bằng chứng Evidence**:
-   - Worker phải cung cấp đường dẫn hoặc URL evidence cho mọi kết quả `Pass` và `Fail`.
+   - Worker phải cung cấp ít nhất một ảnh hoặc video cho từng kết quả `Pass` và `Fail`; JSON, trace hoặc network log đơn lẻ không đủ.

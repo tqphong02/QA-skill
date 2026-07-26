@@ -66,7 +66,19 @@
       "UI/UX"
     ],
     "conditional_layer": "Original Retest only for rows linked to a Plane ticket or previous failure",
-    "plane_mutation_rule": "Do not comment or change Plane state without an exact ticket"
+    "plane_mutation_rule": "Do not comment or change Plane state without an exact ticket",
+    "confirmation_gates": [
+      "Exact module or functional-group scope",
+      "Worker count from 1 to 4",
+      "All workers, selected worker IDs, or cancel"
+    ],
+    "module_rule": "A module named in the prompt is a requested filter and must be confirmed before execution",
+    "single_module_sharding": "Split one module across the confirmed worker count without duplicating testcase rows",
+    "visual_evidence_rule": "Every Pass and Fail testcase requires at least one existing screenshot or video; JSON, trace, console, or network evidence alone is insufficient",
+    "visual_evidence_extensions": ["png", "jpg", "jpeg", "webp", "gif", "mp4", "webm", "mov", "m4v"],
+    "evidence_media_layout": "evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/",
+    "evidence_metadata_layout": "evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/",
+    "evidence_placement_rule": "Local media must be written under the testcase evidence_directory assigned by the executor"
   },
 
   "cover_sheet": {

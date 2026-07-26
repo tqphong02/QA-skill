@@ -45,10 +45,12 @@
             "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
           },
           "evidence": {
+            "description": "Pass/Fail media. Local files must be under evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/ as specified by the assignment evidence_directory",
             "oneOf": [
               {
                 "type": "string",
-                "minLength": 1
+                "minLength": 1,
+                "pattern": "^(?:(?:image|video):.+|.+\\.(?:png|PNG|jpg|JPG|jpeg|JPEG|webp|WEBP|gif|GIF|mp4|MP4|webm|WEBM|mov|MOV|m4v|M4V)(?:$|[?#]))"
               },
               {
                 "type": "array",
@@ -56,6 +58,10 @@
                 "items": {
                   "type": "string",
                   "minLength": 1
+                },
+                "contains": {
+                  "type": "string",
+                  "pattern": "^(?:(?:image|video):.+|.+\\.(?:png|PNG|jpg|JPG|jpeg|JPEG|webp|WEBP|gif|GIF|mp4|MP4|webm|WEBM|mov|MOV|m4v|M4V)(?:$|[?#]))"
                 }
               }
             ]

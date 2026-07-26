@@ -116,7 +116,7 @@ const res = runScript('permission-matrix-extractor.mjs', ['--dir', './src']);
    - Khuyến nghị sử dụng đường dẫn đầy đủ theo domain thư mục mới, ví dụ:
      ```bash
      node qa-run/scripts/orchestrators/repo-business-discovery.mjs --repo . --mode full
-     node qa-run/scripts/helpers/execute-sheet.mjs --sheet-url <URL>
+     node qa-run/scripts/helpers/execute-sheet.mjs --sheet-url <URL> --module <requested-if-known> --parallel --plan-only
      ```
 2. **Khi viết mới hoặc mở rộng script con:**
    - Xác định đúng 1 trong 7 nhóm thư mục phù hợp với domain nghiệp vụ.

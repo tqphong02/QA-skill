@@ -6,15 +6,20 @@
  * assignments, requires an explicit worker selection, and writes back only
  * validated execution results that contain the required evidence
  *
+ * Media: evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/
+ * Metadata: evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/
+ *
  * Planning:
- *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 --plan-only
+ *   node execute-sheet.mjs --sheet-url <URL> --module LOGIN --parallel --plan-only
  *
  * Execute with an external Node worker:
- *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 \
+ *   node execute-sheet.mjs --sheet-url <URL> --module LOGIN \
+ *     --confirmed-module LOGIN --parallel --workers 2 \
  *     --selected-workers all --worker-script ./run-sheet-worker.mjs
  *
  * Import evidence-backed results collected by browser/agent workers:
- *   node execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 \
+ *   node execute-sheet.mjs --sheet-url <URL> --module LOGIN \
+ *     --confirmed-module LOGIN --parallel --workers 2 \
  *     --selected-workers all --results-file ./worker-results.json
  */
 
@@ -32,6 +37,7 @@ const MAX_CONCURRENT_WORKERS = 4;
 const MAX_GROUPS_PER_ASSIGNMENT = 2;
 const VALID_RESULTS = new Set(['Pass', 'Fail', 'N/A', 'Untest']);
 const VALID_PRIORITIES = new Set(['Critical', 'High', 'Medium', 'Low']);
+const VISUAL_EVIDENCE_EXTENSIONS = /\.(png|jpe?g|webp|gif|mp4|webm|mov|m4v)(?:$|[?#])/i;
 
 const args = process.argv.slice(2);
 const getArg = (flag, fallback = undefined) => {
@@ -42,6 +48,7 @@ const getArg = (flag, fallback = undefined) => {
 const DATA = path.resolve(process.env.QA_DATA_DIR || process.cwd());
 const SKILL_DIR = path.resolve(process.env.QA_RUN_SKILL_DIR || path.join(__dirname, '../..'));
 const EVIDENCE_DIR = path.join(DATA, 'evidence');
+const SHEET_EVIDENCE_DIR = path.join(EVIDENCE_DIR, 'sheet');
 const localPythonScript = path.join(__dirname, 'drive_sheet_execute.py');
 const sharedPythonScript = path.join(path.resolve(SKILL_DIR, '..', 'google-drive-qa', 'scripts'), 'drive_sheet_execute.py');
 const DRIVE_PYTHON_SCRIPT = fs.existsSync(localPythonScript) ? localPythonScript : sharedPythonScript;
@@ -51,6 +58,59 @@ function sanitizeRunId(value) {
     .trim()
     .replace(/[^a-zA-Z0-9_-]+/g, '-')
     .replace(/^-+|-+$/g, '') || `sheet-${Date.now()}`;
+}
+
+export function evidenceSlug(value) {
+  return String(value || 'general')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[Đđ]/g, 'd')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'general';
+}
+
+function currentLocalDate() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeRunDate(value) {
+  const normalized = String(value || currentLocalDate()).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    throw new Error('--run-date phải có định dạng YYYY-MM-DD');
+  }
+  return normalized;
+}
+
+function sheetRunMetadataDir(runDate, runId, evidenceRoot = EVIDENCE_DIR) {
+  return path.join(
+    evidenceRoot,
+    'sheet',
+    '_runs',
+    normalizeRunDate(runDate),
+    sanitizeRunId(runId),
+  );
+}
+
+export function sheetFunctionalEvidenceDir(
+  functionalGroup,
+  runDate,
+  runId,
+  workerId,
+  evidenceRoot = EVIDENCE_DIR,
+) {
+  return path.join(
+    evidenceRoot,
+    'sheet',
+    evidenceSlug(functionalGroup),
+    normalizeRunDate(runDate),
+    sanitizeRunId(runId),
+    `worker-${workerId}`,
+  );
 }
 
 function validateWorkerCount(value) {
@@ -169,38 +229,57 @@ function readSheetTestcases(source, sheetName) {
 }
 
 function getExportedKeysFile() {
-  return path.join(EVIDENCE_DIR, '.exported-keys.json');
+  return path.join(SHEET_EVIDENCE_DIR, '_state', '.exported-keys.json');
 }
 
 function readExportedKeys() {
-  const filePath = getExportedKeysFile();
-  if (!fs.existsSync(filePath)) return [];
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+  const keys = [];
+  const candidates = [
+    getExportedKeysFile(),
+    path.join(EVIDENCE_DIR, '.exported-keys.json'),
+  ];
+  for (const filePath of candidates) {
+    if (!fs.existsSync(filePath)) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (Array.isArray(parsed)) keys.push(...parsed);
+    } catch {
+      // Ignore malformed historical state and preserve any valid current state
+    }
   }
+  return [...new Set(keys)];
 }
 
 function markUpdatesAsExported(keys) {
   const merged = [...new Set([...readExportedKeys(), ...keys])].slice(-5000);
-  fs.writeFileSync(getExportedKeysFile(), JSON.stringify(merged, null, 2), 'utf8');
+  const filePath = getExportedKeysFile();
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(merged, null, 2), 'utf8');
 }
 
-function updateSheetResults(source, sheetName, updates, runId) {
+function updateSheetResults(source, sheetName, updates, runId, runDate) {
   const existingKeys = new Set(readExportedKeys());
-  const pending = updates.filter((update) => {
-    const key = `${runId}:row-${update.row_number}:sheet`;
-    return !existingKeys.has(key);
-  });
+  const pending = updates
+    .filter((update) => {
+      const key = `${runId}:row-${update.row_number}:sheet`;
+      return !existingKeys.has(key);
+    })
+    .map((update) => {
+      const visualEvidence = (update.evidence || []).filter(isVisualEvidenceReference);
+      if (!visualEvidence.length) return update;
+      const evidenceText = `Evidence: ${visualEvidence.join(', ')}`;
+      return {
+        ...update,
+        note: update.note ? `${update.note} | ${evidenceText}` : evidenceText,
+      };
+    });
 
   if (!pending.length) {
     console.log('[execute-sheet] Không có kết quả mới cần write-back');
     return { updated_count: 0, errors: [] };
   }
 
-  const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+  const runDir = sheetRunMetadataDir(runDate, runId);
   fs.mkdirSync(runDir, { recursive: true });
   const updateFile = path.join(runDir, 'sheet-updates.json');
   fs.writeFileSync(updateFile, JSON.stringify(pending, null, 2), 'utf8');
@@ -247,9 +326,152 @@ export function partitionByFunctionalGroup(testcases) {
   return groups;
 }
 
+function splitGroupTokens(value) {
+  return String(value || '')
+    .split(',')
+    .map((token) => token.trim())
+    .filter(Boolean);
+}
+
+export function resolveFunctionalGroupNames(moduleGroups, requestedModule = '') {
+  const available = [...moduleGroups.keys()];
+  const tokens = splitGroupTokens(requestedModule);
+  if (!tokens.length || tokens.some((token) => /^all$/i.test(token))) return available;
+
+  return tokens.map((token) => {
+    const exact = available.find((group) => group.toLowerCase() === token.toLowerCase());
+    if (exact) return exact;
+    const partial = available.filter((group) => group.toLowerCase().includes(token.toLowerCase()));
+    if (partial.length === 1) return partial[0];
+    if (partial.length > 1) {
+      throw new Error(`Module "${token}" không rõ ràng; matches: ${partial.join(', ')}`);
+    }
+    throw new Error(`Không tìm thấy module "${token}"; available: ${available.join(', ')}`);
+  });
+}
+
+function casesForGroups(moduleGroups, groupNames) {
+  return groupNames.flatMap((groupName) => moduleGroups.get(groupName) || []);
+}
+
+function sameGroupSet(left, right) {
+  const normalize = (items) => [...new Set(items.map((item) => item.toLowerCase()))].sort();
+  return JSON.stringify(normalize(left)) === JSON.stringify(normalize(right));
+}
+
+export async function resolveModuleConfirmation(
+  moduleGroups,
+  requestedGroups,
+  {
+    confirmedModule,
+    interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    ask,
+  } = {},
+) {
+  if (confirmedModule) {
+    const confirmedGroups = resolveFunctionalGroupNames(moduleGroups, confirmedModule);
+    if (!sameGroupSet(confirmedGroups, requestedGroups)) {
+      throw new Error(
+        `Module xác nhận [${confirmedGroups.join(', ')}] không khớp scope đã resolve [${requestedGroups.join(', ')}]`,
+      );
+    }
+    return requestedGroups;
+  }
+  if (!interactive) {
+    throw new Error(
+      `Cần xác nhận module trước khi chạy; dùng --confirmed-module "${requestedGroups.join(',')}"`,
+    );
+  }
+
+  let answer;
+  if (ask) {
+    answer = await ask(requestedGroups, [...moduleGroups.keys()]);
+  } else {
+    const interfaceHandle = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      answer = await interfaceHandle.question(
+        `\nXác nhận module cần chạy [${requestedGroups.join(', ')}]? [yes / tên module khác / cancel]: `,
+      );
+    } finally {
+      interfaceHandle.close();
+    }
+  }
+
+  const normalized = String(answer || '').trim().toLowerCase();
+  if (['yes', 'y', 'đúng', 'dung'].includes(normalized)) return requestedGroups;
+  if (['cancel', 'c', 'hủy', 'huy'].includes(normalized)) return [];
+  return resolveFunctionalGroupNames(moduleGroups, answer);
+}
+
+export async function resolveWorkerCount(
+  {
+    workers,
+    recommended = 1,
+    interactive = Boolean(process.stdin.isTTY && process.stdout.isTTY),
+    ask,
+  } = {},
+) {
+  if (workers !== undefined && workers !== null && String(workers).trim()) {
+    return validateWorkerCount(workers);
+  }
+  if (!interactive) {
+    throw new Error(`Cần xác nhận số worker trước khi chạy; dùng --workers <1-${MAX_CONCURRENT_WORKERS}>`);
+  }
+
+  let answer;
+  if (ask) {
+    answer = await ask(recommended);
+  } else {
+    const interfaceHandle = createInterface({ input: process.stdin, output: process.stdout });
+    try {
+      answer = await interfaceHandle.question(
+        `\nBạn muốn chạy bao nhiêu worker? [1-${MAX_CONCURRENT_WORKERS}, đề xuất ${recommended}]: `,
+      );
+    } finally {
+      interfaceHandle.close();
+    }
+  }
+  return validateWorkerCount(answer);
+}
+
+function uniqueGroupsForCases(testcases) {
+  return [...new Set(testcases.map(functionalGroupOf))];
+}
+
+function splitLargestAssignment(assignments) {
+  let largestIndex = -1;
+  for (let index = 0; index < assignments.length; index += 1) {
+    if (assignments[index].testcases.length < 2) continue;
+    if (
+      largestIndex === -1
+      || assignments[index].testcases.length > assignments[largestIndex].testcases.length
+    ) {
+      largestIndex = index;
+    }
+  }
+  if (largestIndex === -1) return false;
+
+  const original = assignments[largestIndex];
+  const midpoint = Math.ceil(original.testcases.length / 2);
+  assignments.splice(
+    largestIndex,
+    1,
+    { testcases: original.testcases.slice(0, midpoint) },
+    { testcases: original.testcases.slice(midpoint) },
+  );
+  return true;
+}
+
 export function buildWorkerAssignments(
   moduleGroups,
-  { parallel = true, maxGroupsPerAssignment = MAX_GROUPS_PER_ASSIGNMENT, runId = 'run' } = {},
+  {
+    parallel = true,
+    desiredWorkers,
+    maxGroupsPerAssignment = MAX_GROUPS_PER_ASSIGNMENT,
+    runId = 'run',
+    runDate = currentLocalDate(),
+    evidenceRoot = EVIDENCE_DIR,
+  } = {},
 ) {
   const entries = [...moduleGroups.entries()];
   if (!entries.length) return [];
@@ -258,16 +480,42 @@ export function buildWorkerAssignments(
 
   for (let index = 0; index < entries.length; index += groupLimit) {
     const chunk = entries.slice(index, index + groupLimit);
-    const id = assignments.length + 1;
     assignments.push({
-      id,
-      functional_groups: chunk.map(([group]) => group),
-      testcase_count: chunk.reduce((total, [, cases]) => total + cases.length, 0),
-      data_scope: `w${id}_${sanitizeRunId(runId)}`,
       testcases: chunk.flatMap(([, cases]) => cases),
     });
   }
-  return assignments;
+
+  const totalCases = entries.reduce((total, [, cases]) => total + cases.length, 0);
+  const requestedAssignmentCount = desiredWorkers
+    ? validateWorkerCount(desiredWorkers)
+    : assignments.length;
+  const targetAssignments = parallel
+    ? Math.min(requestedAssignmentCount, totalCases)
+    : 1;
+  while (assignments.length < targetAssignments && splitLargestAssignment(assignments)) {
+    // Split a large group shard until the confirmed worker count is reached
+  }
+
+  return assignments.map((assignment, index) => {
+    const id = index + 1;
+    const functionalGroups = uniqueGroupsForCases(assignment.testcases);
+    const evidenceDirectories = Object.fromEntries(functionalGroups.map((group) => [
+      group,
+      sheetFunctionalEvidenceDir(group, runDate, runId, id, evidenceRoot),
+    ]));
+    return {
+      id,
+      functional_groups: functionalGroups,
+      testcase_count: assignment.testcases.length,
+      shard: `${id}/${assignments.length}`,
+      data_scope: `w${id}_${sanitizeRunId(runId)}`,
+      evidence_directories: evidenceDirectories,
+      testcases: assignment.testcases.map((testcase) => ({
+        ...testcase,
+        evidence_directory: evidenceDirectories[functionalGroupOf(testcase)],
+      })),
+    };
+  });
 }
 
 export function parseWorkerSelection(input, assignments) {
@@ -331,6 +579,37 @@ function normalizeEvidence(evidence) {
   return values.map((value) => String(value || '').trim()).filter(Boolean);
 }
 
+export function isVisualEvidenceReference(reference) {
+  const normalized = String(reference || '').trim();
+  if (!normalized) return false;
+  if (/^(image|video):/i.test(normalized)) return true;
+  return VISUAL_EVIDENCE_EXTENSIONS.test(normalized);
+}
+
+function unwrapVisualEvidenceReference(reference) {
+  return String(reference || '').replace(/^(image|video):/i, '').trim();
+}
+
+function validateVisualEvidenceFiles(references, evidenceBaseDir, expectedDirectory = '') {
+  for (const reference of references) {
+    const target = unwrapVisualEvidenceReference(reference);
+    if (/^(https?:\/\/|drive:\/\/|s3:\/\/|gs:\/\/)/i.test(target)) continue;
+    const localPath = path.isAbsolute(target) ? target : path.resolve(evidenceBaseDir, target);
+    if (!fs.existsSync(localPath)) {
+      throw new Error(`Visual evidence không tồn tại: ${reference}`);
+    }
+    if (expectedDirectory) {
+      const expected = path.resolve(expectedDirectory);
+      const relative = path.relative(expected, localPath);
+      if (relative.startsWith('..') || path.isAbsolute(relative)) {
+        throw new Error(
+          `Visual evidence nằm sai thư mục chức năng/ngày: ${reference}; expected under ${expected}`,
+        );
+      }
+    }
+  }
+}
+
 function resultKey(value) {
   if (value?.row_number !== undefined && value?.row_number !== null) {
     return `row:${Number(value.row_number)}`;
@@ -338,7 +617,11 @@ function resultKey(value) {
   return `id:${String(value?.testcase_id || '').trim()}`;
 }
 
-export function validateWorkerResults(rawResults, assignedTestcases, { requireComplete = true } = {}) {
+export function validateWorkerResults(
+  rawResults,
+  assignedTestcases,
+  { requireComplete = true, evidenceBaseDir = DATA } = {},
+) {
   const resultList = Array.isArray(rawResults) ? rawResults : rawResults?.results;
   if (!Array.isArray(resultList)) throw new Error('Worker result phải là array hoặc object có field results');
 
@@ -370,8 +653,18 @@ export function validateWorkerResults(rawResults, assignedTestcases, { requireCo
 
     const note = cleanNote(raw.note);
     const evidence = normalizeEvidence(raw.evidence);
-    if (['Pass', 'Fail'].includes(raw.result) && !evidence.length) {
-      throw new Error(`Thiếu evidence cho ${raw.result}: ${testcase.testcase_id || rowKey}`);
+    const visualEvidence = evidence.filter(isVisualEvidenceReference);
+    if (['Pass', 'Fail'].includes(raw.result) && !visualEvidence.length) {
+      throw new Error(
+        `Thiếu evidence hình ảnh/video cho ${raw.result}: ${testcase.testcase_id || rowKey}`,
+      );
+    }
+    if (visualEvidence.length) {
+      validateVisualEvidenceFiles(
+        visualEvidence,
+        evidenceBaseDir,
+        testcase.evidence_directory,
+      );
     }
     if (['Fail', 'N/A', 'Untest'].includes(raw.result) && !note) {
       throw new Error(`Thiếu Note cho ${raw.result}: ${testcase.testcase_id || rowKey}`);
@@ -427,34 +720,61 @@ export async function runWithConcurrency(items, concurrency, handler) {
 
 function writeExecutionPlan({
   runId,
+  runDate,
   source,
   sheetData,
   assignments,
   maxConcurrentWorkers,
+  availableGroups,
+  requestedModule,
+  resolvedGroups,
+  confirmationRequired,
 }) {
-  const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+  const runDir = sheetRunMetadataDir(runDate, runId);
   fs.mkdirSync(runDir, { recursive: true });
   const planPath = path.join(runDir, 'sheet-worker-plan.json');
   const plan = {
-    schema_version: 1,
+    schema_version: 3,
     run_id: runId,
+    run_date: runDate,
     source,
     sheet_name: sheetData.sheet_name,
     header_row: sheetData.header_row,
+    module_scope: {
+      requested: requestedModule || 'all',
+      resolved_functional_groups: resolvedGroups,
+      available_functional_groups: availableGroups,
+    },
     max_concurrent_workers: maxConcurrentWorkers,
+    effective_concurrent_workers: Math.min(maxConcurrentWorkers, assignments.length),
     max_functional_groups_per_assignment: MAX_GROUPS_PER_ASSIGNMENT,
+    visual_evidence_required_for: ['Pass', 'Fail'],
+    accepted_visual_evidence: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'mp4', 'webm', 'mov', 'm4v'],
+    evidence_layout: {
+      media: 'evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/',
+      run_metadata: 'evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/',
+    },
+    confirmation_required: confirmationRequired,
     assignments,
   };
   fs.writeFileSync(planPath, JSON.stringify(plan, null, 2), 'utf8');
   return planPath;
 }
 
+function printModuleScope(availableGroups, requestedModule, resolvedGroups) {
+  console.log('\nMODULE SCOPE');
+  console.log(`  Requested: ${requestedModule || 'all'}`);
+  console.log(`  Resolved: [${resolvedGroups.join(', ')}]`);
+  console.log(`  Available: [${availableGroups.join(', ')}]`);
+}
+
 function printWorkerPlan(assignments, maxConcurrentWorkers) {
   console.log('\nPROPOSED FUNCTIONAL WORKER PLAN');
   console.log(`Concurrency limit: ${maxConcurrentWorkers}`);
+  console.log(`Effective concurrent workers: ${Math.min(maxConcurrentWorkers, assignments.length)}`);
   for (const assignment of assignments) {
     console.log(
-      `  [Worker ${assignment.id}] Groups: [${assignment.functional_groups.join(', ')}] | Cases: ${assignment.testcase_count} | Data scope: ${assignment.data_scope}`,
+      `  [Worker ${assignment.id}] Groups: [${assignment.functional_groups.join(', ')}] | Cases: ${assignment.testcase_count} | Shard: ${assignment.shard} | Data scope: ${assignment.data_scope}`,
     );
   }
 }
@@ -530,47 +850,113 @@ async function main() {
 
   const parallel = args.includes('--parallel') || args.includes('--all');
   const planOnly = args.includes('--plan-only') || args.includes('--dry-run');
-  const workerCount = validateWorkerCount(getArg('--workers', parallel ? '4' : '1'));
+  const workersArg = getArg('--workers', '');
   const selectedWorkers = getArg('--selected-workers', args.includes('--yes') ? 'all' : '');
   const sheetName = getArg('--sheet-name', DEFAULT_SHEET_NAME);
   const moduleFilter = getArg('--module', '');
+  const confirmedModule = getArg('--confirmed-module', '');
   const resultsFile = resolveDataPath(getArg('--results-file', ''));
   const workerScript = resolveDataPath(getArg('--worker-script', ''));
   const dataFile = resolveDataPath(getArg('--data-file', 'test-data.md'));
   const runId = sanitizeRunId(getArg('--run-id', `sheet-${new Date().toISOString().replace(/\D/g, '').slice(0, 17)}`));
+  const runDate = normalizeRunDate(getArg('--run-date', ''));
 
   const sheetData = readSheetTestcases(source, sheetName);
   const allCases = Array.isArray(sheetData.testcases) ? sheetData.testcases : [];
   if (!allCases.length) throw new Error(`Không tìm thấy testcase trong tab ${sheetData.sheet_name || sheetName}`);
 
-  let targetCases = allCases;
-  if (moduleFilter) {
-    const needle = moduleFilter.toLowerCase();
-    targetCases = allCases.filter(
-      (testcase) => functionalGroupOf(testcase).toLowerCase().includes(needle),
+  const allGroups = partitionByFunctionalGroup(allCases);
+  const availableGroups = [...allGroups.keys()];
+  const requestedGroups = resolveFunctionalGroupNames(allGroups, moduleFilter);
+  const requestedCases = casesForGroups(allGroups, requestedGroups);
+  const recommendedWorkers = Math.min(
+    MAX_CONCURRENT_WORKERS,
+    Math.max(1, requestedCases.length),
+  );
+
+  if (planOnly) {
+    const proposedWorkerCount = workersArg
+      ? validateWorkerCount(workersArg)
+      : recommendedWorkers;
+    const proposedAssignments = buildWorkerAssignments(
+      partitionByFunctionalGroup(requestedCases),
+      {
+        parallel,
+        desiredWorkers: proposedWorkerCount,
+        runId,
+        runDate,
+      },
     );
-    if (!targetCases.length) throw new Error(`Không tìm thấy functional group: ${moduleFilter}`);
+    printModuleScope(availableGroups, moduleFilter, requestedGroups);
+    console.log(`\nRecommended workers: ${recommendedWorkers}`);
+    printWorkerPlan(proposedAssignments, proposedWorkerCount);
+    const planPath = writeExecutionPlan({
+      runId,
+      runDate,
+      source,
+      sheetData,
+      assignments: proposedAssignments,
+      maxConcurrentWorkers: proposedWorkerCount,
+      availableGroups,
+      requestedModule: moduleFilter,
+      resolvedGroups: requestedGroups,
+      confirmationRequired: {
+        module_scope: true,
+        worker_count: true,
+        worker_selection: true,
+      },
+    });
+    console.log(`Plan: ${planPath}`);
+    console.log(
+      `[plan-only] Hãy xác nhận module [${requestedGroups.join(', ')}], số worker 1-${MAX_CONCURRENT_WORKERS}, rồi chọn worker; chưa write-back kết quả`,
+    );
+    return;
   }
+
+  const confirmedGroups = await resolveModuleConfirmation(allGroups, requestedGroups, {
+    confirmedModule,
+  });
+  if (!confirmedGroups.length) {
+    console.log('Đã hủy execution');
+    return;
+  }
+  const targetCases = casesForGroups(allGroups, confirmedGroups);
+  const workerCount = await resolveWorkerCount({
+    workers: workersArg,
+    recommended: Math.min(MAX_CONCURRENT_WORKERS, Math.max(1, targetCases.length)),
+  });
+  const actualParallel = parallel || workerCount > 1;
 
   const missingDataPath = checkAndGenerateMissingDataContract(targetCases, dataFile);
   if (missingDataPath) console.log(`[execute-sheet] Thiếu test data: ${missingDataPath}`);
 
   const groups = partitionByFunctionalGroup(targetCases);
-  const assignments = buildWorkerAssignments(groups, { parallel, runId });
+  const assignments = buildWorkerAssignments(groups, {
+    parallel: actualParallel,
+    desiredWorkers: workerCount,
+    runId,
+    runDate,
+  });
+  printModuleScope(availableGroups, moduleFilter, confirmedGroups);
+  console.log(`Confirmed workers: ${workerCount}`);
   printWorkerPlan(assignments, workerCount);
   const planPath = writeExecutionPlan({
     runId,
+    runDate,
     source,
     sheetData,
     assignments,
     maxConcurrentWorkers: workerCount,
+    availableGroups,
+    requestedModule: moduleFilter,
+    resolvedGroups: confirmedGroups,
+    confirmationRequired: {
+      module_scope: false,
+      worker_count: false,
+      worker_selection: !selectedWorkers,
+    },
   });
   console.log(`Plan: ${planPath}`);
-
-  if (planOnly) {
-    console.log('[plan-only] Chưa chạy worker và chưa write-back kết quả');
-    return;
-  }
 
   const selectedAssignments = await resolveWorkerSelection(assignments, { selectedWorkers });
   if (!selectedAssignments.length) {
@@ -585,7 +971,7 @@ async function main() {
     validatedResults = validateWorkerResults(loadResultFile(resultsFile), selectedCases);
   } else if (workerScript) {
     if (!fs.existsSync(workerScript)) throw new Error(`Không tìm thấy worker script: ${workerScript}`);
-    const runDir = path.join(EVIDENCE_DIR, 'runs', runId);
+    const runDir = sheetRunMetadataDir(runDate, runId);
     const workerResults = await runWithConcurrency(
       selectedAssignments,
       workerCount,
@@ -598,7 +984,13 @@ async function main() {
     );
   }
 
-  const response = updateSheetResults(source, sheetData.sheet_name, validatedResults, runId);
+  const response = updateSheetResults(
+    source,
+    sheetData.sheet_name,
+    validatedResults,
+    runId,
+    runDate,
+  );
   console.log(`Write-back hoàn tất: ${response.updated_count} testcase`);
 }
 

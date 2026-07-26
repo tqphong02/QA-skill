@@ -32,7 +32,7 @@
 
 | Mistake | Fix |
 |---|---|
-| Evidence files scattered outside `evidence/runs/<run-id>/` | Always use `collect-evidence.mjs` to bundle |
+| Sheet evidence from every function mixed in one run folder | Write media to `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/` and metadata to `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/` |
 | FINDINGS.md written as a wall of text | Each bug: Quan sát → Expected → Evidence path → Severity → TC; one bullet per point |
 | Screenshot returned as image bytes into context | Use `lib/driver.mjs` — saves to file; reference path, not bytes |
 | Multiple run artifacts mixed in one folder | Each `run-manifest.mjs start` creates unique `run-id`; never share folders across runs |

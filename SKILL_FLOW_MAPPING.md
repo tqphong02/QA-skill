@@ -117,7 +117,7 @@ flowchart TD
 | **Retest, re-test, verify bug/ticket** | `plane-qa` + `qa-run` | Plane doctor/read → Kích hoạt **RETEST_PLUS** (Retest flow gốc + Sanity + Impacted Regression + Exploratory + UI/UX Audit) |
 | **"Test thử trang này, chưa có testcase..." / Săn bug ad-hoc** | `qa-run: EXPLORATORY_ADHOC` | Đọc knowledge có sẵn → Sinh dynamic checklist → Safe mutation → Visual audit → Log bug |
 | **"Học toàn bộ web app này..." / Bootstrap app baseline** | `qa-run: APP_BASELINE_DISCOVERY` | Quét menu, route, API → Lưu `app-flow-map.json` & `app-business-guide.md` với `coverage_map` |
-| **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo functional worker plan → Hỏi user chọn all/worker ID/cancel → Delegate nhóm đã chọn → Chỉ ghi kết quả có evidence vào Sheet |
+| **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo plan → Hiển thị requested/resolved module → Hỏi xác nhận module + số worker 1-4 + all/worker ID/cancel → Chỉ ghi Pass/Fail có screenshot/video |
 | **Phân tích repo, học business flow từ source code** | `qa-run: REPO_BUSINESS_DISCOVERY` | Chạy `repo-business-discovery.mjs --repo <path> --mode full` → Merge vào `system-business-guide.md` & `system-qna.json` |
 | **Từ UI suy ra flow, đối chiếu Code + Docs + Runtime, tìm mâu thuẫn** | `qa-run: UI_BUSINESS_RECONCILIATION` | Chạy `ui-business-reconciliation.mjs --page <slug>` → Phân loại 9 kết quả, 10 ambiguity patterns → Xuất `ui-business-guide.md` & `clarification-qna.json` |
 | **Viết/sửa/review testcase, Scenario ID/Name** | `testcase-template` | Đọc testcase Markdown cũ nếu có → Generator tạo Markdown trước, Excel sau |
@@ -173,11 +173,12 @@ File SRS/BRD (PDF/Drive)
 ```text
 Google Sheet URL chứa Testcases
   └─► qa-run (SHEET_EXECUTION)
-       ├─► Chạy execute-sheet.mjs --parallel --workers 4 --plan-only
-       ├─► Hiển thị mapping Worker → Functional groups → Testcase count
-       ├─► Hỏi user chọn all, worker ID hoặc cancel
-       ├─► Delegate nhóm đã chọn và thu evidence-backed result JSON
-       └─► Validate đủ result/evidence rồi mới cập nhật Google Sheet
+       ├─► Chạy execute-sheet.mjs --module <requested> --parallel --plan-only
+       ├─► Hiển thị requested/resolved/available module và testcase count
+       ├─► Hỏi user xác nhận module, số worker 1-4 và all/worker ID/cancel
+       ├─► Shard module theo worker count, delegate nhóm đã chọn
+       ├─► Thu screenshot/video cho từng testcase Pass/Fail
+       └─► Lưu media theo chức năng/ngày, validate đủ result + visual evidence rồi mới cập nhật Google Sheet
 ```
 
 ### 5️⃣ Flow 5: Retest Bug Lifecycle (`RETEST_PLUS` -> Plane Update)
@@ -280,7 +281,7 @@ Lần làm việc tiếp theo:
 1. **Chạy Script Trích xuất Deterministic Node.js / Python CLI (`0 Token AI`)**:
    - `repo-business-discovery.mjs`: ast-grep & AST Scanners trích xuất API & ERD tự động.
    - `visual-evidence-router.mjs`: Microsoft OmniParser phân tích Bounding Boxes cục bộ (`omni-parsed-boxes.json`).
-   - `execute-sheet.mjs`: Lập functional worker plan, bắt buộc chọn worker và chỉ import/write-back kết quả có evidence.
+   - `execute-sheet.mjs`: Xác nhận module + worker count + worker selection, shard testcase và chỉ write-back Pass/Fail có ảnh/video.
 2. **Đọc File Caching Memory từ `qa-knowledge/` (`~1,500 Tokens`)**:
    - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
 3. **Targeted Visual Evidence Cropping (`~500 - 1,000 Tokens`)**:

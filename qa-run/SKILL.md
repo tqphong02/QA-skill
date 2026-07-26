@@ -92,15 +92,21 @@ Apply the following exact order for all models, especially fast or small-context
      ```bash
      node scripts/helpers/execute-sheet.mjs \
        --sheet-url <URL> \
+       --module <requested-module-if-known> \
        --parallel \
-       --workers 4 \
        --plan-only
      ```
-   - Read `evidence/runs/<run-id>/sheet-worker-plan.json`, show the exact Worker → Functional groups → testcase count mapping, then **ask the user** whether to run `all`, selected worker IDs such as `1,2`, or `cancel`. Do not silently choose all workers
-   - After the user selects workers, delegate each selected assignment to an independent browser sub-agent/worker when the host supports parallel agents, concurrently up to `--workers`; one assignment contains at most two functional groups and extra assignments run in later waves
-   - Every worker must return JSON matching [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json). `Pass` and `Fail` require evidence; `Fail`, `Untest`, and `N/A` require Note
-   - Merge the worker outputs and import them with `--results-file <JSON> --selected-workers <all|1,2>`, or supply a real external executor with `--worker-script <PATH>`. Without either input, execution is `BLOCKED` and no Sheet cell may be changed
-   - `--workers` is the real concurrency limit, from 1 to 4. It does not authorize a worker selection
+   - Read `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/sheet-worker-plan.json`, show `Requested module`, exact `Resolved functional groups`, available groups, testcase count and proposed shards, then stop for three explicit user confirmations:
+     1. Confirm the exact module/functional-group scope, for example `LOGIN`
+     2. Ask how many workers to use from 1 to 4; do not provide a final execution command with a default worker count
+     3. Ask whether to run `all`, selected worker IDs such as `1,2`, or `cancel`
+   - These confirmations are mandatory in Antigravity and every other host. A module named in the original prompt is a requested filter, not confirmation. Do not silently confirm the module, choose the worker count, or choose all workers
+   - Resume with `--module <requested> --confirmed-module <confirmed> --workers <confirmed-count> --selected-workers <all|1,2>`. Missing any confirmation is `BLOCKED` before browser action or write-back
+   - When a single module such as `LOGIN` is assigned multiple workers, shard its testcases across the confirmed worker count without duplicating rows; when assignments exceed the concurrency limit, run later waves
+   - After the user confirms, delegate each selected assignment to an independent browser sub-agent/worker when the host supports parallel agents
+   - Every worker must return JSON matching [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json). Every `Pass` and `Fail` testcase must include at least one final-state screenshot or video (`png`, `jpg`, `jpeg`, `webp`, `gif`, `mp4`, `webm`, `mov`, `m4v`); JSON, trace, console or network evidence alone is insufficient. `Fail`, `Untest`, and `N/A` require Note
+   - Store local media under the assigned `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/` or return an `image:`/`video:` remote URL. Store plan, assignments, worker results and write-back JSON separately under `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`. The executor rejects local media outside the testcase's assigned function/date directory and appends valid media references to the Sheet Note
+   - Merge worker outputs and import with `--results-file <JSON>`, or supply a real external executor with `--worker-script <PATH>`. Without valid media evidence, no `Pass`/`Fail` cell may be changed
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
    - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
    - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
@@ -140,7 +146,7 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 ## Knowledge scope decision
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
-- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the functional worker plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --parallel --workers 4 --plan-only`, ask the user to select `all`, worker IDs, or `cancel`, then run only the selected workers and import evidence-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
+- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --module <requested-if-known> --parallel --plan-only`, show the resolved module scope, then ask the user to confirm module, worker count 1-4 and worker selection. Run only confirmed assignments and import image/video-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
 - `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
 - `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope.
 - Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`.
@@ -163,6 +169,8 @@ These must be observed at all times, even before reading any reference file:
 ├── auth.json
 ├── evidence/
 │   ├── runs/<run-id>/ (manifest.json, screenshots/, logs/, redacted/)
+│   ├── sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/ (Sheet screenshots/videos)
+│   ├── sheet/_runs/<YYYY-MM-DD>/<run-id>/ (Sheet plans/results/write-back metadata)
 │   ├── visual-*/
 │   └── .runtime-events.json
 ├── qa-knowledge/
@@ -193,7 +201,7 @@ These must be observed at all times, even before reading any reference file:
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
-| `scripts/helpers/execute-sheet.mjs` | Plan functional-group workers, require selection, run/import evidence-backed results, and write back validated verdicts |
+| `scripts/helpers/execute-sheet.mjs` | Resolve and confirm module scope, worker count and selection; shard assignments; require image/video evidence; write back validated verdicts |
 | `scripts/helpers/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
 | `scripts/helpers/visual-audit.mjs` | Visual Heuristic Audit: overflow/clipping/touch targets/z-index |
 | `scripts/analysis/attack-surface.mjs` | Classify Action Safety, auto-inject mutations |

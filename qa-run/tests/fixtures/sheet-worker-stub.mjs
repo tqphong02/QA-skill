@@ -15,23 +15,32 @@ if (!assignmentPath || !resultPath) {
 }
 
 const assignment = JSON.parse(fs.readFileSync(assignmentPath, 'utf8'));
-const evidenceDir = path.join(path.dirname(resultPath), `worker-${assignment.id}-evidence`);
-fs.mkdirSync(evidenceDir, { recursive: true });
+const onePixelPng = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+);
 
 const results = assignment.testcases.map((testcase) => {
-  const evidencePath = path.join(evidenceDir, `row-${testcase.row_number}.json`);
-  fs.writeFileSync(
-    evidencePath,
-    JSON.stringify({ row_number: testcase.row_number, observed: 'stub-pass' }, null, 2),
-    'utf8',
+  const failed = testcase.row_number === 13;
+  if (!testcase.evidence_directory) {
+    throw new Error(`Missing evidence_directory for row ${testcase.row_number}`);
+  }
+  fs.mkdirSync(testcase.evidence_directory, { recursive: true });
+  const evidencePath = path.join(
+    testcase.evidence_directory,
+    `row-${testcase.row_number}-${failed ? 'fail' : 'pass'}.png`,
   );
+  fs.writeFileSync(evidencePath, onePixelPng);
   return {
     row_number: testcase.row_number,
     testcase_id: testcase.testcase_id,
-    result: 'Pass',
-    priority: ['Critical', 'High', 'Medium', 'Low'].includes(testcase.priority)
+    result: failed ? 'Fail' : 'Pass',
+    priority: failed
+      ? 'High'
+      : ['Critical', 'High', 'Medium', 'Low'].includes(testcase.priority)
       ? testcase.priority
       : 'Medium',
+    note: failed ? 'Stub observed state did not match expected' : '',
     evidence: evidencePath,
   };
 });

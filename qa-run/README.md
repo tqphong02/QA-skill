@@ -47,6 +47,8 @@ Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong thư
 ├── auth.json
 ├── evidence/
 │   ├── runs/<run-id>/
+│   ├── sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/
+│   ├── sheet/_runs/<YYYY-MM-DD>/<run-id>/
 │   └── visual-*/
 ├── qa-knowledge/
 │   ├── knowledge-index.json
@@ -67,7 +69,7 @@ Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong thư
 
 - Knowledge mới ưu tiên vào `qa-knowledge/knowledge-index.json` và các shard `flows/`, `rules/`, `contracts/`
 - `app-business-guide.md` và `app-flow-map.json` giữ vai trò tương thích hoặc summary
-- Evidence theo run luôn vào `evidence/runs/<run-id>/`
+- Evidence run thông thường vào `evidence/runs/<run-id>/`; riêng Sheet media tách theo chức năng/ngày ở `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`
 - Report hoặc export tách riêng vào `reports/`
 - `FINDINGS.md` ở root chỉ giữ summary ngắn của issue đang theo dõi
 - Không để file QA rải ở root nếu đã có thư mục chuẩn phù hợp

@@ -104,6 +104,17 @@ For the full MCP Playwright tool reference, speed optimization patterns and scre
 
 Core rule: use MCP for interactive branches not yet understood; use CLI scripts for clear, repetitive flows.
 
+### Sheet testcase visual evidence gate
+
+For every Sheet testcase with verdict `Pass` or `Fail`:
+
+1. Capture at least one screenshot after the final assertion, or retain a video that visibly includes the tested action and final state
+2. Use a testcase-specific filename under the assigned `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`, for example `<testcase-id>-pass.png` or `<testcase-id>-fail.webm`; keep plan/result metadata under `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`
+3. Return the media path or an `image:`/`video:` remote URL in the worker result `evidence` field
+4. JSON, trace, console and network files may be additional evidence but cannot replace the required screenshot/video
+5. Do not reuse a pre-action screenshot as final-state evidence and do not mark `Pass`/`Fail` if the visual artifact is missing
+6. The executor rejects local media outside the testcase's assigned function/date directory
+
 ## Step 3 — Speed & Intelligence Optimization
 
 See [MCP-CHEATSHEET.md](MCP-CHEATSHEET.md) for the complete speed pattern table and intelligence checklist.
