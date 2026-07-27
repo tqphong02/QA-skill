@@ -7,7 +7,7 @@ description: Scaffold or extend Playwright Page Object Model automation for UI, 
 
 **Core principle:** All selectors must go through a Page Object — never write `page.locator()` directly in spec files.
 
-Covers 4 test types: **UI · API · Performance · CI/CD**. **Project-agnostic**: do NOT hardcode domain/URL/business logic.
+Covers 4 test types: **UI · API · Performance · CI/CD**, plus **Data-Driven Testing (DDT)** and parallel-safe test-data isolation. **Project-agnostic**: do NOT hardcode domain/URL/business logic.
 
 > **When to use**: When the user wants to automate web/API tests or set up a test pipeline.
 > **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.
@@ -29,6 +29,7 @@ Read the **Decision tree** below → pick the right reference → copy the templ
 | UI test, page object, locator, click/fill flow | `references/ui-testing.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |
 | API test, HTTP request, auth/token, schema | `references/api-testing.md` | `fixtures/api-client.ts`, `tests/api/example.api.spec.ts` |
 | Functional/E2E, business flow spanning UI+API | `references/ui-testing.md` + `references/api-testing.md` | `tests/functional/example.functional.spec.ts` |
+| Data-driven/parameterized test, dataset, parallel data isolation | `references/data-driven-testing.md` | `fixtures/data-driven.ts`, `test-data/cases/login.cases.ts`, `tests/ui/example.data-driven.ui.spec.ts` |
 | Perf/load/timing/SLA | `references/performance-testing.md` | `tests/performance/k6-load-test.js` (Tier 2) |
 | Selector repo, centralized locators | (below) → `selectors/login.selectors.ts`, `selectors/index.ts` | - |
 | Pipeline, CI/CD, Jenkins, GitHub Actions, schedule | `references/cicd.md` | `github-actions-ci.yml`, `Jenkinsfile`, `playwright.config.ts` |
@@ -43,7 +44,9 @@ project-root/
 │   └── performance/   # *.perf.spec.ts (Tier 1) + k6/*.js (Tier 2)
 ├── pages/             # Page Object classes (POM) — one class per page
 ├── selectors/         # Centralized selector repo (NEW) ← single source of truth
-├── fixtures/          # Auth, test data, API request context
+├── fixtures/          # Auth, isolated runtime data, API request context
+├── test-data/         # Versioned typed datasets/cases (read-only inputs)
+├── testdata/          # Runtime-generated data (gitignored)
 ├── utils/             # Config, generators, allure helpers
 ├── reports/           # html/, allure-results/, allure-report/
 ├── playwright.config.ts
@@ -148,10 +151,36 @@ protected get loginBtn() {
 ### 6. Add API layer (API testing conventions)
 - Default to using Playwright `request` fixture (`APIRequestContext`).
 - Validate response schema with `zod` (priority) — fail fast on contract drift
-- Auth/token fixture reusable: login once in `beforeAll`, share `token` / storage state
-- CRUD lifecycle: create → use → **delete in `afterAll`** (no test data pollution)
+- Auth/token fixture reusable: worker-scoped token/storage state, with a standalone request context and optional per-slot account pool
+- CRUD lifecycle: create → use → delete in the same test's `finally`/fixture teardown. Use `afterAll` only for a serial, worker-owned lifecycle
 
-### 7. Add performance harness (optional — 2 tiers)
+### 7. Add Data-Driven Testing + parallel isolation
+
+Separate two kinds of data:
+
+1. **Case data** — versioned, typed, read-only rows under `test-data/cases/`
+2. **Runtime data** — unique entities created by `fixtures/data-driven.ts`
+
+Generate one Playwright test per case at collection time with a synchronous `for...of`. Every case must have a unique stable ID in the test title. Never let two parallel tests mutate the same account, record, cart, tenant, filename, or JSON store.
+
+The runtime namespace must include:
+
+```text
+<runId>-<project>-p<parallelIndex>-w<workerIndex>-t<testIdHash>-r<retry>-e<repeatEachIndex>
+```
+
+Rules:
+- Use the test-scoped `testData` fixture for unique email/string/resource keys
+- Use `TEST_ACCOUNTS_JSON` to allocate a different account per parallel slot when scenarios mutate account-owned state
+- Do not cycle/reuse an undersized account pool; fail with a clear configuration error
+- Store runtime JSON in a namespace-specific file; never use one shared read-modify-write JSON file across workers
+- Cleanup per test in fixture teardown/`afterEach`; use `afterAll` only for resources owned exclusively by that worker
+- A browser context is isolated, but backend data is not; fresh contexts alone do not prevent conflicts
+- Retries must create a new retry-scoped identity and cleanup only resources created by that attempt
+
+See `references/data-driven-testing.md` for the full pattern and templates.
+
+### 8. Add performance harness (optional — 2 tiers)
 | Tier | When | Tool |
 |---|---|---|
 | 1 (Playwright) | Smoke perf gate, 1 user, in main suite | Playwright native (`page.timing`, `performance`) |
@@ -160,7 +189,7 @@ protected get loginBtn() {
 **Escalate Tier 1 → 2 when**: >1 concurrent user needed, formal p95/p99 threshold, standalone CI job.
 See `references/performance-testing.md` for template + escalation matrix.
 
-### 8. Wire up Allure + CI (reporting & platform-NEUTRAL CI/CD)
+### 9. Wire up Allure + CI (reporting & platform-NEUTRAL CI/CD)
 
 **Reporting — Allure:**
 - Annotate with `allure.step()`, `allure.attachment()` in UI/API/perf tests
@@ -189,7 +218,7 @@ See `references/performance-testing.md` for template + escalation matrix.
 - Jenkins → Credentials (`credentials('id')`)
 - **DO NOT hardcode** in pipeline file or commit
 
-### 9. Setup (one-time per project)
+### 10. Setup (one-time per project)
 ```bash
 npm init -y
 npm i -D @playwright/test allure-playwright zod
@@ -204,7 +233,7 @@ npx playwright install chromium      # + firefox / webkit if needed
 # "lint":           "tsc --noEmit && eslint ."
 ```
 
-### 10. Tagging convention
+### 11. Tagging convention
 ```typescript
 test('login happy path @ui', async ({ page }) => { ... });
 test('create user @api', async ({ request }) => { ... });
@@ -215,10 +244,14 @@ Filter:
 - `npx playwright test --grep @api`
 - `npx playwright test --grep @functional`
 
-### 11. Self-check before delivering
+### 12. Self-check before delivering
 - [ ] **`selectors/` repo created** for every page — NO hardcoded locators
 - [ ] Page Object has NO `expect()` in action methods
-- [ ] CRUD tests have `afterAll` cleanup (delete created data)
+- [ ] CRUD tests clean exact created IDs in `finally`/fixture teardown; `afterAll` is limited to worker-owned serial lifecycles
+- [ ] DDT rows are typed, read-only, have unique stable IDs, and generate one test per row
+- [ ] Mutating parallel tests use `testData` namespace or a non-shared account from `TEST_ACCOUNTS_JSON`
+- [ ] Runtime stores/files are isolated by worker/test; no shared JSON read-modify-write
+- [ ] Retry/repeat data keys include `retry` and `repeatEachIndex`
 - [ ] `data-testid` named by convention `<component>-<element>`
 - [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions
 - [ ] Secrets via env vars/credentials, NOT hardcoded
@@ -234,7 +267,11 @@ Filter:
 |---|---|---|
 | Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, use `getByRole`/`getByTestId` |
 | Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |
-| Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Add `afterAll` delete |
+| Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Delete exact owned IDs in `finally`/fixture teardown |
+| DDT loop reuses one mutable payload object | Rows/workers overwrite each other | Keep case rows `readonly`; build a fresh runtime payload inside each test |
+| Parallel tests reuse one account/record/cart | Backend state conflicts although browser contexts are fresh | Allocate per-worker accounts or create per-test resources with `testData` |
+| Workers write the same JSON file | Lost updates/corrupt JSON from read-modify-write races | Include the data namespace in the filename; never share mutable runtime files |
+| Fixture says “per worker” but has no `{ scope: 'worker' }` | Fixture actually runs per test | Declare a worker fixture and avoid test-scoped dependencies |
 | CI/CD hardcodes `API_BASE_URL` or credentials in YAML | Secret leak, cannot be rotated | Use `secrets.*` (GitHub) or `credentials()` (Jenkins) |
 | Test only asserts `status === 200` | Does not verify business rule, only checks if route responds | Add schema validation (zod), check critical fields |
 | Tier 1 perf test runs 50 concurrent users | Playwright cannot scale | Escalate to k6 (Tier 2) |
@@ -243,7 +280,7 @@ Filter:
 
 - **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts.
 
-- **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()` or `afterAll` cleanup.
+- **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()`, fixture teardown, or exact-ID cleanup in `finally`.
 
 - **JSON config** where possible instead of hardcoding URL/credentials.
 
@@ -253,7 +290,7 @@ Filter:
 
 - **API key**: one shared config file `../config/api_keys.json` (gitignored), used by all 3 skills. See [README.md](../README.md).
 
-- **Self-check is critical**: AI often forgets cleanup hooks, hardcodes secrets, or omits the selector repo. Run through the 11-item checklist before committing.
+- **Self-check is critical**: AI often forgets cleanup hooks, hardcodes secrets, or omits the selector repo. Run through the full checklist before committing.
 
 ## References
 
@@ -263,16 +300,20 @@ Filter:
 - `assets/templates/playwright.config.ts`
 - `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders
 - `assets/templates/fixtures/api-client.ts`
+- `assets/templates/fixtures/data-driven.ts`
+- `assets/templates/test-data/cases/login.cases.ts`
 - `assets/templates/pages/base.page.ts`, `pages/example.page.ts`
 - `assets/templates/selectors/index.ts`, `selectors/login.selectors.ts`
 - `assets/templates/tests/api/example.api.spec.ts`
 - `assets/templates/tests/ui/example.ui.spec.ts`
+- `assets/templates/tests/ui/example.data-driven.ui.spec.ts`
 - `assets/templates/tests/functional/example.functional.spec.ts`
 - `assets/templates/tests/performance/k6-load-test.js`
 
 ### Reference docs (`references/`)
 - [references/ui-testing.md](references/ui-testing.md) — UI test patterns, page object examples
 - [references/api-testing.md](references/api-testing.md) — API tests with zod schema, auth fixtures
+- [references/data-driven-testing.md](references/data-driven-testing.md) — typed datasets, worker/test namespaces, account pools, cleanup
 - [references/performance-testing.md](references/performance-testing.md) — Playwright perf + k6, escalation matrix
 - [references/cicd.md](references/cicd.md) — Jenkins + GitHub Actions templates, secrets management
 

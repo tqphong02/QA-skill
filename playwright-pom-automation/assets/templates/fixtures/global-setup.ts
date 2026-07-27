@@ -18,7 +18,7 @@ import path from 'path';
  *   3. Set RUN_ID env var để tests/cleanup track data của run này
  *
  * Lưu ý:
- *   - Chạy 1 lần per worker — KHÔNG per test
+ *   - Chạy 1 lần cho toàn bộ Playwright invocation — KHÔNG per worker/test
  *   - Fail ở đây → toàn bộ suite không chạy
  *   - KHÔNG dùng page fixtures ở đây (chỉ dùng standalone API)
  */

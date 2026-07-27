@@ -8,7 +8,7 @@ Template scaffold + quy trình viết test Playwright + TypeScript theo **Page O
 - **[assets/templates/](assets/templates/)** — folder scaffold copy vào project thật
 - **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)** — danh sách placeholder cần fill
 - **[SKILL.md](SKILL.md)** — quy trình chi tiết (AI đọc khi kích hoạt; **human thường bỏ qua**)
-- **[references/](references/)** — UI/API/perf/CI patterns (đọc khi cần deep-dive)
+- **[references/](references/)** — UI/API/DDT/perf/CI patterns (đọc khi cần deep-dive)
 
 ## 🚀 Quickstart
 
@@ -56,6 +56,7 @@ assets/templates/
 │   ├── login.selectors.ts            LoginLocators mẫu
 │   └── dashboard.selectors.ts        DashboardLocators mẫu
 ├── fixtures/                      ← auth, test-data, session, env, global setup/teardown
+├── test-data/                     ← typed, versioned, read-only DDT case rows
 ├── tests/
 │   ├── ui/                          @ui    — browser-driven, per-page
 │   ├── api/                         @api   — request-level, no browser
@@ -75,6 +76,16 @@ assets/templates/
 4. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
 
 Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing.md)**.
+
+## 🧪 Data-Driven Testing và parallel
+
+- Khai báo case rows typed/read-only trong `test-data/cases/`
+- Tạo một test riêng cho mỗi row bằng `for...of`
+- Dùng `fixtures/data-driven.ts` để sinh email, resource key và namespace khác nhau theo run/project/worker/test/retry
+- Nếu test thay đổi dữ liệu gắn với account, cấu hình `TEST_ACCOUNTS_JSON` đủ ít nhất bằng số parallel slots
+- Không dùng chung một JSON runtime, record, cart, tenant hoặc account giữa các worker
+
+Xem **[references/data-driven-testing.md](references/data-driven-testing.md)** và template `tests/ui/example.data-driven.ui.spec.ts`.
 
 ## ✅ Validation
 

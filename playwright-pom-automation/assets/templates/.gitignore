@@ -40,6 +40,7 @@ sessions/*.json
 !sessions/README.md
 
 testdata/*.json
+testdata/*.tmp
 !testdata/.gitkeep
 !testdata/README.md
 # OPTIONAL: commit seed files for sharing across team

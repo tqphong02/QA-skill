@@ -121,14 +121,16 @@ const <Resource>Schema = z.object({
 
 ## Cleanup Policy
 
-> AI: spec file PHẢI có cleanup logic. Mỗi resource tạo ra → xóa trong `afterAll`.
+> AI: spec file PHẢI có cleanup logic. Mỗi resource tạo ra → xóa theo exact ID trong `finally` hoặc fixture teardown. Chỉ dùng `afterAll` cho serial lifecycle do một worker sở hữu riêng.
 
 ```typescript
-const createdIds: string[] = [];
-
-test.afterAll(async () => {
-  for (const id of createdIds) {
-    await api.delete(`/api/<resource>/${id}`, token);
+test('create resource', async ({ testData }) => {
+  let createdId: string | undefined;
+  try {
+    createdId = await createResource({ externalKey: testData.caseKey('<TC_ID>') });
+    // assertions
+  } finally {
+    if (createdId) await api.delete(`/api/<resource>/${createdId}`, token);
   }
 });
 ```

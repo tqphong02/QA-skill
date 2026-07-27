@@ -80,16 +80,23 @@ test.describe('Feature @ui', () => {
   Generate it with a setup project (login → `page.context().storageState({ path: ... })`).
 - **Custom fixtures** for test data generators (email, timestamps) so tests stay deterministic but unique:
   ```typescript
-  export const test = base.extend<{ uniqueEmail: string }>({
-    uniqueEmail: async ({}, use) => { await use(`qa-${Date.now()}@example.com`); },
+  import { test, expect } from '../fixtures/data-driven';
+
+  test('create isolated user', async ({ testData }) => {
+    const email = testData.uniqueEmail();
+    // Use email only in this test attempt, then clean up the created user.
   });
   ```
 - **Project-specific data** → `fixtures/` folder, **not** hardcoded in page objects.
+- **Typed case datasets** → `test-data/cases/`; keep them read-only and create one test per row.
+- Full DDT and worker/test isolation pattern → `references/data-driven-testing.md`.
 
 ## 6. Parallelism & isolation
 
-- Playwright runs tests in parallel by default (`fullyParallel: true`). Each test gets a fresh context — **no shared state between tests**.
-- If a test mutates data, **clean up in `afterEach`/`afterAll`** or use `withRevert`-style teardown. Don't rely on test ordering.
+- Playwright runs tests in parallel when configured with `fullyParallel: true`. Each test gets a fresh browser context, but backend/account/file state remains shared unless explicitly isolated.
+- If a test mutates data, create data with the test-scoped `testData` fixture and **clean up in fixture teardown/`afterEach`**. Use `afterAll` only for worker-owned resources.
+- Scenarios that mutate account-owned state require a per-parallel-slot account pool (`TEST_ACCOUNTS_JSON`) or another isolated tenant/resource.
+- Runtime file/store names must include the worker/test namespace. Never let workers update one shared JSON file.
 - For serial dependency (rare, avoid if possible): `test.describe.serial(...)`.
 
 ## 7. Tracing / screenshots / video

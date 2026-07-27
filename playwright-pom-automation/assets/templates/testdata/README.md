@@ -1,17 +1,20 @@
 # Testdata Folder
 
-> **Mục đích**: Lưu trữ test data (seed users, mock responses, generated payloads) dùng chung giữa các test.
+> **Mục đích**: Lưu runtime-generated data để debug hoặc handoff giữa các bước có ownership rõ ràng.
 
 > **AI**: Folder này KHÔNG cần file template — chỉ cần `.gitkeep` để git track folder. Runtime sẽ tự sinh files JSON.
+>
+> Case rows typed/read-only phải đặt trong `test-data/cases/`, không đặt ở folder runtime này.
 
 ## Files sinh ra bởi runtime
 
 | File | Tạo bởi | Mô tả |
 |---|---|---|
-| `users.json` | `TestDataStore('users')` | Danh sách user seed cho tests |
-| `mock-responses.json` | `TestDataStore('mock')` | Mock response payloads |
-| `generated.json` | `TestDataStore('generated')` | Generated data qua `generators` |
-| `<custom>.json` | `TestDataStore('<name>')` | Bất kỳ custom data nào |
+| `users.<namespace>.json` | `TestDataStore('users', namespace)` | User data thuộc một test attempt |
+| `mock.<namespace>.json` | `TestDataStore('mock', namespace)` | Mock payload thuộc một test attempt |
+| `generated.<namespace>.json` | `TestDataStore('generated', namespace)` | Generated data thuộc một test attempt |
+
+Không để nhiều worker read-modify-write cùng một JSON. Khi chạy parallel, luôn truyền `testData.namespace`.
 
 ## Gitignore
 
@@ -36,14 +39,14 @@ testdata/*.json
 ## Ví dụ sử dụng
 
 ```typescript
-import { TestDataStore, generators } from '../../fixtures/test-data';
-
-const userStore = new TestDataStore('users');
+import { test, expect } from '../../fixtures/data-driven';
+import { TestDataStore } from '../../fixtures/test-data';
 
 // Save generated user
-test('create and save user', async ({ request, apiToken }) => {
+test('create and save user', async ({ request, apiToken, testData }) => {
+  const userStore = new TestDataStore('users', testData.namespace);
   const user = {
-    email: generators.uniqueEmail(),
+    email: testData.uniqueEmail(),
     firstName: 'Test',
     lastName: 'User',
   };
@@ -52,13 +55,9 @@ test('create and save user', async ({ request, apiToken }) => {
   const res = await request.post('/api/users', { data: user, headers: { Authorization: `Bearer ${apiToken}` } });
   expect(res.status()).toBe(201);
 });
-
-// Load saved user trong test khác
-test('use saved user', async () => {
-  const savedUser = userStore.load<{ email: string }>('test-1@example.com');
-  expect(savedUser?.firstName).toBe('Test');
-});
 ```
+
+Không phụ thuộc một test khác để load file này. Nếu một business flow cần create → use, giữ các bước trong cùng test hoặc worker-owned fixture và cleanup theo exact resource ID.
 
 ## Seed data (optional)
 

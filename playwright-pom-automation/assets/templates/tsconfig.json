@@ -34,6 +34,7 @@
     "pages/**/*",
     "selectors/**/*",
     "fixtures/**/*",
+    "test-data/**/*",
     "utils/**/*",
     "*.ts"
   ],

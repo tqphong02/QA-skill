@@ -69,14 +69,28 @@ export class GenericBuilder<T extends object> {
 // ─────────────────────────────────────────────────────────────
 const TESTDATA_DIR = path.resolve(__dirname, '../testdata');
 
+function safeFileSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'data';
+}
+
 export class TestDataStore {
   private readonly filePath: string;
 
-  constructor(name: string) {
+  /**
+   * `namespace` phải lấy từ fixture `testData.namespace` khi test chạy parallel.
+   * Default có PID để các worker process không cùng read-modify-write một file.
+   */
+  constructor(
+    name: string,
+    namespace = `${process.env.RUN_ID ?? 'local'}-pid-${process.pid}`,
+  ) {
     if (!fs.existsSync(TESTDATA_DIR)) {
       fs.mkdirSync(TESTDATA_DIR, { recursive: true });
     }
-    this.filePath = path.join(TESTDATA_DIR, `${name}.json`);
+    this.filePath = path.join(
+      TESTDATA_DIR,
+      `${safeFileSegment(name)}.${safeFileSegment(namespace)}.json`,
+    );
   }
 
   /** Save data để share giữa các test hoặc debug sau khi fail */

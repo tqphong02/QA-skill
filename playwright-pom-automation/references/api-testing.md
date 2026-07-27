@@ -51,15 +51,23 @@ test.beforeAll(async ({ request }) => {
 
 **Pattern B — custom fixture (more reusable):**
 ```typescript
+import { request as playwrightRequest } from '@playwright/test';
+
 export const test = base.extend<{}, { token: string }>({
-  token: [async ({ request }, use) => {
-    const res = await request.post(`${BASE}/auth/login`, { data: credentials });
-    await use((await res.json()).accessToken);
+  token: [async ({}, use) => {
+    const context = await playwrightRequest.newContext();
+    try {
+      const res = await context.post(`${BASE}/auth/login`, { data: credentials });
+      await use((await res.json()).accessToken);
+    } finally {
+      await context.dispose();
+    }
   }, { scope: 'worker' }],  // login once per worker, not per test
 });
 ```
 
 Credentials from env (`process.env.TEST_USER`), never hardcoded.
+A worker-scoped fixture must not depend on the test-scoped `request` fixture. For account-state mutation, allocate credentials from `TEST_ACCOUNTS_JSON[parallelIndex]`.
 
 ## 4. Schema validation with zod
 
@@ -110,8 +118,9 @@ test.describe.serial('User CRUD @api', () => {
 });
 ```
 
-- Use `test.describe.serial` only when tests genuinely depend on order (CRUD lifecycle is the legit case).
-- **Cleanup is mandatory** — `afterAll` delete, even if a test failed mid-way.
+- Use `test.describe.serial` only when tests genuinely depend on order (a single worker-owned CRUD lifecycle is a legitimate case).
+- For independent/parallel CRUD tests, create and delete the exact resource in the same test with `try/finally` or fixture teardown.
+- **Cleanup is mandatory**. `afterAll` is allowed only when the serial block owns the resource exclusively.
 
 ## 6. Status code expectations
 
@@ -136,8 +145,8 @@ test.describe.serial('User CRUD @api', () => {
 | Hardcoded credentials | `process.env.TEST_USER` / `TEST_PASS` |
 | Login inside every test | `beforeAll` / worker-scoped token fixture |
 | No schema validation | Validate every response with `zod` |
-| No cleanup after create | `afterAll` delete — leave no data rác |
+| No cleanup after create | Delete the exact owned ID in `finally`/fixture teardown |
 | Only happy-path tests | Add 401/403/422 negative tests |
 | `axios` introduced when Playwright `request` available | Use `APIRequestContext` |
 | Trusting only status code | Assert response body shape + values |
-| Tests depending on shared mutable data | Fresh data per run (`qa-<timestamp>`) |
+| Tests depending on shared mutable data | Use `testData` namespace; timestamp alone is not worker/test isolation |

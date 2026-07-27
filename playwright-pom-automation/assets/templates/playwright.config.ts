@@ -1,5 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
+// Set once in the config process; every worker inherits the same run ID.
+process.env.RUN_ID ??= `local-${Date.now()}-${process.pid}`;
+
+function resolveWorkers(): number {
+  if (!process.env.PW_WORKERS) return process.env.CI ? 4 : 1;
+  const workers = Number.parseInt(process.env.PW_WORKERS, 10);
+  if (!Number.isInteger(workers) || workers < 1) {
+    throw new Error(`PW_WORKERS must be a positive integer, received: ${process.env.PW_WORKERS}`);
+  }
+  return workers;
+}
+
 /**
  * Playwright config chuẩn (generic).
  * Đổi baseURL / projects / reporter theo project thật.
@@ -9,7 +21,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI, // cấm test.only trên CI
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 4 : 1,
+  // Override locally/CI with PW_WORKERS. Parallel mutating tests must have
+  // isolated runtime data and, when needed, one account per parallel slot.
+  workers: resolveWorkers(),
 
   // Reporter: list (console) + HTML + JUnit + Allure (bật allure-playwright khi đã cài).
   // Allure raw results → reports/allure-results; HTML generate bằng:
@@ -22,7 +36,7 @@ export default defineConfig({
   ],
 
   use: {
-    baseURL: process.env.BASE_URL ?? 'http://localhost:3000',
+    baseURL: process.env.UI_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
