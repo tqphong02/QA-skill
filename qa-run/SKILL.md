@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Execute browser QA for app discovery, Plane ticket retest, Sheet testcase execution, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence, release sign-off, and business-flow knowledge handoff. Trigger on retest, re-test, verify bug/ticket, a Plane ticket URL with validation language, a Sheet URL with execute/run language, sanity, regression, exploratory, ad-hoc, UI/UX, or business discovery; do not require the skill name. Compose shared discovery/exploratory layers into RETEST_PLUS and SHEET_EXECUTION_PLUS. Not for writing automation or testcase documents.
+description: Execute browser QA with same-session network and console observation for app discovery, Plane ticket retest, Sheet testcase execution, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence, release sign-off, and business-flow knowledge handoff. Trigger on retest, re-test, verify bug/ticket, a Plane ticket URL with validation language, a Sheet URL with execute/run language, sanity, regression, exploratory, ad-hoc, UI/UX, browser response errors, or business discovery; do not require the skill name. Compose shared discovery/exploratory layers into RETEST_PLUS and SHEET_EXECUTION_PLUS. Not for writing automation, native-mobile traffic interception, or testcase documents.
 ---
 
 # QA Run
@@ -26,6 +26,10 @@ RETEST_PLUS =
 SHEET_EXECUTION_PLUS =
   Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE
   + Original Retest only for rows linked to a ticket or previous failure
+
+BROWSER_OBSERVABILITY =
+  Same-session Network + Console + Page Error correlation
+  Applied to every live browser stack without changing DISCOVERY_CORE
 ```
 
 | User entrypoint | Required stack | Read now |
@@ -40,6 +44,8 @@ SHEET_EXECUTION_PLUS =
 | Write Playwright automation or POM | Exit `qa-run` | Route to `playwright-pom-automation` |
 
 Create a ledger row for every expanded layer. Do not conclude the parent workflow while any required layer lacks `PASS`, `FAILED`, `BLOCKED`, `PARTIAL`, or `N/A` with a reason.
+
+For every live browser route, also create one `BROWSER_OBSERVABILITY` ledger row and read [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md). Use the observer attached to the same page/session as the UI driver. Route native Android/iOS traffic to `mobile-qa`.
 
 Load optional references only when their condition occurs:
 
@@ -76,9 +82,15 @@ Apply the following exact order for all models, especially fast or small-context
    ```bash
    node scripts/helpers/run-manifest.mjs start \
      --mode <MODE> \
-     --business-context qa-knowledge/context/business-execution-brief.json
+     --business-context qa-knowledge/context/business-execution-brief.json \
+     --browser-observer <playwright-mcp|chrome-devtools-mcp|playwright-runtime|unavailable|not-applicable>
    ```
    `run-manifest.mjs` must reject every non-discovery run whose brief is missing, invalid or not `READY`.
+   - Resolve the observer before opening the page. Prefer Playwright network/console tools when Playwright MCP drives the UI; prefer Chrome DevTools network/console tools only when Chrome DevTools drives or is attached to that exact page
+   - Never use an isolated Chrome DevTools browser to claim network evidence for a Playwright browser
+   - Start observation before the first critical action. After each submit, save, delete, calculation, navigation, upload, retry, permission change, or other business transition, inspect matching XHR/fetch/document requests and console/page errors
+   - Inspect response bodies only for failed or contract-relevant requests, including GraphQL HTTP 200 responses with `errors`; redact secrets and personal data before persistence
+   - If browser observability is unavailable, mark its ledger row `BLOCKED`. Continue functional testing only when network verification is not part of the requested or business contract
 4. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
    - **Standard schema is pre-baked** — read [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json); DO NOT rescan headers each time. Schema summary:
      ```
@@ -160,6 +172,8 @@ These must be observed at all times, even before reading any reference file:
 - **DO NOT conclude PASS when lacking evidence** — absence of visible error is not evidence of passing
 - **DO NOT use fallback (Antigravity/CLI) as a substitute for MCP** without first confirming MCP is genuinely unavailable
 - **DO NOT overwrite existing artifacts** (`auth.json`, `evidence/`, `qa-knowledge/`) without reading the existing content first
+- **DO NOT mix browser sessions** — network and console evidence must come from the same page/session that executed the UI action
+- **DO NOT treat every 4xx/5xx as a confirmed bug** — correlate the request with the triggering action, expected negative behavior, response body and visible outcome
 
 ## Canonical artifact layout
 
@@ -169,6 +183,8 @@ These must be observed at all times, even before reading any reference file:
 ├── auth.json
 ├── evidence/
 │   ├── runs/<run-id>/ (manifest.json, screenshots/, logs/, redacted/)
+│   ├── network/<run-id>/ (sanitized request/response summaries)
+│   ├── console/<run-id>/ (sanitized error/warning summaries)
 │   ├── sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/ (Sheet screenshots/videos)
 │   ├── sheet/_runs/<YYYY-MM-DD>/<run-id>/ (Sheet plans/results/write-back metadata)
 │   ├── visual-*/
@@ -200,6 +216,7 @@ These must be observed at all times, even before reading any reference file:
 |---|---|
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
+| `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
 | `scripts/helpers/execute-sheet.mjs` | Resolve and confirm module scope, worker count and selection; shard assignments; require image/video evidence; write back validated verdicts |
 | `scripts/helpers/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
@@ -223,3 +240,4 @@ These must be observed at all times, even before reading any reference file:
 - [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — write deterministic test-as-code (DIFFERENT from this live exploratory)
 - [testcase-template](../testcase-template/SKILL.md) — document Excel test cases (DIFFERENT from this bug hunting)
 - [doc-to-md](../doc-to-md/SKILL.md) — convert PDF/DOCX to MD for AI to read spec
+- [mobile-qa](../mobile-qa/SKILL.md) — native Android/iOS Appium execution and authorized proxy interception

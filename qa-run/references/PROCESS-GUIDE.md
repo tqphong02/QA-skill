@@ -6,9 +6,12 @@
 
 `DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`
 
+`BROWSER_OBSERVABILITY = Same-session Network + Console + Page Error correlation`
+
 - `Scoped Business Discovery` reads existing knowledge, verifies the current flow/roles/states/rules, fills only missing or stale facts, and writes the confirmed delta after the run
 - `RETEST_PLUS` and `SHEET_EXECUTION_PLUS` both reuse `DISCOVERY_CORE`; do not rerun the same discovery separately for each layer
 - Full-app Business Discovery is reserved for `APP_BASELINE_DISCOVERY`; ticket and Sheet runs use the affected feature and dependency scope
+- Apply `BROWSER_OBSERVABILITY` to every live browser stack without adding it to or changing `DISCOVERY_CORE`
 
 ## Step 1 — Understand context first (Principle #1)
 
@@ -96,13 +99,17 @@ One line: *"Khám phá <feature> tìm lỗi về <rủi ro>; account <role>; ~<t
 ### Step D — Goal-oriented UI driving (via MCP Playwright)
 - Happy path -> snapshot every step -> verify state changes correctly
 - **Purposeful deviations** at each step: try invalid / boundary / concurrent inputs
-- Note exposed console/HTTP errors (`browser_console_messages`, `browser_network_requests`)
+- Start same-session browser observation before the first critical action
+- After every critical transition, inspect matching requests, failed/contract-relevant response bodies and console/page errors
+- Read [BROWSER-OBSERVABILITY.md](BROWSER-OBSERVABILITY.md) for tool routing, correlation, redaction and classification
 
 ## Step 2 — Drive UI via MCP Playwright (Principle #2)
 
 For the full MCP Playwright tool reference, speed optimization patterns and screenshot evidence rules, read [MCP-CHEATSHEET.md](MCP-CHEATSHEET.md).
 
 Core rule: use MCP for interactive branches not yet understood; use CLI scripts for clear, repetitive flows.
+
+Browser observability rule: use the network and console tools belonging to the active browser session. Playwright MCP UI actions pair with Playwright MCP network tools. Chrome DevTools evidence is valid only for a page driven by or attached to Chrome DevTools. Never cross-associate isolated sessions.
 
 ### Sheet testcase visual evidence gate
 
@@ -122,6 +129,7 @@ See [MCP-CHEATSHEET.md](MCP-CHEATSHEET.md) for the complete speed pattern table 
 Key rules:
 - Scope snapshot — never snapshot full page when only a sub-section is needed
 - Cross-verify: DOM + network + console ≥ 2 sources before concluding
+- Inspect response bodies selectively for failures, persistence/calculation contracts and GraphQL envelopes; do not retain unrestricted bodies
 - Read matching feature business guide before each run; update guide after every run
 
 ## Step 4 — UI/UX & Interaction testing

@@ -6,7 +6,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
-| [qa-run](./qa-run/SKILL.md) | Săn bug exploratory + log Plane + đóng gói evidence (PDF/Drive) | `FINDINGS.md` + ticket Plane + ảnh |
+| [qa-run](./qa-run/SKILL.md) | Browser QA với same-session network/console observability, exploratory, Plane và evidence | `FINDINGS.md` + network/console correlation + ticket Plane + ảnh |
 | [testcase-template](./testcase-template/SKILL.md) | Sinh test case Excel theo template Nina Studio (4 sheet, formulas, dropdowns) | `Template.xlsx` |
 | [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Scaffold & viết Playwright + TS + POM (UI / API / Performance / CI-CD) | `.spec.ts` + `pages/` + `selectors/` + pipeline |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |

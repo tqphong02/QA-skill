@@ -13,7 +13,12 @@
 | Run arbitrary JS (probe API, read state) | `browser_evaluate` |
 | Wait for text / state | `browser_wait_for` stable text (no hard `wait_for_timeout`) |
 | Test multiple pages / endpoints | `browser_tabs` (open in parallel) |
-| View network + console | `browser_network_requests` / `browser_console_messages` |
+| View Playwright network list | `browser_network_requests` |
+| Inspect one Playwright request/response | `browser_network_request` |
+| View Playwright console | `browser_console_messages` |
+| View Chrome DevTools network list | `list_network_requests` |
+| Inspect one Chrome DevTools request/response | `get_network_request` |
+| View Chrome DevTools console | `list_console_messages` / `get_console_message` |
 | Compare baseline | `browser_take_screenshot` (when pixel comparison is needed) |
 
 ## Speed Optimization (Reduce Round-trips & Payload)
@@ -36,6 +41,15 @@
 4. **Parallel agent fan-out** — 3-5 agents probe simultaneously (only when user opts in)
 5. **Charter with risk taxonomy** — H/M/L priority probe first
 6. **Screenshot-first evidence** — prioritize `visual-evidence-router.mjs` / OmniParser to ground elements, labels and bounding boxes first; only fallback to OCR or general vision when OmniParser is unavailable or exact characters need extracting; do not convert whole PNG/JPG to markdown
+
+## Same-session network rule
+
+- Playwright MCP drives UI → use `browser_network_requests`, `browser_network_request`, and `browser_console_messages`
+- Chrome DevTools drives or attaches to the page → use `list_network_requests`, `get_network_request`, `list_console_messages`, and `get_console_message`
+- Bundled Playwright script drives UI → attach `scripts/helpers/runtime-observer.mjs`
+- Do not use Chrome DevTools MCP network evidence for actions executed in an isolated Playwright MCP browser, or the reverse
+- Exclude successful static resources by default; inspect response bodies only for failures or contract-relevant calls
+- A 4xx/5xx is a candidate until correlated with the triggering action, expected behavior and UI/persistence impact
 
 ## When to Use MCP vs Scripts
 

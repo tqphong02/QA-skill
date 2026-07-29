@@ -61,6 +61,22 @@ if (command === 'start') {
     '--business-context',
     path.join(DATA, 'qa-knowledge', 'context', 'business-execution-brief.json'),
   ));
+  const browserObserver = getArg(
+    '--browser-observer',
+    process.env.QA_BROWSER_OBSERVER || 'auto',
+  );
+  const allowedBrowserObservers = new Set([
+    'auto',
+    'playwright-mcp',
+    'chrome-devtools-mcp',
+    'playwright-runtime',
+    'unavailable',
+    'not-applicable',
+  ]);
+  if (!allowedBrowserObservers.has(browserObserver)) {
+    console.error(`[run-manifest] BLOCKED: unsupported browser observer ${browserObserver}`);
+    process.exit(2);
+  }
 
   let businessContext = null;
   if (fs.existsSync(businessContextPath)) {
@@ -96,6 +112,13 @@ if (command === 'start') {
     git_branch: getGitBranch(),
     app_version: process.env.QA_APP_VERSION || '1.0.0',
     browser: 'chromium-headless',
+    browser_observability: {
+      observer: browserObserver,
+      same_session_required: true,
+      enabled: !['unavailable', 'not-applicable'].includes(browserObserver),
+      scope: ['document', 'xhr', 'fetch', 'websocket', 'console', 'pageerror'],
+      redaction_required: true,
+    },
     viewport: '1440x900',
     account_roles: [process.env.QA_EMAIL || 'default_user'],
     test_data_namespace: `ns-${Date.now().toString(36)}`,

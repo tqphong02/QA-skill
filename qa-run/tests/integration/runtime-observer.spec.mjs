@@ -1,10 +1,74 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRuntimeObserver } from '../../scripts/runtime-observer.mjs';
+import { EventEmitter } from 'node:events';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { createRuntimeObserver } from '../../scripts/helpers/runtime-observer.mjs';
 
 test('Runtime Observer: Captures live events in memory and streams to disk', () => {
-  const observer = createRuntimeObserver(null);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-runtime-observer-'));
+  const eventsFile = path.join(tempDir, 'runtime-events.json');
+  const observer = createRuntimeObserver(null, { eventsFile });
   assert.equal(typeof observer.getEvents, 'function');
   assert.equal(typeof observer.clearEvents, 'function');
   assert.ok(Array.isArray(observer.getEvents()));
+  fs.rmSync(tempDir, { recursive: true, force: true });
+});
+
+test('Runtime Observer: Captures and redacts browser failures', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-runtime-observer-'));
+  const eventsFile = path.join(tempDir, 'runtime-events.json');
+  const page = new EventEmitter();
+  const observer = createRuntimeObserver(page, { eventsFile });
+
+  page.emit('console', {
+    type: () => 'error',
+    text: () => 'Request failed for user@example.com with Bearer secret-token',
+  });
+  page.emit('pageerror', new Error('Crash for user@example.com'));
+  page.emit('requestfailed', {
+    method: () => 'POST',
+    url: () => 'https://example.test/orders?access_token=secret',
+    failure: () => ({ errorText: 'net::ERR_FAILED Bearer secret-token' }),
+  });
+  page.emit('response', {
+    status: () => 500,
+    statusText: () => 'Internal Server Error',
+    url: () => 'https://example.test/orders?account=123',
+    headers: () => ({ 'content-type': 'application/json' }),
+    text: async () => JSON.stringify({
+      error: 'ORDER_FAILED',
+      token: 'secret-token',
+      email: 'user@example.com',
+    }),
+    request: () => ({ method: () => 'POST' }),
+  });
+  page.emit('response', {
+    status: () => 200,
+    statusText: () => 'OK',
+    url: () => 'https://example.test/graphql?operation=Checkout',
+    headers: () => ({ 'content-type': 'application/json' }),
+    text: async () => JSON.stringify({
+      data: { checkout: null },
+      errors: [{ message: 'Checkout failed', token: 'secret-token' }],
+    }),
+    request: () => ({ method: () => 'POST' }),
+  });
+
+  await new Promise(resolve => setImmediate(resolve));
+
+  const events = observer.getEvents();
+  assert.ok(events.some(event => event.type === 'CONSOLE_ERROR'));
+  assert.ok(events.some(event => event.type === 'PAGE_CRASH_ERROR'));
+  assert.ok(events.some(event => event.type === 'REQUEST_FAILED'));
+  assert.ok(events.some(event => event.type === 'HTTP_FAILURE'));
+  assert.ok(events.some(event => event.type === 'GRAPHQL_ERROR'));
+
+  const serialized = JSON.stringify(events);
+  assert.doesNotMatch(serialized, /secret-token/);
+  assert.doesNotMatch(serialized, /user@example\.com/);
+  assert.match(serialized, /<redacted>/);
+  assert.ok(fs.existsSync(eventsFile));
+  fs.rmSync(tempDir, { recursive: true, force: true });
 });

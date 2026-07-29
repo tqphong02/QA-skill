@@ -34,7 +34,7 @@ For each AC:
 1. Setup conditions (login correct role, clear localStorage, **prepare test data**)
 2. Execute exact repro steps (DO NOT arbitrarily add weird steps)
 3. Snapshot after each step -> compare with "Expected" in AC
-4. Verify network response too (if AC involves persist/calculation)
+4. Verify same-session network and console behavior for every critical transition; inspect response bodies for failures and persist/calculation contracts
 5. Mark PASS/FAILED for each AC — DO NOT lump into "overall OK"
 
 ## Step 4 — RETEST_PLUS coverage (MANDATORY)
@@ -52,7 +52,7 @@ Adjacent area check in the above layers:
 - Create 1 record via different flow (e.g. import file instead of form) -> share validation?
 - Refresh/back mid-flow -> is state dirty?
 - Change user role (e.g. guest views admin page) -> permission leak?
-- `browser_console_messages` + `browser_network_requests` at end of session -> any weird warning/error?
+- Same-session network + console sweep at the end of every layer -> any late warning/error, failed request, GraphQL error, duplicate or retry storm?
 
 ## Step 5 — Verdict + report
 

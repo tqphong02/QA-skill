@@ -578,12 +578,14 @@ setup_selected_integrations() {
   local skills=("$@")
   local has_postman=0
   local has_mobile=0
+  local has_qa_run=0
   local skill
   for skill in "${skills[@]}"; do
     [[ "$skill" == "postman" ]] && has_postman=1
     [[ "$skill" == "mobile-qa" ]] && has_mobile=1
+    [[ "$skill" == "qa-run" ]] && has_qa_run=1
   done
-  if [[ "$has_postman" -ne 1 ]] && [[ "$has_mobile" -ne 1 ]]; then
+  if [[ "$has_postman" -ne 1 ]] && [[ "$has_mobile" -ne 1 ]] && [[ "$has_qa_run" -ne 1 ]]; then
     return 0
   fi
 
@@ -610,6 +612,21 @@ setup_selected_integrations() {
       "$py_bin" "$mobile_bootstrap" --agent antigravity --dry-run || return 1
     else
       "$py_bin" "$mobile_bootstrap" --agent antigravity || return 1
+    fi
+  fi
+
+  if [[ "$has_qa_run" -eq 1 ]] && [[ "${TARGET_AGENT:-}" == "antigravity" ]]; then
+    log_step "Playwright MCP browser-observability bootstrap"
+    if [[ -z "$py_bin" ]]; then
+      log_err "Không có Python để cấu hình Playwright MCP"
+      return 1
+    fi
+    local browser_bootstrap="$SKILLS_DIR/qa-run/scripts/helpers/configure-browser-mcp.py"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      browser_bootstrap="$REPO_DIR/qa-run/scripts/helpers/configure-browser-mcp.py"
+      "$py_bin" "$browser_bootstrap" --agent antigravity --dry-run || return 1
+    else
+      "$py_bin" "$browser_bootstrap" --agent antigravity || return 1
     fi
   fi
 

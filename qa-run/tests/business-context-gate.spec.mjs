@@ -78,6 +78,7 @@ try {
     'start',
     '--mode', 'RETEST_TICKET',
     '--business-context', readyBrief,
+    '--browser-observer', 'playwright-mcp',
   ], readyRoot);
   assert.equal(readyManifest.status, 0, readyManifest.stderr || readyManifest.stdout);
   const manifest = JSON.parse(
@@ -85,6 +86,9 @@ try {
   );
   assert.equal(manifest.business_context.status, 'READY');
   assert.equal(manifest.business_context.scope, 'checkout');
+  assert.equal(manifest.browser_observability.observer, 'playwright-mcp');
+  assert.equal(manifest.browser_observability.same_session_required, true);
+  assert.equal(manifest.browser_observability.redaction_required, true);
 
   const missingRoot = path.join(tempRoot, 'missing');
   fs.mkdirSync(missingRoot, { recursive: true });
