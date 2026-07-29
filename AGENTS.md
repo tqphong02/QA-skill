@@ -47,7 +47,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition |
 | Postman setup, Postman MCP/CLI, Newman, OAuth, collection run, workspace, environment, spec, mock hoặc monitor operation | `postman/SKILL.md` | Bootstrap MCP, chạy runtime doctor, ưu tiên Postman CLI và chỉ fallback Newman cho collection v2/v2.1 |
 | OpenAPI, Swagger, Postman contract/collection validation, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
-| Android/iOS, APK/IPA, Appium, emulator hoặc real device | `mobile-qa/SKILL.md` | Chọn device matrix và lifecycle coverage |
+| Android/iOS, APK/IPA, Appium, emulator, real device, scrcpy, `scrcpy-wifi`, Proxyman, Charles, mitmproxy, HTTP Toolkit, Fiddler, HAR hoặc mobile network traffic | `mobile-qa/SKILL.md` | Chạy mobile/network doctor phù hợp, chọn device matrix, lifecycle và authorized capture scope |
 | Tạo/import/chạy JMeter `.jmx` | `performance-qa/SKILL.md` | Dùng internal JMeter adapter; smoke một thread trước approved load |
 
 ### Hard gates

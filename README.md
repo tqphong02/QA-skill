@@ -20,7 +20,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [performance-qa](./performance-qa/SKILL.md) | Một orchestrator cho JMeter/k6, common config, threshold, report và bottleneck | `.jmx`/k6 + JSON/Markdown/HTML report |
 | [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
 | [postman](./postman/SKILL.md) | OAuth MCP, Postman CLI, Newman và collection execution | MCP connection + JSON/JUnit/console evidence |
-| [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, device matrix và Appium | mobile QA evidence |
+| [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, Appium MCP, WebdriverIO, scrcpy Wi-Fi và authorized network proxy inspection | mobile QA evidence + sanitized HAR/network report + test code |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram

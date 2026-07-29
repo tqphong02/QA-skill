@@ -15,6 +15,29 @@ Choose risk-based representatives rather than every possible device.
 | Lifecycle | clean install, upgrade, background, terminate, restart |
 | Accessibility | font scaling, screen reader, switch or keyboard where supported |
 
+## Required run record
+
+Record the resolved matrix before execution:
+
+| Field | Resolved value |
+|---|---|
+| Build and checksum | |
+| Environment | |
+| Platform and OS | |
+| Device model/class | |
+| Real, emulator, or simulator | |
+| Orientation, locale, theme | |
+| Network states | |
+| Install/upgrade state | |
+| Lifecycle transitions | |
+| Accessibility settings | |
+
+Use at least one real device for release-critical flows unless the user explicitly accepts virtual-only coverage. Keep unexecuted combinations visible.
+
+## Lifecycle scope
+
+Choose explicitly from clean install, upgrade, first launch, warm launch, cold launch, background/foreground, process termination, device restart, permission revocation/recovery, network loss/recovery, app-data reset, and uninstall cleanup.
+
 ## Locator priority
 
 1. Accessibility ID

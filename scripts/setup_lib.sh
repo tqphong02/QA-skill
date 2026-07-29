@@ -577,17 +577,45 @@ setup_ai_config() {
 setup_selected_integrations() {
   local skills=("$@")
   local has_postman=0
+  local has_mobile=0
   local skill
   for skill in "${skills[@]}"; do
     [[ "$skill" == "postman" ]] && has_postman=1
+    [[ "$skill" == "mobile-qa" ]] && has_mobile=1
   done
+  if [[ "$has_postman" -ne 1 ]] && [[ "$has_mobile" -ne 1 ]]; then
+    return 0
+  fi
+
+  if [[ "${SKIP_MCP_SETUP:-0}" -eq 1 ]]; then
+    log_warn "Skipping selected MCP configuration (--skip-mcp-setup)"
+    return 0
+  fi
+
+  local py_bin=""
+  local py
+  for py in python3.11 python3.12 python3.10 python3; do
+    command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
+  done
+
+  if [[ "$has_mobile" -eq 1 ]] && [[ "${TARGET_AGENT:-}" == "antigravity" ]]; then
+    log_step "Appium MCP bootstrap"
+    if [[ -z "$py_bin" ]]; then
+      log_err "Không có Python để cấu hình Appium MCP"
+      return 1
+    fi
+    local mobile_bootstrap="$SKILLS_DIR/mobile-qa/scripts/configure-appium-mcp.py"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      mobile_bootstrap="$REPO_DIR/mobile-qa/scripts/configure-appium-mcp.py"
+      "$py_bin" "$mobile_bootstrap" --agent antigravity --dry-run || return 1
+    else
+      "$py_bin" "$mobile_bootstrap" --agent antigravity || return 1
+    fi
+  fi
+
   [[ "$has_postman" -eq 1 ]] || return 0
 
   log_step "Postman MCP bootstrap"
-  if [[ "${SKIP_MCP_SETUP:-0}" -eq 1 ]]; then
-    log_warn "Skipping Postman MCP configuration (--skip-mcp-setup)"
-    return 0
-  fi
 
   case "${TARGET_AGENT:-}" in
     antigravity|codex) ;;
@@ -597,11 +625,6 @@ setup_selected_integrations() {
       ;;
   esac
 
-  local py_bin=""
-  local py
-  for py in python3.11 python3.12 python3.10 python3; do
-    command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
-  done
   if [[ -z "$py_bin" ]]; then
     log_err "Không có Python để cấu hình Postman MCP"
     return 1
