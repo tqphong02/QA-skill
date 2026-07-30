@@ -30,6 +30,37 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 Sơ đồ luồng & mapping chi tiết giữa các skill: [SKILL_FLOW_MAPPING.md](./SKILL_FLOW_MAPPING.md)
 
+Bundle tiếng Việt ngày `30-07-2026` theo `plannotator/effective-html/html-diagram`:
+
+- [QA-skill — kiến trúc, danh mục và luồng định tuyến trong một file](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html)
+- [Dữ liệu JSON chuẩn](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill-du-lieu.json)
+
+File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `17 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Catalog lập chỉ mục đủ `173` mục H2–H4 từ các `SKILL.md` công khai và `23` mục mô tả capability phụ trợ, tổng cộng `196` mục cấu trúc. Nhánh thực thi được mô hình hóa riêng: `qa-run` có `9` workflow nội bộ và `mobile-qa` có `8`, tổng cộng `17` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
+
+Format tương tác hiện tại:
+
+- Kéo chuột hoặc cuộn hai ngón trên trackpad để di chuyển sơ đồ theo hai chiều
+- Chụm/xòe hai ngón trên trackpad để zoom tại vị trí con trỏ; hỗ trợ cả tín hiệu Chrome `Ctrl/Meta+Wheel` và Safari/WebKit `gesturestart/gesturechange`
+- Dùng nút `−`, `+` hoặc `Đặt lại` để điều khiển zoom thủ công
+- Canvas không tạo text highlight khi kéo
+- Nhãn mũi tên dùng pill có nền riêng và lane tách biệt để không bị đường nối che hoặc chồng lên nhau
+- Click/tap skill card được xử lý trực tiếp ở `pointerup` khi dịch chuyển dưới 5 px; drag thật chỉ di chuyển canvas và không mở panel
+- Card hiển thị số nhánh thực thi nếu skill có workflow nội bộ; tìm kiếm bao phủ cả tên workflow và tên mục
+- `Khám phá & Ad-hoc browser` là một flow riêng: qa-run tự thao tác browser live, chạy Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
+- `Browser MCP: Network & Console` tách riêng Playwright MCP, Chrome DevTools MCP và runtime observer theo hard gate cùng session
+- `Mobile: Appium & Network` tách Appium MCP thực thi UI khỏi proxy capture bằng Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit; evidence phải được làm sạch và đối chiếu với bước UI
+- Panel chi tiết hiển thị `Làm được gì`, `Ưu điểm`, `Hạn chế`, `Nhánh thực thi` và `Cấu trúc hướng dẫn`; không hiển thị nội dung thô `SKILL.md`
+
+Tạo lại catalog từ toàn bộ `SKILL.md` và kiểm tra artifact:
+
+```bash
+node scripts/build-skill-catalog.mjs \
+  --bundle skill-catalog/QA-skill-effective-html-30-07-2026
+
+node scripts/build-skill-catalog.mjs \
+  --check skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html
+```
+
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)
 
 Hướng dẫn dùng skill performance cho JMeter/k6: [performance-qa/GUIDE.md](./performance-qa/GUIDE.md)
