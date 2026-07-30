@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { acquireAtomicLock, releaseAtomicLock } from '../../scripts/data-factory.mjs';
+import { acquireAtomicLock, releaseAtomicLock } from '../../scripts/helpers/data-factory.mjs';
 
 test('Resource Lock: Atomic wx flag prevents duplicate lock acquisition by another worker', () => {
   const resourceName = `test_resource_${Date.now()}`;

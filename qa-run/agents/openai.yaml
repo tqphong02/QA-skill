@@ -1,4 +1,4 @@
 interface:
   display_name: "QA Run"
-  short_description: "Chạy browser QA và lưu business knowledge"
-  default_prompt: "Use $qa-run as one public skill with composed layers. Expand DISCOVERY_CORE, RETEST_PLUS, or SHEET_EXECUTION_PLUS, build a Business Execution Brief, require READY before normal browser execution, and complete every required ledger row."
+  short_description: "Risk-driven QA từ source, knowledge và runtime"
+  default_prompt: "Use $qa-run to recover business logic from source and saved knowledge, rank evidence-linked risks, and execute focused browser QA charters."

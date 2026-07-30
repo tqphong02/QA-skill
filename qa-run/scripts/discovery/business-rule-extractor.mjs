@@ -96,7 +96,7 @@ const RULE_PATTERNS = [
     confidence: 'verified',
     patterns: [
       /(?:balance|amount|price|total|fee|credit|debit)\s*[<>]=?\s*(?:amount|balance|price|\d)/i,
-      /Insufficient|insufficient_funds|balance.*not.*enough/i,
+      /Insufficient\s+(?:funds?|balance|credit)|insufficient_funds|balance.*not.*enough/i,
     ],
     extract: (line) => ({
       condition: line.trim().replace(/\s+/g, ' ').slice(0, 150),
@@ -123,7 +123,7 @@ const RULE_PATTERNS = [
     confidence: 'verified',
     patterns: [
       /throw.*(?:NotFoundException|NotFoundError|EntityNotFound)/,
-      /if\s*\(!?\s*\w+\s*\)\s*(?:throw|return)/,
+      /if\s*\(\s*!\s*\w+\s*\)\s*(?:throw|return)/,
     ],
     extract: (line) => ({
       condition: line.trim().replace(/\s+/g, ' ').slice(0, 150),
@@ -135,7 +135,7 @@ const RULE_PATTERNS = [
     category: 'uniqueness',
     confidence: 'verified',
     patterns: [
-      /ConflictException|DuplicateException|already.*exist|is.*taken/i,
+      /DuplicateException|already.*exist|is.*taken/i,
       /UNIQUE.*constraint|unique.*violation/i,
     ],
     extract: (line) => ({
@@ -234,6 +234,7 @@ async function main() {
 
     lines.forEach((line, i) => {
       const lineNum = i + 1;
+      if (/^\s*(?:import\b|export\s+(?:declare\s+)?class\b|class\b)/.test(line)) return;
 
       for (const rulePattern of RULE_PATTERNS) {
         const matched = rulePattern.patterns.some(p => p.test(line));

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { registerCleanupItem, performCleanup } from '../../scripts/data-factory.mjs';
+import { registerCleanupItem, performCleanup } from '../../scripts/helpers/data-factory.mjs';
 
 test('Cleanup: Idempotent teardown registers and cleans cleanup queue', async () => {
   const wId = 999;

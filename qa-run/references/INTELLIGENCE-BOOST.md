@@ -31,9 +31,9 @@ After each `browser_click`, `browser_fill_form`, `browser_navigate` — run this
 
 ---
 
-## Protocol B — Per-feature-type attack vectors
+## Protocol B — Risk-matched feature attack vectors
 
-Pick the matching feature type and run ALL attack vectors in that row before concluding:
+Start from `risk_inventory` and `exploratory_charters` in the Business Execution Brief. Pick only vectors that test a cited risk or a new runtime hypothesis. Do not run every vector mechanically; record why each selected vector applies.
 
 ### Form / Auth
 ```
@@ -235,12 +235,14 @@ Flash models often skip the knowledge cycle entirely, causing the AI to re-explo
 ### Before test — READ in this exact order
 
 ```
-Step 1: Run the deterministic builder:
-  node scripts/helpers/context-builder.mjs --intent <intent> --scope <feature-slug>
-  Add --target, --expected, --role and --impact when the ticket/testcase supplies them
+Step 1: Run the deterministic intelligence preparation:
+  node scripts/helpers/prepare-test-intelligence.mjs --intent <intent> --scope <feature-slug>
+  Add --repo when source is available; add --target, --expected, --role and --impact
+  when the ticket/testcase supplies them
 
 Step 2: Read qa-knowledge/context/business-execution-brief.json:
-  READY → use its execution_contract exactly
+  READY → use its execution_contract, source_evidence, risk_inventory and
+          exploratory_charters exactly
   NEEDS_DISCOVERY → run scoped discovery, write knowledge, rebuild
   BLOCKED → report missing_required and do not open the browser for normal execution
 

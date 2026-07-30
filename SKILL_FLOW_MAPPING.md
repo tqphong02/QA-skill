@@ -50,6 +50,7 @@ flowchart TD
         ACC["accessibility-qa (WCAG / axe-core)"]
         DBQ["data-quality-qa (Database & Schema Drift)"]
         MOB["mobile-qa (Android / iOS)"]
+        WB["whitebox-qa (Branch / Execution Path)"]
     end
 
     %% 5. Reporting & Exporters
@@ -83,7 +84,7 @@ flowchart TD
 
 ---
 
-## 📊 3. Ma trận Chuyển giao giữa 16 Skills (Data Handover Matrix)
+## 📊 3. Ma trận Chuyển giao giữa 17 Skills (Data Handover Matrix)
 
 | Skill Nguồn (Input) | Luồng Xử lý (Process) | Output Sinh ra (Artifact) | Skill Tiếp nhận (Consumer) | Dữ liệu Chuyển giao |
 |:---|:---|:---|:---|:---|
@@ -104,6 +105,7 @@ flowchart TD
 | **`accessibility-qa`** | Web Accessibility Audit (axe-core / WCAG) | `a11y-report.json` | `qa-run Aggregation` | Lỗi vi phạm WCAG, keyboard focus, screen reader |
 | **`data-quality-qa`** | Database ETL & Schema Drift check | `data-drift.json` | `qa-run Aggregation` | Bảng dữ liệu lệch schema, data lineage error |
 | **`mobile-qa`** | Appium testing trên Android / iOS | `mobile-report.json` | `qa-run Aggregation` | Kết quả test ứng dụng di động APK / IPA |
+| **`whitebox-qa`** | Phân tích AST đa ngôn ngữ, call graph/NestJS DI, sinh Jest/Vitest và đo runtime coverage | compact/full analysis + graph + executable test + coverage evidence | `testcase-template` | Source hash, branch/path IDs, test result và measured coverage |
 | **`plane-qa`** | CRUD Plane Tickets & Comments | Comment retest + Đổi Ticket Status | `github-mcp-qa` | PASS → `Done`, FAILED → `In Progress`, Bug mới → `Todo` |
 | **`github-mcp-qa`** | Đọc Git diff/PR, quản lý Issues & Actions | PR Comment + CI Check Status | `qa-run` | Nhận biết changed files để chọn testcases bị ảnh hưởng |
 
@@ -127,6 +129,7 @@ flowchart TD
 | **Performance, load, stress test, k6, JMeter, `.jmx`, JTL, Chrome DevTools** | `performance-qa` | Xác nhận common workload contract → chọn internal engine → smoke một user → approved load |
 | **Postman setup, MCP/CLI, Newman, OAuth, collection run, workspace, environment, spec, mock hoặc monitor** | `postman` | Bootstrap MCP → runtime doctor → Postman CLI ưu tiên, Newman v2 fallback |
 | **OpenAPI, Swagger, Postman contract validation** | `api-contract-qa` | Validate spec đối chiếu với implementation thực tế |
+| **White-box, branch/path/decision coverage, call graph, NestJS DI, Jest/Vitest từ source** | `whitebox-qa` | Resolve exact target → analyze compact → graph/test/coverage khi cần → handoff `testcase-template` |
 | **WCAG, axe-core, keyboard access, screen reader** | `accessibility-qa` | Kết hợp automated scan với manual interaction |
 | **ETL/ELT, reconciliation, database schema drift** | `data-quality-qa` | Xác nhận nguồn/đích & read-only boundary tại DB role |
 
@@ -673,3 +676,14 @@ flowchart TD
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: User request hoặc API artifact cần resolve trong Postman.
   - 📤 **Chuyển dữ liệu tới**: `api-contract-qa`, `testcase-template` hoặc collection runner.
+
+---
+
+### 17. `whitebox-qa` (Multi-language White-box Analyzer)
+- **Đường dẫn**: `whitebox-qa/SKILL.md`
+- **Mục đích**: Phân tích deterministic TypeScript, JavaScript, Python, Java, Go, C# và Dart; dựng bounded call graph, resolve NestJS source-visible DI, sinh Jest/Vitest executable và nhập runtime coverage.
+- **Inputs**: Repository, exact file/class/function, giới hạn branch/path/depth và mapping test/coverage khi cần.
+- **Outputs**: Compact/full analysis, graph, executable unit test, runtime evidence và `source-derived-candidate`.
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: Source repository và requirement/AC đã xác nhận.
+  - 📤 **Chuyển dữ liệu tới**: `testcase-template`; không sở hữu hoặc sao chép workbook template.

@@ -5,7 +5,8 @@
 ## Enterprise QE Pipeline (15 Layers)
 
 ```
-Intent Router → Run Planner & Dependency Graph → Business Context Gate (context-builder.mjs)
+Intent Router → Test Intelligence (prepare-test-intelligence.mjs: requirement + knowledge + current source)
+  → Ranked Risk Charters → Business Context Gate (context-builder.mjs)
   → Manifest Initializer (run-manifest.mjs) → Safety Guard (Default BLOCKED)
   → Knowledge Validator (validate-knowledge.mjs)
   → Worker Account & Data Isolation (data-factory.mjs) → Runtime Observer (runtime-observer.mjs)

@@ -23,58 +23,17 @@
 - Reuse still-valid flows, roles/data, routes/APIs, state transitions and reusable assets
 - Do not read other features' guides and do not skip verification just because the old guide says PASS
 
-### Step 0.5 — No-doc fallback: generate static checklist from UI (MANDATORY when no spec)
+### Step 0.5 — Recover business intelligence before UI enumeration
 
-**Trigger**: no spec/AC/doc exists AND this is Exploratory or Ad-hoc mode.
+Run `prepare-test-intelligence.mjs` as defined in [TEST-INTELLIGENCE.md](TEST-INTELLIGENCE.md). When source is available, pass `--repo`; the resolver refreshes stale source-derived knowledge and merges it with the exact feature knowledge.
 
-**DO NOT start clicking before completing this step.**
+Execute the ranked `exploratory_charters` from the resulting brief. Use the first UI snapshot only to:
 
-```
-1. browser_navigate(<page>)
-2. browser_snapshot()  ← read all elements: labels, buttons, inputs, links, modals, dropdowns
-3. Classify every element into 2 layers:
-   - UI Layer: label text, placeholder, icon, layout hints, empty/error/loading states
-   - Functional Layer: buttons (action?), inputs (validate?), links (navigate?), forms (submit flow?)
-4. Generate static checklist in this format and save to qa-knowledge/checklists/<slug>-static-checklist.md:
-```
+- verify known entry points and actions
+- add UI-only states or controls missing from knowledge/source
+- create a scoped checklist for the selected charter
 
-```markdown
-## Static Checklist — <feature name> — <YYYY-MM-DD>
-_Generated from UI observation — no spec available — verify each line during test_
-
-### 1.1. UI Checklist
-- [ ] [UI-01] Page title/heading displays correctly: "<observed text>"
-- [ ] [UI-02] All input field labels visible and clear
-- [ ] [UI-03] Placeholder text is contextually correct
-- [ ] [UI-04] CTA buttons are visually prominent
-- [ ] [UI-05] No text cut off or overflowing containers
-- [ ] [UI-06] Icons/images load without broken state
-- [ ] [UI-07] Spacing consistent across sections
-- [ ] [UI-08] Responsive: layout intact at narrow viewport
-- [ ] [UI-09] Empty state and error state show appropriate messages
-- [ ] [UI-10] Loading state handled (spinner/skeleton, not blank screen)
-<add UI-specific items observed from snapshot>
-
-### 1.2. Functional Checklist
-- [ ] [FN-01] <first button/action> → inferred behavior: <from label>
-- [ ] [FN-02] <input field> → validate: required? format? maxlength?
-- [ ] [FN-03] <dropdown/select> → options correct, selection changes what?
-- [ ] [FN-04] Form submit → success → shows what? failure → error shown where?
-- [ ] [FN-05] Modal/popup trigger → opens correct content, closeable?
-- [ ] [FN-06] Navigation links → redirect to correct page?
-- [ ] [FN-07] Filter/search → results change correctly?
-- [ ] [FN-08] Delete/remove → confirmation dialog? removes correct record?
-- [ ] [FN-09] Permission: is this action restricted by role?
-- [ ] [FN-10] Data persistence: data survives page reload after action?
-<add Functional items inferred from observed UI elements>
-```
-
-```
-5. Run Exploratory/Ad-hoc FOLLOWING this checklist — test each line, mark [x] PASS or [ ] FAIL + evidence path
-6. After test session: merge checklist findings into guide-update.json (gate 11 in SKILL.md)
-```
-
-> **Why mandatory**: Generating checklist from UI BEFORE clicking gives the AI a structured test map instead of random clicks. This is Static Testing applied to no-doc workflows — technique §13 in TESTING-TECHNIQUES.md.
+Do not generate a generic “click every element” checklist before checking source and knowledge. DOM order is not business-risk priority.
 
 
 
@@ -93,8 +52,7 @@ _Generated from UI observation — no spec available — verify each line during
 6. **3rd party integration**: payment, email, calendar, notification, search, AI
 
 ### Step C — Form a charter (purposeful exploratory goal)
-One line: *"Khám phá <feature> tìm lỗi về <rủi ro>; account <role>; ~<thời gian>."*
-- A good charter clearly states the **risk** (not just "testing for fun")
+Use the ranked charters from `business-execution-brief.json`. Each charter must retain its risk, oracle, source references, target role/data and safety rule. Add an ad-hoc branch only when a runtime observation changes the risk model.
 
 ### Step D — Goal-oriented UI driving (via MCP Playwright)
 - Happy path -> snapshot every step -> verify state changes correctly
@@ -172,12 +130,11 @@ See [TESTING-TECHNIQUES.md](../TESTING-TECHNIQUES.md) for details + coverage mat
 12 techniques: Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · Boundary/Validation · Workflow · UI/UX · Compatibility · Session-based · API Inspection (+ Risk-based/Sanity/Regression).
 
 **Hard gate for Exploratory/Ad-hoc (MANDATORY):**
-1. Read `qa-knowledge/knowledge-index.json` first; only if absent, use `app-flow-map.json` or `app-business-guide.md` as fallback.
-2. **Auto-generate Markdown Checklist for page/feature**:
-   - Run `node scripts/generate-checklist.mjs --path /feature-path --feature "feature-name"`
-   - Output: `qa-knowledge/checklists/<feature-slug>-checklist.md`
-   - Script automatically scans 100% of items, buttons, input fields, tables, modals on screen and generates a ready-to-test checklist.
-3. Determine feature type to test (Form? Table? Modal? Auth? CRUD? Async? File?) from [ATTACK-TAXONOMY.md](ATTACK-TAXONOMY.md) — select 3-5 priority attack vectors.
-4. For Form/Auth: run `attack-surface.mjs` to auto-inject mutations before manual clicking.
-5. For UI/UX: run `visual-audit.mjs` first — read JSON + view real image.
-6. AI goes through each line in the generated `<feature-slug>-checklist.md` file, tests and marks `[x]` PASS or `[ ]` FAIL with a brief reason.
+1. Run `prepare-test-intelligence.mjs`, passing `--repo` when source is available
+2. Read the ranked risks, charters, oracles, provenance and knowledge health
+3. Execute all high-priority charters first or mark an exact blocker/defer reason
+4. Generate a scoped Markdown checklist only for the active charter when UI enumeration adds coverage; never use checklist completion as the verdict
+5. Select attack vectors from [ATTACK-TAXONOMY.md](ATTACK-TAXONOMY.md) only when they match the charter risk and feature type
+6. For Form/Auth, use `attack-surface.mjs` only for authorized, risk-relevant mutations
+7. For UI/UX, run `visual-audit.mjs`, read JSON and inspect real screenshots
+8. Re-rank or branch charters when runtime evidence contradicts source, knowledge or the current oracle

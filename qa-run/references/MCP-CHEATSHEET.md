@@ -60,7 +60,8 @@
 | Regression / recurring CI run | `run.mjs` + `cases.mjs` data-driven |
 | Visual layout verification | `visual-audit.mjs` → read JSON → view screenshots |
 | Form mutation/attack injection | `attack-surface.mjs` (0 tokens) |
-| Exploratory checklist generation | `generate-checklist.mjs` → mark [x]/[ ] |
+| Exploratory/ad-hoc planning | `prepare-test-intelligence.mjs` → ranked charters |
+| UI inventory for active charter | `generate-checklist.mjs` → scoped checklist |
 
 ## Screenshot & Image Evidence Rules
 

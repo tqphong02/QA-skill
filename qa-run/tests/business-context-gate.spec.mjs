@@ -73,6 +73,10 @@ try {
   assert.equal(ready.execution_contract.role_data, 'Buyer');
   assert.equal(ready.execution_contract.original_flow.length, 2);
   assert.equal(ready.source_files.length, 1);
+  assert.equal(ready.schema_version, 2);
+  assert.ok(ready.risk_inventory.length > 0);
+  assert.ok(ready.exploratory_charters.length > 0);
+  assert.ok(ready.exploratory_charters.every(charter => charter.oracles.length > 0));
 
   const readyManifest = run(runManifest, [
     'start',
@@ -89,6 +93,9 @@ try {
   assert.equal(manifest.browser_observability.observer, 'playwright-mcp');
   assert.equal(manifest.browser_observability.same_session_required, true);
   assert.equal(manifest.browser_observability.redaction_required, true);
+  assert.ok(manifest.test_intelligence.charter_ids.length > 0);
+  assert.ok(manifest.test_intelligence.high_risk_ids.length > 0);
+  assert.equal(manifest.test_intelligence.knowledge_confidence, 'static_or_document_derived');
 
   const missingRoot = path.join(tempRoot, 'missing');
   fs.mkdirSync(missingRoot, { recursive: true });

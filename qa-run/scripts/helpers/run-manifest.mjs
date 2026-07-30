@@ -99,6 +99,16 @@ if (command === 'start') {
       console.error(`Missing: ${(businessContext.missing_required || []).join(', ') || 'unknown'}`);
       process.exit(2);
     }
+    if (
+      !Array.isArray(businessContext.risk_inventory)
+      || businessContext.risk_inventory.length === 0
+      || !Array.isArray(businessContext.exploratory_charters)
+      || businessContext.exploratory_charters.length === 0
+    ) {
+      console.error('[run-manifest] BLOCKED: READY brief lacks ranked risks or exploratory charters');
+      console.error('Run scripts/helpers/prepare-test-intelligence.mjs before browser testing');
+      process.exit(2);
+    }
   }
 
   fs.mkdirSync(EVID, { recursive: true });
@@ -133,6 +143,15 @@ if (command === 'start') {
         .update(fs.readFileSync(businessContextPath))
         .digest('hex')
         .slice(0, 12),
+    } : null,
+    test_intelligence: businessContext ? {
+      knowledge_confidence: businessContext.knowledge_health?.confidence || 'unknown',
+      runtime_evidence_present: Boolean(businessContext.knowledge_health?.runtime_evidence_present),
+      source_evidence_count: businessContext.source_evidence?.length || 0,
+      high_risk_ids: (businessContext.risk_inventory || [])
+        .filter(risk => ['critical', 'high'].includes(risk.priority))
+        .map(risk => risk.risk_id),
+      charter_ids: (businessContext.exploratory_charters || []).map(charter => charter.charter_id),
     } : null,
     started_time: new Date().toISOString(),
     finished_time: null,

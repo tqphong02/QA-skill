@@ -18,6 +18,7 @@ Hard requirements:
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`
 - Drive private CRUD uses `google-drive-qa` and the configured Drive MCP, followed by read-back verification
 - Testcase generation uses `testcase-template` and its generator without inventing columns
+- Multi-language white-box branch/path, bounded call graph, NestJS DI, Jest/Vitest generation and runtime coverage use `whitebox-qa`; resolve an exact function, keep static paths as `source-derived-candidate`, and hand testcase documents to `testcase-template`
 - Business document analysis uses `doc-to-md` first when needed, then `business-analysis`; review all 18 areas and generate matching XMind, Q&A Markdown, and Q&A Excel from one JSON source
 - Authorized pentest work uses `pentest-run`; create `.pentest/engagement.md`, run its doctor and resolve scope, authorization, exclusions and rate limits before any network request
 - GitHub repository API or Actions work uses `github-mcp-qa`; keep Git SSH separate from MCP OAuth/PAT and verify account, repository, and branch before mutation

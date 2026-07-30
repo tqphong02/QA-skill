@@ -1,0 +1,28 @@
+{
+  "framework": "vitest",
+  "module": "../fixtures/payment-service",
+  "imports": [
+    {"name": "PaymentService", "default": false}
+  ],
+  "suite": "PaymentService.processPayment whitebox paths",
+  "setup": [
+    "const subject = new PaymentService()"
+  ],
+  "beforeEach": [],
+  "cases": [
+    {
+      "candidate_id": "WB-001",
+      "title": "throws USER_NOT_FOUND when user is absent",
+      "body": [
+        "await expect(subject.processPayment(undefined, 100, \"NEW\")).rejects.toThrow(\"USER_NOT_FOUND\")"
+      ]
+    },
+    {
+      "candidate_id": "WB-002",
+      "title": "throws INVALID_AMOUNT when amount is zero",
+      "body": [
+        "await expect(subject.processPayment({ id: \"u1\" }, 0, \"NEW\")).rejects.toThrow(\"INVALID_AMOUNT\")"
+      ]
+    }
+  ]
+}

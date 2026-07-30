@@ -2,11 +2,11 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 16 skill
+## 17 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
-| [qa-run](./qa-run/SKILL.md) | Browser QA với same-session network/console observability, exploratory, Plane và evidence | `FINDINGS.md` + network/console correlation + ticket Plane + ảnh |
+| [qa-run](./qa-run/SKILL.md) | Risk-driven browser QA từ source + knowledge + runtime, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
 | [testcase-template](./testcase-template/SKILL.md) | Sinh test case Excel theo template Nina Studio (4 sheet, formulas, dropdowns) | `Template.xlsx` |
 | [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Scaffold & viết Playwright + TS + POM (UI / API / Performance / CI-CD) | `.spec.ts` + `pages/` + `selectors/` + pipeline |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
@@ -21,6 +21,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
 | [postman](./postman/SKILL.md) | OAuth MCP, Postman CLI, Newman và collection execution | MCP connection + JSON/JUnit/console evidence |
 | [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, Appium MCP, WebdriverIO, scrcpy Wi-Fi và authorized network proxy inspection | mobile QA evidence + sanitized HAR/network report + test code |
+| [whitebox-qa](./whitebox-qa/SKILL.md) | White-box đa ngôn ngữ, call graph, NestJS DI, Jest/Vitest và runtime coverage | compact/full analysis + executable test + coverage evidence + testcase-template handoff |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram
@@ -63,7 +64,7 @@ cd QA-skill
 # 2c. Claude Code
 ./scripts/setup.sh --agent=claude --profile=core --yes
 
-# Cài đủ 16 skill chuyên sâu khi cần
+# Cài đủ 17 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # Cài Postman skill + MCP + Postman CLI + Newman

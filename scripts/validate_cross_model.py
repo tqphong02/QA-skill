@@ -27,6 +27,7 @@ SKILLS = (
     "postman",
     "qa-run",
     "testcase-template",
+    "whitebox-qa",
 )
 
 REQUIRED = {
@@ -56,7 +57,7 @@ REQUIRED = {
         "mcp_not_configured",
         "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
         "Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`",
-        "context-builder.mjs",
+        "prepare-test-intelligence.mjs",
         "Business Execution Brief là `READY`",
         "Không được tự thay business flow thiếu bằng flow generic",
         "`performance-qa` là public skill duy nhất cho performance",
@@ -131,6 +132,7 @@ REQUIRED = {
         "Audit accessibility trang login",
         "Đánh giá chatbot RAG",
         "Test mobile app trên Android và iOS",
+        "Phân tích white-box function processPayment",
         "Tạo JMeter JMX cho API",
         "GitHub MCP đã có skill nhưng không dùng được",
         "Cài riêng qa-run cho intern",
@@ -155,7 +157,7 @@ REQUIRED = {
         "SHEET_EXECUTION_PLUS =",
         "Create a ledger row for every expanded layer",
         "Never load or expose `vendor/**/SKILL.md`",
-        "a Plane ticket URL with validation language",
+        "Plane ticket plus retest",
         "Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX",
         "PASS → Done",
         "FAILED → In Progress",
@@ -165,7 +167,7 @@ REQUIRED = {
         "coverage_map",
         "Business Execution Brief",
         "context-builder.mjs",
-        "No normal browser action is allowed",
+        "stop normal execution",
         "run-manifest.mjs` must reject",
     ],
     "qa-run/references/RETEST-PLUS.md": [
@@ -273,7 +275,7 @@ REQUIRED = {
         "missing_required",
     ],
     "qa-run/references/INTELLIGENCE-BOOST.md": [
-        "context-builder.mjs",
+        "prepare-test-intelligence.mjs",
         "business-execution-brief.json",
         "NEEDS_DISCOVERY",
         "Never replace a missing field with a generic five-step flow",
@@ -525,6 +527,46 @@ REQUIRED = {
         '"postman-cli": "1.44.0"',
         '"lockfileVersion": 3',
     ],
+    "whitebox-qa/SKILL.md": [
+        "source-derived-candidate",
+        "testcase-template/scripts/gen-testcases.py",
+        "No runtime coverage evidence supplied",
+        "TypeScript",
+        "Python",
+        "run-coverage",
+        "NestJS",
+    ],
+    "whitebox-qa/package.json": [
+        '"ts-morph"',
+        '"@ast-grep/napi"',
+        '"postinstall"',
+        '"test:coverage"',
+    ],
+    "whitebox-qa/src/analyzer.ts": [
+        "PATH_EXPLOSION",
+        "MAX_BRANCHES_EXCEEDED",
+        "No runtime coverage evidence supplied",
+    ],
+    "whitebox-qa/src/handoff.ts": [
+        "UNKNOWN_REQUIREMENT",
+        "OUT_OF_SPEC_TYPE_REQUIRED",
+        "1.2. FUNCTION",
+    ],
+    "whitebox-qa/src/graph.ts": [
+        "buildAnyCallGraph",
+        "buildNestJsGraph",
+        "external-or-dynamic",
+    ],
+    "whitebox-qa/src/coverage-runner.ts": [
+        "COVERAGE_RUNNER_MISSING",
+        "COVERAGE_TEST_FAILED",
+        "coverage-final.json",
+    ],
+    "whitebox-qa/src/unit-test-generator.ts": [
+        "UNKNOWN_CANDIDATE",
+        "DUPLICATE_CANDIDATE_MAPPING",
+        "Whitebox trace",
+    ],
     "data-quality-qa/SKILL.md": [
         "references/DATABASE_MCP.md",
         "proof of read-only access",
@@ -718,7 +760,9 @@ def main():
             not path.is_file()
             or ".git" in path.parts
             or "node_modules" in path.parts
-            or ("qa-run" in path.parts and "qa-knowledge" in path.parts)
+            or "qa-knowledge" in path.parts
+            or "coverage" in path.parts
+            or "dist" in path.parts
         ):
             continue
         if path == Path(__file__).resolve():

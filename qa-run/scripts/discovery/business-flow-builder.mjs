@@ -129,8 +129,15 @@ async function main() {
           if (fnMatch) { handlerName = fnMatch[1]; break; }
         }
 
-        // Extract steps from this handler area
-        const handlerContent = lines.slice(i, Math.min(i + 80, lines.length)).join('\n');
+        // Extract only this route handler. The old fixed 80-line window leaked
+        // actions from adjacent handlers into every flow.
+        const nextRouteOffset = lines.slice(i + 1).findIndex(candidate => (
+          /@(Get|Post|Put|Patch|Delete)\(/i.test(candidate)
+        ));
+        const handlerEnd = nextRouteOffset === -1
+          ? Math.min(i + 80, lines.length)
+          : i + 1 + nextRouteOffset;
+        const handlerContent = lines.slice(i, handlerEnd).join('\n');
         const steps = extractFlowSteps(handlerContent, relativePath);
         const sideEffects = extractSideEffects(handlerContent);
 

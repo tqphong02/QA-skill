@@ -22,7 +22,7 @@
  *   node repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
  */
 
-import { execSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -60,12 +60,23 @@ function runScript(scriptName, extraArgs = []) {
 }
 
 function getGitCommit(repoPath) {
-  try { return execSync('git rev-parse --short HEAD', { cwd: repoPath, encoding: 'utf8' }).trim(); } catch { return 'unknown'; }
+  try {
+    return execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: repoPath,
+      encoding: 'utf8',
+    }).trim();
+  } catch {
+    return 'unknown';
+  }
 }
 
 function getChangedFiles(repoPath, lastCommit) {
+  if (!/^[0-9a-f]{4,40}$/i.test(lastCommit || '')) return [];
   try {
-    const out = execSync(`git diff ${lastCommit}..HEAD --name-only`, { cwd: repoPath, encoding: 'utf8' });
+    const out = execFileSync('git', ['diff', `${lastCommit}..HEAD`, '--name-only'], {
+      cwd: repoPath,
+      encoding: 'utf8',
+    });
     return out.trim().split('\n').filter(Boolean);
   } catch { return []; }
 }
@@ -107,6 +118,67 @@ function generateSystemBusinessMap() {
 
   fs.writeFileSync(mapPath, JSON.stringify(systemMap, null, 2), 'utf8');
   console.log(`[orchestrator] ✅ System business map updated: ${mapPath}`);
+}
+
+function updateKnowledgeIndex() {
+  fs.mkdirSync(path.join(DATA_DIR, 'qa-knowledge'), { recursive: true });
+  const indexPath = path.join(DATA_DIR, 'qa-knowledge', 'knowledge-index.json');
+  let index = {};
+  try {
+    index = JSON.parse(fs.readFileSync(indexPath, 'utf8'));
+    if (!index || typeof index !== 'object' || Array.isArray(index)) index = {};
+  } catch {
+    index = {};
+  }
+
+  const sourceRepositories = {
+    ...(index.source_repositories && typeof index.source_repositories === 'object'
+      ? index.source_repositories
+      : {}),
+  };
+  const artifactNames = [
+    'repo-metadata.json',
+    'architecture-map.json',
+    'api-contracts.json',
+    'business-rules.json',
+    'business-flows.json',
+    'state-machines.json',
+    'permission-matrix.json',
+    'domain-model.json',
+    'reconciliation-report.json',
+    'business-qna.json',
+    'business-guide.md',
+  ];
+
+  if (fs.existsSync(KNOW_BASE)) {
+    for (const repoName of fs.readdirSync(KNOW_BASE)) {
+      const repoDir = path.join(KNOW_BASE, repoName);
+      if (!fs.statSync(repoDir).isDirectory()) continue;
+      const metadata = readJSON(repoDir, 'repo-metadata.json');
+      const artifacts = artifactNames
+        .map(name => path.join(repoDir, name))
+        .filter(file => fs.existsSync(file))
+        .map(file => path.relative(DATA_DIR, file));
+      sourceRepositories[repoName] = {
+        repo_path: metadata?.repoPath || null,
+        commit: metadata?.commit || 'unknown',
+        modules: (metadata?.modules || []).map(module => module.name || module).filter(Boolean),
+        artifacts,
+        updated_at: new Date().toISOString(),
+      };
+    }
+  }
+
+  const nextIndex = {
+    ...index,
+    schema_version: Math.max(Number(index.schema_version) || 0, 1),
+    updated_at: new Date().toISOString(),
+    source_repositories: sourceRepositories,
+  };
+  const tempPath = `${indexPath}.tmp`;
+  fs.writeFileSync(tempPath, JSON.stringify(nextIndex, null, 2), 'utf8');
+  fs.renameSync(tempPath, indexPath);
+  console.log(`[orchestrator] ✅ Knowledge index updated: ${indexPath}`);
 }
 
 function readJSON(dir, filename) {
@@ -180,7 +252,7 @@ async function analyzeRepo(repoPath) {
   ]);
 
   // ── Phase 2: Flow, State, Permission, Domain ──────────────────────────────
-  if (['full', 'phase2', 'phase3'].includes(MODE)) {
+  if (['full', 'incremental', 'phase2', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 2: Flow, State, Permission, Domain ──');
     runScript('business-flow-builder.mjs',       ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')]);
     runScript('state-machine-extractor.mjs',     ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')]);
@@ -196,7 +268,7 @@ async function analyzeRepo(repoPath) {
   }
 
   // ── Phase 3: Reconciliation, Q&A, Guide, Traceability ────────────────────
-  if (['full', 'phase3'].includes(MODE)) {
+  if (['full', 'incremental', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 3: Reconciliation, Q&A, Guide, Traceability ──');
     runScript('repo-runtime-reconciler.mjs',     ['--repo-knowledge', outputDir]);
     runScript('business-qna-generator.mjs',      ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')]);
@@ -273,6 +345,7 @@ async function main() {
 
   // Always update global system-business-map.json
   generateSystemBusinessMap();
+  updateKnowledgeIndex();
 }
 
 main().catch(err => {

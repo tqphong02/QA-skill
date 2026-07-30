@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Execute browser QA with same-session network and console observation for app discovery, Plane ticket retest, Sheet testcase execution, sanity, impacted regression, exploratory/ad-hoc testing, UI/UX audit, evidence, release sign-off, and business-flow knowledge handoff. Trigger on retest, re-test, verify bug/ticket, a Plane ticket URL with validation language, a Sheet URL with execute/run language, sanity, regression, exploratory, ad-hoc, UI/UX, browser response errors, or business discovery; do not require the skill name. Compose shared discovery/exploratory layers into RETEST_PLUS and SHEET_EXECUTION_PLUS. Not for writing automation, native-mobile traffic interception, or testcase documents.
+description: Execute risk-driven browser QA using business logic recovered from source code, saved QA knowledge, requirements and runtime evidence, with same-session network/console observation. Trigger on app or repository discovery, exploratory/ad-hoc testing, sanity/regression, Plane ticket retest, Sheet testcase execution, UI/UX, browser response errors, business-flow or system-logic analysis, and release sign-off; do not require the skill name. Rank evidence-linked charters instead of generic clicking, compose RETEST_PLUS and SHEET_EXECUTION_PLUS, and write verified knowledge back after execution. Not for writing automation, native-mobile traffic interception, or testcase documents.
 ---
 
 # QA Run
@@ -30,22 +30,28 @@ SHEET_EXECUTION_PLUS =
 BROWSER_OBSERVABILITY =
   Same-session Network + Console + Page Error correlation
   Applied to every live browser stack without changing DISCOVERY_CORE
+
+TEST_INTELLIGENCE =
+  Requirement + Runtime Knowledge + Current Source + UI Observation
+  -> Provenance-aware Business Brief -> Ranked Risks -> Exploratory Charters
 ```
 
 | User entrypoint | Required stack | Read now |
 |---|---|---|
-| Exploratory, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Exploratory, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/PIPELINE.md](references/PIPELINE.md) |
+| Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PIPELINE.md](references/PIPELINE.md) |
 | Reconcile UI with source, docs or runtime | `UI_BUSINESS_RECONCILIATION + DISCOVERY_CORE` | [references/PIPELINE.md](references/PIPELINE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Write Playwright automation or POM | Exit `qa-run` | Route to `playwright-pom-automation` |
 
 Create a ledger row for every expanded layer. Do not conclude the parent workflow while any required layer lacks `PASS`, `FAILED`, `BLOCKED`, `PARTIAL`, or `N/A` with a reason.
 
 For every live browser route, also create one `BROWSER_OBSERVABILITY` ledger row and read [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md). Use the observer attached to the same page/session as the UI driver. Route native Android/iOS traffic to `mobile-qa`.
+
+Before every executable browser route, build `TEST_INTELLIGENCE`. When the source repository is locally available, pass it to the canonical preparation command so stale or missing source knowledge is refreshed before risk selection. Execute ranked charters; do not replace them with a generic element checklist.
 
 Load optional references only when their condition occurs:
 
@@ -63,21 +69,23 @@ Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; v
 Apply the following exact order for all models, especially fast or small-context models:
 
 1. Select the user entrypoint, expand its complete workflow stack, and initialize a ledger row for every required layer before opening the browser. If the route exits to another skill, stop `qa-run`.
-2. **[BEFORE BROWSER — BUILD business context]** Derive the narrow feature slug from the ticket, Sheet row, URL, or user scope, then run:
+2. **[BEFORE BROWSER — PREPARE test intelligence]** Derive the narrow feature slug from the ticket, Sheet row, URL, or user scope. If source is available, resolve its exact repository root. Run:
    ```bash
-   node scripts/helpers/context-builder.mjs \
+   node scripts/helpers/prepare-test-intelligence.mjs \
      --intent <RETEST_TICKET|SHEET_TESTCASE_EXECUTION|SANITY_REGRESSION|EXPLORATORY_ADHOC> \
      --scope <feature-slug> \
+     --repo <source-repo-if-available> \
      --target <route-or-ticket-url-if-known> \
      --expected <ticket-or-testcase-expected-if-known> \
      --role <role-if-known> \
      --impact <comma-separated-impacted-areas-if-known>
    ```
-   Read both generated files under `qa-knowledge/context/`. `Business Execution Brief` is the machine gate, not an optional summary:
-   - `READY` → use its exact `Target`, `Role/Data`, `Original flow`, `Expected`, `Impact area`, source hashes and known issues
-   - `NEEDS_DISCOVERY` → run only `SCOPED_BUSINESS_DISCOVERY`, update knowledge, then rebuild the brief
+   Read both generated files under `qa-knowledge/context/`. `Business Execution Brief` is the machine gate and risk model:
+   - `READY` → use its exact execution contract, `knowledge_health`, fact-level `source_evidence`, ranked `risk_inventory` and `exploratory_charters`
+   - `NEEDS_DISCOVERY` → run only scoped runtime/UI discovery needed by `missing_required`, write knowledge, then rebuild the brief
    - `BLOCKED` → stop normal execution and report `missing_required`; never invent a route, role, rule, flow or expected result
-   - Discovery modes may start without `READY` only to produce the missing knowledge. No normal browser action is allowed before the desired run's brief is `READY`
+   - Source facts remain static/document-derived until runtime confirms them. Discovery modes may start without `READY` only to produce missing knowledge
+   - Execute high-priority charters first. Branch only when evidence changes the risk model; record why a charter was added, deferred or stopped
 3. **Initialize Run Manifest** only after the business gate:
    ```bash
    node scripts/helpers/run-manifest.mjs start \
@@ -122,11 +130,11 @@ Apply the following exact order for all models, especially fast or small-context
    - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
    - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
    - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
-5. **[BEFORE TEST — VERIFY loaded knowledge]** The brief builder must resolve `<project-root>/qa-knowledge/knowledge-index.json` first:
+5. **[BEFORE TEST — VERIFY intelligence provenance]** The preparation command must resolve `<project-root>/qa-knowledge/knowledge-index.json` and current source artifacts before UI execution:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
    - Read `permission-matrix.json` (machine-readable, NOT `rbac-matrix.md`) when preparing role-based or security tests
-   - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, reusable assets
+   - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, side effects, reusable assets, source file/line and confidence
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
    - If NO guide exists at all: run scoped discovery for a retest; use `APP_BASELINE_DISCOVERY` only for an explicit full-app/bootstrap request
 6. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
@@ -174,6 +182,8 @@ These must be observed at all times, even before reading any reference file:
 - **DO NOT overwrite existing artifacts** (`auth.json`, `evidence/`, `qa-knowledge/`) without reading the existing content first
 - **DO NOT mix browser sessions** — network and console evidence must come from the same page/session that executed the UI action
 - **DO NOT treat every 4xx/5xx as a confirmed bug** — correlate the request with the triggering action, expected negative behavior, response body and visible outcome
+- **DO NOT replace business-risk exploration with a generic element checklist** — derive charters from requirement, knowledge, source and runtime signals
+- **DO NOT call a static source claim runtime-verified** — preserve provenance and reconcile contradictions explicitly
 
 ## Canonical artifact layout
 
@@ -215,6 +225,7 @@ These must be observed at all times, even before reading any reference file:
 | Script | Purpose |
 |---|---|
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
+| `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |

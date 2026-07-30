@@ -1,0 +1,103 @@
+# Test intelligence
+
+Use this reference before every exploratory, ad-hoc, sanity, regression, retest, or Sheet browser run. The objective is to turn saved knowledge and source-derived facts into ranked test missions instead of a generic checklist.
+
+## Source precedence
+
+Resolve facts in this order:
+
+1. Explicit ticket, testcase, requirement, role and expected result
+2. Runtime-verified feature knowledge matching the current environment
+3. Source-derived API, rule, state, permission, flow and integration artifacts at the current commit
+4. Current UI and same-session network observation
+5. Clearly labeled inference
+
+Do not silently choose one source when they conflict. Create a high-priority reconciliation charter, preserve both claims with provenance, and let runtime evidence resolve the conflict where safe.
+
+## Canonical preparation
+
+Run from the tested project:
+
+```bash
+node <skill-root>/scripts/helpers/prepare-test-intelligence.mjs \
+  --intent <EXPLORATORY_ADHOC|SANITY_REGRESSION|RETEST_TICKET|SHEET_TESTCASE_EXECUTION> \
+  --scope <feature-slug> \
+  --repo <source-repo-if-available> \
+  --target <route-if-known> \
+  --role <role-if-known> \
+  --expected <expected-if-known> \
+  --impact <related-areas-if-known>
+```
+
+When `--repo` is present, the command refreshes source knowledge only when it is missing, incomplete or behind the current commit. `--refresh-source always` forces refresh; `never` uses saved knowledge only.
+
+Read both generated files:
+
+- `qa-knowledge/context/business-execution-brief.json`
+- `qa-knowledge/context/business-execution-brief.md`
+
+The JSON includes:
+
+- `knowledge_health`: whether facts are runtime-correlated or static/document-derived
+- `source_evidence`: fact-to-file/line provenance
+- `business_context`: routes, roles, flows, rules, states, side effects and contracts
+- `risk_inventory`: ranked hypotheses derived from those facts
+- `exploratory_charters`: executable, evidence-aware missions
+
+## Charter execution
+
+Execute charters by priority, not file order or DOM order.
+
+For each charter:
+
+1. Copy its mission, target, roles, techniques, oracle, safety rule and source references into the run ledger
+2. Confirm the required account/data exists
+3. Run the shortest happy transition needed to reach the risk
+4. Make one purposeful deviation tied to the hypothesis
+5. Observe UI, URL, same-session network/console and persisted state
+6. Compare against the charter oracle and source claim
+7. Record `confirmed`, `disproved`, `blocked` or `unresolved`
+8. Use the result to choose the next charter; do not finish a fixed generic list when evidence points elsewhere
+
+For a short session, execute all high-priority charters first. For longer sessions, expand medium risks, adjacent states, roles and integrations. Never reduce exploratory testing to “click every button”.
+
+## Adaptive reasoning loop
+
+After every meaningful observation:
+
+```text
+Observation
+  -> Which business claim did it confirm or contradict?
+  -> Which risk probability or impact changed?
+  -> Is a new state, role, dependency or boundary exposed?
+  -> Continue current charter, branch to a higher-risk charter, or stop?
+```
+
+Branch when:
+
+- the UI outcome conflicts with API/persisted state
+- a role sees an action that source permission data rejects
+- a state transition occurs outside the known state model
+- retry or duplicate requests create more than one side effect
+- a dependency failure leaves partial state
+- current runtime contradicts saved knowledge or current source
+
+## Quality gates
+
+- Every exploratory charter must cite at least one business fact or explicit observed UI signal
+- Every `high` risk must be executed, blocked with the missing prerequisite, or consciously deferred with a reason
+- Static source claims remain `static_or_document_derived` until runtime proves them
+- Runtime facts must identify environment, role/data and evidence
+- Generic attack vectors supplement a charter only when they match its feature type and risk
+- Do not run destructive, high-volume, security exploit or production mutation scenarios without the required authorization
+- Do not conclude PASS from a generated checklist count; conclude only against business oracles and evidence
+
+## Knowledge feedback
+
+After the run:
+
+- promote confirmed source claims to runtime-verified facts
+- mark contradicted facts with both source and runtime evidence
+- store newly observed state transitions, permissions, API contracts and side effects
+- update known issues and reusable assets
+- rebuild the intelligence brief on the next run so ranking reflects accumulated knowledge

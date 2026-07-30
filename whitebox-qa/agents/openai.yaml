@@ -1,0 +1,4 @@
+interface:
+  display_name: "Whitebox QA"
+  short_description: "Multi-language branch and runtime coverage QA"
+  default_prompt: "Use $whitebox-qa to analyze a function, trace its local calls, generate executable unit tests, and verify runtime branch coverage."
