@@ -21,14 +21,16 @@ Activated when the user requests: `Analyze this repo`, `Learn business flow from
 
 ```bash
 # Analyze a repo
-node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode full
+node scripts/orchestrators/repo-business-discovery.mjs --repo /path/to/backend --mode full --graphify auto
 
 # Only update changes
-node scripts/repo-business-discovery.mjs --repo /path/to/backend --mode incremental
+node scripts/orchestrators/repo-business-discovery.mjs --repo /path/to/backend --mode incremental --graphify auto
 
 # Analyze multiple repos simultaneously
-node scripts/repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
+node scripts/orchestrators/repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full --graphify auto
 ```
+
+Graphify is an optional code-only discovery provider in this orchestrator. Default `--graphify auto` uses it when installed and continues with canonical scanners when unavailable. Use `--graphify required` only when the requested result explicitly depends on Graphify and read [GRAPHIFY-EFFECTIVE-HTML.md](GRAPHIFY-EFFECTIVE-HTML.md) before changing this boundary
 
 Output: `qa-knowledge/repositories/<repo-name>/` includes:
 - `repo-metadata.json` — repo type, framework, modules, commit
@@ -40,6 +42,8 @@ Output: `qa-knowledge/repositories/<repo-name>/` includes:
 - `system-overview.md` — compatible summary for human reading
 - `flows/`, `rules/`, `contracts/`, `evidence/` — shard knowledge by scope
 - `business-guide.md` *(Phase 3, compatibility)* — guide tổng hợp 18 sections khi cần bàn giao hoặc fallback
+- `graphify-discovery.json` *(optional)* — compact dependency candidates preserving `EXTRACTED`, `INFERRED` and `AMBIGUOUS`
+- `graphify-code-only/graphify-out/` *(optional)* — isolated raw local Graphify output; never the canonical business truth
 
 When `system-business-guide.md` exists at `qa-knowledge/merged/`, `qa-run` and `business-analysis` read from it for enriched context. When the project already has `qa-knowledge/knowledge-index.json`, only load the shards pointed to by the index instead of reading the entire large guide.
 

@@ -32,7 +32,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Plane URL (`projects.metasolutions.ai`, path có `/issues/` hoặc `/work-items/`), ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor; bare URL/ID thì đọc ticket |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
 | App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, browser response/network/console error, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Chạy `prepare-test-intelligence.mjs` để merge requirement + knowledge + current source thành ranked risk charters, resolve browser observer cùng session; với Sheet tạo plan, hiển thị resolved module rồi hỏi user xác nhận module, số worker 1-4 và all/worker ID/cancel |
-| Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
+| Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full --graphify auto`; Graphify code-only chỉ bổ sung dependency candidate, Phần 2+3 vẫn tạo nguồn business chuẩn và merge vào `qa-knowledge/merged/system-business-guide.md` |
 | Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --page <slug>`; phân loại 9 kết quả, kiểm tra 10 ambiguity patterns, xuất `ui-business-guide.md` 12 sections |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP; bare URL/ID thì đọc object |
@@ -64,6 +64,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
 10. Với qa-run, chạy `scripts/helpers/prepare-test-intelligence.mjs` theo feature scope trước normal browser action, truyền `--repo` khi source có sẵn; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu
 11. Live browser qa-run phải quan sát network, console và page error trong đúng session đang thực thi UI; không ghép evidence từ browser MCP khác session
+12. Graphify chỉ là optional static discovery provider: không chạy installer/hook/AGENTS mutation, mặc định `--code-only`, giữ `EXTRACTED`/`INFERRED`/`AMBIGUOUS` và không nâng relation thành business truth, runtime evidence hay measured coverage
+13. effective-html chỉ ảnh hưởng companion HTML sinh từ JSON đã validate; JSON, Markdown, Excel, XMind và evidence chuẩn hiện tại vẫn là source of truth
 
 ### Invariant bắt buộc
 
@@ -84,6 +86,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Business analysis phải sinh `.xmind`, Q&A Markdown và Q&A Excel từ cùng một JSON; Question ID giữa hai Q&A phải khớp
 - Pentest scanner alert luôn là `Candidate` cho đến khi có reproduction evidence và control comparison
 - Whitebox path/testcase tĩnh luôn là `source-derived-candidate`; chỉ tuyên bố measured coverage sau `coverage`/`run-coverage`, giữ `unknown` khác `uncovered`, và không tự tạo template testcase ngoài `testcase-template`
+- Graphify relation luôn là `source-derived-candidate`; `EXTRACTED` vẫn chỉ là static relationship, `INFERRED` và `AMBIGUOUS` luôn cần review
+- Interactive HTML luôn là derived presentation artifact và phải pass `render-intelligence-html.mjs --check` trước bàn giao
 - Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
 - Không xem `source_available` là tool đã cài hoặc được phép chạy
 
@@ -134,6 +138,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Đọc `qa-knowledge/<feature>-business-guide.md` trước browser action nếu có
 - Sau mọi run, ghi và validate business guide bằng `scripts/writers/write-business-guide.mjs`
 - Khi khám phá tổng thể hoặc bootstrap app, tạo `qa-knowledge/app-business-guide.md` với module coverage map; retest không lặp lại full-app baseline
+- Khi REPO_BUSINESS_DISCOVERY cần cross-file graph, dùng `graphify-adapter.mjs` qua orchestrator với `--graphify auto|required|off`; không gọi `graphify codex install` hoặc `graphify hook install`
+- Khi user yêu cầu báo cáo/diagram HTML, chỉ chạy `render-intelligence-html.mjs` sau khi canonical JSON validate và giữ HTML là companion output
 
 ### Nguyên tắc cốt lõi
 > Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
@@ -197,6 +203,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Review đủ 18 vùng trong senior fullstack QA/QC checklist
 - Tạo một analysis JSON rồi chạy `business-analysis/scripts/generate.sh`
 - Read-back `.xmind`, Q&A Markdown và Q&A Excel trước khi bàn giao
+- Nếu có `graphify-discovery.json`, chỉ dùng candidate để tìm related function hoặc Q&A còn thiếu; không đánh dấu `verified`
+- Chỉ sinh HTML companion khi user yêu cầu và phải sinh từ analysis JSON đã validate
 
 Đọc chi tiết: [`business-analysis/SKILL.md`](business-analysis/SKILL.md)
 

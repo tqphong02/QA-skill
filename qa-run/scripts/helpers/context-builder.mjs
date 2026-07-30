@@ -239,6 +239,34 @@ function collectKnownArtifact(data, sourcePath) {
   const relativeSource = path.relative(DATA_DIR, sourcePath);
   const confidenceOf = item => item?.confidence || 'inferred';
 
+  if (data.tool === 'graphify-adapter' && data.status === 'generated') {
+    const candidates = (data.candidates || []).filter(item => matchesScope(
+      item.source,
+      item.target,
+      item.relation,
+      item.sourceRef,
+    ));
+    for (const candidate of candidates.slice(0, 40)) {
+      const rendered = `${candidate.source} --${candidate.relation}--> ${candidate.target}`;
+      result.impactAreas.push(candidate.source, candidate.target);
+      const confidence = candidate.confidence === 'EXTRACTED'
+        ? 'source-derived-candidate'
+        : candidate.confidence === 'INFERRED'
+          ? 'inferred'
+          : 'ambiguous';
+      addEvidence(
+        'dependency_candidate',
+        rendered,
+        candidate.sourceRef || relativeSource,
+        confidence,
+      );
+      if (candidate.confidence === 'AMBIGUOUS') {
+        result.unresolved.push(`Graphify ambiguous dependency: ${rendered}`);
+      }
+    }
+    return true;
+  }
+
   if (Array.isArray(data.endpoints)) {
     for (const endpoint of data.endpoints.filter(item => matchesScope(
       item.module,

@@ -15,6 +15,7 @@ Convert first, reason once, render deterministically
    - Check `qa-knowledge/repositories/<repo>/reconciliation-report.json` — prioritize entries with `result: CONFIRMED`; clearly highlight `CONFLICT`s, do not blindly choose one source
    - Check `qa-knowledge/repositories/<repo>/business-qna.json` — merge existing Q&A, only generate new Q&A for uncovered areas
    - Check `qa-knowledge/repositories/<repo>/runtime-findings.json` — if it exists, read it first to acknowledge runtime confirmed security/permission CONFLICTs without creating duplicate Q&A
+   - Check `qa-knowledge/repositories/<repo>/graphify-discovery.json` — if it exists, use dependency candidates to find related functions and missing cross-flow questions; never promote a Graphify relation to `verified`
    - If source and doc contradict: record both, mark as `conflict`, and require human confirmation
    - If no knowledge files are found: proceed normally from gate 1
 
@@ -120,6 +121,21 @@ The XMind must use exactly one `Luồng hệ thống` sheet so readers see the e
 - Run `node scripts/render-xmind.mjs --check <file.xmind> <analysis.json>` and verify journey and relationship counts
 - Report `BLOCKED` when conversion, review coverage, dependency or output validation fails
 
+### 7. Optional interactive companion
+
+Only when the user requests HTML, an interactive flow or a visual companion, read [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md), then render from the already validated hidden JSON:
+
+```bash
+node ../qa-run/scripts/writers/render-intelligence-html.mjs \
+  --input .business-analysis/<project-name>_Analysis_Source.json \
+  --output <project-output>/<project-name>_Business_Flow.html
+
+node ../qa-run/scripts/writers/render-intelligence-html.mjs \
+  --check <project-output>/<project-name>_Business_Flow.html
+```
+
+This HTML is optional and derived. The required `.xmind`, Q&A Markdown and Q&A Excel remain the canonical synchronized deliverables
+
 ## Output rules
 
 - Q&A Markdown and Excel must have matching Question IDs and content
@@ -155,3 +171,4 @@ The XMind must use exactly one `Luồng hệ thống` sheet so readers see the e
 - [scripts/render-qa.py](scripts/render-qa.py) for matching Markdown and Excel Q&A
 - [scripts/render-xmind.mjs](scripts/render-xmind.mjs) for editable XMind output
 - [examples/sample-analysis.json](examples/sample-analysis.json) for a cross-model example
+- [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md) for optional source graph candidates and interactive HTML companions

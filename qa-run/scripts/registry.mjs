@@ -34,6 +34,8 @@ export const SCRIPT_REGISTRY = {
   'source-indexer': 'discovery/source-indexer.mjs',
   'repo-fingerprint.mjs': 'discovery/repo-fingerprint.mjs',
   'repo-fingerprint': 'discovery/repo-fingerprint.mjs',
+  'graphify-adapter.mjs': 'discovery/graphify-adapter.mjs',
+  'graphify-adapter': 'discovery/graphify-adapter.mjs',
   'traceability-matrix-generator.mjs': 'discovery/traceability-matrix-generator.mjs',
   'traceability-matrix-generator': 'discovery/traceability-matrix-generator.mjs',
 
@@ -76,6 +78,8 @@ export const SCRIPT_REGISTRY = {
   'write-repo-business-guide': 'writers/write-repo-business-guide.mjs',
   'write-ui-business-guide.mjs': 'writers/write-ui-business-guide.mjs',
   'write-ui-business-guide': 'writers/write-ui-business-guide.mjs',
+  'render-intelligence-html.mjs': 'writers/render-intelligence-html.mjs',
+  'render-intelligence-html': 'writers/render-intelligence-html.mjs',
   'write-rbac-matrix.mjs': 'writers/write-rbac-matrix.mjs',
   'write-rbac-matrix': 'writers/write-rbac-matrix.mjs',
   'business-qna-generator.mjs': 'writers/business-qna-generator.mjs',

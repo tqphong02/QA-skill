@@ -16,6 +16,11 @@
  *   --analysis-mode deterministic  (Mặc định) Nhanh, 0 token AI, kết quả cấu trúc JSON/MD
  *   --analysis-mode semantic       Tự động gọi AI diễn giải ý nghĩa nghiệp vụ từ JSON đã rút gọn
  *
+ * Lớp graph intelligence (--graphify):
+ *   --graphify auto      Dùng Graphify code-only nếu runtime có sẵn (mặc định)
+ *   --graphify required  Dừng nếu Graphify thiếu hoặc thất bại
+ *   --graphify off       Không chạy Graphify
+ *
  * Usage:
  *   node repo-business-discovery.mjs --repo /path/to/backend --mode full
  *   node repo-business-discovery.mjs --repo . --mode incremental
@@ -38,9 +43,15 @@ const WORKSPACE     = getArg('--workspace', null);
 const REPOS_CSV     = getArg('--repos', null);
 const MODE          = getArg('--mode', 'full');
 const ANALYSIS_MODE = getArg('--analysis-mode', 'deterministic');
+const GRAPHIFY_MODE = getArg('--graphify', 'auto').toLowerCase();
 const DATA_DIR      = process.env.QA_DATA_DIR || process.cwd();
 const KNOW_BASE     = path.join(DATA_DIR, 'qa-knowledge', 'repositories');
 const MERGED_DIR    = path.join(DATA_DIR, 'qa-knowledge', 'merged');
+
+if (!['auto', 'required', 'off'].includes(GRAPHIFY_MODE)) {
+  console.error('[repo-orchestrator] BLOCKED: --graphify must be auto, required, or off');
+  process.exit(2);
+}
 
 function runScript(scriptName, extraArgs = []) {
   const scriptPath = resolveScriptPath(scriptName);
@@ -148,6 +159,7 @@ function updateKnowledgeIndex() {
     'reconciliation-report.json',
     'business-qna.json',
     'business-guide.md',
+    'graphify-discovery.json',
   ];
 
   if (fs.existsSync(KNOW_BASE)) {
@@ -216,6 +228,7 @@ async function analyzeRepo(repoPath) {
   console.log(`  Target Repo:    ${repoPath}`);
   console.log(`  Mode:           ${MODE}`);
   console.log(`  Analysis Mode:  ${ANALYSIS_MODE}`);
+  console.log(`  Graphify:       ${GRAPHIFY_MODE}`);
   console.log(`  Semantic Engine: ${isUABundled ? '🟢 BUNDLED (Egonex-AI Understand-Anything)' : '⚪ AST Default'}`);
   console.log(`  Output:         ${outputDir}`);
   console.log(`  Commit:         ${currentCommit}`);
@@ -235,6 +248,17 @@ async function analyzeRepo(repoPath) {
     '--repo', repoPath,
     '--output', path.join(outputDir, 'symbol-index.json'),
   ]);
+
+  const graphifyOutput = path.join(outputDir, 'graphify-discovery.json');
+  const okGraphify = runScript('graphify-adapter.mjs', [
+    '--repo', repoPath,
+    '--output', graphifyOutput,
+    '--graph-root', path.join(outputDir, 'graphify-code-only'),
+    '--mode', GRAPHIFY_MODE,
+  ]);
+  if (GRAPHIFY_MODE === 'required' && (!okGraphify || !fs.existsSync(graphifyOutput))) {
+    throw new Error('Graphify was required but no normalized discovery artifact was produced');
+  }
 
   const ok3 = runScript('architecture-discovery.mjs', [
     '--repo', repoPath,
@@ -301,7 +325,24 @@ async function analyzeRepo(repoPath) {
     mode: MODE,
     analysisMode: ANALYSIS_MODE,
     commit: currentCommit,
-    phase1: { fingerprint: ok1, sourceIndex: ok2, architecture: ok3, apiContracts: ok4, businessRules: ok5 },
+    phase1: {
+      fingerprint: ok1,
+      sourceIndex: ok2,
+      graphify: {
+        mode: GRAPHIFY_MODE,
+        attempted: GRAPHIFY_MODE !== 'off',
+        completed: okGraphify && fs.existsSync(graphifyOutput),
+        outcome: fs.existsSync(graphifyOutput)
+          ? 'generated'
+          : GRAPHIFY_MODE === 'off'
+            ? 'disabled'
+            : 'skipped_or_unavailable',
+        artifact: fs.existsSync(graphifyOutput) ? graphifyOutput : null,
+      },
+      architecture: ok3,
+      apiContracts: ok4,
+      businessRules: ok5,
+    },
     outputDir,
     completedAt: new Date().toISOString(),
     durationSeconds: parseFloat(duration),

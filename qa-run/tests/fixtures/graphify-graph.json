@@ -1,0 +1,48 @@
+{
+  "directed": true,
+  "graph": {
+    "built_at_commit": "abc123"
+  },
+  "nodes": [
+    {
+      "id": "order_controller",
+      "label": "OrderController",
+      "file_type": "code",
+      "source_file": "src/order/order.controller.ts",
+      "source_location": "L10",
+      "community": 1
+    },
+    {
+      "id": "order_service",
+      "label": "OrderService",
+      "file_type": "code",
+      "source_file": "src/order/order.service.ts",
+      "source_location": "L20",
+      "community": 1
+    },
+    {
+      "id": "order_repository",
+      "label": "OrderRepository",
+      "file_type": "code",
+      "source_file": "src/order/order.repository.ts",
+      "source_location": "L30",
+      "community": 2
+    }
+  ],
+  "links": [
+    {
+      "source": "order_controller",
+      "target": "order_service",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "weight": 1
+    },
+    {
+      "source": "order_service",
+      "target": "order_repository",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75
+    }
+  ]
+}

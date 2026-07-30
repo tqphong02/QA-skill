@@ -88,6 +88,31 @@ npm run cli -- nestjs \
   --output /absolute/repository/reports/nestjs-graph.json
 ```
 
+For a large, cross-language or unfamiliar repository, use the optional Graphify adapter only to select the exact bounded scope:
+
+```bash
+node ../qa-run/scripts/discovery/graphify-adapter.mjs --doctor
+node ../qa-run/scripts/discovery/graphify-adapter.mjs \
+  --repo /absolute/repository \
+  --output /absolute/repository/reports/graphify-discovery.json \
+  --mode auto
+```
+
+Read [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md) before using this layer. Preserve every Graphify relation as `source-derived-candidate`. Then run the local `whitebox graph` command for the named function; Graphify never replaces exact function resolution, branch/path analysis or coverage import
+
+Render an optional interactive companion only after the graph JSON validates:
+
+```bash
+node ../qa-run/scripts/writers/render-intelligence-html.mjs \
+  --input reports/process-payment-call-graph.json \
+  --output reports/process-payment-call-graph.html
+
+node ../qa-run/scripts/writers/render-intelligence-html.mjs \
+  --check reports/process-payment-call-graph.html
+```
+
+The HTML is a derived view and cannot change evidence level
+
 ## Generate executable Jest or Vitest
 
 Analyze with `--format json`, then create an explicit unit-test mapping:
@@ -172,6 +197,7 @@ Never collapse these levels into one claim.
 - NestJS resolution covers decorators, module arrays, imports, constructor types, and `@Inject` tokens visible in source; custom provider factories and runtime tokens may remain unresolved
 - Automatic runtime execution currently supports local Jest/Vitest with Istanbul JSON; other language runners need a compatible adapter or externally produced evidence
 - Static reachability is not runtime proof, even when a path looks complete
+- Repository-wide Graphify relations are supplemental candidates and may not expand a bounded function graph without exact local resolution
 
 ## Resources
 
@@ -182,4 +208,5 @@ Never collapse these levels into one claim.
 - [token budget](references/token-budget.md)
 - [Windows and PowerShell](references/windows.md)
 - [testcase handoff](references/testcase-handoff.md)
+- [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md)
 - [CLI entrypoint](src/cli.ts)

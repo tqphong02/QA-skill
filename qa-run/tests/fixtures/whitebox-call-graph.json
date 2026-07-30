@@ -1,0 +1,38 @@
+{
+  "graphVersion": "1.0",
+  "language": "typescript",
+  "entrypoint": "PaymentController.create",
+  "limits": {
+    "maxDepth": 5,
+    "maxNodes": 20
+  },
+  "nodes": [
+    {
+      "id": "payment.controller.ts#PaymentController.create",
+      "filePath": "payment.controller.ts",
+      "className": "PaymentController",
+      "functionName": "create",
+      "line": 12,
+      "depth": 0
+    },
+    {
+      "id": "payment.service.ts#PaymentService.processPayment",
+      "filePath": "payment.service.ts",
+      "className": "PaymentService",
+      "functionName": "processPayment",
+      "line": 18,
+      "depth": 1
+    }
+  ],
+  "edges": [
+    {
+      "from": "payment.controller.ts#PaymentController.create",
+      "to": "payment.service.ts#PaymentService.processPayment",
+      "call": "processPayment",
+      "line": 15,
+      "resolution": "resolved",
+      "candidates": []
+    }
+  ],
+  "truncated": false
+}

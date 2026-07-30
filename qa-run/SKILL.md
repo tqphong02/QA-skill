@@ -43,7 +43,7 @@ TEST_INTELLIGENCE =
 | Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PIPELINE.md](references/PIPELINE.md) |
+| Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md), [references/PIPELINE.md](references/PIPELINE.md), and [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md) |
 | Reconcile UI with source, docs or runtime | `UI_BUSINESS_RECONCILIATION + DISCOVERY_CORE` | [references/PIPELINE.md](references/PIPELINE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Write Playwright automation or POM | Exit `qa-run` | Route to `playwright-pom-automation` |
 
@@ -61,6 +61,7 @@ Load optional references only when their condition occurs:
 - A workflow step failed → [references/COMMON-MISTAKES.md](references/COMMON-MISTAKES.md)
 - Playwright was proven unavailable → [references/ANTIGRAVITY-FALLBACK.md](references/ANTIGRAVITY-FALLBACK.md)
 - A verdict is shallow, contradictory or unsupported → [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md)
+- Repository-wide graph, cross-file impact, call-flow diagram or interactive intelligence report is requested → [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md)
 
 Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; vendor code is an optional development dependency, not a user-selectable QA skill.
 
@@ -166,6 +167,7 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 ## Knowledge scope decision
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
+- `REPO_BUSINESS_DISCOVERY`: run `node scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode <full|incremental> --graphify auto`. Graphify runs code-only when available and contributes dependency candidates; canonical QA-skill scanners still produce rules, flows, contracts and permissions. Use `--graphify required` only when Graphify itself is required by the user
 - `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --module <requested-if-known> --parallel --plan-only`, show the resolved module scope, then ask the user to confirm module, worker count 1-4 and worker selection. Run only confirmed assignments and import image/video-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
 - `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
 - `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope.
@@ -184,6 +186,8 @@ These must be observed at all times, even before reading any reference file:
 - **DO NOT treat every 4xx/5xx as a confirmed bug** — correlate the request with the triggering action, expected negative behavior, response body and visible outcome
 - **DO NOT replace business-risk exploration with a generic element checklist** — derive charters from requirement, knowledge, source and runtime signals
 - **DO NOT call a static source claim runtime-verified** — preserve provenance and reconcile contradictions explicitly
+- **DO NOT treat Graphify output as a business rule, expected result or coverage proof** — keep every relation `source-derived-candidate` and preserve `EXTRACTED`, `INFERRED` or `AMBIGUOUS`
+- **DO NOT let an optional HTML companion replace canonical JSON, Markdown, Excel or XMind** — render only after the source artifact validates
 
 ## Canonical artifact layout
 
@@ -206,6 +210,8 @@ These must be observed at all times, even before reading any reference file:
 │   ├── app-business-guide.md       ← compatibility/overview layer
 │   ├── app-flow-map.json
 │   ├── checklists/, merged/, repositories/, ui-business/
+│   ├── repositories/<repo>/graphify-discovery.json
+│   ├── repositories/<repo>/graphify-code-only/graphify-out/
 ├── FINDINGS.md
 └── reports/ (retest/, exports/)
 ```
@@ -226,6 +232,7 @@ These must be observed at all times, even before reading any reference file:
 |---|---|
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
+| `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, then normalize provenance-preserving dependency candidates |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
@@ -240,6 +247,7 @@ These must be observed at all times, even before reading any reference file:
 | `scripts/writers/validate-knowledge.mjs` | Check knowledge freshness, hash routes & git commit |
 | `scripts/helpers/collect-evidence.mjs` | Bundle screenshots, traces, logs into artifact package |
 | `scripts/writers/write-business-guide.mjs` | Deterministic renderer/validator for business guide |
+| `scripts/writers/render-intelligence-html.mjs` | Render and validate an optional self-contained interactive view from canonical QA intelligence JSON |
 | `scripts/helpers/log-bug.mjs` | Log Plane bug with inline image evidence |
 | `scripts/helpers/login.mjs` | Create auth.json |
 | `lib/driver.mjs` | Headless browser + screenshot to file |

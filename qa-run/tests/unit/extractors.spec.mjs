@@ -186,6 +186,15 @@ test('Extractor Test 10: Full orchestrator discovery run on NestJS fixture', () 
     assert.ok(fs.existsSync(path.join(repoKnowledgeDir, f)), `Missing expected output file: ${f}`);
   }
 
+  const discoverySession = JSON.parse(
+    fs.readFileSync(path.join(repoKnowledgeDir, 'discovery-session.json'), 'utf8'),
+  );
+  assert.equal(
+    discoverySession.phase1.graphify.completed,
+    Boolean(discoverySession.phase1.graphify.artifact),
+    'Graphify completion must require a normalized artifact',
+  );
+
   const mergedDir = path.join(process.cwd(), 'qa-knowledge/merged');
   assert.ok(fs.existsSync(path.join(mergedDir, 'system-business-guide.md')), 'Should create system-business-guide.md');
   assert.ok(fs.existsSync(path.join(mergedDir, 'system-business-map.json')), 'Should create system-business-map.json');
