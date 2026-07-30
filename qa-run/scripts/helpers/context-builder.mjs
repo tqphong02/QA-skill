@@ -240,7 +240,8 @@ function collectKnownArtifact(data, sourcePath) {
   const confidenceOf = item => item?.confidence || 'inferred';
 
   if (data.tool === 'graphify-adapter' && data.status === 'generated') {
-    const candidates = (data.candidates || []).filter(item => matchesScope(
+    const graphifyContext = data.contextSlice?.candidates || data.candidates || [];
+    const candidates = graphifyContext.filter(item => matchesScope(
       item.source,
       item.target,
       item.relation,

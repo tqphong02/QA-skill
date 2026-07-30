@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Run Graphify as an optional, code-only repository intelligence provider and
- * normalize its graph into a compact QA artifact.
+ * normalize its complete graph into a QA artifact with a separate compact
+ * context slice.
  *
  * Graphify is supplemental. Its output never upgrades a business rule,
  * expected result, runtime observation, or measured coverage state.
@@ -30,8 +31,10 @@ const repoArg = getArg('--repo', '').trim();
 const graphArg = getArg('--graph', '').trim();
 const outputArg = getArg('--output', '').trim();
 const graphRootArg = getArg('--graph-root', '').trim();
-const maxNodes = Number(getArg('--max-nodes', '300'));
-const maxEdges = Number(getArg('--max-edges', '600'));
+const maxNodes = Number(getArg('--max-nodes', '0'));
+const maxEdges = Number(getArg('--max-edges', '0'));
+const contextMaxNodes = Number(getArg('--context-max-nodes', '300'));
+const contextMaxEdges = Number(getArg('--context-max-edges', '600'));
 
 function usage() {
   console.log(`Usage:
@@ -41,8 +44,10 @@ function usage() {
 
 Options:
   --graph-root <dir>  Graphify output parent; Graphify writes <dir>/graphify-out/
-  --max-nodes <n>    Maximum normalized high-degree nodes (default 300)
-  --max-edges <n>    Maximum normalized dependency candidates (default 600)
+  --max-nodes <n>    Optional canonical node cap; 0 keeps all (default 0)
+  --max-edges <n>    Optional canonical edge cap; 0 keeps all (default 0)
+  --context-max-nodes <n>  High-degree nodes exposed to AI context (default 300)
+  --context-max-edges <n>  Ranked candidates exposed to AI context (default 600)
   --dry-run          Print the resolved extraction command without running it
   --doctor           Report runtime availability without writing files`);
 }
@@ -76,11 +81,17 @@ if (hasFlag('--help') || hasFlag('-h')) {
 if (!['auto', 'required', 'off'].includes(mode)) {
   fail('--mode must be auto, required, or off');
 }
-if (!Number.isInteger(maxNodes) || maxNodes < 1 || maxNodes > 5000) {
-  fail('--max-nodes must be an integer from 1 to 5000');
+if (!Number.isInteger(maxNodes) || maxNodes < 0 || maxNodes > 1000000) {
+  fail('--max-nodes must be an integer from 0 to 1000000');
 }
-if (!Number.isInteger(maxEdges) || maxEdges < 1 || maxEdges > 10000) {
-  fail('--max-edges must be an integer from 1 to 10000');
+if (!Number.isInteger(maxEdges) || maxEdges < 0 || maxEdges > 2000000) {
+  fail('--max-edges must be an integer from 0 to 2000000');
+}
+if (!Number.isInteger(contextMaxNodes) || contextMaxNodes < 1 || contextMaxNodes > 5000) {
+  fail('--context-max-nodes must be an integer from 1 to 5000');
+}
+if (!Number.isInteger(contextMaxEdges) || contextMaxEdges < 1 || contextMaxEdges > 10000) {
+  fail('--context-max-edges must be an integer from 1 to 10000');
 }
 
 if (hasFlag('--doctor')) {
@@ -214,7 +225,7 @@ function sourceRef(node, edge) {
   return [file, location].filter(Boolean).join(':');
 }
 
-const nodes = rawNodes
+const allNodes = rawNodes
   .map(node => ({
     id: text(node.id),
     label: text(node.label || node.name || node.id),
@@ -224,11 +235,11 @@ const nodes = rawNodes
     degree: degrees.get(String(node.id)) || 0,
   }))
   .filter(node => node.id && node.label)
-  .sort((a, b) => b.degree - a.degree || a.label.localeCompare(b.label))
-  .slice(0, maxNodes);
+  .sort((a, b) => b.degree - a.degree || a.label.localeCompare(b.label));
+const nodes = maxNodes > 0 ? allNodes.slice(0, maxNodes) : allNodes;
 
 const confidenceRank = { EXTRACTED: 0, INFERRED: 1, AMBIGUOUS: 2 };
-const candidates = rawEdges
+const allCandidates = rawEdges
   .map(edge => {
     const sourceId = endpointId(edge.source ?? edge.from);
     const targetId = endpointId(edge.target ?? edge.to);
@@ -260,8 +271,19 @@ const candidates = rawEdges
     Number(b.crossFile) - Number(a.crossFile)
     || confidenceRank[a.confidence] - confidenceRank[b.confidence]
     || a.relation.localeCompare(b.relation)
+  ));
+const candidates = maxEdges > 0 ? allCandidates.slice(0, maxEdges) : allCandidates;
+const retainedNodeIds = new Set(nodes.map(node => node.id));
+const retainedCandidates = candidates.filter(candidate => (
+  retainedNodeIds.has(candidate.sourceId) && retainedNodeIds.has(candidate.targetId)
+));
+const contextNodes = nodes.slice(0, contextMaxNodes);
+const contextNodeIds = new Set(contextNodes.map(node => node.id));
+const contextCandidates = retainedCandidates
+  .filter(candidate => (
+    contextNodeIds.has(candidate.sourceId) || contextNodeIds.has(candidate.targetId)
   ))
-  .slice(0, maxEdges);
+  .slice(0, contextMaxEdges);
 
 function counts(values) {
   return values.reduce((acc, value) => {
@@ -272,7 +294,7 @@ function counts(values) {
 }
 
 const normalized = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   tool: 'graphify-adapter',
   status: 'generated',
   generatedAt: new Date().toISOString(),
@@ -296,19 +318,34 @@ const normalized = {
     inferred: 'Candidate relationship that requires source or runtime verification',
     ambiguous: 'Unresolved candidate that must not drive a verdict without review',
   },
+  retentionPolicy: {
+    canonical: maxNodes === 0 && maxEdges === 0
+      ? 'full-project'
+      : 'explicitly-capped',
+    context: 'bounded-ranked-slice',
+    canonicalNodeLimit: maxNodes || null,
+    canonicalEdgeLimit: maxEdges || null,
+    contextNodeLimit: contextMaxNodes,
+    contextEdgeLimit: contextMaxEdges,
+  },
   summary: {
     totalNodes: rawNodes.length,
     totalEdges: rawEdges.length,
     normalizedNodes: nodes.length,
-    normalizedCandidates: candidates.length,
-    truncatedNodes: rawNodes.length > nodes.length,
-    truncatedEdges: rawEdges.length > candidates.length,
+    normalizedCandidates: retainedCandidates.length,
+    truncatedNodes: allNodes.length > nodes.length,
+    truncatedEdges: allCandidates.length > retainedCandidates.length,
     confidenceCounts: counts(rawEdges.map(edge => text(edge.confidence || 'AMBIGUOUS').toUpperCase())),
     relationCounts: counts(rawEdges.map(edge => edge.relation || edge.type || 'related_to')),
     communityCounts: counts(rawNodes.map(node => node.community ?? 'unassigned')),
   },
   nodes,
-  candidates,
+  candidates: retainedCandidates,
+  contextSlice: {
+    purpose: 'token-bounded AI retrieval only; never project completeness',
+    nodes: contextNodes,
+    candidates: contextCandidates,
+  },
 };
 
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -319,5 +356,6 @@ fs.renameSync(temporaryPath, outputPath);
 console.log(
   `[graphify-adapter] generated ${outputPath}`
   + ` nodes=${rawNodes.length} edges=${rawEdges.length}`
-  + ` candidates=${candidates.length}`,
+  + ` retained=${nodes.length}/${retainedCandidates.length}`
+  + ` context=${contextNodes.length}/${contextCandidates.length}`,
 );

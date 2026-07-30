@@ -29,7 +29,9 @@ test('Graphify adapter imports graph.json and preserves confidence provenance', 
   assert.equal(run.status, 0, run.stderr);
   const artifact = JSON.parse(fs.readFileSync(output, 'utf8'));
   assert.equal(artifact.tool, 'graphify-adapter');
+  assert.equal(artifact.schemaVersion, 2);
   assert.equal(artifact.provenancePolicy.classification, 'source-derived-candidate');
+  assert.equal(artifact.retentionPolicy.canonical, 'full-project');
   assert.equal(artifact.summary.totalNodes, 3);
   assert.equal(artifact.summary.totalEdges, 2);
   assert.deepEqual(
@@ -37,6 +39,43 @@ test('Graphify adapter imports graph.json and preserves confidence provenance', 
     ['EXTRACTED', 'INFERRED'],
   );
   assert.ok(artifact.candidates.every(candidate => candidate.crossFile));
+});
+
+test('Graphify adapter retains the full project and creates a separate context slice', () => {
+  const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'graphify-full-project-'));
+  const graph = path.join(temporaryDir, 'graph.json');
+  const output = path.join(temporaryDir, 'graphify-discovery.json');
+  const nodes = Array.from({ length: 350 }, (_, index) => ({
+    id: `node-${index}`,
+    label: `Node ${index}`,
+    file_type: 'code',
+    source_file: `src/node-${index}.ts`,
+    community: index % 12,
+  }));
+  const links = Array.from({ length: 700 }, (_, index) => ({
+    source: `node-${index % nodes.length}`,
+    target: `node-${(index + 1) % nodes.length}`,
+    relation: 'calls',
+    confidence: index % 10 === 0 ? 'INFERRED' : 'EXTRACTED',
+  }));
+  fs.writeFileSync(graph, JSON.stringify({ nodes, links }));
+
+  const run = spawnSync(process.execPath, [
+    adapter,
+    '--repo', repo,
+    '--graph', graph,
+    '--output', output,
+  ], { encoding: 'utf8' });
+
+  assert.equal(run.status, 0, run.stderr);
+  const artifact = JSON.parse(fs.readFileSync(output, 'utf8'));
+  assert.equal(artifact.nodes.length, 350);
+  assert.equal(artifact.candidates.length, 700);
+  assert.equal(artifact.summary.truncatedNodes, false);
+  assert.equal(artifact.summary.truncatedEdges, false);
+  assert.equal(artifact.contextSlice.nodes.length, 300);
+  assert.ok(artifact.contextSlice.candidates.length <= 600);
+  assert.equal(artifact.contextSlice.purpose.includes('token-bounded'), true);
 });
 
 test('Graphify adapter dry-run is code-only and disables query logging', () => {
@@ -89,6 +128,17 @@ test('Test intelligence consumes Graphify only as dependency candidates', () => 
     '--output', normalized,
   ], { encoding: 'utf8' });
   assert.equal(imported.status, 0, imported.stderr);
+  const artifact = JSON.parse(fs.readFileSync(normalized, 'utf8'));
+  artifact.candidates.push({
+    sourceId: 'full-only-source',
+    source: 'OrderFullOnly',
+    targetId: 'full-only-target',
+    target: 'OrderFullOnlyTarget',
+    relation: 'calls',
+    confidence: 'EXTRACTED',
+    sourceRef: 'src/full-only.ts',
+  });
+  fs.writeFileSync(normalized, JSON.stringify(artifact, null, 2));
 
   fs.writeFileSync(path.join(knowledgeDir, 'knowledge-index.json'), JSON.stringify({
     source_repositories: {
@@ -120,4 +170,5 @@ test('Test intelligence consumes Graphify only as dependency candidates', () => 
     brief.business_context.business_rules.some(rule => rule.includes('OrderController')),
     false,
   );
+  assert.equal(brief.business_context.impact_areas.includes('OrderFullOnly'), false);
 });

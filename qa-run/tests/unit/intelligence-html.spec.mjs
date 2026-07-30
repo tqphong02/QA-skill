@@ -126,7 +126,7 @@ test('Intelligence HTML keeps a large multi-community graph within a readable co
   const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bounded-html-'));
   const input = path.join(temporaryDir, 'large-graphify.json');
   const html = path.join(temporaryDir, 'large-graphify.html');
-  const nodes = Array.from({ length: 36 }, (_, index) => ({
+  const nodes = Array.from({ length: 80 }, (_, index) => ({
     id: `node-${index}`,
     label: `Node ${index}`,
     fileType: 'code',
@@ -134,7 +134,7 @@ test('Intelligence HTML keeps a large multi-community graph within a readable co
     community: index,
     degree: 2,
   }));
-  const candidates = Array.from({ length: 35 }, (_, index) => ({
+  const candidates = Array.from({ length: 79 }, (_, index) => ({
     sourceId: `node-${index}`,
     source: `Node ${index}`,
     targetId: `node-${index + 1}`,
@@ -168,4 +168,8 @@ test('Intelligence HTML keeps a large multi-community graph within a readable co
   assert.ok(viewBox, 'Expected a numeric SVG viewBox');
   assert.ok(Number(viewBox[1]) <= 1260, 'Expected no more than four layout columns');
   assert.ok(Number(viewBox[2]) > 900, 'Expected nodes to wrap into readable rows');
+  assert.match(output, /id="fullSearch"/);
+  assert.match(output, /qa-full-node-count" content="80"/);
+  assert.match(output, /Node 79/);
+  assert.match(output, /Full project index/);
 });

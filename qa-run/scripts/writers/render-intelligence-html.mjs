@@ -40,6 +40,12 @@ function fail(message, code = 2) {
 function checkHtml(filePath) {
   if (!fs.existsSync(filePath)) fail(`HTML file does not exist: ${filePath}`);
   const html = fs.readFileSync(filePath, 'utf8');
+  const fullNodeCount = Number(
+    html.match(/<meta name="qa-full-node-count" content="(\d+)">/)?.[1] || 0,
+  );
+  const fullEdgeCount = Number(
+    html.match(/<meta name="qa-full-edge-count" content="(\d+)">/)?.[1] || 0,
+  );
   const checks = {
     doctype: /^<!doctype html>/i.test(html),
     selfContained: !/<script[^>]+\bsrc=|<link[^>]+\bhref=/i.test(html),
@@ -51,6 +57,11 @@ function checkHtml(filePath) {
     nonEmptyDiagram: Number(
       html.match(/<meta name="qa-diagram-node-count" content="(\d+)">/)?.[1] || 0,
     ) > 0,
+    fullProjectIndex: fullNodeCount === 0 || (
+      /id="fullSearch"/.test(html)
+      && /const FULL_INDEX=/.test(html)
+      && fullEdgeCount >= 0
+    ),
   };
   const failed = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
   console.log(JSON.stringify({ file: path.resolve(filePath), checks, status: failed.length ? 'FAILED' : 'PASS' }, null, 2));
@@ -142,11 +153,13 @@ function metric(label, value, tone = 'neutral') {
 
 function buildGraphifyModel(value) {
   const nodeMap = new Map((value.nodes || []).map(node => [clean(node.id), node]));
-  const edgeNodeIds = unique((value.candidates || []).flatMap(edge => [edge.sourceId, edge.targetId]));
+  const contextNodes = value.contextSlice?.nodes || value.nodes || [];
+  const contextCandidates = value.contextSlice?.candidates || value.candidates || [];
+  const edgeNodeIds = unique(contextCandidates.flatMap(edge => [edge.sourceId, edge.targetId]));
   const preferredNodes = edgeNodeIds
     .map(id => nodeMap.get(id))
     .filter(Boolean);
-  const nodePool = [...preferredNodes, ...(value.nodes || [])]
+  const nodePool = [...preferredNodes, ...contextNodes, ...(value.nodes || [])]
     .filter((node, index, list) => list.findIndex(item => clean(item.id) === clean(node.id)) === index)
     .slice(0, 36);
   const nodes = nodePool.map((node, index) => ({
@@ -160,7 +173,7 @@ function buildGraphifyModel(value) {
     tone: 'dependency',
   }));
   const normalizedBySource = new Map(nodes.map(node => [node.sourceId, node.id]));
-  const edges = (value.candidates || [])
+  const edges = contextCandidates
     .filter(edge => normalizedBySource.has(clean(edge.sourceId)) && normalizedBySource.has(clean(edge.targetId)))
     .slice(0, 72)
     .map(edge => ({
@@ -184,6 +197,25 @@ function buildGraphifyModel(value) {
     ],
     nodes,
     edges,
+    fullIndex: {
+      nodes: (value.nodes || []).map(node => ({
+        id: clean(node.id),
+        label: clean(node.label),
+        meta: [
+          clean(node.fileType),
+          node.community !== null ? `community ${node.community}` : '',
+          `degree ${node.degree ?? 0}`,
+        ].filter(Boolean).join(' · '),
+        detail: clean(node.source) || 'No source location',
+      })),
+      relations: (value.candidates || []).map(edge => ({
+        source: clean(edge.source),
+        target: clean(edge.target),
+        relation: clean(edge.relation),
+        confidence: clean(edge.confidence || 'AMBIGUOUS').toUpperCase(),
+        sourceRef: clean(edge.sourceRef),
+      })),
+    },
     sections: [
       {
         title: 'Provenance boundary',
@@ -196,7 +228,7 @@ function buildGraphifyModel(value) {
       },
       {
         title: 'Top dependency candidates',
-        items: (value.candidates || []).slice(0, 16).map(edge => (
+        items: contextCandidates.slice(0, 16).map(edge => (
           `[${edge.confidence}] ${edge.source} --${edge.relation}--> ${edge.target}`
         )),
       },
@@ -637,6 +669,20 @@ const sectionsHtml = model.sections.map(section => `<section class="report-secti
   <ul>${(section.items || []).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
 </section>`).join('\n');
 
+const fullIndexHtml = model.fullIndex ? `<section class="full-index" aria-labelledby="fullIndexTitle">
+  <div class="full-index-heading">
+    <div>
+      <h2 id="fullIndexTitle">Full project index</h2>
+      <p>Search every retained node and relation. The canvas above is only a readable overview.</p>
+    </div>
+    <div class="full-index-counts">${model.fullIndex.nodes.length} nodes · ${model.fullIndex.relations.length} relations</div>
+  </div>
+  <label for="fullSearch">Search node, path, relation or confidence</label>
+  <input id="fullSearch" type="search" autocomplete="off" placeholder="Type at least 2 characters">
+  <output id="fullIndexStatus" class="full-index-status" aria-live="polite"></output>
+  <div id="fullIndexResults" class="full-index-results"></div>
+</section>` : '';
+
 const scriptModel = JSON.stringify({
   nodes: positionedNodes.map(node => ({
     id: node.id,
@@ -645,6 +691,14 @@ const scriptModel = JSON.stringify({
     detail: node.detail,
   })),
 }).replaceAll('<', '\\u003c');
+const fullIndexModel = JSON.stringify(model.fullIndex || {
+  nodes: [],
+  relations: [],
+}).replaceAll('<', '\\u003c');
+const fullIndexMeta = model.fullIndex
+  ? `<meta name="qa-full-node-count" content="${model.fullIndex.nodes.length}">
+<meta name="qa-full-edge-count" content="${model.fullIndex.relations.length}">`
+  : '';
 
 const html = `<!doctype html>
 <html lang="en">
@@ -653,6 +707,7 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="QA-skill render-intelligence-html">
 <meta name="qa-diagram-node-count" content="${positionedNodes.length}">
+${fullIndexMeta}
 <title>${escapeHtml(model.title)}</title>
 <script>
   (function () {
@@ -713,6 +768,19 @@ const html = `<!doctype html>
   .report-section{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
   .report-section h2{margin:0 0 10px;color:var(--ink);font-size:16px}.report-section ul{margin:0;padding-left:20px}
   .report-section li{margin:7px 0;overflow-wrap:anywhere}
+  .full-index{margin-top:16px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px}
+  .full-index-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .full-index h2{margin:0;color:var(--ink);font-size:18px}.full-index p{margin:4px 0 14px;color:var(--muted)}
+  .full-index-counts{font:12px var(--mono);color:var(--accent);padding-top:3px}
+  .full-index label{display:block;margin-bottom:6px;color:var(--ink);font-weight:600}
+  .full-index input{width:100%;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);
+    padding:10px 12px;font:14px var(--sans)}
+  .full-index input:focus{outline:2px solid var(--accent);outline-offset:2px}
+  .full-index-status{display:block;margin:9px 0;color:var(--muted);font:11px var(--mono)}
+  .full-index-results{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:8px}
+  .index-result{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg);min-width:0}
+  .index-result strong{display:block;color:var(--ink);overflow-wrap:anywhere}
+  .index-result span{display:block;color:var(--muted);font:11px var(--mono);overflow-wrap:anywhere;margin-top:3px}
   .legend{position:absolute;left:12px;top:12px;display:flex;gap:8px;flex-wrap:wrap;background:var(--surface);
     border:1px solid var(--line);border-radius:9px;padding:7px 9px;font:10px var(--mono)}
   .legend span::before{content:"";display:inline-block;width:18px;border-top:2px solid var(--muted);margin-right:5px;vertical-align:middle}
@@ -748,9 +816,11 @@ const html = `<!doctype html>
     </aside>
   </section>
   <div class="report-grid">${sectionsHtml}</div>
+  ${fullIndexHtml}
 </main>
 <script>
   const MODEL=${scriptModel};
+  const FULL_INDEX=${fullIndexModel};
   const nodeById=new Map(MODEL.nodes.map(node=>[node.id,node]));
   const svg=document.getElementById('diagram');
   const content=document.getElementById('svg-content');
@@ -771,6 +841,39 @@ const html = `<!doctype html>
   document.querySelectorAll('.node').forEach(element=>{element.addEventListener('click',()=>showDetail(element.dataset.nodeId));element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showDetail(element.dataset.nodeId)}})});
   document.getElementById('detailClose').addEventListener('click',()=>{detail.hidden=true});
   document.getElementById('themeToggle').addEventListener('click',()=>{const dark=!document.documentElement.classList.contains('dark');document.documentElement.classList.toggle('dark',dark);localStorage.setItem('qa-theme',dark?'dark':'light')});
+  const fullSearch=document.getElementById('fullSearch');
+  if(fullSearch){
+    const results=document.getElementById('fullIndexResults');
+    const status=document.getElementById('fullIndexStatus');
+    const renderIndex=query=>{
+      const needle=query.trim().toLocaleLowerCase('en-US');
+      results.replaceChildren();
+      if(needle.length<2){
+        status.textContent='Full index ready: '+FULL_INDEX.nodes.length+' nodes and '+FULL_INDEX.relations.length+' relations';
+        return;
+      }
+      const nodeMatches=FULL_INDEX.nodes.filter(node=>(node.label+' '+node.meta+' '+node.detail).toLocaleLowerCase('en-US').includes(needle));
+      const relationMatches=FULL_INDEX.relations.filter(edge=>(edge.source+' '+edge.relation+' '+edge.target+' '+edge.confidence+' '+edge.sourceRef).toLocaleLowerCase('en-US').includes(needle));
+      const shownNodes=nodeMatches.slice(0,40);
+      const shownRelations=relationMatches.slice(0,40);
+      for(const node of shownNodes){
+        const item=document.createElement('div');item.className='index-result';
+        const title=document.createElement('strong');title.textContent=node.label;
+        const meta=document.createElement('span');meta.textContent=node.meta;
+        const detailText=document.createElement('span');detailText.textContent=node.detail;
+        item.append(title,meta,detailText);results.append(item);
+      }
+      for(const edge of shownRelations){
+        const item=document.createElement('div');item.className='index-result';
+        const title=document.createElement('strong');title.textContent=edge.source+' —'+edge.relation+'→ '+edge.target;
+        const meta=document.createElement('span');meta.textContent=edge.confidence+(edge.sourceRef?' · '+edge.sourceRef:'');
+        item.append(title,meta);results.append(item);
+      }
+      status.textContent='Showing '+shownNodes.length+' of '+nodeMatches.length+' matching nodes and '+shownRelations.length+' of '+relationMatches.length+' matching relations';
+    };
+    fullSearch.addEventListener('input',()=>renderIndex(fullSearch.value));
+    renderIndex('');
+  }
   applyTransform();
 </script>
 </body>

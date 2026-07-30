@@ -34,7 +34,7 @@ Use `--graphify required` only when the requested deliverable explicitly depends
 
 The adapter always invokes Graphify with `--code-only` and disables Graphify query logging for extraction. It never runs `graphify install`, `graphify codex install`, `graphify hook install`, semantic document extraction, MCP startup, a database push or a remote backend
 
-The normalized artifact is:
+The normalized artifact retains the complete project graph by default:
 
 ```text
 qa-knowledge/repositories/<repo>/graphify-discovery.json
@@ -53,6 +53,10 @@ Every normalized relation remains `source-derived-candidate`
 - `AMBIGUOUS`: unresolved candidate that cannot drive a verdict
 
 Use candidates to select scope, identify dependency neighborhoods, rank impacted regression and choose exact functions for `whitebox-qa`. Never use them to invent a role, expected result, business rule, allowed state transition or coverage result
+
+`nodes` and `candidates` are the canonical full-project normalized collections. Do not cap them during normal repository discovery. The adapter also writes `contextSlice.nodes` and `contextSlice.candidates`; only this bounded ranked slice may be loaded into routine AI context. A context slice is a retrieval optimization, never a completeness statement
+
+Use `--max-nodes` or `--max-edges` only when the user explicitly accepts a capped canonical artifact. Defaults are `0`, meaning keep all. `--context-max-nodes` and `--context-max-edges` control token exposure without deleting canonical project knowledge
 
 Import an already-built graph without requiring a Graphify runtime:
 
@@ -86,7 +90,9 @@ node scripts/writers/render-intelligence-html.mjs \
   --check /absolute/report.html
 ```
 
-The renderer must remain self-contained, use no external scripts or stylesheets, include dark mode, keyboard-operable nodes, a dismissible detail panel, reduced-motion handling and pan/zoom controls
+For Graphify input, the renderer embeds the complete retained node/relation index and exposes search across all of it. The SVG canvas intentionally displays a readable overview neighborhood instead of mounting thousands of SVG elements at once. Never describe the canvas count as project coverage
+
+The renderer must remain self-contained, use no external scripts or stylesheets, include dark mode, keyboard-operable nodes, a dismissible detail panel, full-project search, reduced-motion handling and pan/zoom controls
 
 Do not expose hidden `source_ref`, secret, credential, personal data or internal diagnostics in a business-analysis HTML companion. Run `accessibility-qa` when the HTML itself is a release deliverable
 

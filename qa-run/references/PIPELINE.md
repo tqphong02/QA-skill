@@ -42,7 +42,7 @@ Output: `qa-knowledge/repositories/<repo-name>/` includes:
 - `system-overview.md` — compatible summary for human reading
 - `flows/`, `rules/`, `contracts/`, `evidence/` — shard knowledge by scope
 - `business-guide.md` *(Phase 3, compatibility)* — guide tổng hợp 18 sections khi cần bàn giao hoặc fallback
-- `graphify-discovery.json` *(optional)* — compact dependency candidates preserving `EXTRACTED`, `INFERRED` and `AMBIGUOUS`
+- `graphify-discovery.json` *(optional)* — complete normalized project graph plus a token-bounded `contextSlice`, preserving `EXTRACTED`, `INFERRED` and `AMBIGUOUS`
 - `graphify-code-only/graphify-out/` *(optional)* — isolated raw local Graphify output; never the canonical business truth
 
 When `system-business-guide.md` exists at `qa-knowledge/merged/`, `qa-run` and `business-analysis` read from it for enriched context. When the project already has `qa-knowledge/knowledge-index.json`, only load the shards pointed to by the index instead of reading the entire large guide.

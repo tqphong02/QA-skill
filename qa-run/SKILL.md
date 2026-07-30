@@ -187,6 +187,7 @@ These must be observed at all times, even before reading any reference file:
 - **DO NOT replace business-risk exploration with a generic element checklist** — derive charters from requirement, knowledge, source and runtime signals
 - **DO NOT call a static source claim runtime-verified** — preserve provenance and reconcile contradictions explicitly
 - **DO NOT treat Graphify output as a business rule, expected result or coverage proof** — keep every relation `source-derived-candidate` and preserve `EXTRACTED`, `INFERRED` or `AMBIGUOUS`
+- **DO NOT confuse the bounded `contextSlice` or HTML overview canvas with project completeness** — retain all normalized nodes/relations by default and retrieve only the relevant slice into AI context
 - **DO NOT let an optional HTML companion replace canonical JSON, Markdown, Excel or XMind** — render only after the source artifact validates
 
 ## Canonical artifact layout
@@ -232,7 +233,7 @@ These must be observed at all times, even before reading any reference file:
 |---|---|
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
-| `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, then normalize provenance-preserving dependency candidates |
+| `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, retain the complete normalized project graph and produce a separate token-bounded context slice |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
 | `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |

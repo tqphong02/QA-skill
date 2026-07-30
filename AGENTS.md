@@ -64,7 +64,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
 10. Với qa-run, chạy `scripts/helpers/prepare-test-intelligence.mjs` theo feature scope trước normal browser action, truyền `--repo` khi source có sẵn; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu
 11. Live browser qa-run phải quan sát network, console và page error trong đúng session đang thực thi UI; không ghép evidence từ browser MCP khác session
-12. Graphify chỉ là optional static discovery provider: không chạy installer/hook/AGENTS mutation, mặc định `--code-only`, giữ `EXTRACTED`/`INFERRED`/`AMBIGUOUS` và không nâng relation thành business truth, runtime evidence hay measured coverage
+12. Graphify chỉ là optional static discovery provider: không chạy installer/hook/AGENTS mutation, mặc định `--code-only`, giữ đầy đủ normalized node/relation của project, tách `contextSlice` giới hạn token, giữ `EXTRACTED`/`INFERRED`/`AMBIGUOUS` và không nâng relation thành business truth, runtime evidence hay measured coverage
 13. effective-html chỉ ảnh hưởng companion HTML sinh từ JSON đã validate; JSON, Markdown, Excel, XMind và evidence chuẩn hiện tại vẫn là source of truth
 
 ### Invariant bắt buộc
@@ -87,6 +87,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Pentest scanner alert luôn là `Candidate` cho đến khi có reproduction evidence và control comparison
 - Whitebox path/testcase tĩnh luôn là `source-derived-candidate`; chỉ tuyên bố measured coverage sau `coverage`/`run-coverage`, giữ `unknown` khác `uncovered`, và không tự tạo template testcase ngoài `testcase-template`
 - Graphify relation luôn là `source-derived-candidate`; `EXTRACTED` vẫn chỉ là static relationship, `INFERRED` và `AMBIGUOUS` luôn cần review
+- Graphify full-project artifact giữ toàn bộ node/relation theo mặc định; `contextSlice` và HTML overview chỉ là retrieval/presentation window, không phải project coverage
 - Interactive HTML luôn là derived presentation artifact và phải pass `render-intelligence-html.mjs --check` trước bàn giao
 - Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
 - Không xem `source_available` là tool đã cài hoặc được phép chạy
