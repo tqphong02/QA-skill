@@ -62,3 +62,6 @@ qa-knowledge/
 *.zip
 MISSING_TEST_DATA.md
 test-data.md
+
+# pentest-security engine tokens (OAuth)
+.pentest/.engine-tokens.json

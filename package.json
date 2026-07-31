@@ -1,0 +1,36 @@
+{
+  "name": "qa-skill",
+  "version": "1.0.0",
+  "description": "QA-skill — bộ 18 skill QE/Security/MCP cho Codex, Claude, Gemini, Cursor, Windsurf, Copilot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "security:detect": "node pentest-run/skills/pentest-security/scripts/detect.mjs",
+    "security:preflight": "node pentest-run/skills/pentest-security/scripts/preflight.mjs",
+    "security:scan": "node pentest-run/skills/pentest-security/scripts/run-scan.mjs",
+    "security:normalize": "node pentest-run/skills/pentest-security/scripts/normalize-findings.mjs",
+    "security:testcases": "node pentest-run/skills/pentest-security/scripts/generate-security-tests.mjs",
+    "security:ai-scan": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs",
+    "security:ai-scan:gemini": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs --engine gemini",
+    "security:ai-scan:claude": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs --engine claude",
+    "security:login": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs",
+    "security:login:claude": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs claude",
+    "security:login:gemini": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs gemini",
+    "security:login:status": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs status"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tqphong02/QA-skill.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/tqphong02/QA-skill/issues"
+  },
+  "homepage": "https://github.com/tqphong02/QA-skill#readme",
+  "devDependencies": {
+    "@openai/codex-security": "^0.1.4"
+  }
+}
