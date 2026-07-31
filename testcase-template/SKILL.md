@@ -73,7 +73,17 @@ WRONG vs CORRECT examples for login page:
 ```
 
 ### 3. Gen cases by type order
-8 types: `happy → alternative → validation → edge → negative → error → ui → additional`. Details + examples: `@references/test-types.md`.
+
+**Before writing any case, identify the BB technique:**
+
+- `happy` / `alternative` → Use Case Testing
+- `validation` → EP + BVA; if ≥2 combined conditions → **build Decision Table first**
+- `edge` → BVA: list min−1, min, min+1, max−1, max, max+1 before writing
+- `negative` → EP (invalid partition) + Error Guessing checklist
+- `error` → Error Guessing + State Transition
+- `additional` → Error Guessing; always flag `Ref: (out-of-spec)`
+
+8 types: `happy → alternative → validation → edge → negative → error → ui → additional`. Full technique guide + JSON examples: `@references/blackbox-techniques.md`.
 
 ### 4. Build JSON input
 ```json
@@ -214,6 +224,32 @@ Describe exactly what the Tester sees or can verify after performing the steps. 
 
 See `@references/template-schema.md` for details on the 4 sheets (Cover, Test cases_App, Dropdown Keys, Report).
 
+## Black-Box Techniques
+
+Mọi case phải dùng it́ nhát 1 kĩ thuạt BB. Xác định khi làm buước 3, ghi vào `bb_technique` để trace (generator bỏ qua, không ảnh huưởng Excel).
+
+| Kĩ thuạt | Type áp dụng | Khi nào bát buọc |
+|---|---|---|
+| **Equivalence Partitioning (EP)** | `validation`, `negative` | Luôn áp dụng khi có input partition |
+| **Boundary Value Analysis (BVA)** | `edge`, `validation` | Khi field có giới hạn số, độ dài, ngày |
+| **Decision Table** | `validation`, `negative`, `happy` | Bắt buộc khi ≥2 điều kiện kết hợp |
+| **State Transition** | `happy`, `alternative`, `error`, `negative` | Khi object có ≥2 trạng thái rõ ràng |
+| **Use Case Testing** | `happy`, `alternative`, `ui` | Mặc định cho flow AC |
+| **Error Guessing** | `negative`, `error`, `additional` | Luôn áp dụng sau các kỹ thuật khác |
+| **Pairwise** | `validation`, `edge` | Khi ≥3 input field độc lập |
+
+**Decision rule:**
+
+```
+≥2 điều kiện kết hợp?  → Decision Table bắt buộc trước
+Có giá trị biên (độ dài, số, ngày)?  → BVA bắt buộc cho edge
+Có ≥2 traạng thái?  → Veẽ state diagram trướng
+Có ≥3 field đọc lạp?  → Dùng Pairwise thay full factorial
+Còn lại?  → Use Case Testing + EP + Error Guessing
+```
+
+Xem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.md`](references/blackbox-techniques.md)
+
 ## Red flags
 
 | Symptom | Why it's wrong | Fix |
@@ -261,7 +297,9 @@ See `@references/template-schema.md` for details on the 4 sheets (Cover, Test ca
 - [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)
 - [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer for OpenAPI/Swagger/Postman/JSON/curl/source endpoints
 - [references/template-schema.md](references/template-schema.md) — 4 sheet details (Cover, Test cases_App, Dropdown Keys, Report)
-- [references/test-types.md](references/test-types.md) — 8 test case types + examples
+- [references/test-types.md](references/test-types.md) — 8 test case types + BB technique mapping
+- [references/blackbox-techniques.md](references/blackbox-techniques.md) — 7 BB techniques: EP, BVA, Decision Table, State Transition, Use Case, Error Guessing, Pairwise
+- [references/ui-testcases.md](references/ui-testcases.md) — UI testing checklist (8 categories)
 - [references/api-testcases.md](references/api-testcases.md) — mapping and coverage for API mode only
 - [references/markdown-testcases.md](references/markdown-testcases.md) — contract: Markdown created before Excel, AI read order
 - [references/plane-integration.md](references/plane-integration.md) — fetch AC from Plane API

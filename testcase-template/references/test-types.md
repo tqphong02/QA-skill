@@ -1,21 +1,23 @@
 # Test Case Types - Canonical Order
 
-> **Khi nào đọc file này**: Khi gen test case và cần biết 8 loại case + thứ tự ưu tiên. Tham chiếu `@references/test-types.md` trong SKILL.md.
+> **Khi nào đọc file này**: Khi gen test case và cần biết 8 loại case + thứ tự ưu tiên + kỹ thuật black-box tương ứng. Đọc `@references/blackbox-techniques.md` để biết cách áp dụng từng kỹ thuật với ví dụ JSON.
 
 ## 8 loại test case (canonical type order)
 
 Script tự sort cases theo thứ tự này trong mỗi scenario:
 
-| # | Type | Test cái gì | Ví dụ |
-|---|---|---|---|
-| 1 | `happy` | Flow đúng, input hợp lệ → phải PASS | login đúng → Dashboard |
-| 2 | `alternative` | Cách khác cùng kết quả OK | bấm Enter thay vì click |
-| 3 | `validation` | Required/format/constraint | bỏ trống, email thiếu @ |
-| 4 | `edge` | Boundary: min/max/empty/long | password đúng 8 ký tự (boundary) |
-| 5 | `negative` | Input sai, unauthorized, sai flow | password sai, email không tồn tại |
-| 6 | `error` | Server/network fail, graceful | 500, timeout, disconnect |
-| 7 | `ui` | Display/layout (section UI) | element hiển thị đúng |
-| 8 | `additional` | AI thêm ngoài document - **PHẢI flag** | case đoán thêm, KHÔNG trong AC |
+| # | Type | BB Technique | Test cái gì | Ví dụ |
+|---|---|---|---|---|
+| 1 | `happy` | Use Case Testing | Flow đúng, input hợp lệ → phải PASS | login đúng → Dashboard |
+| 2 | `alternative` | Use Case Testing | Cách khác cùng kết quả OK | bấm Enter thay vì click |
+| 3 | `validation` | EP + BVA + Decision Table¹ | Required/format/constraint | bỏ trống, email thiếu @ |
+| 4 | `edge` | BVA + EP | Boundary: min/max/empty/long | password đúng 8 ký tự (boundary) |
+| 5 | `negative` | EP (invalid partition) + Error Guessing | Input sai, unauthorized, sai flow | password sai, email không tồn tại |
+| 6 | `error` | Error Guessing + State Transition | Server/network fail, graceful | 500, timeout, disconnect |
+| 7 | `ui` | Use Case Testing (UI perspective) | Display/layout (section UI) | element hiển thị đúng |
+| 8 | `additional` | Error Guessing — **PHẢI flag** | AI thêm ngoài document | case đoán thêm, KHÔNG trong AC |
+
+¹ **Decision Table bắt buộc** khi feature có ≥2 điều kiện độc lập kết hợp tạo ra behavior khác nhau — xem `@references/blackbox-techniques.md` §3.
 
 ## Rules
 
@@ -23,6 +25,10 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 - `additional` cases (not in doc) → flag clearly, **DO NOT fabricate expected result** from spec
 - Script auto-sorts by type order; AI does not need to write in order
 - Description format MANUAL: start with "Verify that..." (no technical prefix)
+- Before writing any case, identify the BB technique from the table above; add optional `bb_technique` field in JSON to trace (generator ignores this field)
+- For `validation`/`edge`: always check if Decision Table applies first (≥2 combined conditions → build table, then derive cases)
+- For `edge`: always list boundary values explicitly (min−1, min, min+1, max−1, max, max+1) before writing cases
+- For `negative`/`error`: cross-check Error Guessing list in `@references/blackbox-techniques.md` §6 for common missed cases
 
 ## Manual-Friendly Writing Rules (applies to ALL case types)
 

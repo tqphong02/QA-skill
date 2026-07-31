@@ -1,6 +1,6 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-17 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
+18 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
@@ -37,6 +37,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP; bare URL/ID thì đọc object |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
+| ego-browser, ego-lite, ego lite, task space, browser automation không cần Playwright MCP, kế thừa login state thật của user | `ego-browser/SKILL.md` | Kiểm tra ego lite đã install chưa bằng `ego-browser nodejs <<'EOF' cliLog(typeof snapshotText) EOF`; nếu chưa, đọc `ego-browser/references/install.md` |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
 | Pentest được ủy quyền, security assessment, bug bounty, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor trước request mạng |
@@ -66,6 +67,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 11. Live browser qa-run phải quan sát network, console và page error trong đúng session đang thực thi UI; không ghép evidence từ browser MCP khác session
 12. Graphify chỉ là optional static discovery provider: không chạy installer/hook/AGENTS mutation, mặc định `--code-only`, giữ đầy đủ normalized node/relation của project, tách `contextSlice` giới hạn token, giữ `EXTRACTED`/`INFERRED`/`AMBIGUOUS` và không nâng relation thành business truth, runtime evidence hay measured coverage
 13. effective-html chỉ ảnh hưởng companion HTML sinh từ JSON đã validate; JSON, Markdown, Excel, XMind và evidence chuẩn hiện tại vẫn là source of truth
+14. Với ego-browser: chạy `node ego-browser/scripts/detect.mjs` trước task; không dùng `drainEvents()` để claim request/response body; không thực hiện action phá huỷ với session thật khi chưa được user xác nhận; `browser-driver` và `network-observer` phải resolve độc lập theo [BROWSER-DRIVER-RESOLUTION.md](qa-run/references/BROWSER-DRIVER-RESOLUTION.md)
 
 ### Invariant bắt buộc
 
@@ -89,6 +91,10 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Graphify relation luôn là `source-derived-candidate`; `EXTRACTED` vẫn chỉ là static relationship, `INFERRED` và `AMBIGUOUS` luôn cần review
 - Graphify full-project artifact giữ toàn bộ node/relation theo mặc định; `contextSlice` và HTML overview chỉ là retrieval/presentation window, không phải project coverage
 - Interactive HTML luôn là derived presentation artifact và phải pass `render-intelligence-html.mjs --check` trước bàn giao
+- ego-browser là browser driver riêng, không phải chỉ là fallback của Playwright; `browser-driver` và `network-observer` resolve độc lập; ego-browser chỉ cung cấp basic network events qua `drainEvents()` — không có request/response body
+- ego-browser `drainEvents()` luôn là `reduced_confidence` cho network assertion; muốn body/headers phải attach `chrome-devtools-mcp` vào đúng CDP port của ego lite
+- ego-browser không available trên Windows/Linux; resolve `unsupported_platform` và fallback sang `playwright-mcp` hoặc `chrome-devtools-mcp`
+- ego-browser có login state thật của user — phải tuân thủ 8 hard gate trong `ego-browser/SKILL.md` trước mọi action có tác dụng ngoài app
 - Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
 - Không xem `source_available` là tool đã cài hoặc được phép chạy
 

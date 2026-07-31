@@ -42,20 +42,56 @@
 5. **Charter with risk taxonomy** — H/M/L priority probe first
 6. **Screenshot-first evidence** — prioritize `visual-evidence-router.mjs` / OmniParser to ground elements, labels and bounding boxes first; only fallback to OCR or general vision when OmniParser is unavailable or exact characters need extracting; do not convert whole PNG/JPG to markdown
 
-## Same-session network rule
+## Same-session network rule — 2-track model
 
-- Playwright MCP drives UI → use `browser_network_requests`, `browser_network_request`, and `browser_console_messages`
-- Chrome DevTools drives or attaches to the page → use `list_network_requests`, `get_network_request`, `list_console_messages`, and `get_console_message`
-- Bundled Playwright script drives UI → attach `scripts/helpers/runtime-observer.mjs`
-- Do not use Chrome DevTools MCP network evidence for actions executed in an isolated Playwright MCP browser, or the reverse
-- Exclude successful static resources by default; inspect response bodies only for failures or contract-relevant calls
-- A 4xx/5xx is a candidate until correlated with the triggering action, expected behavior and UI/persistence impact
+`browser_driver` và `network_observer` được resolve độc lập. Network evidence phải từ đúng session tương ứng:
 
-## When to Use MCP vs Scripts
+| browser_driver | network_observer hợp lệ | Tool |
+|---|---|---|
+| Playwright MCP | playwright-mcp | `browser_network_requests`, `browser_network_request`, `browser_console_messages` |
+| Playwright MCP | chrome-devtools-mcp | `list_network_requests`, `get_network_request` (attach đúng tab) |
+| ego-browser | ego-browser | `drainEvents()` — basic events, no body; mark `reduced_confidence` |
+| ego-browser | chrome-devtools-mcp | `list_network_requests`, `get_network_request` (attach CDP port ego lite) |
+| chrome-devtools-mcp | chrome-devtools-mcp | `list_network_requests`, `get_network_request`, `list_console_messages` |
+| script (playwright-runtime) | script | attach `scripts/helpers/runtime-observer.mjs` |
 
-| Situation | Use |
+**Cross-session vi phạm (never):**
+- ❌ ego-browser driver + Chrome DevTools observer khi chưa verify CDP port match
+- ❌ Playwright MCP network evidence cho action thực thi trong ego-browser
+- ❌ drainEvents() output để claim request/response body
+- ❌ Chrome DevTools MCP của browser khác session để làm network evidence
+
+**ego-browser network confidence:**
+- `drainEvents()` only → `reduced_confidence` — chỉ phù hợp cho exploratory, không phù hợp cho network contract test
+- Muốn body/headers → attach `chrome-devtools-mcp` vào cùng Chromium process của ego lite
+
+Một 4xx/5xx là candidate cho đến khi có correlation với triggering action, expected behavior, response body và UI impact
+
+## When to Use: driver và observer
+
+### browser_driver
+
+| Tình huống | Driver |
 |---|---|
-| Interactive branch not yet understood | MCP Playwright (interactive) |
+| Cross-platform, rich obs, default | playwright-mcp |
+| macOS + cần login state thật | ego-browser |
+| Playwright MCP unavailable, macOS | ego-browser |
+| Attach vào tab đang chạy | chrome-devtools-mcp |
+| ego-browser không available (Windows/Linux/not installed) | playwright-mcp → chrome-devtools-mcp → antigravity-native |
+
+### network_observer
+
+| Khi cần | Observer |
+|---|---|
+| Request/response body, headers, timing đầy đủ | chrome-devtools-mcp |
+| Playwright đang làm driver cùng session | playwright-mcp |
+| Exploratory, không cần body | ego-browser (mark reduced_confidence) |
+| Không có observer nào available | unavailable — mark BLOCKED nếu network là part of contract |
+
+### Scripts
+
+| Tình huống | Dùng |
+|---|---|
 | Clear repetitive flow | CLI scripts (`node scripts/x.mjs`) |
 | Regression / recurring CI run | `run.mjs` + `cases.mjs` data-driven |
 | Visual layout verification | `visual-audit.mjs` → read JSON → view screenshots |

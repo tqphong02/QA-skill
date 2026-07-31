@@ -92,11 +92,18 @@ Apply the following exact order for all models, especially fast or small-context
    node scripts/helpers/run-manifest.mjs start \
      --mode <MODE> \
      --business-context qa-knowledge/context/business-execution-brief.json \
-     --browser-observer <playwright-mcp|chrome-devtools-mcp|playwright-runtime|unavailable|not-applicable>
+     --browser-driver <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable> \
+     --browser-observer <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|unavailable> \
+     --network-observer <auto|chrome-devtools-mcp|playwright-mcp|ego-browser|unavailable>
    ```
    `run-manifest.mjs` must reject every non-discovery run whose brief is missing, invalid or not `READY`.
-   - Resolve the observer before opening the page. Prefer Playwright network/console tools when Playwright MCP drives the UI; prefer Chrome DevTools network/console tools only when Chrome DevTools drives or is attached to that exact page
-   - Never use an isolated Chrome DevTools browser to claim network evidence for a Playwright browser
+   - `browser-driver` and `network-observer` are resolved **independently**; read [references/BROWSER-DRIVER-RESOLUTION.md](references/BROWSER-DRIVER-RESOLUTION.md) for the full flowchart and combination rules
+   - `auto` resolves driver priority: `playwright-mcp → ego-browser → chrome-devtools-mcp → antigravity-native → unavailable`
+   - `auto` resolves network observer priority: `chrome-devtools-mcp → playwright-mcp → ego-browser → unavailable`
+   - ego-browser provides basic network events via `drainEvents()` only (no request/response body); mark network assertions `reduced_confidence` when `network-observer: ego-browser`
+   - ego-browser as driver requires macOS; on other platforms resolve to next available driver
+   - Prefer `playwright-mcp` network tools when Playwright MCP drives the UI (same session); prefer `chrome-devtools-mcp` network tools only when Chrome DevTools drives or is attached to that exact page
+   - Never use an isolated Chrome DevTools browser to claim network evidence for an ego-browser or Playwright session, or the reverse
    - Start observation before the first critical action. After each submit, save, delete, calculation, navigation, upload, retry, permission change, or other business transition, inspect matching XHR/fetch/document requests and console/page errors
    - Inspect response bodies only for failed or contract-relevant requests, including GraphQL HTTP 200 responses with `errors`; redact secrets and personal data before persistence
    - If browser observability is unavailable, mark its ledger row `BLOCKED`. Continue functional testing only when network verification is not part of the requested or business contract

@@ -2,6 +2,35 @@
 
 > Read this file when: Claude Code + Playwright MCP is unavailable, or when debugging common workflow mistakes.
 
+## 2-track browser capability model
+
+`browser_driver` và `network_observer` được resolve **độc lập**. Đọc chi tiết flowchart: [BROWSER-DRIVER-RESOLUTION.md](BROWSER-DRIVER-RESOLUTION.md)
+
+### browser_driver priority
+
+```
+Playwright MCP → ego-browser → Chrome DevTools MCP → Antigravity native → unavailable
+```
+
+- **Playwright MCP**: driver mặc định; cross-platform; rich obs cùng session
+- **ego-browser**: browser driver riêng, không phải chỉ fallback của Playwright; macOS only; kế thừa login state thật của user; đọc [`../../ego-browser/SKILL.md`](../../ego-browser/SKILL.md)
+- **Chrome DevTools MCP**: dùng khi attach vào tab đang chạy; limited interaction
+- **Antigravity native**: Gemini-in-Chrome; last resort
+- **unavailable**: mark BROWSER_DRIVER ledger BLOCKED
+
+### network_observer priority
+
+```
+Chrome DevTools MCP → Playwright MCP (same session) → ego-browser (basic) → unavailable
+```
+
+- **Chrome DevTools MCP**: body, headers, timing, WebSocket — full detail
+- **Playwright MCP**: body + status khi cùng session với driver
+- **ego-browser drainEvents()**: basic navigation/network events; không có body; mark `reduced_confidence`
+- **unavailable**: mark NETWORK_OBSERVER ledger BLOCKED
+
+Kết hợp tốt nhất khi cần login thật + full network: `ego-browser` driver + `chrome-devtools-mcp` observer
+
 ## Google Antigravity Fallback
 
 If Claude Code loses access, or Playwright MCP is removed/broken -> **skill still runs on Antigravity** (Google's agentic platform: CLI + IDE + Gemini-in-Chrome). Most skill assets are **portable** — only swapping the "UI driving brain".
@@ -19,13 +48,17 @@ If Claude Code loses access, or Playwright MCP is removed/broken -> **skill stil
 
 ### Needs swapping (only "UI driving brain")
 
-| Task | Claude Code (default) | Antigravity (fallback) |
-|---|---|---|
-| Interactive UI driving | `mcp__playwright__browser_*` | **Gemini-in-Chrome** (Antigravity controls Chrome itself) |
-| Fetch ticket from URL | `WebFetch` | Antigravity web tool / `curl` in terminal |
-| Agent reasoning | Claude | Gemini (Antigravity default) |
-| Run probe script | `node scripts/x.mjs` via Bash tool | `node scripts/x.mjs` via terminal |
-| Log bug | `node log-bug.mjs ...` | `node log-bug.mjs ...` |
+| Task | Claude Code + Playwright (default) | ego-browser (macOS fallback) | Antigravity native (final fallback) |
+|---|---|---|---|
+| **UI interaction** | `mcp__playwright__browser_*` | `ego-browser nodejs <<'EOF' ... EOF` | Gemini-in-Chrome |
+| **DOM snapshot** | `browser_snapshot` | `snapshotText()` | Gemini screenshot / read DOM |
+| **Screenshot** | `browser_take_screenshot` | `captureScreenshot()` | Gemini screenshot |
+| **Network events (basic)** | `browser_network_requests` | `drainEvents()` — basic, no body | Antigravity browser tools |
+| **Network body/headers** | `browser_network_request` | ❌ — dùng Chrome DevTools MCP | Not available |
+| **Login state** | Playwright `auth.json` | Kế thừa từ user's ego lite browser | Re-login qua `login.mjs` |
+| Fetch ticket from URL | `WebFetch` | `serverFetch(url)` trong heredoc | Antigravity web tool / `curl` |
+| Run probe script | `node scripts/x.mjs` via Bash tool | `node scripts/x.mjs` via terminal | `node scripts/x.mjs` via terminal |
+| Log bug | `node log-bug.mjs ...` | `node log-bug.mjs ...` | `node log-bug.mjs ...` |
 
 ### Workflow on Antigravity
 1. Open Antigravity IDE -> open project folder (e.g. `MyProject/qa/`)
@@ -56,3 +89,7 @@ If Claude Code loses access, or Playwright MCP is removed/broken -> **skill stil
 | `Cannot find .env` | Wrong cwd | `cd ~/Documents/QA-MDS/<project>` before running |
 | `401 Unauthorized` (Plane) | Wrong/expired API key | Rotate key in Plane Profile |
 | Skill not appearing | Folder in wrong location | Run `scripts/doctor-agent.sh --agent=<host>` from repository then open new agent session |
+| ego-browser drainEvents used as network body evidence | drainEvents has no request/response body | Use Chrome DevTools MCP as network_observer for body/headers |
+| ego-browser on Windows/Linux | Unsupported platform — CLI not found | Run detect.mjs; fallback to playwright-mcp or chrome-devtools-mcp |
+| Claiming Chrome DevTools network evidence for ego-browser session | Different Chromium process or port | Verify CDP port matches ego lite; only then attach Chrome DevTools MCP |
+| Skipping detect.mjs before ego-browser task | App may not be running | Always run `node ego-browser/scripts/detect.mjs` first |

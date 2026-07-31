@@ -5,7 +5,8 @@
  * Khởi tạo và cập nhật file evidence/manifest-<run_id>.json chứa đầy đủ thông tin:
  *   - run_id
  *   - environment, base_url, git_commit, app_version
- *   - browser, viewport, account_roles
+ *   - browser_driver, browser_observer, network_observer
+ *   - browser_observability (3-track model)
  *   - test_data_namespace
  *   - started_time, finished_time, duration_ms
  *   - worker_count
@@ -13,10 +14,16 @@
  *
  * Usage:
  *   # Start manifest
- *   node run-manifest.mjs start --workers 4 --mode SHEET_EXECUTION
+ *   node run-manifest.mjs start --workers 4 --mode SHEET_EXECUTION \
+ *     --browser-driver ego-browser \
+ *     --browser-observer ego-browser \
+ *     --network-observer chrome-devtools-mcp
  *
  *   # Finish manifest
  *   node run-manifest.mjs finish <RUN_ID> --verdict PASS --total-cases 20 --passed 18 --failed 2
+ *
+ *   # Backward compat (deprecated, shows migration warning):
+ *   node run-manifest.mjs start --browser-observer playwright-mcp
  */
 
 import { execSync } from 'node:child_process';
@@ -61,22 +68,102 @@ if (command === 'start') {
     '--business-context',
     path.join(DATA, 'qa-knowledge', 'context', 'business-execution-brief.json'),
   ));
-  const browserObserver = getArg(
-    '--browser-observer',
-    process.env.QA_BROWSER_OBSERVER || 'auto',
-  );
-  const allowedBrowserObservers = new Set([
-    'auto',
-    'playwright-mcp',
-    'chrome-devtools-mcp',
-    'playwright-runtime',
-    'unavailable',
-    'not-applicable',
+  // ── Browser 3-track resolution ─────────────────────────────────────────────
+  //
+  // Allowed values per track:
+  const ALLOWED_DRIVER = new Set([
+    'auto', 'playwright-mcp', 'ego-browser', 'chrome-devtools-mcp',
+    'antigravity-native', 'playwright-runtime', 'unavailable',
   ]);
-  if (!allowedBrowserObservers.has(browserObserver)) {
-    console.error(`[run-manifest] BLOCKED: unsupported browser observer ${browserObserver}`);
+  const ALLOWED_OBSERVER = new Set([
+    'auto', 'playwright-mcp', 'ego-browser', 'chrome-devtools-mcp',
+    'playwright-runtime', 'unavailable', 'not-applicable',
+  ]);
+  const ALLOWED_NETWORK = new Set([
+    'auto', 'chrome-devtools-mcp', 'playwright-mcp', 'ego-browser',
+    'playwright-runtime', 'unavailable', 'not-applicable',
+  ]);
+
+  // Backward-compat alias map: old --browser-observer values -> new driver value
+  const COMPAT_ALIAS = {
+    'playwright':         'playwright-mcp',
+    'chrome-devtools':    'chrome-devtools-mcp',
+    'playwright-mcp':     'playwright-mcp',
+    'chrome-devtools-mcp':'chrome-devtools-mcp',
+    'ego-browser':        'ego-browser',
+    'playwright-runtime': 'playwright-runtime',
+    'unavailable':        'unavailable',
+    'not-applicable':     'not-applicable',
+    'auto':               'auto',
+  };
+
+  // Detect legacy single --browser-observer usage
+  const legacyObserverRaw = args.includes('--browser-observer') && !args.includes('--browser-driver')
+    ? getArg('--browser-observer', null)
+    : null;
+
+  if (legacyObserverRaw !== null) {
+    const migrated = COMPAT_ALIAS[legacyObserverRaw];
+    if (migrated) {
+      console.warn('[run-manifest] MIGRATION WARNING: --browser-observer is deprecated.');
+      console.warn(`  Old: --browser-observer ${legacyObserverRaw}`);
+      console.warn(`  New: --browser-driver ${migrated} --browser-observer ${migrated} --network-observer auto`);
+      console.warn('  Update your command. Legacy alias accepted this run.');
+    } else {
+      console.error(`[run-manifest] BLOCKED: unknown legacy --browser-observer value: ${legacyObserverRaw}`);
+      console.error('  --browser-observer has been replaced by 3 separate flags:');
+      console.error('    --browser-driver <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable>');
+      console.error('    --browser-observer <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|unavailable>');
+      console.error('    --network-observer <auto|chrome-devtools-mcp|playwright-mcp|ego-browser|unavailable>');
+      console.error('  See qa-run/references/BROWSER-DRIVER-RESOLUTION.md');
+      process.exit(2);
+    }
+  }
+
+  // Resolve the 3 tracks
+  const browserDriver = legacyObserverRaw 
+    ? COMPAT_ALIAS[legacyObserverRaw] 
+    : getArg('--browser-driver', process.env.QA_BROWSER_DRIVER || 'auto');
+
+  const browserObserver = legacyObserverRaw 
+    ? COMPAT_ALIAS[legacyObserverRaw] 
+    : getArg('--browser-observer', process.env.QA_BROWSER_OBSERVER || 'auto');
+
+  const networkObserver = legacyObserverRaw 
+    ? 'auto' 
+    : getArg('--network-observer', process.env.QA_NETWORK_OBSERVER || 'auto');
+
+  if (!ALLOWED_DRIVER.has(browserDriver)) {
+    console.error(`[run-manifest] BLOCKED: unsupported --browser-driver value: ${browserDriver}`);
+    console.error(`  Allowed: ${[...ALLOWED_DRIVER].join(', ')}`);
     process.exit(2);
   }
+  if (!ALLOWED_OBSERVER.has(browserObserver)) {
+    console.error(`[run-manifest] BLOCKED: unsupported --browser-observer value: ${browserObserver}`);
+    console.error(`  Allowed: ${[...ALLOWED_OBSERVER].join(', ')}`);
+    process.exit(2);
+  }
+  if (!ALLOWED_NETWORK.has(networkObserver)) {
+    console.error(`[run-manifest] BLOCKED: unsupported --network-observer value: ${networkObserver}`);
+    console.error(`  Allowed: ${[...ALLOWED_NETWORK].join(', ')}`);
+    process.exit(2);
+  }
+
+  // ego-browser is macOS only; warn on other platforms
+  if (browserDriver === 'ego-browser' && process.platform !== 'darwin') {
+    console.error(`[run-manifest] BLOCKED: --browser-driver ego-browser is macOS only (current: ${process.platform})`);
+    console.error('  Resolve to playwright-mcp or chrome-devtools-mcp on this platform.');
+    process.exit(2);
+  }
+
+  // Compute network capability flags
+  const networkBodyAvailable = networkObserver === 'chrome-devtools-mcp' || networkObserver === 'playwright-mcp';
+  const networkConfidence = (() => {
+    if (['chrome-devtools-mcp', 'playwright-mcp'].includes(networkObserver)) return 'high';
+    if (networkObserver === 'ego-browser') return 'medium';
+    return 'low';
+  })();
+  const observabilityEnabled = !['unavailable', 'not-applicable'].includes(browserDriver);
 
   let businessContext = null;
   if (fs.existsSync(businessContextPath)) {
@@ -121,13 +208,23 @@ if (command === 'start') {
     git_commit: getGitCommit(),
     git_branch: getGitBranch(),
     app_version: process.env.QA_APP_VERSION || '1.0.0',
-    browser: 'chromium-headless',
+    browser: `${browserDriver === 'ego-browser' ? 'chromium-ego-lite' : 'chromium-headless'}`,
+    browser_driver: browserDriver,
+    browser_observer: browserObserver,
+    network_observer: networkObserver,
     browser_observability: {
+      driver: browserDriver,
       observer: browserObserver,
+      network_observer: networkObserver,
       same_session_required: true,
-      enabled: !['unavailable', 'not-applicable'].includes(browserObserver),
+      network_body_available: networkBodyAvailable,
+      network_confidence: networkConfidence,
+      enabled: observabilityEnabled,
       scope: ['document', 'xhr', 'fetch', 'websocket', 'console', 'pageerror'],
       redaction_required: true,
+      ego_browser_notes: browserDriver === 'ego-browser'
+        ? 'drainEvents() provides basic events only; no request/response body; use chrome-devtools-mcp as network_observer for full detail'
+        : null,
     },
     viewport: '1440x900',
     account_roles: [process.env.QA_EMAIL || 'default_user'],
