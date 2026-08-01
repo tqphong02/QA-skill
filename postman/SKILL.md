@@ -9,6 +9,14 @@ Read [QUICK_REF.md](QUICK_REF.md) for UI marketplace installation, free API key 
 
 Use the official remote Postman MCP server for resource management. Use the bundled Postman CLI and Newman runtimes for reproducible collection execution.
 
+## Hard gates
+
+1. Resolve the exact Postman host, account, workspace, collection or environment before acting
+2. Treat local configuration and collection runs as separate from MCP OAuth; never request or store a password, token or API key in the repository
+3. Run the bundled runtime doctor and classify `mcp_not_configured`, `mcp_not_loaded`, `auth_required`, `runtime_missing` and engine incompatibility explicitly
+4. Use dry-run/read-only discovery before any Postman or MCP mutation and read back the changed object after a requested write
+5. Stop collection execution when the target, environment, authorization or stop condition is missing
+
 ## First-use bootstrap
 
 1. Resolve the active host as `antigravity` or `codex`

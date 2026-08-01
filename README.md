@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 18 skill
+## 23 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -24,6 +24,11 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [whitebox-qa](./whitebox-qa/SKILL.md) | White-box đa ngôn ngữ, call graph, NestJS DI, Jest/Vitest và runtime coverage | compact/full analysis + executable test + coverage evidence + testcase-template handoff |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
 | [ego-browser](./ego-browser/SKILL.md) | Browser driver macOS kế thừa login state thật, có safety gate cho external effects | browser session + UI evidence |
+| [ui-ux-design-qa](./ui-ux-design-qa/SKILL.md) | Review design-to-code, visual hierarchy, responsive states và UX evidence | UI/UX review packet + screenshot/video evidence |
+| [release-governance-qa](./release-governance-qa/SKILL.md) | Risk-based release gate, defect risk, evidence, approval và exit criteria | release gate JSON + go/no-go decision |
+| [appsec-supply-chain-qa](./appsec-supply-chain-qa/SKILL.md) | Local redacted secret, dependency, SBOM và secure-CI preflight | supply-chain report + candidate findings |
+| [reliability-resilience-qa](./reliability-resilience-qa/SKILL.md) | Validate fault-injection, recovery, observability, RTO/RPO và stop conditions | bounded resilience plan + readiness report |
+| [compatibility-localization-qa](./compatibility-localization-qa/SKILL.md) | Browser/device/locale/timezone/currency/i18n/RTL coverage | compatibility matrix + coverage report |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram
 
@@ -36,7 +41,7 @@ Bundle tiếng Việt ngày `30-07-2026` theo `plannotator/effective-html/html-d
 - [QA-skill — kiến trúc, danh mục và luồng định tuyến trong một file](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html)
 - [Dữ liệu JSON chuẩn](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill-du-lieu.json)
 
-File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `18 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Catalog lập chỉ mục `181` mục H2–H4 từ các `SKILL.md` công khai và `23` mục capability phụ trợ, tổng cộng `204` mục cấu trúc, `22` relationship và `17` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
+File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `23 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Bản catalog hiện lập chỉ mục `207` nhánh công khai, `23` nhánh phụ trợ, tổng cộng `230` mục cấu trúc, `29` relationship và `32` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
 
 Format tương tác hiện tại:
 
@@ -78,6 +83,23 @@ Kiểm tra contract trước khi dùng hoặc push:
 python3 scripts/validate_cross_model.py
 ```
 
+## Senior readiness suite
+
+Chạy toàn bộ 23 skill trong phạm vi local, read-only. Suite chạy fixture/unit/compile, kiểm tra mapping BA → browser, chạy doctor cho MCP/device/target và tạo report nhiều dòng; không tự gọi Docker, Postgres, load test, target mạng hoặc mutation ngoài repo:
+
+```bash
+npm test
+```
+
+Chạy riêng readiness hoặc bật cổng strict-live:
+
+```bash
+npm run test:skills
+npm run test:skills:strict-live
+```
+
+Report dễ đọc nằm tại `evidence/skill-readiness/latest.md`, JSON pretty-print tại `evidence/skill-readiness/latest.json`. `PASS` là evidence đã chạy local, `BLOCKED` là integration cần credential/target/device/approval, còn `FAIL` là lỗi deterministic phải sửa. Strict-live chỉ PASS khi không còn integration BLOCKED
+
 Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-COMPATIBILITY.md).
 
 ## Cài đặt (máy mới)
@@ -96,7 +118,7 @@ cd QA-skill
 # 2c. Claude Code
 ./scripts/setup.sh --agent=claude --profile=core --yes
 
-# Cài đủ 18 skill chuyên sâu khi cần
+# Cài đủ 23 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # Cài Postman skill + MCP + Postman CLI + Newman

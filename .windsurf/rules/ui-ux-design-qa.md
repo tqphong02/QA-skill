@@ -1,0 +1,10 @@
+---
+trigger: model_decision
+description: Use for UI UX design review, Figma fidelity, responsive states, visual evidence and design-to-code checks
+---
+
+# UI/UX Design QA
+
+Load [`ui-ux-design-qa/SKILL.md`](../../ui-ux-design-qa/SKILL.md) for design-to-implementation review
+
+Require requirement mapping, desktop/mobile evidence, interaction states and existing screenshot/video evidence. Route live browser observation to `qa-run` and accessibility claims to `accessibility-qa`

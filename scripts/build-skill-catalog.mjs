@@ -38,7 +38,7 @@ const GROUPS = [
     labelVi: 'Thiết kế & tri thức',
     noteVi: 'Chuyển nguồn đầu vào thành tri thức có thể kiểm thử',
     color: 'clay',
-    skills: ['doc-to-md', 'business-analysis', 'testcase-template', 'playwright-pom-automation'],
+    skills: ['doc-to-md', 'business-analysis', 'testcase-template', 'playwright-pom-automation', 'ui-ux-design-qa'],
   },
   {
     id: 'core',
@@ -47,7 +47,7 @@ const GROUPS = [
     labelVi: 'Thực thi cốt lõi',
     noteVi: 'Khám phá, thực thi và phân tích từ implementation',
     color: 'olive',
-    skills: ['qa-run', 'whitebox-qa', 'api-contract-qa'],
+    skills: ['qa-run', 'whitebox-qa', 'api-contract-qa', 'release-governance-qa'],
   },
   {
     id: 'assurance',
@@ -63,6 +63,9 @@ const GROUPS = [
       'mobile-qa',
       'performance-qa',
       'pentest-run',
+      'appsec-supply-chain-qa',
+      'reliability-resilience-qa',
+      'compatibility-localization-qa',
     ],
   },
   {
@@ -198,6 +201,41 @@ const RELATIONSHIPS = [
     from: 'qa-run', to: 'provider-effective-html', flow: 'providers', kind: 'presentation-provider',
     label: 'interactive companion', labelVi: 'trình bày HTML tương tác',
     sourceRefs: [{ path: 'qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md', line: 72, quote: 'HTML renderer is an optional companion view' }],
+  },
+  {
+    from: 'ui-ux-design-qa', to: 'qa-run', flow: 'browser', kind: 'route',
+    label: 'live browser evidence', labelVi: 'evidence browser live',
+    sourceRefs: [{ path: 'ui-ux-design-qa/SKILL.md', line: 8, quote: 'live navigation and network/console observation are handed to `qa-run`' }],
+  },
+  {
+    from: 'ui-ux-design-qa', to: 'accessibility-qa', flow: 'browser', kind: 'handoff',
+    label: 'accessibility handoff', labelVi: 'bàn giao accessibility',
+    sourceRefs: [{ path: 'ui-ux-design-qa/SKILL.md', line: 8, quote: 'WCAG conformance is handed to `accessibility-qa`' }],
+  },
+  {
+    from: 'qa-run', to: 'release-governance-qa', flow: 'source', kind: 'handoff',
+    label: 'release evidence', labelVi: 'evidence release',
+    sourceRefs: [{ path: 'release-governance-qa/SKILL.md', line: 8, quote: 'It consumes evidence from `qa-run` and specialized skills' }],
+  },
+  {
+    from: 'appsec-supply-chain-qa', to: 'pentest-run', flow: 'api', kind: 'route',
+    label: 'exploit validation', labelVi: 'validation exploit',
+    sourceRefs: [{ path: 'appsec-supply-chain-qa/SKILL.md', line: 16, quote: 'Route confirmed exploit validation to `pentest-run`' }],
+  },
+  {
+    from: 'reliability-resilience-qa', to: 'release-governance-qa', flow: 'performance', kind: 'handoff',
+    label: 'recovery risk', labelVi: 'rủi ro recovery',
+    sourceRefs: [{ path: 'reliability-resilience-qa/SKILL.md', line: 18, quote: 'Hand measured recovery and unresolved resilience risk to `release-governance-qa`' }],
+  },
+  {
+    from: 'compatibility-localization-qa', to: 'qa-run', flow: 'browser', kind: 'route',
+    label: 'web matrix execution', labelVi: 'thực thi matrix web',
+    sourceRefs: [{ path: 'compatibility-localization-qa/SKILL.md', line: 8, quote: 'live browser/device actions belong to `qa-run` or `mobile-qa`' }],
+  },
+  {
+    from: 'compatibility-localization-qa', to: 'mobile-qa', flow: 'browser', kind: 'route',
+    label: 'native matrix execution', labelVi: 'thực thi matrix native',
+    sourceRefs: [{ path: 'compatibility-localization-qa/SKILL.md', line: 8, quote: 'live browser/device actions belong to `qa-run` or `mobile-qa`' }],
   },
 ];
 
@@ -428,6 +466,106 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['Stop proxy capture', 'Restore proxy/CA/VPN', 'Restore permission/orientation/locale', 'Delete owned Appium session'],
     },
   ],
+  'ui-ux-design-qa': [
+    {
+      id: 'DESIGN_REQUIREMENT_TRACE',
+      titleVi: 'Trace design và requirement',
+      summaryVi: 'Giữ design source, requirement, implementation và runtime observation thành các provenance riêng',
+      childrenVi: ['Requirement IDs', 'Design reference/token', 'Implementation observation', 'Runtime observation'],
+    },
+    {
+      id: 'VISUAL_STATE_REVIEW',
+      titleVi: 'Review visual và interaction states',
+      summaryVi: 'Kiểm tra hierarchy, spacing, typography, responsive và các state có thể nhìn thấy',
+      childrenVi: ['Default', 'Loading', 'Validation', 'Error', 'Empty', 'Success', 'Desktop/Mobile'],
+    },
+    {
+      id: 'UIUX_EVIDENCE',
+      titleVi: 'Evidence UI/UX',
+      summaryVi: 'Chỉ kết luận visual PASS khi có screenshot/video và ghi rõ limitation của review tĩnh',
+      childrenVi: ['Screenshot/video', 'State ID', 'Viewport', 'Accessibility handoff', 'Same-session browser run'],
+    },
+  ],
+  'release-governance-qa': [
+    {
+      id: 'RELEASE_PACKET',
+      titleVi: 'Đọc release packet',
+      summaryVi: 'Resolve release ID, build, scope, risk, test summary, defects, evidence và approvals',
+      childrenVi: ['Release/build', 'Impacted scope', 'Risk', 'Test runs', 'Defects', 'Evidence', 'Approvals'],
+    },
+    {
+      id: 'EXIT_CRITERIA',
+      titleVi: 'Đánh giá exit criteria',
+      summaryVi: 'Kiểm tra gate theo mức rủi ro và phân biệt PASS, FAIL với BLOCKED',
+      childrenVi: ['Functional', 'Security', 'Regression', 'Non-functional', 'Operational readiness', 'Exception'],
+    },
+    {
+      id: 'GO_NO_GO',
+      titleVi: 'Go/No-Go decision',
+      summaryVi: 'Tạo quyết định có thể audit mà không tự deploy hay đổi tracker state',
+      childrenVi: ['PASS', 'FAIL', 'BLOCKED', 'Gate ledger', 'Owner handoff'],
+    },
+  ],
+  'appsec-supply-chain-qa': [
+    {
+      id: 'REDACTED_SECRET_SCAN',
+      titleVi: 'Quét secret đã redact',
+      summaryVi: 'Tìm candidate trong boundary local mà không in giá trị credential hoặc đọc keychain',
+      childrenVi: ['Exact repo boundary', 'Excluded directories', 'Secret kind', 'Relative path/line', 'Redaction'],
+    },
+    {
+      id: 'DEPENDENCY_SBOM',
+      titleVi: 'Dependency và SBOM readiness',
+      summaryVi: 'Inventory manifest/lockfile và đánh giá mức sẵn sàng cho SCA/SBOM bên ngoài',
+      childrenVi: ['Manifest', 'Lockfile', 'SBOM config', 'License policy', 'CVE limitation'],
+    },
+    {
+      id: 'APPSEC_HANDOFF',
+      titleVi: 'Handoff security finding',
+      summaryVi: 'Giữ scanner alert là Candidate rồi chuyển exploit validation và release risk qua owner phù hợp',
+      childrenVi: ['Candidate', 'Reproduction', 'Control comparison', 'pentest-run', 'Release gate'],
+    },
+  ],
+  'reliability-resilience-qa': [
+    {
+      id: 'RESILIENCE_HYPOTHESIS',
+      titleVi: 'Hypothesis và steady state',
+      summaryVi: 'Khai báo failure mode, SLO baseline, blast radius và kỳ vọng graceful degradation',
+      childrenVi: ['Dependency', 'SLO/SLI', 'Blast radius', 'Expected behavior'],
+    },
+    {
+      id: 'BOUNDED_INJECTION',
+      titleVi: 'Bounded fault injection',
+      summaryVi: 'Gắn stop condition, owner approval, rollback và cleanup trước active execution',
+      childrenVi: ['Target', 'Approval', 'Abort threshold', 'Injection', 'Cleanup'],
+    },
+    {
+      id: 'RECOVERY_MEASUREMENT',
+      titleVi: 'Đo recovery và RTO/RPO',
+      summaryVi: 'Thu metrics/logs/traces, đo thời gian hồi phục và kiểm data integrity sau restore',
+      childrenVi: ['RTO', 'RPO', 'Recovery evidence', 'Data integrity', 'Follow-up'],
+    },
+  ],
+  'compatibility-localization-qa': [
+    {
+      id: 'COMPATIBILITY_DIMENSIONS',
+      titleVi: 'Chọn dimensions tương thích',
+      summaryVi: 'Xác định browser, device, OS, locale, timezone, currency và RTL policy theo requirement',
+      childrenVi: ['Chromium/Firefox/WebKit', 'Desktop/Mobile', 'OS/device', 'Locale', 'Timezone/Currency', 'RTL'],
+    },
+    {
+      id: 'LOCALIZATION_CASES',
+      titleVi: 'Expected localized behavior',
+      summaryVi: 'Kiểm text expansion, Unicode, translated validation, date/number format và fallback',
+      childrenVi: ['Long text', 'Unicode', 'Validation', 'Empty state', 'Date/number', 'Fallback'],
+    },
+    {
+      id: 'MATRIX_EXECUTION',
+      titleVi: 'Coverage và evidence',
+      summaryVi: 'Mỗi dimension phải có executable case trước khi route sang browser hoặc mobile execution',
+      childrenVi: ['Case coverage', 'qa-run', 'mobile-qa', 'Screenshot/video', 'Release risk'],
+    },
+  ],
 };
 
 const AUXILIARY = [
@@ -505,6 +643,11 @@ const VI_SKILL_TEXT = {
   'qa-run': 'Thực thi browser QA theo rủi ro từ business logic, source, requirement và runtime evidence với quan sát network/console cùng session',
   'testcase-template': 'Tạo, chỉnh sửa và review testcase Markdown/Excel đồng bộ từ một nguồn JSON đã xác thực',
   'whitebox-qa': 'Phân tích source code xác định cho function, branch, path, call graph, NestJS DI, test generation và runtime coverage',
+  'ui-ux-design-qa': 'Đối chiếu design-to-code, visual hierarchy, responsive states, UX interaction và screenshot/video evidence',
+  'release-governance-qa': 'Đánh giá release theo risk, test summary, defect, evidence, approval và exit criteria',
+  'appsec-supply-chain-qa': 'Quét local redacted cho secret, dependency manifest, lockfile, SBOM readiness và secure CI controls',
+  'reliability-resilience-qa': 'Validate bounded fault-injection, recovery, observability, rollback và RTO/RPO plan',
+  'compatibility-localization-qa': 'Validate browser/device/locale/timezone/currency/i18n và RTL coverage matrix',
 };
 
 const VI_SKILL_INSIGHTS = {
@@ -579,6 +722,26 @@ const VI_SKILL_INSIGHTS = {
   'whitebox-qa': {
     advantages: ['Phân tích branch, path, call graph và NestJS DI xác định', 'Phân biệt static candidate với measured coverage'],
     limitations: ['Static analysis không chứng minh runtime coverage', 'Testcase document phải bàn giao qua testcase-template'],
+  },
+  'ui-ux-design-qa': {
+    advantages: ['Gắn visual review với requirement, viewport, state và evidence', 'Tách rõ design mismatch, implementation mismatch và accessibility handoff'],
+    limitations: ['Không thay thế human visual review hoặc live browser observation', 'Không tự kết luận WCAG nếu chưa qua accessibility-qa'],
+  },
+  'release-governance-qa': {
+    advantages: ['Tạo go/no-go decision có gate ledger và provenance', 'Phân biệt defect risk, thiếu proof và approved exception'],
+    limitations: ['Không thay thế test chuyên môn hoặc CI verification', 'Không tự deploy, đổi ticket state hoặc chấp thuận exception'],
+  },
+  'appsec-supply-chain-qa': {
+    advantages: ['Local redacted scan an toàn cho manifest và candidate secret', 'Làm rõ giới hạn giữa preflight, SAST/SCA và pentest'],
+    limitations: ['Không query CVE/registry hoặc chứng minh exploitability', 'Regex sạch không đồng nghĩa repo sạch hoàn toàn'],
+  },
+  'reliability-resilience-qa': {
+    advantages: ['Buộc plan có SLO, stop, rollback, cleanup, observability và RTO/RPO', 'Ngăn active fault injection thiếu approval'],
+    limitations: ['Plan READY chưa phải measured recovery', 'Cần staging/device/service owner thật cho execution'],
+  },
+  'compatibility-localization-qa': {
+    advantages: ['Kiểm coverage dimensions và executable case trước live run', 'Bao phủ locale, timezone, currency, Unicode và RTL rõ ràng'],
+    limitations: ['Matrix không thay thế browser/device execution', 'Expected translation và supported-platform policy cần owner xác nhận'],
   },
 };
 

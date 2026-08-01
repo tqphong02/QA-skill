@@ -1,10 +1,12 @@
 {
   "name": "qa-skill",
   "version": "1.0.0",
-  "description": "QA-skill — bộ 18 skill QE/Security/MCP cho Codex, Claude, Gemini, Cursor, Windsurf, Copilot",
+  "description": "QA-skill — bộ 23 skill QE/Security/MCP cho Codex, Claude, Gemini, Cursor, Windsurf, Copilot",
   "main": "index.js",
   "scripts": {
     "test": "node scripts/test-suite.mjs",
+    "test:skills": "node scripts/skill-readiness-suite.mjs",
+    "test:skills:strict-live": "node scripts/skill-readiness-suite.mjs --strict-live",
     "security:detect": "node pentest-run/skills/pentest-security/scripts/detect.mjs",
     "security:preflight": "node pentest-run/skills/pentest-security/scripts/preflight.mjs",
     "security:scan": "node pentest-run/skills/pentest-security/scripts/run-scan.mjs",

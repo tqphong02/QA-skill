@@ -12,6 +12,14 @@ Uses Microsoft's **MarkItDown** (open-source MIT) to convert PDF, DOCX, PPTX, XL
 > **When to use**: User uploads a document file (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) and wants the AI to read its content.
 > **Purpose**: Raw PDF/DOCX files are hard for AI to parse directly. Convert to Markdown first → AI reads MD much easier and understands deeper context.
 
+## Hard gates
+
+1. Require an existing local filesystem path or chat-uploaded artifact before running the converter
+2. Route Drive URLs, Drive IDs and remote Google documents to `google-drive-qa`
+3. Never retype source content, scrape a web page, or download a remote document implicitly
+4. Preserve the source structure and read back the generated Markdown before handing it to another skill
+5. Record missing converter dependencies as `runtime_missing` instead of claiming conversion success
+
 ## Source boundary
 
 1. Require a real local filesystem path before running `convert.sh`.

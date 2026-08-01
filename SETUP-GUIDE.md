@@ -1,6 +1,6 @@
 # Setup QA-skill trên máy mới
 
-Repository phân phối 18 skill. Profile `core` cài 10 skill thường dùng và là mặc định; profile `full` cài đủ 18 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
+Repository phân phối 23 skill. Profile `core` cài 10 skill thường dùng và là mặc định; profile `full` cài đủ 23 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
 
 ## 1. Yêu cầu
 
@@ -66,13 +66,13 @@ Khi profile có `postman`, installer tự merge và bật Postman remote MCP tro
 
 Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa`, `github-mcp-qa` và `postman`
 
-Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa`, `whitebox-qa` và `ego-browser`
+Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa`, `whitebox-qa`, `ego-browser`, `ui-ux-design-qa`, `release-governance-qa`, `appsec-supply-chain-qa`, `reliability-resilience-qa` và `compatibility-localization-qa`
 
 ```bash
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 ```
 
-Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 8 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
+Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 13 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
 ```
 
 PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH

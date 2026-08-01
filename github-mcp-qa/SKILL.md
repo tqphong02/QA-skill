@@ -18,6 +18,14 @@ Use the official remote endpoint `https://api.githubcopilot.com/mcp/` for all Gi
 
 Do not claim that an SSH key authenticates GitHub MCP. SSH and MCP/API authentication are separate.
 
+## Hard gates
+
+1. Resolve the exact repository, branch, issue, pull request or workflow before any operation
+2. Treat a bare URL as read-only inspection; do not infer a mutation from a link
+3. Run the host-specific doctor and distinguish `mcp_not_configured`, `mcp_not_loaded`, `auth_required`, `runtime_missing` and `permission_denied`
+4. Require explicit confirmation immediately before external writes and read back the changed object or run
+5. Never print, store or commit OAuth tokens, PAT values, cookies or private repository data
+
 ## Install and diagnose
 
 Select the guide for the active host:

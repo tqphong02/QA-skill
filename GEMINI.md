@@ -1,11 +1,11 @@
 <!--
 Mirror of ./<skill>/SKILL.md — keep in sync.
-18 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
+23 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
 -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 18 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
+Repo này phân phối 23 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
 
 ## Cross-model deterministic mode
 
@@ -34,6 +34,11 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; tạo plan bằng `scripts/helpers/execute-sheet.mjs --module <requested-if-known> --parallel --plan-only`, hiển thị resolved module rồi hỏi user xác nhận module, số worker 1-4 và all/worker ID/cancel; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
 | Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; map từng UI item với requirement theo 7 trạng thái, kiểm tra 10 ambiguity patterns, xuất traceability JSON và guide 12 sections |
+| Figma, design token, design-to-code fidelity, responsive visual review, interaction state hoặc UX spec | `ui-ux-design-qa/SKILL.md` | Validate review packet requirement/viewport/state/media trước; live browser execution chuyển sang `qa-run`, accessibility chuyển sang `accessibility-qa` |
+| Release readiness, go/no-go, quality gate, exit criteria, risk acceptance hoặc sign-off | `release-governance-qa/SKILL.md` | Đánh giá release packet local trước; thiếu evidence/approval là `BLOCKED`, không tự đổi trạng thái deploy/ticket |
+| SAST, SCA, SBOM, secret scan, dependency/license hoặc secure CI | `appsec-supply-chain-qa/SKILL.md` | Chạy local redacted preflight; không đọc secret/keychain/registry và exploit validation chuyển sang `pentest-run` |
+| Resilience, chaos, fault injection, failover, recovery, RTO/RPO, retry hoặc timeout | `reliability-resilience-qa/SKILL.md` | Validate plan và stop condition trước; active injection cần target, rollback, owner approval và execution contract |
+| Cross-browser, device/OS, locale, i18n/l10n, timezone, currency hoặc RTL | `compatibility-localization-qa/SKILL.md` | Validate matrix trước; live web chuyển `qa-run`, native mobile chuyển `mobile-qa`, thiếu target thì `BLOCKED` |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP; bare URL/ID thì đọc object |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
@@ -68,6 +73,11 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 12. Với `pentest-security` trên Antigravity không API key: chạy `detect --engine antigravity-host` → `prepare` → active host agent hoàn thành exact assignment result → `status` → `finalize`; không đọc token/keychain, không gọi Gemini API và không tuyên bố OpenAI `codex-security` CLI đang chạy bằng Gemini
 13. Với interactive companion HTML: chỉ render từ canonical JSON đã validate bằng `qa-run/scripts/writers/render-intelligence-html.mjs`; output phải dùng layout `catalog-v2` đồng bộ `QA-skill.html`, cuộn 2 ngón để pan, pinch/`Ctrl`/`Cmd`+wheel để zoom, có route chip làm nổi bật tuyến end-to-end, edge label dạng pill chỉ hiện khi hover/active và click node phải highlight đường vào/ra kèm detail drawer có `Làm được gì`, thông tin flow và đường liên quan, rồi pass `--check`; không bàn giao template legacy
 14. UI business reconciliation phải có URL/snapshot thật và requirement registry có stable ID/source_ref; thiếu input thì fail closed, không dùng fixture ngầm; runtime click phải có `--verify-runtime` và exact selector được user duyệt
+15. UI/UX review phải giữ design source, requirement, implementation và runtime provenance riêng; screenshot/video là bắt buộc cho visual `PASS`
+16. Release governance không được biến thiếu evidence hoặc approval thành PASS; phải phân biệt `FAIL` với `BLOCKED`
+17. AppSec local scan phải redacted; scanner alert luôn là `Candidate` cho đến khi có reproduction và control comparison
+18. Resilience không được chạy fault injection hoặc concurrency khi chưa có target, rollback, stop condition và owner approval
+19. Compatibility phải ghi rõ supported browsers/devices/locales/timezones; matrix plan không được tuyên bố là runtime execution PASS
 
 ### Invariant bắt buộc
 

@@ -13,6 +13,14 @@ Covers 4 test types: **UI · API · Performance · CI/CD**, plus **Data-Driven T
 > **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.
 > **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py).
 
+## Hard gates
+
+1. Resolve the application, environment, test account and requested test type before scaffolding
+2. Keep every selector in `selectors/` or a Page Object; never put raw `page.locator()` in a spec
+3. Keep assertions in specs, tag each executable test, and isolate data by worker and retry
+4. Do not run against production or create external state without an explicit target and cleanup contract
+5. Run placeholder, TypeScript and relevant test checks before handing the suite to CI
+
 ## The trap this skill exists to prevent
 
 **Flat selector soup** — tests with no POM layer, raw `page.locator()` chains scattered across spec files, leading to brittle suites that break on every UI redesign. Centralize selectors in `selectors/` repo, route through Page Object classes, spec files import from there.

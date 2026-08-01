@@ -1,0 +1,4 @@
+interface:
+  display_name: "Reliability Resilience QA"
+  short_description: "Verify recovery and failure resilience"
+  default_prompt: "Use $reliability-resilience-qa to design a safe resilience test with failure injection, recovery evidence, and stop conditions."

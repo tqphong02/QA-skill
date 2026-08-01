@@ -20,6 +20,11 @@ Hard requirements:
 - Testcase generation uses `testcase-template` and its generator without inventing columns
 - Multi-language white-box branch/path, bounded call graph, NestJS DI, Jest/Vitest generation and runtime coverage use `whitebox-qa`; resolve an exact function, keep static paths as `source-derived-candidate`, and hand testcase documents to `testcase-template`
 - Business document analysis uses `doc-to-md` first when needed, then `business-analysis`; review all 18 areas and generate matching XMind, Q&A Markdown, and Q&A Excel from one JSON source
+- UI/UX design review uses `ui-ux-design-qa` for requirement, viewport, state and screenshot/video evidence; live browser execution remains `qa-run` and accessibility claims remain `accessibility-qa`
+- Release readiness, go/no-go, exit criteria and risk acceptance use `release-governance-qa`; missing evidence or approval is `BLOCKED`
+- SAST, SCA, SBOM, secret, dependency and secure-CI preflight uses `appsec-supply-chain-qa`; redact values and route exploit validation to `pentest-run`
+- Resilience, chaos, fault injection, recovery, failover, RTO/RPO, retry and timeout planning uses `reliability-resilience-qa`; active injection requires approval and stop conditions
+- Cross-browser, device, locale, timezone, currency, i18n/l10n and RTL planning uses `compatibility-localization-qa`; route live web execution to `qa-run` and native execution to `mobile-qa`
 - Authorized pentest work uses `pentest-run`; create `.pentest/engagement.md`, run its doctor and resolve scope, authorization, exclusions and rate limits before any network request
 - GitHub repository API or Actions work uses `github-mcp-qa`; keep Git SSH separate from MCP OAuth/PAT and verify account, repository, and branch before mutation
 - Chrome DevTools or k6 MCP setup uses `performance-qa`; Postman MCP/CLI/Newman setup and execution use `postman`, while Postman contract validation uses `api-contract-qa`; database read-only MCP uses `data-quality-qa`

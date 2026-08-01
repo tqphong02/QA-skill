@@ -28,6 +28,11 @@ Không nạp toàn bộ repository, full DOM, screenshot bytes, mọi ticket com
 | `Viết testcase login` | testcase-template | Tạo Markdown testcase đầy đủ trước Excel, ID/content khớp, lần sau đọc Markdown trước |
 | `Viết testcase API từ swagger.json` | testcase-template | Chạy importer, kiểm tra `review_required`, chỉ gen Excel khi contract đủ, không bịa status |
 | `Đọc BRD này, vẽ business flow XMind và tạo Q&A` | doc-to-md → business-analysis | Convert Markdown trước, review đủ 18 vùng, sinh `.xmind`, Q&A `.md` và `.xlsx` có ID khớp |
+| `Review UI login theo Figma và mobile responsive` | ui-ux-design-qa → qa-run; accessibility-qa khi cần | Validate requirement mapping, viewport, interaction states và screenshot/video evidence; live browser phải same-session |
+| `Đánh giá release này có go/no-go không` | release-governance-qa | Đọc release packet, kiểm test summary, defect risk, evidence, approvals và exit criteria; thiếu proof là `BLOCKED` |
+| `Quét secret, dependency và SBOM readiness cho repo local` | appsec-supply-chain-qa | Chạy redacted local scan; không đọc keychain/registry, finding là `Candidate` cho tới reproduction và control comparison |
+| `Thiết kế resilience test khi payment timeout` | reliability-resilience-qa | Validate steady state, stop condition, rollback, observability, RTO/RPO; active fault injection cần approval |
+| `Kiểm tra browser, locale vi-VN, timezone và RTL` | compatibility-localization-qa → qa-run/mobile-qa | Tạo matrix có executable case cho browser/device/locale và expected formatting trước live execution |
 | `Pentest target này, tôi có quyền kiểm tra` | pentest-run | Tạo engagement contract, chạy doctor, passive trước, xin duyệt trước Level 2, chỉ confirm finding có control comparison |
 | `Update Google Sheet <URL>` | google-drive-qa | Resolve exact ID, dùng Drive MCP, update đúng range, read-back |
 | `<Drive/Docs/Sheets/Slides URL>` | google-drive-qa | Không hỏi user chọn skill; resolve exact ID và đọc metadata/nội dung, không tự write |

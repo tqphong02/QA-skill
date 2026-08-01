@@ -1,6 +1,6 @@
-# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 18 Skills
+# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 23 Skills
 
-Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **18 Skills** trong hệ thống **QA-skill Framework**.
+Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **23 Skills** trong hệ thống **QA-skill Framework**.
 
 ---
 
@@ -44,13 +44,18 @@ flowchart TD
     %% 4. Specialized Testing
     subgraph S4["4. Specialized QA Skills"]
         SEC["pentest-run (Security Assessment)"]
+        APPSEC["appsec-supply-chain-qa (SAST/SCA/SBOM preflight)"]
         PERF["performance-qa (internal k6 / JMeter engines)"]
+        RES["reliability-resilience-qa (Recovery & RTO/RPO)"]
+        COMPAT["compatibility-localization-qa (Browser/Locale/RTL)"]
         POSTMAN["postman (MCP + Postman CLI + Newman)"]
         API["api-contract-qa (OpenAPI / Swagger)"]
         ACC["accessibility-qa (WCAG / axe-core)"]
         DBQ["data-quality-qa (Database & Schema Drift)"]
         MOB["mobile-qa (Android / iOS)"]
         WB["whitebox-qa (Branch / Execution Path)"]
+        UIUX["ui-ux-design-qa (Design fidelity & UX states)"]
+        RELEASE["release-governance-qa (Go/No-Go gates)"]
     end
 
     %% 5. Reporting & Exporters
@@ -84,7 +89,7 @@ flowchart TD
 
 ---
 
-## 📊 3. Ma trận Chuyển giao giữa 18 Skills (Data Handover Matrix)
+## 📊 3. Ma trận Chuyển giao giữa 23 Skills (Data Handover Matrix)
 
 | Skill Nguồn (Input) | Luồng Xử lý (Process) | Output Sinh ra (Artifact) | Skill Tiếp nhận (Consumer) | Dữ liệu Chuyển giao |
 |:---|:---|:---|:---|:---|
@@ -110,6 +115,11 @@ flowchart TD
 | **`ego-browser`** | Điều khiển browser macOS có login state thật theo external-effect safety gate | browser session + UI evidence | `qa-run` | UI observation; network body cần observer cùng CDP session |
 | **`plane-qa`** | CRUD Plane Tickets & Comments | Comment retest + Đổi Ticket Status | `github-mcp-qa` | PASS → `Done`, FAILED → `In Progress`, Bug mới → `Todo` |
 | **`github-mcp-qa`** | Đọc Git diff/PR, quản lý Issues & Actions | PR Comment + CI Check Status | `qa-run` | Nhận biết changed files để chọn testcases bị ảnh hưởng |
+| **`ui-ux-design-qa`** | Review design-to-code, hierarchy, responsive và interaction states | `uiux-review.json` + screenshot/video references | `qa-run`<br>`accessibility-qa` | Requirement, viewport, state và visual provenance |
+| **`release-governance-qa`** | Đánh giá risk-based release gates | `release-gate.json` + go/no-go decision | `plane-qa`<br>`github-mcp-qa` | Defect risk, test summary, evidence, approval và exit criteria |
+| **`appsec-supply-chain-qa`** | Local redacted secret/dependency/SBOM/CI preflight | `supply-chain-report.json` | `pentest-run`<br>`release-governance-qa` | Candidate findings và limitation về SAST/SCA/CVE |
+| **`reliability-resilience-qa`** | Validate bounded fault-injection and recovery plan | `resilience-plan.json` + recovery evidence | `performance-qa`<br>`release-governance-qa` | Steady state, stop, rollback, observability, RTO/RPO |
+| **`compatibility-localization-qa`** | Validate browser/device/locale/timezone/currency/RTL matrix | `compatibility-report.json` | `qa-run`<br>`mobile-qa`<br>`release-governance-qa` | Executable case coverage and expected localized behavior |
 
 ---
 
@@ -124,6 +134,11 @@ flowchart TD
 | **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo plan → Hiển thị requested/resolved module → Hỏi xác nhận module + số worker 1-4 + all/worker ID/cancel → Chỉ ghi Pass/Fail có screenshot/video |
 | **Phân tích repo, học business flow từ source code** | `qa-run: REPO_BUSINESS_DISCOVERY` | Chạy `repo-business-discovery.mjs --repo <path> --mode full` → Merge vào `system-business-guide.md` & `system-qna.json` |
 | **Từ UI suy ra flow, đối chiếu Code + Docs + Runtime, tìm mâu thuẫn** | `qa-run: UI_BUSINESS_RECONCILIATION` | Chạy orchestrator với `--url/--snapshot`, `--page` và `--requirements` → Map 7 trạng thái, kiểm tra 10 ambiguity patterns → Xuất traceability JSON, guide và Q&A |
+| **Review UI theo Figma/design token hoặc visual UX** | `ui-ux-design-qa` | Validate packet requirement/viewport/state/media → live browser chuyển `qa-run`, accessibility chuyển `accessibility-qa` |
+| **Đánh giá release readiness hoặc go/no-go** | `release-governance-qa` | Đọc release packet → kiểm defect/test/evidence/approval/exit criteria → PASS/FAIL/BLOCKED |
+| **SAST/SCA/SBOM/secret/dependency/secure CI preflight** | `appsec-supply-chain-qa` | Quét local redacted → giữ finding là Candidate → exploit validation chuyển `pentest-run` |
+| **Resilience/chaos/fault injection/recovery/RTO/RPO** | `reliability-resilience-qa` | Validate plan và stop condition → approval ngay trước active injection → đo recovery |
+| **Cross-browser/device/locale/i18n/timezone/currency/RTL** | `compatibility-localization-qa` | Validate matrix → route live web `qa-run`, native `mobile-qa` → gom evidence vào release gate |
 | **Viết/sửa/review testcase, Scenario ID/Name** | `testcase-template` | Đọc testcase Markdown cũ nếu có → Generator tạo Markdown trước, Excel sau |
 | **Viết Playwright automation / POM code (`selectors/`, `pages/`)** | `playwright-pom-automation` | Đọc template POM → Scaffold cấu trúc `selectors/`, `pages/`, `tests/` |
 | **Phân tích BRD/SRS, dựng flow hệ thống, tạo XMind hoặc Q&A** | `business-analysis` (+ `doc-to-md` khi nguồn chưa là MD) | Convert đính kèm sang MD → Review 18 vùng Senior QA → Generate XMind + Q&A Markdown + Q&A Excel |
@@ -498,7 +513,7 @@ flowchart TD
 
 ---
 
-## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 18 Skills
+## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 23 Skills
 
 ### 1️⃣ `qa-run` (Core Execution Engine & Knowledge Hub)
 - **Đường dẫn**: `qa-run/SKILL.md`
@@ -695,3 +710,58 @@ flowchart TD
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: `qa-run` browser-driver resolution
   - 📤 **Chuyển dữ liệu tới**: `qa-run`; cần `chrome-devtools-mcp` cùng CDP port khi assertion cần request/response body hoặc headers
+
+---
+
+### 19. `ui-ux-design-qa` (Design Fidelity & UX State Auditor)
+- **Đường dẫn**: `ui-ux-design-qa/SKILL.md`
+- **Mục đích**: Đối chiếu design intent, requirement, responsive viewport, visual hierarchy và interaction states trước khi kết luận UI đạt
+- **Inputs**: Design reference hoặc token, requirement IDs, screen/state packet, desktop/mobile evidence
+- **Outputs**: `uiux-review.json`, mismatch classification và screenshot/video references
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `business-analysis` requirement registry và UI snapshot từ `qa-run`
+  - 📤 **Chuyển dữ liệu tới**: `qa-run` cho live browser, `accessibility-qa` cho WCAG và `release-governance-qa` cho release gate
+
+---
+
+### 20. `release-governance-qa` (Risk-Based Release Gate)
+- **Đường dẫn**: `release-governance-qa/SKILL.md`
+- **Mục đích**: Gom test summary, defect risk, evidence, approval và exit criteria thành quyết định PASS/FAIL/BLOCKED
+- **Inputs**: Release ID/build, impacted scope, test runs, defect list, evidence paths, exception và owner approval
+- **Outputs**: `release-gate.json`, gate ledger và go/no-go decision
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: mọi skill thực thi và `github-mcp-qa`/`plane-qa` khi read-only evidence đã được resolve
+  - 📤 **Chuyển dữ liệu tới**: release owner hoặc integration owner; không tự deploy hoặc đổi ticket state
+
+---
+
+### 21. `appsec-supply-chain-qa` (Local AppSec & Supply-Chain Preflight)
+- **Đường dẫn**: `appsec-supply-chain-qa/SKILL.md`
+- **Mục đích**: Kiểm tra local redacted secrets, dependency manifests, lockfiles, SBOM readiness và CI security controls
+- **Inputs**: Exact repository boundary, branch/commit và exclusions
+- **Outputs**: `supply-chain-report.json`, manifest inventory, redacted Candidate findings và limitations
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: source repository hoặc changed files từ `github-mcp-qa`
+  - 📤 **Chuyển dữ liệu tới**: `pentest-run` cho exploit validation và `release-governance-qa` cho risk gate
+
+---
+
+### 22. `reliability-resilience-qa` (Recovery & Failure-Mode Planner)
+- **Đường dẫn**: `reliability-resilience-qa/SKILL.md`
+- **Mục đích**: Thiết kế bounded fault-injection, recovery, retry/timeout, failover và RTO/RPO evidence
+- **Inputs**: Target environment, hypothesis, steady-state SLO, stop condition, rollback, observability và approval
+- **Outputs**: `resilience-plan.json`, readiness gate và measured recovery evidence khi execution được duyệt
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `performance-qa` workload assumptions và system knowledge từ `qa-run`
+  - 📤 **Chuyển dữ liệu tới**: `release-governance-qa`; active injection vẫn cần owner approval ngay trước chạy
+
+---
+
+### 23. `compatibility-localization-qa` (Browser, Device & Locale Matrix)
+- **Đường dẫn**: `compatibility-localization-qa/SKILL.md`
+- **Mục đích**: Bảo đảm coverage cho browser engine, device, OS, locale, timezone, currency, Unicode, text expansion và RTL
+- **Inputs**: Supported-platform requirements, browser/device matrix, locale/timezone policy và expected localized output
+- **Outputs**: `compatibility-report.json`, executable case coverage và evidence mapping
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `business-analysis` requirements và `ui-ux-design-qa` visual expectations
+  - 📤 **Chuyển dữ liệu tới**: `qa-run` cho web, `mobile-qa` cho native và `release-governance-qa` cho compatibility risk

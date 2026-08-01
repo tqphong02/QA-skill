@@ -1,0 +1,52 @@
+from __future__ import annotations
+
+import importlib.util
+import tempfile
+import unittest
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("release_checker", ROOT / "scripts/evaluate_release.py")
+assert SPEC and SPEC.loader
+MODULE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(MODULE)
+
+
+def release_packet() -> dict:
+    return {
+        "release_id": "SJK-2026.08.01",
+        "target": "local",
+        "scope": ["login"],
+        "risk": "medium",
+        "test_summary": {"status": "PASS", "passed": True, "pass_rate": 1.0, "run_id": "run-local"},
+        "defects": [{"id": "BUG-1", "severity": "P2", "status": "closed"}],
+        "evidence": ["summary.md"],
+        "approvals": {"qa_owner": True, "release_owner": True},
+        "exit_criteria": [{"id": "functional", "passed": True}],
+    }
+
+
+class ReleaseGateTests(unittest.TestCase):
+    def test_complete_packet_passes(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / "summary.md").write_text("local evidence\n", encoding="utf-8")
+            report = MODULE.evaluate(release_packet(), base)
+        self.assertTrue(report["passed"], report)
+        self.assertEqual(report["decision"], "PASS")
+
+    def test_open_high_risk_defect_fails(self) -> None:
+        packet = release_packet()
+        packet["defects"] = [{"id": "BUG-P1", "severity": "P1", "status": "open"}]
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / "summary.md").write_text("local evidence\n", encoding="utf-8")
+            report = MODULE.evaluate(packet, base)
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["decision"], "FAIL")
+        self.assertTrue(any(item["gate"] == "defect_risk" for item in report["errors"]))
+
+
+if __name__ == "__main__":
+    unittest.main()

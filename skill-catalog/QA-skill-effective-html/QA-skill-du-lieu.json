@@ -7,18 +7,18 @@
     "revision": "63b1bf04d3e48b426a31fdb82b1319c33663fde4",
     "license": "MIT"
   },
-  "sourceDigest": "f3e70063077b7a0bc61dbee576225bde38d7df28a302ad50ab23fcc567833968",
+  "sourceDigest": "76d9eb8f75d0d68e0f50fc99cb4570be8fe907b067e143119c9e9973f9c75fc2",
   "summary": {
-    "skillCount": 18,
+    "skillCount": 23,
     "auxiliaryCount": 5,
-    "publicBranchCount": 181,
+    "publicBranchCount": 207,
     "auxiliaryBranchCount": 23,
-    "branchCount": 204,
-    "operationalBranchCount": 17,
-    "relationshipCount": 22,
+    "branchCount": 230,
+    "operationalBranchCount": 32,
+    "relationshipCount": 29,
     "groupCount": 5,
-    "scriptCount": 151,
-    "referenceCount": 86,
+    "scriptCount": 162,
+    "referenceCount": 91,
     "assetCount": 56
   },
   "groups": [
@@ -33,7 +33,8 @@
         "doc-to-md",
         "business-analysis",
         "testcase-template",
-        "playwright-pom-automation"
+        "playwright-pom-automation",
+        "ui-ux-design-qa"
       ]
     },
     {
@@ -46,7 +47,8 @@
       "skills": [
         "qa-run",
         "whitebox-qa",
-        "api-contract-qa"
+        "api-contract-qa",
+        "release-governance-qa"
       ]
     },
     {
@@ -62,7 +64,10 @@
         "data-quality-qa",
         "mobile-qa",
         "performance-qa",
-        "pentest-run"
+        "pentest-run",
+        "appsec-supply-chain-qa",
+        "reliability-resilience-qa",
+        "compatibility-localization-qa"
       ]
     },
     {
@@ -376,7 +381,7 @@
       "sourceRefs": [
         {
           "path": "doc-to-md/SKILL.md",
-          "line": 20,
+          "line": 28,
           "quote": "route the request to `google-drive-qa`"
         }
       ]
@@ -541,7 +546,7 @@
       "sourceRefs": [
         {
           "path": "postman/SKILL.md",
-          "line": 92,
+          "line": 100,
           "quote": "Route contract validation against a live implementation to `api-contract-qa`"
         }
       ]
@@ -571,7 +576,7 @@
       "sourceRefs": [
         {
           "path": "postman/SKILL.md",
-          "line": 92,
+          "line": 100,
           "quote": "Route explicit testcase document creation to `testcase-template`"
         }
       ]
@@ -698,6 +703,111 @@
           "path": "qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md",
           "line": 72,
           "quote": "HTML renderer is an optional companion view"
+        }
+      ]
+    },
+    {
+      "from": "ui-ux-design-qa",
+      "to": "qa-run",
+      "flow": "browser",
+      "kind": "route",
+      "label": "live browser evidence",
+      "labelVi": "evidence browser live",
+      "sourceRefs": [
+        {
+          "path": "ui-ux-design-qa/SKILL.md",
+          "line": 8,
+          "quote": "live navigation and network/console observation are handed to `qa-run`"
+        }
+      ]
+    },
+    {
+      "from": "ui-ux-design-qa",
+      "to": "accessibility-qa",
+      "flow": "browser",
+      "kind": "handoff",
+      "label": "accessibility handoff",
+      "labelVi": "bàn giao accessibility",
+      "sourceRefs": [
+        {
+          "path": "ui-ux-design-qa/SKILL.md",
+          "line": 8,
+          "quote": "WCAG conformance is handed to `accessibility-qa`"
+        }
+      ]
+    },
+    {
+      "from": "qa-run",
+      "to": "release-governance-qa",
+      "flow": "source",
+      "kind": "handoff",
+      "label": "release evidence",
+      "labelVi": "evidence release",
+      "sourceRefs": [
+        {
+          "path": "release-governance-qa/SKILL.md",
+          "line": 8,
+          "quote": "It consumes evidence from `qa-run` and specialized skills"
+        }
+      ]
+    },
+    {
+      "from": "appsec-supply-chain-qa",
+      "to": "pentest-run",
+      "flow": "api",
+      "kind": "route",
+      "label": "exploit validation",
+      "labelVi": "validation exploit",
+      "sourceRefs": [
+        {
+          "path": "appsec-supply-chain-qa/SKILL.md",
+          "line": 16,
+          "quote": "Route confirmed exploit validation to `pentest-run`"
+        }
+      ]
+    },
+    {
+      "from": "reliability-resilience-qa",
+      "to": "release-governance-qa",
+      "flow": "performance",
+      "kind": "handoff",
+      "label": "recovery risk",
+      "labelVi": "rủi ro recovery",
+      "sourceRefs": [
+        {
+          "path": "reliability-resilience-qa/SKILL.md",
+          "line": 18,
+          "quote": "Hand measured recovery and unresolved resilience risk to `release-governance-qa`"
+        }
+      ]
+    },
+    {
+      "from": "compatibility-localization-qa",
+      "to": "qa-run",
+      "flow": "browser",
+      "kind": "route",
+      "label": "web matrix execution",
+      "labelVi": "thực thi matrix web",
+      "sourceRefs": [
+        {
+          "path": "compatibility-localization-qa/SKILL.md",
+          "line": 8,
+          "quote": "live browser/device actions belong to `qa-run` or `mobile-qa`"
+        }
+      ]
+    },
+    {
+      "from": "compatibility-localization-qa",
+      "to": "mobile-qa",
+      "flow": "browser",
+      "kind": "route",
+      "label": "native matrix execution",
+      "labelVi": "thực thi matrix native",
+      "sourceRefs": [
+        {
+          "path": "compatibility-localization-qa/SKILL.md",
+          "line": 8,
+          "quote": "live browser/device actions belong to `qa-run` or `mobile-qa`"
         }
       ]
     }
@@ -1236,6 +1346,98 @@
       "sourceHash": "55bf024feffccaaaad6cf3d04b9c32c62ae206975047c71d0326b75af56bccdf"
     },
     {
+      "name": "appsec-supply-chain-qa",
+      "title": "AppSec & Supply-Chain QA",
+      "folder": "appsec-supply-chain-qa",
+      "group": "assurance",
+      "description": "Perform a safe local application-security and software-supply-chain preflight for secrets, dependency manifests, lockfiles, SBOM readiness, and CI security controls. Trigger on SAST, SCA, SBOM, secret scanning, dependency risk, license risk, package audit, supply-chain security, or secure CI review; do not require the skill name. Use pentest-run separately for authorized exploit-oriented testing.",
+      "principle": "Find security and dependency hygiene gaps before release without contacting a vulnerability service or exposing secret values. This complements pentest-run: static preflight does not prove exploitability, CVE reachability, or production security.",
+      "vi": {
+        "summary": "Quét local redacted cho secret, dependency manifest, lockfile, SBOM readiness và secure CI controls",
+        "advantages": [
+          "Local redacted scan an toàn cho manifest và candidate secret",
+          "Làm rõ giới hạn giữa preflight, SAST/SCA và pentest"
+        ],
+        "limitations": [
+          "Không query CVE/registry hoặc chứng minh exploitability",
+          "Regex sạch không đồng nghĩa repo sạch hoàn toàn"
+        ]
+      },
+      "operationalBranches": [
+        {
+          "id": "REDACTED_SECRET_SCAN",
+          "titleVi": "Quét secret đã redact",
+          "summaryVi": "Tìm candidate trong boundary local mà không in giá trị credential hoặc đọc keychain",
+          "childrenVi": [
+            "Exact repo boundary",
+            "Excluded directories",
+            "Secret kind",
+            "Relative path/line",
+            "Redaction"
+          ]
+        },
+        {
+          "id": "DEPENDENCY_SBOM",
+          "titleVi": "Dependency và SBOM readiness",
+          "summaryVi": "Inventory manifest/lockfile và đánh giá mức sẵn sàng cho SCA/SBOM bên ngoài",
+          "childrenVi": [
+            "Manifest",
+            "Lockfile",
+            "SBOM config",
+            "License policy",
+            "CVE limitation"
+          ]
+        },
+        {
+          "id": "APPSEC_HANDOFF",
+          "titleVi": "Handoff security finding",
+          "summaryVi": "Giữ scanner alert là Candidate rồi chuyển exploit validation và release risk qua owner phù hợp",
+          "childrenVi": [
+            "Candidate",
+            "Reproduction",
+            "Control comparison",
+            "pentest-run",
+            "Release gate"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "level": 2,
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
+          "title": "Output contract"
+        },
+        {
+          "level": 2,
+          "title": "References"
+        }
+      ],
+      "interface": {
+        "displayName": "AppSec Supply Chain QA",
+        "shortDescription": "Scan code dependencies and secrets safely",
+        "defaultPrompt": "Use $appsec-supply-chain-qa to run a local AppSec and software-supply-chain preflight with redacted evidence."
+      },
+      "resources": {
+        "scripts": 2,
+        "references": 1,
+        "assets": 0
+      },
+      "metrics": {
+        "lines": 38,
+        "words": 279
+      },
+      "sourcePath": "appsec-supply-chain-qa/SKILL.md",
+      "source": "---\nname: appsec-supply-chain-qa\ndescription: Perform a safe local application-security and software-supply-chain preflight for secrets, dependency manifests, lockfiles, SBOM readiness, and CI security controls. Trigger on SAST, SCA, SBOM, secret scanning, dependency risk, license risk, package audit, supply-chain security, or secure CI review; do not require the skill name. Use pentest-run separately for authorized exploit-oriented testing.\n---\n\n# AppSec & Supply-Chain QA\n\nFind security and dependency hygiene gaps before release without contacting a vulnerability service or exposing secret values. This complements `pentest-run`: static preflight does not prove exploitability, CVE reachability, or production security.\n\n## Workflow\n\n1. Resolve the repository boundary, branch/commit, exclusions, language manifests, lockfiles, and CI policy\n2. Run the local redacted preflight\n3. Inspect dependency pinning, lockfile consistency, secret findings, SBOM generation, license policy, and protected CI steps\n4. For a candidate finding, preserve path/line/kind only; never print the secret or credential\n5. Route confirmed exploit validation to `pentest-run` with an engagement contract and approval\n\n```bash\npython3 appsec-supply-chain-qa/scripts/check_supply_chain.py --repo .\n```\n\n## Hard gates\n\n- Do not read keychains, environment secrets, browser profiles, or remote registries during the local preflight\n- No network target, authorization, or rate limit means no active security request\n- Findings are `Candidate` until reproduction and a control comparison confirm them\n- A clean local regex scan is not a clean SAST/SCA result; external scanners and vulnerability databases remain separate evidence\n- Redact values in reports and do not commit generated evidence containing secrets\n\n## Output contract\n\nWrite pretty JSON with `passed`, `repo`, `dependency_manifests`, `secret_findings`, `sbom_ready`, `ci_controls`, and `limitations`. Secret findings contain only relative path, line, kind, and redaction status. Report the scanned commit or source hash when available.\n\n## References\n\n- [Supply-chain review matrix](references/REVIEW_MATRIX.md)\n- [Redacted local checker](scripts/check_supply_chain.py)\n",
+      "sourceHash": "7f84ffb6375689d06e7fa1c18777d0bd8d161a22aff4de13cc54a77709baa60a"
+    },
+    {
       "name": "business-analysis",
       "title": "Business Analysis",
       "folder": "business-analysis",
@@ -1317,6 +1519,100 @@
       "sourcePath": "business-analysis/SKILL.md",
       "source": "---\nname: business-analysis\ndescription: Analyze BRD, SRS, FRS, requirements, and system documents as a senior fullstack QA/QC tester after local non-Markdown sources pass through doc-to-md. Trigger on business flow, requirement analysis, editable XMind map, prerequisites, related functions, ambiguity or gap analysis, clarification questions, Q&A Markdown, or Q&A Excel; do not require the skill name. For Drive URLs, use google-drive-qa to access the source first. Produce the Vietnamese XMind and matching Q&A deliverables from one validated JSON source before testcase design or browser testing\n---\n\n# Business Analysis\n\nConvert first, reason once, render deterministically\n\n## Hard gates\n\n0. **Before reading the BRD/SRS, check the knowledge base from REPO_BUSINESS_DISCOVERY:**\n   - Check `qa-knowledge/merged/system-business-guide.md` — if it exists, read it first to understand the system architecture\n   - Check `qa-knowledge/merged/system-qna.json` — if it exists, load the confirmed Q&A, do not create duplicates\n   - Check `qa-knowledge/repositories/<repo>/reconciliation-report.json` — prioritize entries with `result: CONFIRMED`; clearly highlight `CONFLICT`s, do not blindly choose one source\n   - Check `qa-knowledge/repositories/<repo>/business-qna.json` — merge existing Q&A, only generate new Q&A for uncovered areas\n   - Check `qa-knowledge/repositories/<repo>/runtime-findings.json` — if it exists, read it first to acknowledge runtime confirmed security/permission CONFLICTs without creating duplicate Q&A\n   - Check `qa-knowledge/repositories/<repo>/graphify-discovery.json` — if it exists, use dependency candidates to find related functions and missing cross-flow questions; never promote a Graphify relation to `verified`\n   - If source and doc contradict: record both, mark as `conflict`, and require human confirmation\n   - If no knowledge files are found: proceed normally from gate 1\n\n1. Resolve the exact source documents and project output folder\n2. For PDF, DOCX, PPTX, XLSX, HTML or image input, run `doc-to-md/scripts/convert.sh` first\n3. Read the converted Markdown, not the binary document, and preserve source heading or requirement references\n4. Review all 18 areas in [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md)\n5. Build one structured JSON using [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md) and keep its human-readable content in Vietnamese\n6. Define entry state, exit state, required business outcomes and explicit cross-flow links for every system flow\n7. Build at least one end-to-end path in the internal `sanity_journeys` field with preparation conditions, ordered functions, transition conditions, business control points and final results\n8. Never turn an observed behavior or inference into a confirmed business rule\n9. Run `scripts/generate.sh` to create XMind and both Q&A formats\n10. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success\n11. When browser reconciliation is in scope, add atomic `requirements` with stable IDs and source references to the same JSON; the generator exports `.business-analysis/<project-name>_Requirements.json` for `qa-run`\n\nDo not write testcases in this skill. Hand the confirmed Markdown and Q&A answers to `testcase-template` later\n\n## Workflow\n\n### 1. Convert the source\n\nIf the source is not Markdown:\n\n```bash\nbash <doc-to-md>/scripts/convert.sh <source-file> <project-output>/<source-stem>.md\n```\n\nKeep the Markdown beside the analysis outputs so future AI can reread it without parsing the original binary\n\n### 2. Extract the business model\n\nRecord only what the source supports:\n\n- Scope, actors and permissions\n- Module and entry point\n- Preconditions and trigger\n- Happy, alternate and exception flows\n- State transitions and persistence\n- Business rules, input validation and calculations\n- Side effects, API, data and third-party integration\n- UI/UX, accessibility and non-functional expectations\n- Acceptance criteria and testability\n\nFor every flow, also record:\n\n- Entry state and exit state\n- Preconditions that must be prepared before executing the business flow\n- Ordered system processing steps and state changes\n- Minimum business outcomes that prove the flow completed correctly\n- Upstream and downstream functions through top-level `flow_links`\n- End-to-end execution paths through the internal `sanity_journeys` field\n\nMark each fact `verified`, `inferred` or `unresolved` with a source reference\n\n### 3. Perform senior QA/QC review\n\nRead [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md) completely\n\nFor every review area, set exactly one status:\n\n- `checked` when the document is clear enough or questions were created\n- `blocked` when the source, role or context is missing\n- `not_applicable` only with a reason\n\nCreate Q&A for ambiguity, contradiction, missing rule, untestable expectation, unsafe assumption or unclear ownership. Keep proposed assumptions separate from confirmed answers\n\n### 4. Save the structured source\n\nSave the machine source inside a hidden technical folder:\n\n```text\n<project-output>/.business-analysis/<project-name>_Analysis_Source.json\n```\n\nThis JSON is not a user deliverable. It is the internal source that keeps IDs and content synchronized across Markdown, Excel and XMind. Update the JSON and regenerate instead of editing those three outputs independently\n\n### 5. Generate all outputs\n\n```bash\nbash scripts/generate.sh \\\n  .business-analysis/<project-name>_Analysis_Source.json \\\n  <project-output> \\\n  <project-name>\n```\n\nOutputs:\n\n```text\n<project-name>_Business_Flow.xmind\n<project-name>_Q&A.md\n<project-name>_Q&A.xlsx\n```\n\nWhen the analysis JSON contains explicit `requirements`, the generator also writes the hidden machine handoff `.business-analysis/<project-name>_Requirements.json`. Browser QA must consume this registry instead of trying to infer requirement IDs from XMind, Markdown or Excel\n\nThe XMind file is generated with the official `xmindmark` package and remains editable in XMind\n\nThe XMind is a business and system flow map, not a document dump or test report. It must show the end-to-end system sequence, prerequisites, entry and exit states, required business outcomes, related functions and real relationship arrows between linked flows. Keep detailed Q&A and review coverage in Markdown and Excel only\n\nThe XMind must use exactly one `Luồng hệ thống` sheet so readers see the end-to-end journey and its functions on the same canvas. Render each internal journey path as a horizontal lane under the shared root. Every lane step is the real system function, not a separate summary node. Keep prerequisites, states, business control points, required outcomes and related functions folded under that same function node\n\n### 6. Read back\n\n- Open Q&A Markdown and verify question count, priority and nontechnical readability\n- Open Excel and verify the same Question IDs and content\n- Run `node scripts/render-xmind.mjs --check <file.xmind> <analysis.json>` and verify journey and relationship counts\n- Report `BLOCKED` when conversion, review coverage, dependency or output validation fails\n\n### 7. Optional interactive companion\n\nOnly when the user requests HTML, an interactive flow or a visual companion, read [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md), then render from the already validated hidden JSON:\n\n```bash\nnode ../qa-run/scripts/writers/render-intelligence-html.mjs \\\n  --input .business-analysis/<project-name>_Analysis_Source.json \\\n  --output <project-output>/<project-name>_Business_Flow.html\n\nnode ../qa-run/scripts/writers/render-intelligence-html.mjs \\\n  --check <project-output>/<project-name>_Business_Flow.html\n```\n\nThis HTML is optional and derived. The required `.xmind`, Q&A Markdown and Q&A Excel remain the canonical synchronized deliverables\n\n## Output rules\n\n- Q&A Markdown and Excel must have matching Question IDs and content\n- All user-facing headings, descriptions, questions, assumptions and workbook labels must be Vietnamese\n- Keep filenames in English using exactly `<project-name>_Business_Flow.xmind`, `<project-name>_Q&A.md` and `<project-name>_Q&A.xlsx`\n- Use a restrained navy, teal, blue, amber, red and green palette with readable contrast\n- Keep the internal JSON under `.business-analysis` and do not present it as a deliverable\n- Keep document paths, section codes, `source_ref` and missing-source diagnostics only in the hidden JSON, never in user-facing Markdown, Excel or XMind\n- Use plain business language so a nontechnical reader can understand every visible field\n- Keep XMind focused on business flow and connected system behavior, not testing terminology, the complete Q&A or the 18-area review log\n- Every XMind flow must show prerequisites, entry state, ordered processing, exit state, required business outcomes and related functions\n- Render every item in `flow_links` as a visible function-to-function section and a real XMind relationship arrow\n- Create exactly one `Luồng hệ thống` sheet containing every business journey and every function\n- Render each internal `sanity_journeys` path as a horizontal business lane on the shared canvas\n- Show preparation conditions, every ordered function and final result in the same lane\n- Put transition conditions, business control points, entry and exit states, prerequisites, required outcomes and related functions under the matching function node\n- Fold function detail branches by default so the connected flow remains compact and readable\n- Render both journey transitions and every `flow_links` item as real relationship arrows on the same sheet\n- Never move function relationships or detailed function context to separate sheets\n- Keep the legacy JSON keys `sanity_journeys` and `sanity_checks` internal only and never render those names, `SANITY-*` IDs or testing terms in XMind\n- Keep unanswered questions `Open` with an empty Answer\n- Use `Answered` only when an authority supplied the answer\n- Do not use emoji or icons\n- Do not end human-readable cells or list items with `.`\n- Preserve IDs, URLs, filenames, formulas, decimals, API fields and code exactly\n- Do not store passwords, tokens, cookies, API keys or personal sensitive data\n\n## Resources\n\n- [references/INPUT_SCHEMA.md](references/INPUT_SCHEMA.md) for the analysis JSON contract\n- [references/SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md) for the fullstack QA/QC review\n- [scripts/generate.sh](scripts/generate.sh) for the complete renderer pipeline\n- [scripts/render-qa.py](scripts/render-qa.py) for matching Markdown and Excel Q&A\n- [scripts/render-xmind.mjs](scripts/render-xmind.mjs) for editable XMind output\n- [scripts/export-requirements.py](scripts/export-requirements.py) for the browser traceability handoff\n- [examples/sample-analysis.json](examples/sample-analysis.json) for a cross-model example\n- [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md) for optional source graph candidates and interactive HTML companions\n",
       "sourceHash": "53d4f5ff755e95b477462fd625e8a2ea0652ddd7280fd95f2727ffae1d0bbe5d"
+    },
+    {
+      "name": "compatibility-localization-qa",
+      "title": "Compatibility & Localization QA",
+      "folder": "compatibility-localization-qa",
+      "group": "assurance",
+      "description": "Build and validate browser, device, operating-system, locale, timezone, currency, text-expansion, and RTL compatibility coverage for web or mobile releases. Trigger on browser compatibility, device matrix, cross-browser, responsive support, i18n, l10n, locale, timezone, currency, RTL, translation, Unicode, or regional formatting; do not require the skill name. Use qa-run or mobile-qa for live execution after the matrix is approved.",
+      "principle": "Prevent a green single-browser test from hiding failures in another browser, viewport, locale, timezone, currency, or writing direction. This skill validates coverage design and evidence contracts; live browser/device actions belong to qa-run or mobile-qa.",
+      "vi": {
+        "summary": "Validate browser/device/locale/timezone/currency/i18n và RTL coverage matrix",
+        "advantages": [
+          "Kiểm coverage dimensions và executable case trước live run",
+          "Bao phủ locale, timezone, currency, Unicode và RTL rõ ràng"
+        ],
+        "limitations": [
+          "Matrix không thay thế browser/device execution",
+          "Expected translation và supported-platform policy cần owner xác nhận"
+        ]
+      },
+      "operationalBranches": [
+        {
+          "id": "COMPATIBILITY_DIMENSIONS",
+          "titleVi": "Chọn dimensions tương thích",
+          "summaryVi": "Xác định browser, device, OS, locale, timezone, currency và RTL policy theo requirement",
+          "childrenVi": [
+            "Chromium/Firefox/WebKit",
+            "Desktop/Mobile",
+            "OS/device",
+            "Locale",
+            "Timezone/Currency",
+            "RTL"
+          ]
+        },
+        {
+          "id": "LOCALIZATION_CASES",
+          "titleVi": "Expected localized behavior",
+          "summaryVi": "Kiểm text expansion, Unicode, translated validation, date/number format và fallback",
+          "childrenVi": [
+            "Long text",
+            "Unicode",
+            "Validation",
+            "Empty state",
+            "Date/number",
+            "Fallback"
+          ]
+        },
+        {
+          "id": "MATRIX_EXECUTION",
+          "titleVi": "Coverage và evidence",
+          "summaryVi": "Mỗi dimension phải có executable case trước khi route sang browser hoặc mobile execution",
+          "childrenVi": [
+            "Case coverage",
+            "qa-run",
+            "mobile-qa",
+            "Screenshot/video",
+            "Release risk"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "level": 2,
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
+          "title": "Output contract"
+        },
+        {
+          "level": 2,
+          "title": "References"
+        }
+      ],
+      "interface": {
+        "displayName": "Compatibility Localization QA",
+        "shortDescription": "Check browsers devices locales and RTL",
+        "defaultPrompt": "Use $compatibility-localization-qa to create a browser-device-locale matrix and verify i18n, timezone, currency, and RTL risks."
+      },
+      "resources": {
+        "scripts": 2,
+        "references": 1,
+        "assets": 0
+      },
+      "metrics": {
+        "lines": 38,
+        "words": 310
+      },
+      "sourcePath": "compatibility-localization-qa/SKILL.md",
+      "source": "---\nname: compatibility-localization-qa\ndescription: Build and validate browser, device, operating-system, locale, timezone, currency, text-expansion, and RTL compatibility coverage for web or mobile releases. Trigger on browser compatibility, device matrix, cross-browser, responsive support, i18n, l10n, locale, timezone, currency, RTL, translation, Unicode, or regional formatting; do not require the skill name. Use qa-run or mobile-qa for live execution after the matrix is approved.\n---\n\n# Compatibility & Localization QA\n\nPrevent a green single-browser test from hiding failures in another browser, viewport, locale, timezone, currency, or writing direction. This skill validates coverage design and evidence contracts; live browser/device actions belong to `qa-run` or `mobile-qa`.\n\n## Workflow\n\n1. Resolve supported browsers, devices, OS versions, locales, timezones, currencies, and RTL policy from requirements\n2. Build a risk-based matrix and include text expansion, Unicode, date/number formatting, keyboard, viewport, and network variation where relevant\n3. Validate the matrix locally with `check_compatibility_matrix.py`\n4. Execute approved shards through the matching browser/mobile skill and retain screenshot/video evidence per result\n5. Compare expected translations and formats with source requirements; do not silently accept fallback English or clipped text\n\n```bash\npython3 compatibility-localization-qa/scripts/check_compatibility_matrix.py compatibility.json\n```\n\n## Hard gates\n\n- Missing supported-platform source, locale list, expected format, or target is `BLOCKED`\n- A matrix is not coverage merely because it lists browsers; each required dimension needs at least one executable case\n- If the product supports RTL, include an RTL locale and visual evidence; if RTL is out of scope, record that decision explicitly\n- Do not change locale, account data, device state, or application content outside the approved test boundary\n- Keep translation defects, rendering defects, and browser-engine defects separately classified\n\n## Output contract\n\nReturn pretty JSON with `passed`, `errors`, `warnings`, `dimensions`, `coverage`, `cases`, and `limitations`. Each case preserves browser/device/locale/timezone identity and has an evidence reference when executed. A plan without runtime evidence is `READY`, not an execution `PASS`.\n\n## References\n\n- [Compatibility matrix](references/COMPATIBILITY_MATRIX.md)\n- [Deterministic matrix checker](scripts/check_compatibility_matrix.py)\n",
+      "sourceHash": "12a3eebebef83b5945c6502048c9bb0fc359b783995ef7d73b756289e07c529f"
     },
     {
       "name": "data-quality-qa",
@@ -1419,6 +1715,10 @@
       "headings": [
         {
           "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
           "title": "Source boundary"
         },
         {
@@ -1473,12 +1773,12 @@
         "assets": 0
       },
       "metrics": {
-        "lines": 154,
-        "words": 1151
+        "lines": 162,
+        "words": 1223
       },
       "sourcePath": "doc-to-md/SKILL.md",
-      "source": "---\nname: doc-to-md\ndescription: Convert local or chat-uploaded PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, JSON, XML, or ZIP files to Markdown for other QA skills. Trigger when the user provides one of these local artifacts and asks to read, extract, convert, or analyze it; do not require the skill name. Use only for an existing local path or upload. Route drive.google.com/docs.google.com URLs and Drive IDs to google-drive-qa unless the user explicitly requests a local export first. Not for editing Markdown or scraping web pages.\n---\n\n# Doc to MD\n\n**Core principle:** Only convert local files with correct structure — do not retype manually from PDFs and do not pull Drive sources locally just to convert them.\n\nUses Microsoft's **MarkItDown** (open-source MIT) to convert PDF, DOCX, PPTX, XLSX, HTML, images (JPG/PNG with OCR) to Markdown. Files are processed 100% locally (privacy), no cloud uploads. **API key**: NO key required for MarkItDown.\n\n> **When to use**: User uploads a document file (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) and wants the AI to read its content.\n> **Purpose**: Raw PDF/DOCX files are hard for AI to parse directly. Convert to Markdown first → AI reads MD much easier and understands deeper context.\n\n## Source boundary\n\n1. Require a real local filesystem path before running `convert.sh`.\n2. Treat a chat-uploaded file materialized as a local path as local input.\n3. Treat a Google Drive URL, Drive ID, Google Docs URL, Google Sheets URL, Google Slides URL, or object resolved through Drive MCP as a remote Drive source.\n4. For a remote Drive source, stop this skill and route the request to `google-drive-qa`; consume the in-place MCP content directly.\n5. Do not download, export, or copy a Drive source locally merely to make it eligible for this skill.\n6. Allow conversion after a Drive download or export only when the user explicitly requested that local artifact.\n7. For mixed sources, convert only the local files and leave Drive objects on the MCP route.\n\n## The trap this skill exists to prevent\n\n**OCR-by-eye copy-paste** — manually retyping tables and headings from PDFs, losing structure and introducing typos. Always convert via MarkItDown, never re-key content from the source by hand.\n\n## Process\n\n### 1. Detect file format\nVerify that the input is an existing local path, then check extension `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.jpg`, `.png`. Script `convert.sh` auto-detects from extension — no need to specify format. If the input is a Drive URL or ID, do not run the converter.\n\n### 2. Run converter\n\n**Method 1 — run script directly:**\n```bash\n# Convert PDF to MD (auto output = input_DD-MM-YYYY.md)\nbash <skill-root>/scripts/convert.sh /path/to/file.pdf\n\n# Convert with specific output base; script still appends date\nbash <skill-root>/scripts/convert.sh /path/to/file.docx /tmp/output.md\n\n# Convert Excel\nbash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md\n```\n\nResolve `<skill-root>` from the directory containing the loaded `SKILL.md`. Do not assume the skill is located in `.claude`, `.codex`, `.gemini` or a specific home directory.\n\nAll new Markdown files use the `_DD-MM-YYYY` suffix based on `Asia/Ho_Chi_Minh` time, e.g., `FRS_20-07-2026.md`. Do not append the date twice if the basename already has the correct suffix. Do not rename existing files. If the user explicitly requests keeping the exact filename, run with `QA_PRESERVE_EXACT_FILENAME=1`.\n\n**Method 2 — AI auto-detects and converts** (when user uploads a file in chat):\n1. Detect file type (PDF, DOCX, ...)\n2. Run `bash <skill-root>/scripts/convert.sh <file>`\n3. Read the MD output file instead of the original file\n4. Analyze the content and respond\n\n**AI workflow example**:\n```python\nimport os, subprocess\nskill_root = os.environ['DOC_TO_MD_SKILL_DIR']\nresult = subprocess.run(\n    ['bash', os.path.join(skill_root, 'scripts', 'convert.sh'),\n     '/path/to/spec.pdf', '/tmp/spec.md'],\n    capture_output=True, text=True\n)\nwith open('/tmp/spec.md', 'r') as f:\n    content = f.read()\n# Phân tích content thay vì parse PDF trực tiếp\n```\n\n### 3. Supported formats\n\n| Format | Extension | Output quality |\n|---|---|---|\n| PDF | `.pdf` | ⭐⭐⭐⭐ - text + tables + structure |\n| Word | `.docx`, `.doc` | ⭐⭐⭐⭐⭐ - perfect |\n| PowerPoint | `.pptx`, `.ppt` | ⭐⭐⭐⭐⭐ - slides + notes |\n| Excel | `.xlsx`, `.xls` | ⭐⭐⭐⭐⭐ - tables + sheets |\n| HTML | `.html`, `.htm` | ⭐⭐⭐⭐⭐ |\n| Images | `.jpg`, `.png`, `.gif` | ⭐⭐⭐ - OCR (requires Tesseract) |\n| Audio | `.mp3`, `.wav` | ⭐⭐⭐ - transcription (requires Whisper) |\n| CSV | `.csv` | ⭐⭐⭐⭐ |\n| JSON/XML | `.json`, `.xml` | ⭐⭐⭐⭐⭐ |\n| ZIP | `.zip` | ⭐⭐⭐ - extract and convert each file |\n\n### 4. Installation\n\nFirst time running, the script auto-installs MarkItDown. If it fails, install manually:\n```bash\npip3 install \"markitdown[all]\"\n```\n\nOptional dependencies per format:\n- PDF: requires `pdfminer.six` (auto-installed with `[all]`)\n- Image OCR: requires `tesseract` (`brew install tesseract` on Mac)\n- Audio: requires `ffmpeg` + `whisper`\n\n### 5. Example\n\n**Document conversion:**\n```bash\n$ QA_ARTIFACT_DATE=20-07-2026 bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx\n🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS_20-07-2026.md\n📦 Installing MarkItDown...\n🔄 Converting...\n✅ Done: FRS_20-07-2026.md (45,231 bytes, 1,247 lines)\n```\n\n**AI usage after conversion:**\n```python\nwith open('BCP_AI_SRS.md') as f:\n    spec = f.read()\n# Extract requirements\n# \"FR-M1-01: User registers account...\"\n# → generate test cases from requirement\n```\n\n## Red flags\n\n| Symptom | Why it's wrong | Fix |\n|---|---|---|\n| Output MD missing table headers | MarkItDown can fail on scanned PDFs | Install Tesseract OCR or use a PDF with a text layer |\n| Audio transcription returns empty text | Whisper not installed or ffmpeg bad path | Verify `ffmpeg` in PATH, install `openai-whisper` |\n| Build wheel fails for `cryptography` on macOS | Missing OpenSSL dev headers + Rust | Use `--only-binary=:all:` (see Common mistakes) |\n| Large PDF > 100 pages converts very slowly | MarkItDown processes each page sequentially | Split file or use a page range filter |\n\n## Common mistakes\n\n- **macOS — cryptography build error:** `pip3 install \"markitdown[all]\"` often fails with `Failed building wheel for cryptography`. Cause: OpenSSL dev headers + Rust are missing, and installing via brew hits `/usr/local` permissions (often blocked on corporate laptops). **Fix by using prebuilt wheel:**\n  ```bash\n  pip3 install --only-binary=:all: \"markitdown[all]\"\n  ```\n  Verify: `PYTHON_BIN=/usr/local/bin/python3.11 python3 -c \"import cryptography; print('OK', cryptography.__version__)\"`\n\n- **If it still fails** (custom pyenv Python, very old macOS):\n  - `brew install pkgconf openssl` (requires `/usr/local` ownership change — not recommended on corporate laptops)\n  - Or Conda: `conda install -c conda-forge markitdown`\n\n- **Manual retyping instead of converting** — loses table structure, introduces typos, wastes time. Always run `convert.sh` first.\n\n- **Downloading Drive objects to convert when user only asked to read/analyze** — wrong source route and creates unnecessary local snapshots. Use `google-drive` MCP for in-place reading; only convert when user explicitly requests a local copy.\n\n- **Uploading files to other cloud services** — MarkItDown processes locally, preserving privacy. Do not upload unless the user explicitly requests it.\n\n- **Converting audio without Whisper installed** — script will fail silently or return empty. Install ffmpeg + openai-whisper first.\n\n- **Large PDFs > 100 pages** — may take several seconds. Consider splitting or converting only relevant sections.\n\n## References\n\n- [scripts/convert.sh](scripts/convert.sh) — wrapper script với auto-install + PYTHON_BIN override\n- [MarkItDown (Microsoft)](https://github.com/microsoft/markitdown) — upstream open-source tool\n",
-      "sourceHash": "881d8b597adfc5e7ac77888bc1b98b5a95c639db187e1ae122815b09975daa10"
+      "source": "---\nname: doc-to-md\ndescription: Convert local or chat-uploaded PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, JSON, XML, or ZIP files to Markdown for other QA skills. Trigger when the user provides one of these local artifacts and asks to read, extract, convert, or analyze it; do not require the skill name. Use only for an existing local path or upload. Route drive.google.com/docs.google.com URLs and Drive IDs to google-drive-qa unless the user explicitly requests a local export first. Not for editing Markdown or scraping web pages.\n---\n\n# Doc to MD\n\n**Core principle:** Only convert local files with correct structure — do not retype manually from PDFs and do not pull Drive sources locally just to convert them.\n\nUses Microsoft's **MarkItDown** (open-source MIT) to convert PDF, DOCX, PPTX, XLSX, HTML, images (JPG/PNG with OCR) to Markdown. Files are processed 100% locally (privacy), no cloud uploads. **API key**: NO key required for MarkItDown.\n\n> **When to use**: User uploads a document file (.pdf, .docx, .pptx, .xlsx, .html, .jpg, .png) and wants the AI to read its content.\n> **Purpose**: Raw PDF/DOCX files are hard for AI to parse directly. Convert to Markdown first → AI reads MD much easier and understands deeper context.\n\n## Hard gates\n\n1. Require an existing local filesystem path or chat-uploaded artifact before running the converter\n2. Route Drive URLs, Drive IDs and remote Google documents to `google-drive-qa`\n3. Never retype source content, scrape a web page, or download a remote document implicitly\n4. Preserve the source structure and read back the generated Markdown before handing it to another skill\n5. Record missing converter dependencies as `runtime_missing` instead of claiming conversion success\n\n## Source boundary\n\n1. Require a real local filesystem path before running `convert.sh`.\n2. Treat a chat-uploaded file materialized as a local path as local input.\n3. Treat a Google Drive URL, Drive ID, Google Docs URL, Google Sheets URL, Google Slides URL, or object resolved through Drive MCP as a remote Drive source.\n4. For a remote Drive source, stop this skill and route the request to `google-drive-qa`; consume the in-place MCP content directly.\n5. Do not download, export, or copy a Drive source locally merely to make it eligible for this skill.\n6. Allow conversion after a Drive download or export only when the user explicitly requested that local artifact.\n7. For mixed sources, convert only the local files and leave Drive objects on the MCP route.\n\n## The trap this skill exists to prevent\n\n**OCR-by-eye copy-paste** — manually retyping tables and headings from PDFs, losing structure and introducing typos. Always convert via MarkItDown, never re-key content from the source by hand.\n\n## Process\n\n### 1. Detect file format\nVerify that the input is an existing local path, then check extension `.pdf`, `.docx`, `.pptx`, `.xlsx`, `.html`, `.jpg`, `.png`. Script `convert.sh` auto-detects from extension — no need to specify format. If the input is a Drive URL or ID, do not run the converter.\n\n### 2. Run converter\n\n**Method 1 — run script directly:**\n```bash\n# Convert PDF to MD (auto output = input_DD-MM-YYYY.md)\nbash <skill-root>/scripts/convert.sh /path/to/file.pdf\n\n# Convert with specific output base; script still appends date\nbash <skill-root>/scripts/convert.sh /path/to/file.docx /tmp/output.md\n\n# Convert Excel\nbash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md\n```\n\nResolve `<skill-root>` from the directory containing the loaded `SKILL.md`. Do not assume the skill is located in `.claude`, `.codex`, `.gemini` or a specific home directory.\n\nAll new Markdown files use the `_DD-MM-YYYY` suffix based on `Asia/Ho_Chi_Minh` time, e.g., `FRS_20-07-2026.md`. Do not append the date twice if the basename already has the correct suffix. Do not rename existing files. If the user explicitly requests keeping the exact filename, run with `QA_PRESERVE_EXACT_FILENAME=1`.\n\n**Method 2 — AI auto-detects and converts** (when user uploads a file in chat):\n1. Detect file type (PDF, DOCX, ...)\n2. Run `bash <skill-root>/scripts/convert.sh <file>`\n3. Read the MD output file instead of the original file\n4. Analyze the content and respond\n\n**AI workflow example**:\n```python\nimport os, subprocess\nskill_root = os.environ['DOC_TO_MD_SKILL_DIR']\nresult = subprocess.run(\n    ['bash', os.path.join(skill_root, 'scripts', 'convert.sh'),\n     '/path/to/spec.pdf', '/tmp/spec.md'],\n    capture_output=True, text=True\n)\nwith open('/tmp/spec.md', 'r') as f:\n    content = f.read()\n# Phân tích content thay vì parse PDF trực tiếp\n```\n\n### 3. Supported formats\n\n| Format | Extension | Output quality |\n|---|---|---|\n| PDF | `.pdf` | ⭐⭐⭐⭐ - text + tables + structure |\n| Word | `.docx`, `.doc` | ⭐⭐⭐⭐⭐ - perfect |\n| PowerPoint | `.pptx`, `.ppt` | ⭐⭐⭐⭐⭐ - slides + notes |\n| Excel | `.xlsx`, `.xls` | ⭐⭐⭐⭐⭐ - tables + sheets |\n| HTML | `.html`, `.htm` | ⭐⭐⭐⭐⭐ |\n| Images | `.jpg`, `.png`, `.gif` | ⭐⭐⭐ - OCR (requires Tesseract) |\n| Audio | `.mp3`, `.wav` | ⭐⭐⭐ - transcription (requires Whisper) |\n| CSV | `.csv` | ⭐⭐⭐⭐ |\n| JSON/XML | `.json`, `.xml` | ⭐⭐⭐⭐⭐ |\n| ZIP | `.zip` | ⭐⭐⭐ - extract and convert each file |\n\n### 4. Installation\n\nFirst time running, the script auto-installs MarkItDown. If it fails, install manually:\n```bash\npip3 install \"markitdown[all]\"\n```\n\nOptional dependencies per format:\n- PDF: requires `pdfminer.six` (auto-installed with `[all]`)\n- Image OCR: requires `tesseract` (`brew install tesseract` on Mac)\n- Audio: requires `ffmpeg` + `whisper`\n\n### 5. Example\n\n**Document conversion:**\n```bash\n$ QA_ARTIFACT_DATE=20-07-2026 bash <skill-root>/scripts/convert.sh /project/spec/FRS.docx\n🔄 Converting: /project/spec/FRS.docx → /project/spec/FRS_20-07-2026.md\n📦 Installing MarkItDown...\n🔄 Converting...\n✅ Done: FRS_20-07-2026.md (45,231 bytes, 1,247 lines)\n```\n\n**AI usage after conversion:**\n```python\nwith open('BCP_AI_SRS.md') as f:\n    spec = f.read()\n# Extract requirements\n# \"FR-M1-01: User registers account...\"\n# → generate test cases from requirement\n```\n\n## Red flags\n\n| Symptom | Why it's wrong | Fix |\n|---|---|---|\n| Output MD missing table headers | MarkItDown can fail on scanned PDFs | Install Tesseract OCR or use a PDF with a text layer |\n| Audio transcription returns empty text | Whisper not installed or ffmpeg bad path | Verify `ffmpeg` in PATH, install `openai-whisper` |\n| Build wheel fails for `cryptography` on macOS | Missing OpenSSL dev headers + Rust | Use `--only-binary=:all:` (see Common mistakes) |\n| Large PDF > 100 pages converts very slowly | MarkItDown processes each page sequentially | Split file or use a page range filter |\n\n## Common mistakes\n\n- **macOS — cryptography build error:** `pip3 install \"markitdown[all]\"` often fails with `Failed building wheel for cryptography`. Cause: OpenSSL dev headers + Rust are missing, and installing via brew hits `/usr/local` permissions (often blocked on corporate laptops). **Fix by using prebuilt wheel:**\n  ```bash\n  pip3 install --only-binary=:all: \"markitdown[all]\"\n  ```\n  Verify: `PYTHON_BIN=/usr/local/bin/python3.11 python3 -c \"import cryptography; print('OK', cryptography.__version__)\"`\n\n- **If it still fails** (custom pyenv Python, very old macOS):\n  - `brew install pkgconf openssl` (requires `/usr/local` ownership change — not recommended on corporate laptops)\n  - Or Conda: `conda install -c conda-forge markitdown`\n\n- **Manual retyping instead of converting** — loses table structure, introduces typos, wastes time. Always run `convert.sh` first.\n\n- **Downloading Drive objects to convert when user only asked to read/analyze** — wrong source route and creates unnecessary local snapshots. Use `google-drive` MCP for in-place reading; only convert when user explicitly requests a local copy.\n\n- **Uploading files to other cloud services** — MarkItDown processes locally, preserving privacy. Do not upload unless the user explicitly requests it.\n\n- **Converting audio without Whisper installed** — script will fail silently or return empty. Install ffmpeg + openai-whisper first.\n\n- **Large PDFs > 100 pages** — may take several seconds. Consider splitting or converting only relevant sections.\n\n## References\n\n- [scripts/convert.sh](scripts/convert.sh) — wrapper script với auto-install + PYTHON_BIN override\n- [MarkItDown (Microsoft)](https://github.com/microsoft/markitdown) — upstream open-source tool\n",
+      "sourceHash": "1803e58f944ac1217f40217950c6931bd6c54a7db56620f3f890582231441bd5"
     },
     {
       "name": "ego-browser",
@@ -1573,6 +1873,10 @@
         },
         {
           "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
           "title": "Install and diagnose"
         },
         {
@@ -1599,12 +1903,12 @@
         "assets": 0
       },
       "metrics": {
-        "lines": 67,
-        "words": 594
+        "lines": 75,
+        "words": 670
       },
       "sourcePath": "github-mcp-qa/SKILL.md",
-      "source": "---\nname: github-mcp-qa\ndescription: Configure and operate GitHub's official MCP server for repositories, pull requests, issues, Actions CI/CD, code-quality, and security QA across supported agents. Trigger on GitHub, github.com repository/PR/issue/Actions URLs, GitHub MCP, OAuth/PAT, account switching, repository API reads/writes, or CI monitoring; do not require the skill name. A GitHub URL by itself is a safe-read request to identify and inspect that exact resource. Keep GitHub API authentication separate from local Git SSH authentication and never infer a mutation from a bare URL.\n---\n\n# GitHub MCP QA\n\nUse the official remote endpoint `https://api.githubcopilot.com/mcp/` for all GitHub toolsets or a scoped `/x/<toolset>` endpoint when fewer tools are sufficient. Keep authentication local to each user; never place OAuth credentials or PAT values in this repository.\n\n## Route the operation\n\n| Need | Use |\n|---|---|\n| Local commit, branch, fetch, pull, push | Git CLI with SSH or HTTPS credentials |\n| Repository, PR, Issue, Actions, run logs, security data through API | GitHub MCP with OAuth or PAT |\n| Edit a workflow | Edit `.github/workflows/*.yml` locally, validate, commit and push |\n| Observe or rerun a workflow | GitHub MCP `actions` tools after authentication |\n\nDo not claim that an SSH key authenticates GitHub MCP. SSH and MCP/API authentication are separate.\n\n## Install and diagnose\n\nSelect the guide for the active host:\n\n- Codex: read [references/codex-github-mcp-vi.md](references/codex-github-mcp-vi.md)\n- Antigravity: read [references/antigravity-github-mcp-vi.md](references/antigravity-github-mcp-vi.md)\n\nFor macOS, Linux, or WSL, configure the server with:\n\n```bash\n./github-mcp-qa/scripts/install-codex.sh --login\n```\n\nUse `--dry-run` before mutation. Codex defaults to PAT from `GITHUB_PAT_TOKEN`; use `--login` only when that Codex version can complete GitHub OAuth. Run the host-specific doctor after setup.\n\n## Execute GitHub work\n\n1. Resolve `owner/repo`, target branch, current account, and requested operation\n2. Read repository state before any write\n3. For local changes, inspect `git status`, preserve unrelated changes, and use Git CLI\n4. For GitHub API changes, verify the authenticated account and repository permission first\n5. Require explicit confirmation immediately before deleting repositories, branches, releases, packages, workflow artifacts, secrets, or changing security/organization settings\n6. Read back the changed object or workflow run after mutation\n7. Report the exact repository, branch, commit/run ID, status, and remaining blocker\n\n## CI/CD rules\n\n- Inspect existing workflows and repository conventions before creating a pipeline\n- Pin action versions according to repository policy; never expose secrets in YAML, logs, artifacts, or prompts\n- Give `GITHUB_TOKEN` only the workflow permissions required by its jobs\n- Validate syntax and relevant tests locally before push\n- Treat dispatch, rerun, cancel, deployment approval, secret rotation, and permission changes as state-changing operations\n- Separate pipeline creation from production deployment authorization\n\n## Authentication boundaries\n\n- Prefer OAuth only when the active host supports the GitHub OAuth flow; otherwise use a fine-grained PAT from an environment variable or secret manager\n- Use a fine-grained PAT only when OAuth is unavailable; store it in an environment variable or secret manager\n- Treat `x/all` as all MCP toolsets, not unlimited GitHub account permission\n- Respect organization SSO, GitHub App, PAT, branch-protection, ruleset, and Actions policies\n- Clear the active host OAuth session or change the PAT environment when switching MCP identity\n- Keep personal and company Git identities isolated with separate SSH keys and host aliases\n\nRead [references/qa-mcp-stack-vi.md](references/qa-mcp-stack-vi.md) when selecting GitHub MCP alongside Chrome DevTools, k6, Postman, database read-only, and Slack.\n\nWhen the user asks which QA MCP servers are connected or reports that a skill exists but its tool is missing, run `scripts/doctor-stack.sh --agent=<host>` before suggesting installation. Do not treat a configured server as loaded until a new host session exposes its tools and a read-only smoke test succeeds.\n",
-      "sourceHash": "14235325e3ac45c5fa6317cf5d71bc69da0634f01259d7c8195da3efbdb22840"
+      "source": "---\nname: github-mcp-qa\ndescription: Configure and operate GitHub's official MCP server for repositories, pull requests, issues, Actions CI/CD, code-quality, and security QA across supported agents. Trigger on GitHub, github.com repository/PR/issue/Actions URLs, GitHub MCP, OAuth/PAT, account switching, repository API reads/writes, or CI monitoring; do not require the skill name. A GitHub URL by itself is a safe-read request to identify and inspect that exact resource. Keep GitHub API authentication separate from local Git SSH authentication and never infer a mutation from a bare URL.\n---\n\n# GitHub MCP QA\n\nUse the official remote endpoint `https://api.githubcopilot.com/mcp/` for all GitHub toolsets or a scoped `/x/<toolset>` endpoint when fewer tools are sufficient. Keep authentication local to each user; never place OAuth credentials or PAT values in this repository.\n\n## Route the operation\n\n| Need | Use |\n|---|---|\n| Local commit, branch, fetch, pull, push | Git CLI with SSH or HTTPS credentials |\n| Repository, PR, Issue, Actions, run logs, security data through API | GitHub MCP with OAuth or PAT |\n| Edit a workflow | Edit `.github/workflows/*.yml` locally, validate, commit and push |\n| Observe or rerun a workflow | GitHub MCP `actions` tools after authentication |\n\nDo not claim that an SSH key authenticates GitHub MCP. SSH and MCP/API authentication are separate.\n\n## Hard gates\n\n1. Resolve the exact repository, branch, issue, pull request or workflow before any operation\n2. Treat a bare URL as read-only inspection; do not infer a mutation from a link\n3. Run the host-specific doctor and distinguish `mcp_not_configured`, `mcp_not_loaded`, `auth_required`, `runtime_missing` and `permission_denied`\n4. Require explicit confirmation immediately before external writes and read back the changed object or run\n5. Never print, store or commit OAuth tokens, PAT values, cookies or private repository data\n\n## Install and diagnose\n\nSelect the guide for the active host:\n\n- Codex: read [references/codex-github-mcp-vi.md](references/codex-github-mcp-vi.md)\n- Antigravity: read [references/antigravity-github-mcp-vi.md](references/antigravity-github-mcp-vi.md)\n\nFor macOS, Linux, or WSL, configure the server with:\n\n```bash\n./github-mcp-qa/scripts/install-codex.sh --login\n```\n\nUse `--dry-run` before mutation. Codex defaults to PAT from `GITHUB_PAT_TOKEN`; use `--login` only when that Codex version can complete GitHub OAuth. Run the host-specific doctor after setup.\n\n## Execute GitHub work\n\n1. Resolve `owner/repo`, target branch, current account, and requested operation\n2. Read repository state before any write\n3. For local changes, inspect `git status`, preserve unrelated changes, and use Git CLI\n4. For GitHub API changes, verify the authenticated account and repository permission first\n5. Require explicit confirmation immediately before deleting repositories, branches, releases, packages, workflow artifacts, secrets, or changing security/organization settings\n6. Read back the changed object or workflow run after mutation\n7. Report the exact repository, branch, commit/run ID, status, and remaining blocker\n\n## CI/CD rules\n\n- Inspect existing workflows and repository conventions before creating a pipeline\n- Pin action versions according to repository policy; never expose secrets in YAML, logs, artifacts, or prompts\n- Give `GITHUB_TOKEN` only the workflow permissions required by its jobs\n- Validate syntax and relevant tests locally before push\n- Treat dispatch, rerun, cancel, deployment approval, secret rotation, and permission changes as state-changing operations\n- Separate pipeline creation from production deployment authorization\n\n## Authentication boundaries\n\n- Prefer OAuth only when the active host supports the GitHub OAuth flow; otherwise use a fine-grained PAT from an environment variable or secret manager\n- Use a fine-grained PAT only when OAuth is unavailable; store it in an environment variable or secret manager\n- Treat `x/all` as all MCP toolsets, not unlimited GitHub account permission\n- Respect organization SSO, GitHub App, PAT, branch-protection, ruleset, and Actions policies\n- Clear the active host OAuth session or change the PAT environment when switching MCP identity\n- Keep personal and company Git identities isolated with separate SSH keys and host aliases\n\nRead [references/qa-mcp-stack-vi.md](references/qa-mcp-stack-vi.md) when selecting GitHub MCP alongside Chrome DevTools, k6, Postman, database read-only, and Slack.\n\nWhen the user asks which QA MCP servers are connected or reports that a skill exists but its tool is missing, run `scripts/doctor-stack.sh --agent=<host>` before suggesting installation. Do not treat a configured server as loaded until a new host session exposes its tools and a read-only smoke test succeeds.\n",
+      "sourceHash": "40422d3cf4135fa4c73a56d6803cf3311ad76ab0eedb00df40bb4e1843365a04"
     },
     {
       "name": "google-drive-qa",
@@ -2091,6 +2395,10 @@
       "headings": [
         {
           "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
           "title": "The trap this skill exists to prevent"
         },
         {
@@ -2189,12 +2497,12 @@
         "assets": 39
       },
       "metrics": {
-        "lines": 323,
-        "words": 2410
+        "lines": 331,
+        "words": 2489
       },
       "sourcePath": "playwright-pom-automation/SKILL.md",
-      "source": "---\nname: playwright-pom-automation\ndescription: Scaffold or extend Playwright Page Object Model automation for UI, API, or performance tests and QA CI. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.\n---\n\n# Playwright POM Automation\n\n**Core principle:** All selectors must go through a Page Object — never write `page.locator()` directly in spec files.\n\nCovers 4 test types: **UI · API · Performance · CI/CD**, plus **Data-Driven Testing (DDT)** and parallel-safe test-data isolation. **Project-agnostic**: do NOT hardcode domain/URL/business logic.\n\n> **When to use**: When the user wants to automate web/API tests or set up a test pipeline.\n> **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.\n> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py).\n\n## The trap this skill exists to prevent\n\n**Flat selector soup** — tests with no POM layer, raw `page.locator()` chains scattered across spec files, leading to brittle suites that break on every UI redesign. Centralize selectors in `selectors/` repo, route through Page Object classes, spec files import from there.\n\n## Process\n\n### 1. Quick start\nRead the **Decision tree** below → pick the right reference → copy the template → adapt.\n\n### 2. Decision tree\n\n| What the user wants | Read reference | Copy template |\n|---|---|---|\n| UI test, page object, locator, click/fill flow | `references/ui-testing.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |\n| API test, HTTP request, auth/token, schema | `references/api-testing.md` | `fixtures/api-client.ts`, `tests/api/example.api.spec.ts` |\n| Functional/E2E, business flow spanning UI+API | `references/ui-testing.md` + `references/api-testing.md` | `tests/functional/example.functional.spec.ts` |\n| Data-driven/parameterized test, dataset, parallel data isolation | `references/data-driven-testing.md` | `fixtures/data-driven.ts`, `test-data/cases/login.cases.ts`, `tests/ui/example.data-driven.ui.spec.ts` |\n| Perf/load/timing/SLA | `references/performance-testing.md` | `tests/performance/k6-load-test.js` (Tier 2) |\n| Selector repo, centralized locators | (below) → `selectors/login.selectors.ts`, `selectors/index.ts` | - |\n| Pipeline, CI/CD, Jenkins, GitHub Actions, schedule | `references/cicd.md` | `github-actions-ci.yml`, `Jenkinsfile`, `playwright.config.ts` |\n\n### 3. Standard project structure (POM, separated folders)\n```\nproject-root/\n├── tests/\n│   ├── ui/            # *.ui.spec.ts        — per-page/component browser tests\n│   ├── api/           # *.api.spec.ts       — request-level API tests\n│   ├── functional/    # *.functional.spec.ts— E2E business flows\n│   └── performance/   # *.perf.spec.ts (Tier 1) + k6/*.js (Tier 2)\n├── pages/             # Page Object classes (POM) — one class per page\n├── selectors/         # Centralized selector repo (NEW) ← single source of truth\n├── fixtures/          # Auth, isolated runtime data, API request context\n├── test-data/         # Versioned typed datasets/cases (read-only inputs)\n├── testdata/          # Runtime-generated data (gitignored)\n├── utils/             # Config, generators, allure helpers\n├── reports/           # html/, allure-results/, allure-report/\n├── playwright.config.ts\n└── package.json       # scripts: test:ui / test:api / test:functional / lint\n```\n\n**When to use which folder**:\n- `tests/ui/` - one page/component, one intent, fast, browser-driven\n- `tests/api/` - one endpoint, request-level, no browser\n- `tests/functional/` - full business flow spanning multiple steps\n- `tests/performance/` - Tier 1 Playwright + Tier 2 k6\n\n### 4. Define selector strategy (centralized repo)\n**ALL locators must live in `selectors/`** — single source of truth. When UI changes, update one place; page objects and specs pick up automatically.\n\n```\nselectors/\n├── login.selectors.ts\n├── dashboard.selectors.ts\n├── ...\n└── index.ts           # barrel export\n```\n\nEach `<feature>.selectors.ts` exports:\n1. **Raw selector strings** - `id`, `xpath`, `css` (when user specifies explicitly)\n2. **Locator factory** - `getByRole/getByLabel/getByTestId` (preferred)\n\n**Strategy priority** (most stable → most brittle):\n1. `getByRole` / `getByLabel` / `getByTestId` (⭐⭐⭐⭐⭐) - ALWAYS FIRST PRIORITY\n2. `id` (`#email`) - ⭐⭐⭐⭐\n3. `xpath` - ⭐⭐\n4. `css class` (`.btn-primary`) - ⭐ - AVOID, usually auto-generated\n\n**Pattern for Page Object** (self-healing when UI changes):\n```typescript\n// pages/base.page.ts\nprotected heal(primary, fallbacks, description) {\n  return primary.or(...fallbacks.map(f => f.describe(`fallback for: ${description}`)));\n}\n\nprotected get loginBtn() {\n  return this.heal(\n    this.page.getByRole('button', { name: /login|đăng nhập/i }),\n    [\n      this.page.getByTestId('login-submit'),\n      this.page.locator('#login-btn'),\n      this.page.getByText('Đăng nhập', { exact: true }),\n    ],\n    'login button'\n  );\n}\n```\n\n### 4b. TypeScript `readonly` pattern (mandatory cho mọi POM)\n\n**Mục đích:** Ngăn selector hoặc locator bị gán đè ngoài ý muốn — tương đương `private final` + `static final` trong Java/TestNG.\n\n| Vị trí | Pattern TypeScript | Tương đương Java |\n|---|---|---|\n| Raw selector string | `export const sel = { id: '#btn' } as const` | `public static final String BTN = \"#btn\"` |\n| Locator object trong POM | `private readonly locs: LoginLocators` | `private final LoginLocators locs` |\n| Expose locator ra spec | `get submitButton(): Locator { return this.locs.submitButton; }` | `public WebElement getSubmitButton() { return submitButton; }` |\n\n**Rule bắt buộc:**\n- Tất cả selector file dùng `as const` ở object cuối.\n- Tất cả Page Object class dùng `private readonly locs` — **KHÔNG** dùng `public locs` hay `protected locs`.\n- Expose ra ngoài chỉ qua `getter` — không expose raw field public.\n- Spec KHÔNG được import `buildLoginLocators` trực tiếp — phải qua Page Object.\n\n### 4c. Annotations kiểu TestNG (mapping sang Playwright + Allure)\n\n| TestNG Java | Playwright TypeScript | Mục đích |\n|---|---|---|\n| `@Test(groups=\"smoke\")` | `test('name @smoke', ...)` + `--grep @smoke` | Group/tag để filter CI |\n| `@BeforeClass` | `test.beforeAll(async () => {})` | Setup 1 lần cho cả describe block |\n| `@AfterClass` | `test.afterAll(async () => {})` | Teardown / cleanup data sau cả block |\n| `@BeforeMethod` | `test.beforeEach(async ({ page }) => {})` | Reset state trước mỗi test |\n| `@AfterMethod` | `test.afterEach(async ({ page }, info) => {})` | Screenshot on fail, cleanup per-test |\n| `@Test(enabled=false)` | `test.skip(() => condition, 'reason')` | Bỏ qua test theo điều kiện |\n| `@Severity(CRITICAL)` | `allure.severity('critical')` | Mức độ nghiêm trọng của test |\n| `@Feature(\"Login\")` | `allure.feature('Login')` | Nhóm theo chức năng |\n| `@Story(\"Happy path\")` | `allure.story('Happy path')` | Sub-feature / user story |\n| `@Owner(\"QA Team\")` | `allure.owner('QA Team')` | Người sở hữu test |\n| `@Description(\"...\")` | `allure.description('...')` | Mô tả chi tiết |\n| `@Step(\"Click login\")` | `await allure.step('Click login', async () => {})` | Bước test hiện trong report |\n\n**Rule bắt buộc:**\n- Mọi spec file phải có ít nhất `allure.severity` + `allure.feature` + `allure.story`.\n- Mọi test quan trọng phải wrap action chính bằng `allure.step(...)`.\n- `afterEach` phải có block chụp screenshot khi test fail (xem template).\n- Không dùng `test.only()` trong code commit lên CI (bẫy chỉ chạy 1 test).\n\n### 5. Build Page Object classes (POM conventions)\n| Convention | Details |\n|---|---|\n| 1 class = 1 page | File `login.page.ts` → class `LoginPage` |\n| Locators in `selectors/` | Page objects import from `../selectors`. DO NOT hardcode locator in page |\n| Action methods NO `expect()` | Page object = click/fill/read + return. **Assertions in spec file**. |\n| `BasePage` | Shared helpers: `waitForLoad`, navigation, `waitForResponse`, text extraction |\n| `data-testid` | Name as `<component>-<element>`, consistent with FE team |\n\n### 6. Add API layer (API testing conventions)\n- Default to using Playwright `request` fixture (`APIRequestContext`).\n- Validate response schema with `zod` (priority) — fail fast on contract drift\n- Auth/token fixture reusable: worker-scoped token/storage state, with a standalone request context and optional per-slot account pool\n- CRUD lifecycle: create → use → delete in the same test's `finally`/fixture teardown. Use `afterAll` only for a serial, worker-owned lifecycle\n\n### 7. Add Data-Driven Testing + parallel isolation\n\nSeparate two kinds of data:\n\n1. **Case data** — versioned, typed, read-only rows under `test-data/cases/`\n2. **Runtime data** — unique entities created by `fixtures/data-driven.ts`\n\nGenerate one Playwright test per case at collection time with a synchronous `for...of`. Every case must have a unique stable ID in the test title. Never let two parallel tests mutate the same account, record, cart, tenant, filename, or JSON store.\n\nThe runtime namespace must include:\n\n```text\n<runId>-<project>-p<parallelIndex>-w<workerIndex>-t<testIdHash>-r<retry>-e<repeatEachIndex>\n```\n\nRules:\n- Use the test-scoped `testData` fixture for unique email/string/resource keys\n- Use `TEST_ACCOUNTS_JSON` to allocate a different account per parallel slot when scenarios mutate account-owned state\n- Do not cycle/reuse an undersized account pool; fail with a clear configuration error\n- Store runtime JSON in a namespace-specific file; never use one shared read-modify-write JSON file across workers\n- Cleanup per test in fixture teardown/`afterEach`; use `afterAll` only for resources owned exclusively by that worker\n- A browser context is isolated, but backend data is not; fresh contexts alone do not prevent conflicts\n- Retries must create a new retry-scoped identity and cleanup only resources created by that attempt\n\nSee `references/data-driven-testing.md` for the full pattern and templates.\n\n### 8. Add performance harness (optional — 2 tiers)\n| Tier | When | Tool |\n|---|---|---|\n| 1 (Playwright) | Smoke perf gate, 1 user, in main suite | Playwright native (`page.timing`, `performance`) |\n| 2 (k6) | Need >1 user, p95/p99 SLA, run separately | k6 |\n\n**Escalate Tier 1 → 2 when**: >1 concurrent user needed, formal p95/p99 threshold, standalone CI job.\nSee `references/performance-testing.md` for template + escalation matrix.\n\n### 9. Wire up Allure + CI (reporting & platform-NEUTRAL CI/CD)\n\n**Reporting — Allure:**\n- Annotate with `allure.step()`, `allure.attachment()` in UI/API/perf tests\n- Playwright reporter: `allure-playwright`\n- k6 -> Allure via JSON output + converter (or Grafana for live dashboard)\n- `reports/` structure: `html/`, `allure-results/`, `allure-report/`\n\n**CI/CD — platform selection:**\n| Platform | When |\n|---|---|\n| **Jenkins** | `Jenkinsfile` exists in the repo |\n| **GitHub Actions** | `.github/workflows/` exists |\n| **New / none** | Ask user to choose platform before generating |\n\n**5 standard stages** (different syntax, same logic):\n1. Checkout code\n2. Install (`npm ci`) + cache `node_modules` & Playwright browsers\n3. Lint (optional, fail-fast)\n4. `test:ui` + `test:api` in parallel\n5. Publish Allure report\n\n**k6**: run standalone job/stage, DO NOT block main pipeline.\n\n**Secrets** (token, BASE_URL, TEST_USER/PASS):\n- GitHub Actions → Repository Secrets (`secrets.*`)\n- Jenkins → Credentials (`credentials('id')`)\n- **DO NOT hardcode** in pipeline file or commit\n\n### 10. Setup (one-time per project)\n```bash\nnpm init -y\nnpm i -D @playwright/test allure-playwright zod\nnpx playwright install chromium      # + firefox / webkit if needed\n# Tier 2: brew install k6 (mac) / see `references/performance-testing.md` (Linux/Windows)\n\n# Add scripts to package.json\n# \"test:ui\":        \"playwright test --grep @ui\"\n# \"test:api\":       \"playwright test --grep @api\"\n# \"test:functional\":\"playwright test --grep @functional\"\n# \"allure:gen\":     \"allure generate reports/allure-results -o reports/allure-report --clean\"\n# \"lint\":           \"tsc --noEmit && eslint .\"\n```\n\n### 11. Tagging convention\n```typescript\ntest('login happy path @ui', async ({ page }) => { ... });\ntest('create user @api', async ({ request }) => { ... });\ntest('order flow @functional', async ({ page }) => { ... });\n```\nFilter:\n- `npx playwright test --grep @ui`\n- `npx playwright test --grep @api`\n- `npx playwright test --grep @functional`\n\n### 12. Self-check before delivering\n- [ ] **`selectors/` repo created** for every page — NO hardcoded locators\n- [ ] Page Object has NO `expect()` in action methods\n- [ ] CRUD tests clean exact created IDs in `finally`/fixture teardown; `afterAll` is limited to worker-owned serial lifecycles\n- [ ] DDT rows are typed, read-only, have unique stable IDs, and generate one test per row\n- [ ] Mutating parallel tests use `testData` namespace or a non-shared account from `TEST_ACCOUNTS_JSON`\n- [ ] Runtime stores/files are isolated by worker/test; no shared JSON read-modify-write\n- [ ] Retry/repeat data keys include `retry` and `repeatEachIndex`\n- [ ] `data-testid` named by convention `<component>-<element>`\n- [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions\n- [ ] Secrets via env vars/credentials, NOT hardcoded\n- [ ] Allure annotations (step, attachment) for UI/API/perf\n- [ ] Tests **sorted by type order** (if multiple types)\n- [ ] Cover metadata correct (especially **C3 = project code**)\n- [ ] Dropdown I (Results) + J (Priority) working\n- [ ] Procedure has numbered steps; Expected is specific and measurable\n\n## Red flags\n\n| Symptom | Why it's wrong | Fix |\n|---|---|---|\n| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, use `getByRole`/`getByTestId` |\n| Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |\n| Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Delete exact owned IDs in `finally`/fixture teardown |\n| DDT loop reuses one mutable payload object | Rows/workers overwrite each other | Keep case rows `readonly`; build a fresh runtime payload inside each test |\n| Parallel tests reuse one account/record/cart | Backend state conflicts although browser contexts are fresh | Allocate per-worker accounts or create per-test resources with `testData` |\n| Workers write the same JSON file | Lost updates/corrupt JSON from read-modify-write races | Include the data namespace in the filename; never share mutable runtime files |\n| Fixture says “per worker” but has no `{ scope: 'worker' }` | Fixture actually runs per test | Declare a worker fixture and avoid test-scoped dependencies |\n| CI/CD hardcodes `API_BASE_URL` or credentials in YAML | Secret leak, cannot be rotated | Use `secrets.*` (GitHub) or `credentials()` (Jenkins) |\n| Test only asserts `status === 200` | Does not verify business rule, only checks if route responds | Add schema validation (zod), check critical fields |\n| Tier 1 perf test runs 50 concurrent users | Playwright cannot scale | Escalate to k6 (Tier 2) |\n\n## Common mistakes\n\n- **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts.\n\n- **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()`, fixture teardown, or exact-ID cleanup in `finally`.\n\n- **JSON config** where possible instead of hardcoding URL/credentials.\n\n- **Tagging convention**: use `@ui`, `@api`, `@functional`, `@performance` to filter. No tag = no filter = CI runs everything every time.\n\n- **Allure annotations**: skipping `allure.step()` = report hard to debug. Tag every meaningful step.\n\n- **API key**: one shared config file `../config/api_keys.json` (gitignored), used by all 3 skills. See [README.md](../README.md).\n\n- **Self-check is critical**: AI often forgets cleanup hooks, hardcodes secrets, or omits the selector repo. Run through the full checklist before committing.\n\n## References\n\n### Templates (copy from `assets/templates/`)\n- `assets/templates/Jenkinsfile`\n- `assets/templates/github-actions-ci.yml`\n- `assets/templates/playwright.config.ts`\n- `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders\n- `assets/templates/fixtures/api-client.ts`\n- `assets/templates/fixtures/data-driven.ts`\n- `assets/templates/test-data/cases/login.cases.ts`\n- `assets/templates/pages/base.page.ts`, `pages/example.page.ts`\n- `assets/templates/selectors/index.ts`, `selectors/login.selectors.ts`\n- `assets/templates/tests/api/example.api.spec.ts`\n- `assets/templates/tests/ui/example.ui.spec.ts`\n- `assets/templates/tests/ui/example.data-driven.ui.spec.ts`\n- `assets/templates/tests/functional/example.functional.spec.ts`\n- `assets/templates/tests/performance/k6-load-test.js`\n\n### Reference docs (`references/`)\n- [references/ui-testing.md](references/ui-testing.md) — UI test patterns, page object examples\n- [references/api-testing.md](references/api-testing.md) — API tests with zod schema, auth fixtures\n- [references/data-driven-testing.md](references/data-driven-testing.md) — typed datasets, worker/test namespaces, account pools, cleanup\n- [references/performance-testing.md](references/performance-testing.md) — Playwright perf + k6, escalation matrix\n- [references/cicd.md](references/cicd.md) — Jenkins + GitHub Actions templates, secrets management\n\n### Related skills\n- [qa-run](../qa-run/SKILL.md) — live AI-driven exploratory (DIFFERENT from this deterministic test-as-code)\n- [testcase-template](../testcase-template/SKILL.md) — document test case Excel (KHÁC với code automation `.spec.ts`)\n",
-      "sourceHash": "4175a082368ad9440904150f143700897e49a300939f29d8c1c8cdaf6a443376"
+      "source": "---\nname: playwright-pom-automation\ndescription: Scaffold or extend Playwright Page Object Model automation for UI, API, or performance tests and QA CI. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.\n---\n\n# Playwright POM Automation\n\n**Core principle:** All selectors must go through a Page Object — never write `page.locator()` directly in spec files.\n\nCovers 4 test types: **UI · API · Performance · CI/CD**, plus **Data-Driven Testing (DDT)** and parallel-safe test-data isolation. **Project-agnostic**: do NOT hardcode domain/URL/business logic.\n\n> **When to use**: When the user wants to automate web/API tests or set up a test pipeline.\n> **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.\n> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py).\n\n## Hard gates\n\n1. Resolve the application, environment, test account and requested test type before scaffolding\n2. Keep every selector in `selectors/` or a Page Object; never put raw `page.locator()` in a spec\n3. Keep assertions in specs, tag each executable test, and isolate data by worker and retry\n4. Do not run against production or create external state without an explicit target and cleanup contract\n5. Run placeholder, TypeScript and relevant test checks before handing the suite to CI\n\n## The trap this skill exists to prevent\n\n**Flat selector soup** — tests with no POM layer, raw `page.locator()` chains scattered across spec files, leading to brittle suites that break on every UI redesign. Centralize selectors in `selectors/` repo, route through Page Object classes, spec files import from there.\n\n## Process\n\n### 1. Quick start\nRead the **Decision tree** below → pick the right reference → copy the template → adapt.\n\n### 2. Decision tree\n\n| What the user wants | Read reference | Copy template |\n|---|---|---|\n| UI test, page object, locator, click/fill flow | `references/ui-testing.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |\n| API test, HTTP request, auth/token, schema | `references/api-testing.md` | `fixtures/api-client.ts`, `tests/api/example.api.spec.ts` |\n| Functional/E2E, business flow spanning UI+API | `references/ui-testing.md` + `references/api-testing.md` | `tests/functional/example.functional.spec.ts` |\n| Data-driven/parameterized test, dataset, parallel data isolation | `references/data-driven-testing.md` | `fixtures/data-driven.ts`, `test-data/cases/login.cases.ts`, `tests/ui/example.data-driven.ui.spec.ts` |\n| Perf/load/timing/SLA | `references/performance-testing.md` | `tests/performance/k6-load-test.js` (Tier 2) |\n| Selector repo, centralized locators | (below) → `selectors/login.selectors.ts`, `selectors/index.ts` | - |\n| Pipeline, CI/CD, Jenkins, GitHub Actions, schedule | `references/cicd.md` | `github-actions-ci.yml`, `Jenkinsfile`, `playwright.config.ts` |\n\n### 3. Standard project structure (POM, separated folders)\n```\nproject-root/\n├── tests/\n│   ├── ui/            # *.ui.spec.ts        — per-page/component browser tests\n│   ├── api/           # *.api.spec.ts       — request-level API tests\n│   ├── functional/    # *.functional.spec.ts— E2E business flows\n│   └── performance/   # *.perf.spec.ts (Tier 1) + k6/*.js (Tier 2)\n├── pages/             # Page Object classes (POM) — one class per page\n├── selectors/         # Centralized selector repo (NEW) ← single source of truth\n├── fixtures/          # Auth, isolated runtime data, API request context\n├── test-data/         # Versioned typed datasets/cases (read-only inputs)\n├── testdata/          # Runtime-generated data (gitignored)\n├── utils/             # Config, generators, allure helpers\n├── reports/           # html/, allure-results/, allure-report/\n├── playwright.config.ts\n└── package.json       # scripts: test:ui / test:api / test:functional / lint\n```\n\n**When to use which folder**:\n- `tests/ui/` - one page/component, one intent, fast, browser-driven\n- `tests/api/` - one endpoint, request-level, no browser\n- `tests/functional/` - full business flow spanning multiple steps\n- `tests/performance/` - Tier 1 Playwright + Tier 2 k6\n\n### 4. Define selector strategy (centralized repo)\n**ALL locators must live in `selectors/`** — single source of truth. When UI changes, update one place; page objects and specs pick up automatically.\n\n```\nselectors/\n├── login.selectors.ts\n├── dashboard.selectors.ts\n├── ...\n└── index.ts           # barrel export\n```\n\nEach `<feature>.selectors.ts` exports:\n1. **Raw selector strings** - `id`, `xpath`, `css` (when user specifies explicitly)\n2. **Locator factory** - `getByRole/getByLabel/getByTestId` (preferred)\n\n**Strategy priority** (most stable → most brittle):\n1. `getByRole` / `getByLabel` / `getByTestId` (⭐⭐⭐⭐⭐) - ALWAYS FIRST PRIORITY\n2. `id` (`#email`) - ⭐⭐⭐⭐\n3. `xpath` - ⭐⭐\n4. `css class` (`.btn-primary`) - ⭐ - AVOID, usually auto-generated\n\n**Pattern for Page Object** (self-healing when UI changes):\n```typescript\n// pages/base.page.ts\nprotected heal(primary, fallbacks, description) {\n  return primary.or(...fallbacks.map(f => f.describe(`fallback for: ${description}`)));\n}\n\nprotected get loginBtn() {\n  return this.heal(\n    this.page.getByRole('button', { name: /login|đăng nhập/i }),\n    [\n      this.page.getByTestId('login-submit'),\n      this.page.locator('#login-btn'),\n      this.page.getByText('Đăng nhập', { exact: true }),\n    ],\n    'login button'\n  );\n}\n```\n\n### 4b. TypeScript `readonly` pattern (mandatory cho mọi POM)\n\n**Mục đích:** Ngăn selector hoặc locator bị gán đè ngoài ý muốn — tương đương `private final` + `static final` trong Java/TestNG.\n\n| Vị trí | Pattern TypeScript | Tương đương Java |\n|---|---|---|\n| Raw selector string | `export const sel = { id: '#btn' } as const` | `public static final String BTN = \"#btn\"` |\n| Locator object trong POM | `private readonly locs: LoginLocators` | `private final LoginLocators locs` |\n| Expose locator ra spec | `get submitButton(): Locator { return this.locs.submitButton; }` | `public WebElement getSubmitButton() { return submitButton; }` |\n\n**Rule bắt buộc:**\n- Tất cả selector file dùng `as const` ở object cuối.\n- Tất cả Page Object class dùng `private readonly locs` — **KHÔNG** dùng `public locs` hay `protected locs`.\n- Expose ra ngoài chỉ qua `getter` — không expose raw field public.\n- Spec KHÔNG được import `buildLoginLocators` trực tiếp — phải qua Page Object.\n\n### 4c. Annotations kiểu TestNG (mapping sang Playwright + Allure)\n\n| TestNG Java | Playwright TypeScript | Mục đích |\n|---|---|---|\n| `@Test(groups=\"smoke\")` | `test('name @smoke', ...)` + `--grep @smoke` | Group/tag để filter CI |\n| `@BeforeClass` | `test.beforeAll(async () => {})` | Setup 1 lần cho cả describe block |\n| `@AfterClass` | `test.afterAll(async () => {})` | Teardown / cleanup data sau cả block |\n| `@BeforeMethod` | `test.beforeEach(async ({ page }) => {})` | Reset state trước mỗi test |\n| `@AfterMethod` | `test.afterEach(async ({ page }, info) => {})` | Screenshot on fail, cleanup per-test |\n| `@Test(enabled=false)` | `test.skip(() => condition, 'reason')` | Bỏ qua test theo điều kiện |\n| `@Severity(CRITICAL)` | `allure.severity('critical')` | Mức độ nghiêm trọng của test |\n| `@Feature(\"Login\")` | `allure.feature('Login')` | Nhóm theo chức năng |\n| `@Story(\"Happy path\")` | `allure.story('Happy path')` | Sub-feature / user story |\n| `@Owner(\"QA Team\")` | `allure.owner('QA Team')` | Người sở hữu test |\n| `@Description(\"...\")` | `allure.description('...')` | Mô tả chi tiết |\n| `@Step(\"Click login\")` | `await allure.step('Click login', async () => {})` | Bước test hiện trong report |\n\n**Rule bắt buộc:**\n- Mọi spec file phải có ít nhất `allure.severity` + `allure.feature` + `allure.story`.\n- Mọi test quan trọng phải wrap action chính bằng `allure.step(...)`.\n- `afterEach` phải có block chụp screenshot khi test fail (xem template).\n- Không dùng `test.only()` trong code commit lên CI (bẫy chỉ chạy 1 test).\n\n### 5. Build Page Object classes (POM conventions)\n| Convention | Details |\n|---|---|\n| 1 class = 1 page | File `login.page.ts` → class `LoginPage` |\n| Locators in `selectors/` | Page objects import from `../selectors`. DO NOT hardcode locator in page |\n| Action methods NO `expect()` | Page object = click/fill/read + return. **Assertions in spec file**. |\n| `BasePage` | Shared helpers: `waitForLoad`, navigation, `waitForResponse`, text extraction |\n| `data-testid` | Name as `<component>-<element>`, consistent with FE team |\n\n### 6. Add API layer (API testing conventions)\n- Default to using Playwright `request` fixture (`APIRequestContext`).\n- Validate response schema with `zod` (priority) — fail fast on contract drift\n- Auth/token fixture reusable: worker-scoped token/storage state, with a standalone request context and optional per-slot account pool\n- CRUD lifecycle: create → use → delete in the same test's `finally`/fixture teardown. Use `afterAll` only for a serial, worker-owned lifecycle\n\n### 7. Add Data-Driven Testing + parallel isolation\n\nSeparate two kinds of data:\n\n1. **Case data** — versioned, typed, read-only rows under `test-data/cases/`\n2. **Runtime data** — unique entities created by `fixtures/data-driven.ts`\n\nGenerate one Playwright test per case at collection time with a synchronous `for...of`. Every case must have a unique stable ID in the test title. Never let two parallel tests mutate the same account, record, cart, tenant, filename, or JSON store.\n\nThe runtime namespace must include:\n\n```text\n<runId>-<project>-p<parallelIndex>-w<workerIndex>-t<testIdHash>-r<retry>-e<repeatEachIndex>\n```\n\nRules:\n- Use the test-scoped `testData` fixture for unique email/string/resource keys\n- Use `TEST_ACCOUNTS_JSON` to allocate a different account per parallel slot when scenarios mutate account-owned state\n- Do not cycle/reuse an undersized account pool; fail with a clear configuration error\n- Store runtime JSON in a namespace-specific file; never use one shared read-modify-write JSON file across workers\n- Cleanup per test in fixture teardown/`afterEach`; use `afterAll` only for resources owned exclusively by that worker\n- A browser context is isolated, but backend data is not; fresh contexts alone do not prevent conflicts\n- Retries must create a new retry-scoped identity and cleanup only resources created by that attempt\n\nSee `references/data-driven-testing.md` for the full pattern and templates.\n\n### 8. Add performance harness (optional — 2 tiers)\n| Tier | When | Tool |\n|---|---|---|\n| 1 (Playwright) | Smoke perf gate, 1 user, in main suite | Playwright native (`page.timing`, `performance`) |\n| 2 (k6) | Need >1 user, p95/p99 SLA, run separately | k6 |\n\n**Escalate Tier 1 → 2 when**: >1 concurrent user needed, formal p95/p99 threshold, standalone CI job.\nSee `references/performance-testing.md` for template + escalation matrix.\n\n### 9. Wire up Allure + CI (reporting & platform-NEUTRAL CI/CD)\n\n**Reporting — Allure:**\n- Annotate with `allure.step()`, `allure.attachment()` in UI/API/perf tests\n- Playwright reporter: `allure-playwright`\n- k6 -> Allure via JSON output + converter (or Grafana for live dashboard)\n- `reports/` structure: `html/`, `allure-results/`, `allure-report/`\n\n**CI/CD — platform selection:**\n| Platform | When |\n|---|---|\n| **Jenkins** | `Jenkinsfile` exists in the repo |\n| **GitHub Actions** | `.github/workflows/` exists |\n| **New / none** | Ask user to choose platform before generating |\n\n**5 standard stages** (different syntax, same logic):\n1. Checkout code\n2. Install (`npm ci`) + cache `node_modules` & Playwright browsers\n3. Lint (optional, fail-fast)\n4. `test:ui` + `test:api` in parallel\n5. Publish Allure report\n\n**k6**: run standalone job/stage, DO NOT block main pipeline.\n\n**Secrets** (token, BASE_URL, TEST_USER/PASS):\n- GitHub Actions → Repository Secrets (`secrets.*`)\n- Jenkins → Credentials (`credentials('id')`)\n- **DO NOT hardcode** in pipeline file or commit\n\n### 10. Setup (one-time per project)\n```bash\nnpm init -y\nnpm i -D @playwright/test allure-playwright zod\nnpx playwright install chromium      # + firefox / webkit if needed\n# Tier 2: brew install k6 (mac) / see `references/performance-testing.md` (Linux/Windows)\n\n# Add scripts to package.json\n# \"test:ui\":        \"playwright test --grep @ui\"\n# \"test:api\":       \"playwright test --grep @api\"\n# \"test:functional\":\"playwright test --grep @functional\"\n# \"allure:gen\":     \"allure generate reports/allure-results -o reports/allure-report --clean\"\n# \"lint\":           \"tsc --noEmit && eslint .\"\n```\n\n### 11. Tagging convention\n```typescript\ntest('login happy path @ui', async ({ page }) => { ... });\ntest('create user @api', async ({ request }) => { ... });\ntest('order flow @functional', async ({ page }) => { ... });\n```\nFilter:\n- `npx playwright test --grep @ui`\n- `npx playwright test --grep @api`\n- `npx playwright test --grep @functional`\n\n### 12. Self-check before delivering\n- [ ] **`selectors/` repo created** for every page — NO hardcoded locators\n- [ ] Page Object has NO `expect()` in action methods\n- [ ] CRUD tests clean exact created IDs in `finally`/fixture teardown; `afterAll` is limited to worker-owned serial lifecycles\n- [ ] DDT rows are typed, read-only, have unique stable IDs, and generate one test per row\n- [ ] Mutating parallel tests use `testData` namespace or a non-shared account from `TEST_ACCOUNTS_JSON`\n- [ ] Runtime stores/files are isolated by worker/test; no shared JSON read-modify-write\n- [ ] Retry/repeat data keys include `retry` and `repeatEachIndex`\n- [ ] `data-testid` named by convention `<component>-<element>`\n- [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions\n- [ ] Secrets via env vars/credentials, NOT hardcoded\n- [ ] Allure annotations (step, attachment) for UI/API/perf\n- [ ] Tests **sorted by type order** (if multiple types)\n- [ ] Cover metadata correct (especially **C3 = project code**)\n- [ ] Dropdown I (Results) + J (Priority) working\n- [ ] Procedure has numbered steps; Expected is specific and measurable\n\n## Red flags\n\n| Symptom | Why it's wrong | Fix |\n|---|---|---|\n| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, use `getByRole`/`getByTestId` |\n| Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |\n| Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Delete exact owned IDs in `finally`/fixture teardown |\n| DDT loop reuses one mutable payload object | Rows/workers overwrite each other | Keep case rows `readonly`; build a fresh runtime payload inside each test |\n| Parallel tests reuse one account/record/cart | Backend state conflicts although browser contexts are fresh | Allocate per-worker accounts or create per-test resources with `testData` |\n| Workers write the same JSON file | Lost updates/corrupt JSON from read-modify-write races | Include the data namespace in the filename; never share mutable runtime files |\n| Fixture says “per worker” but has no `{ scope: 'worker' }` | Fixture actually runs per test | Declare a worker fixture and avoid test-scoped dependencies |\n| CI/CD hardcodes `API_BASE_URL` or credentials in YAML | Secret leak, cannot be rotated | Use `secrets.*` (GitHub) or `credentials()` (Jenkins) |\n| Test only asserts `status === 200` | Does not verify business rule, only checks if route responds | Add schema validation (zod), check critical fields |\n| Tier 1 perf test runs 50 concurrent users | Playwright cannot scale | Escalate to k6 (Tier 2) |\n\n## Common mistakes\n\n- **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts.\n\n- **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()`, fixture teardown, or exact-ID cleanup in `finally`.\n\n- **JSON config** where possible instead of hardcoding URL/credentials.\n\n- **Tagging convention**: use `@ui`, `@api`, `@functional`, `@performance` to filter. No tag = no filter = CI runs everything every time.\n\n- **Allure annotations**: skipping `allure.step()` = report hard to debug. Tag every meaningful step.\n\n- **API key**: one shared config file `../config/api_keys.json` (gitignored), used by all 3 skills. See [README.md](../README.md).\n\n- **Self-check is critical**: AI often forgets cleanup hooks, hardcodes secrets, or omits the selector repo. Run through the full checklist before committing.\n\n## References\n\n### Templates (copy from `assets/templates/`)\n- `assets/templates/Jenkinsfile`\n- `assets/templates/github-actions-ci.yml`\n- `assets/templates/playwright.config.ts`\n- `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders\n- `assets/templates/fixtures/api-client.ts`\n- `assets/templates/fixtures/data-driven.ts`\n- `assets/templates/test-data/cases/login.cases.ts`\n- `assets/templates/pages/base.page.ts`, `pages/example.page.ts`\n- `assets/templates/selectors/index.ts`, `selectors/login.selectors.ts`\n- `assets/templates/tests/api/example.api.spec.ts`\n- `assets/templates/tests/ui/example.ui.spec.ts`\n- `assets/templates/tests/ui/example.data-driven.ui.spec.ts`\n- `assets/templates/tests/functional/example.functional.spec.ts`\n- `assets/templates/tests/performance/k6-load-test.js`\n\n### Reference docs (`references/`)\n- [references/ui-testing.md](references/ui-testing.md) — UI test patterns, page object examples\n- [references/api-testing.md](references/api-testing.md) — API tests with zod schema, auth fixtures\n- [references/data-driven-testing.md](references/data-driven-testing.md) — typed datasets, worker/test namespaces, account pools, cleanup\n- [references/performance-testing.md](references/performance-testing.md) — Playwright perf + k6, escalation matrix\n- [references/cicd.md](references/cicd.md) — Jenkins + GitHub Actions templates, secrets management\n\n### Related skills\n- [qa-run](../qa-run/SKILL.md) — live AI-driven exploratory (DIFFERENT from this deterministic test-as-code)\n- [testcase-template](../testcase-template/SKILL.md) — document test case Excel (KHÁC với code automation `.spec.ts`)\n",
+      "sourceHash": "8ab56657e8404195d9ed73c4dd869e75135af8c9ae6caec00b1e98f4e5c2a49d"
     },
     {
       "name": "postman",
@@ -2216,6 +2524,10 @@
       },
       "operationalBranches": [],
       "headings": [
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
         {
           "level": 2,
           "title": "First-use bootstrap"
@@ -2243,17 +2555,17 @@
         "defaultPrompt": "Use $postman to connect Postman, verify both CLIs, and run this collection."
       },
       "resources": {
-        "scripts": 2,
+        "scripts": 3,
         "references": 0,
         "assets": 0
       },
       "metrics": {
-        "lines": 105,
-        "words": 672
+        "lines": 113,
+        "words": 762
       },
       "sourcePath": "postman/SKILL.md",
-      "source": "---\nname: postman\ndescription: Configure, authenticate, diagnose, and operate Postman through its official MCP server, Postman CLI, and Newman, including workspaces, collections, environments, specifications, mocks, monitors, local collection execution, reports, and CI-ready test runs. Trigger on Postman setup, Postman MCP or OAuth, Postman CLI, Newman, collection run, missing Postman tools or skill, workspace or collection management, or requests to connect an agent to Postman; do not require the skill name.\n---\n\n# Postman\n\nRead [QUICK_REF.md](QUICK_REF.md) for UI marketplace installation, free API key generation, and quick authentication steps.\n\nUse the official remote Postman MCP server for resource management. Use the bundled Postman CLI and Newman runtimes for reproducible collection execution.\n\n## First-use bootstrap\n\n1. Resolve the active host as `antigravity` or `codex`\n2. Before changing local configuration, state:\n   - `Target`: the exact MCP config or Codex MCP entry\n   - `Operation`: add or enable `mcpServers.postman`\n   - `Required input`: Postman account login in the OAuth browser\n   - `Write action`: merge only the Postman entry and back up an existing Antigravity config\n   - `Verification`: config read-back followed by a read-only workspace listing\n3. Run:\n\n```bash\npython3 scripts/bootstrap.py --agent=<antigravity|codex>\n```\n\nThe script is idempotent. Run it again when Postman tools are missing. Use `--check` for a read-only configuration check and `--dry-run` to preview the target and payload\n\n4. For Antigravity, fully restart the IDE, run `/mcp`, select `postman`, and complete OAuth\n5. For Codex, run `codex mcp login postman` when the bootstrap reports that login is required\n6. Continue only after this read-only smoke test succeeds:\n\n```text\nList the Postman workspaces available to the active account without changing anything\n```\n\nOAuth consent is the only required user interaction for the US endpoint. Never request, print, or store the user's Postman password. Never commit API keys, access tokens, refresh tokens, cookies, or OAuth browser data\n\n## Collection runtime\n\nRun the runtime doctor before collection execution:\n\n```bash\npython3 scripts/runner.py doctor\n```\n\nUse the unified runner instead of assembling CLI commands manually:\n\n```bash\npython3 scripts/runner.py run <collection-path-or-id> \\\n  --environment <environment-path-or-id> \\\n  --bail \\\n  --report-dir evidence/postman\n```\n\nEngine selection is deterministic:\n\n1. Prefer Postman CLI for every supported collection\n2. Fall back to Newman only for JSON collection v2 or v2.1\n3. Block Newman for Postman v3 YAML collections\n4. Preserve the selected engine's exit code for CI\n\nThe runner creates `console.log` when `--report-dir` is supplied. For compatible v2 collections it also creates `report.json` and `junit.xml`. Authenticate the Postman CLI only when a cloud collection ID, cloud result upload, monitor, or another authenticated command requires it:\n\n```bash\npython3 scripts/runner.py login\n```\n\nLocal collection paths do not require a Postman API key. Do not place API keys in collection URLs or command arguments; use the Postman CLI login flow or a protected CI secret\n\n## Endpoint selection\n\n- Use `minimal` by default for workspaces, collections, environments, and specifications\n- Use `code` only for client-code and API-context workflows\n- Use `full` only when a required tool is absent from `minimal`\n- Use `--region=eu` only for an EU Postman account; EU requires an API key supplied through a protected environment or secret manager\n\nChange the mode deterministically:\n\n```bash\npython3 scripts/bootstrap.py --agent=<agent> --mode=<minimal|code|full> --replace-endpoint\n```\n\n## Operation workflow\n\n1. Resolve the exact account, team, workspace, collection, environment, specification, mock, or monitor\n2. Use read-only discovery before any mutation\n3. Record a mutation contract with target, operation, required inputs, write action, and verification\n4. Execute only the requested Postman operation\n5. Read the object back and verify its ID, parent workspace, name, and changed content\n\nRoute contract validation against a live implementation to `api-contract-qa`. Route explicit testcase document creation to `testcase-template`. Execute collections through `scripts/runner.py`\n\n## Failure classification\n\n- `mcp_not_configured`: run `scripts/bootstrap.py`\n- `mcp_not_loaded`: restart the host and open `/mcp`\n- `auth_required`: complete OAuth with the intended Postman account\n- `workspace_permission_denied`: verify account, team, and workspace membership\n- `tool_not_enabled`: switch endpoint mode only when the requested operation requires it\n- `runtime_missing`: run dependency setup, then `scripts/runner.py doctor`\n- `incompatible engine=newman collection=v3`: use Postman CLI\n\nDo not report the integration as working based only on valid JSON. Require a successful read-only Postman response\n",
-      "sourceHash": "0fe0555ef289a1596aaf1bdb92068bd93c85565f521bba88e395ec3c3abe65dc"
+      "source": "---\nname: postman\ndescription: Configure, authenticate, diagnose, and operate Postman through its official MCP server, Postman CLI, and Newman, including workspaces, collections, environments, specifications, mocks, monitors, local collection execution, reports, and CI-ready test runs. Trigger on Postman setup, Postman MCP or OAuth, Postman CLI, Newman, collection run, missing Postman tools or skill, workspace or collection management, or requests to connect an agent to Postman; do not require the skill name.\n---\n\n# Postman\n\nRead [QUICK_REF.md](QUICK_REF.md) for UI marketplace installation, free API key generation, and quick authentication steps.\n\nUse the official remote Postman MCP server for resource management. Use the bundled Postman CLI and Newman runtimes for reproducible collection execution.\n\n## Hard gates\n\n1. Resolve the exact Postman host, account, workspace, collection or environment before acting\n2. Treat local configuration and collection runs as separate from MCP OAuth; never request or store a password, token or API key in the repository\n3. Run the bundled runtime doctor and classify `mcp_not_configured`, `mcp_not_loaded`, `auth_required`, `runtime_missing` and engine incompatibility explicitly\n4. Use dry-run/read-only discovery before any Postman or MCP mutation and read back the changed object after a requested write\n5. Stop collection execution when the target, environment, authorization or stop condition is missing\n\n## First-use bootstrap\n\n1. Resolve the active host as `antigravity` or `codex`\n2. Before changing local configuration, state:\n   - `Target`: the exact MCP config or Codex MCP entry\n   - `Operation`: add or enable `mcpServers.postman`\n   - `Required input`: Postman account login in the OAuth browser\n   - `Write action`: merge only the Postman entry and back up an existing Antigravity config\n   - `Verification`: config read-back followed by a read-only workspace listing\n3. Run:\n\n```bash\npython3 scripts/bootstrap.py --agent=<antigravity|codex>\n```\n\nThe script is idempotent. Run it again when Postman tools are missing. Use `--check` for a read-only configuration check and `--dry-run` to preview the target and payload\n\n4. For Antigravity, fully restart the IDE, run `/mcp`, select `postman`, and complete OAuth\n5. For Codex, run `codex mcp login postman` when the bootstrap reports that login is required\n6. Continue only after this read-only smoke test succeeds:\n\n```text\nList the Postman workspaces available to the active account without changing anything\n```\n\nOAuth consent is the only required user interaction for the US endpoint. Never request, print, or store the user's Postman password. Never commit API keys, access tokens, refresh tokens, cookies, or OAuth browser data\n\n## Collection runtime\n\nRun the runtime doctor before collection execution:\n\n```bash\npython3 scripts/runner.py doctor\n```\n\nUse the unified runner instead of assembling CLI commands manually:\n\n```bash\npython3 scripts/runner.py run <collection-path-or-id> \\\n  --environment <environment-path-or-id> \\\n  --bail \\\n  --report-dir evidence/postman\n```\n\nEngine selection is deterministic:\n\n1. Prefer Postman CLI for every supported collection\n2. Fall back to Newman only for JSON collection v2 or v2.1\n3. Block Newman for Postman v3 YAML collections\n4. Preserve the selected engine's exit code for CI\n\nThe runner creates `console.log` when `--report-dir` is supplied. For compatible v2 collections it also creates `report.json` and `junit.xml`. Authenticate the Postman CLI only when a cloud collection ID, cloud result upload, monitor, or another authenticated command requires it:\n\n```bash\npython3 scripts/runner.py login\n```\n\nLocal collection paths do not require a Postman API key. Do not place API keys in collection URLs or command arguments; use the Postman CLI login flow or a protected CI secret\n\n## Endpoint selection\n\n- Use `minimal` by default for workspaces, collections, environments, and specifications\n- Use `code` only for client-code and API-context workflows\n- Use `full` only when a required tool is absent from `minimal`\n- Use `--region=eu` only for an EU Postman account; EU requires an API key supplied through a protected environment or secret manager\n\nChange the mode deterministically:\n\n```bash\npython3 scripts/bootstrap.py --agent=<agent> --mode=<minimal|code|full> --replace-endpoint\n```\n\n## Operation workflow\n\n1. Resolve the exact account, team, workspace, collection, environment, specification, mock, or monitor\n2. Use read-only discovery before any mutation\n3. Record a mutation contract with target, operation, required inputs, write action, and verification\n4. Execute only the requested Postman operation\n5. Read the object back and verify its ID, parent workspace, name, and changed content\n\nRoute contract validation against a live implementation to `api-contract-qa`. Route explicit testcase document creation to `testcase-template`. Execute collections through `scripts/runner.py`\n\n## Failure classification\n\n- `mcp_not_configured`: run `scripts/bootstrap.py`\n- `mcp_not_loaded`: restart the host and open `/mcp`\n- `auth_required`: complete OAuth with the intended Postman account\n- `workspace_permission_denied`: verify account, team, and workspace membership\n- `tool_not_enabled`: switch endpoint mode only when the requested operation requires it\n- `runtime_missing`: run dependency setup, then `scripts/runner.py doctor`\n- `incompatible engine=newman collection=v3`: use Postman CLI\n\nDo not report the integration as working based only on valid JSON. Require a successful read-only Postman response\n",
+      "sourceHash": "0ff2e2f4182c515edc0f0aefb10dad4eae7bb91f3880d99fac08ad6f0dbdc526"
     },
     {
       "name": "qa-run",
@@ -2432,6 +2744,196 @@
       "sourceHash": "5b0970ae114e6a701b37a2958610924cc3dd112c753b2a23faa76f463fe1f5e0"
     },
     {
+      "name": "release-governance-qa",
+      "title": "Release Governance QA",
+      "folder": "release-governance-qa",
+      "group": "core",
+      "description": "Build a risk-based release quality gate from scope, test results, defect risk, evidence, approvals, and explicit exit criteria. Trigger on release sign-off, go/no-go, quality gate, release readiness, exit criteria, deployment approval, risk acceptance, or test summary review; do not require the skill name. Keep evidence local and read-only unless a separate integration explicitly authorizes a state change.",
+      "principle": "Turn distributed QA evidence into a reproducible go/no-go decision. This skill owns release risk aggregation and gate evaluation; it does not replace the tests owned by browser, API, performance, security, mobile, or data-quality skills. It consumes evidence from qa-run and specialized skills",
+      "vi": {
+        "summary": "Đánh giá release theo risk, test summary, defect, evidence, approval và exit criteria",
+        "advantages": [
+          "Tạo go/no-go decision có gate ledger và provenance",
+          "Phân biệt defect risk, thiếu proof và approved exception"
+        ],
+        "limitations": [
+          "Không thay thế test chuyên môn hoặc CI verification",
+          "Không tự deploy, đổi ticket state hoặc chấp thuận exception"
+        ]
+      },
+      "operationalBranches": [
+        {
+          "id": "RELEASE_PACKET",
+          "titleVi": "Đọc release packet",
+          "summaryVi": "Resolve release ID, build, scope, risk, test summary, defects, evidence và approvals",
+          "childrenVi": [
+            "Release/build",
+            "Impacted scope",
+            "Risk",
+            "Test runs",
+            "Defects",
+            "Evidence",
+            "Approvals"
+          ]
+        },
+        {
+          "id": "EXIT_CRITERIA",
+          "titleVi": "Đánh giá exit criteria",
+          "summaryVi": "Kiểm tra gate theo mức rủi ro và phân biệt PASS, FAIL với BLOCKED",
+          "childrenVi": [
+            "Functional",
+            "Security",
+            "Regression",
+            "Non-functional",
+            "Operational readiness",
+            "Exception"
+          ]
+        },
+        {
+          "id": "GO_NO_GO",
+          "titleVi": "Go/No-Go decision",
+          "summaryVi": "Tạo quyết định có thể audit mà không tự deploy hay đổi tracker state",
+          "childrenVi": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "Gate ledger",
+            "Owner handoff"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "level": 2,
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "title": "Local contract"
+        },
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
+          "title": "Output contract"
+        },
+        {
+          "level": 2,
+          "title": "References"
+        }
+      ],
+      "interface": {
+        "displayName": "Release Governance QA",
+        "shortDescription": "Gate releases with risk and evidence",
+        "defaultPrompt": "Use $release-governance-qa to build a risk-based release gate and sign-off report from the available QA evidence."
+      },
+      "resources": {
+        "scripts": 2,
+        "references": 1,
+        "assets": 0
+      },
+      "metrics": {
+        "lines": 42,
+        "words": 349
+      },
+      "sourcePath": "release-governance-qa/SKILL.md",
+      "source": "---\nname: release-governance-qa\ndescription: Build a risk-based release quality gate from scope, test results, defect risk, evidence, approvals, and explicit exit criteria. Trigger on release sign-off, go/no-go, quality gate, release readiness, exit criteria, deployment approval, risk acceptance, or test summary review; do not require the skill name. Keep evidence local and read-only unless a separate integration explicitly authorizes a state change.\n---\n\n# Release Governance QA\n\nTurn distributed QA evidence into a reproducible go/no-go decision. This skill owns release risk aggregation and gate evaluation; it does not replace the tests owned by browser, API, performance, security, mobile, or data-quality skills. It consumes evidence from `qa-run` and specialized skills\n\n## Workflow\n\n1. Resolve release ID, commit/build, scope, environments, risk level, and change owner\n2. Collect test summaries, open defects, approved exceptions, evidence paths, and required approvals\n3. Evaluate exit criteria in severity order: safety/security, functional risk, regression, non-functional risk, and operational readiness\n4. Reconcile evidence paths and source run IDs; stale or missing evidence is `BLOCKED`\n5. Produce `PASS`, `FAIL`, or `BLOCKED` with a reason that a release owner can act on\n\n## Local contract\n\n```bash\npython3 release-governance-qa/scripts/evaluate_release.py release-packet.json\n```\n\nThe local evaluator checks packet structure, open high-risk defects, test pass status, evidence existence, and approval presence. It never deploys, changes a ticket, or treats an unverified exception as approval.\n\n## Hard gates\n\n- Missing target/build, scope, test summary, evidence, approval, or exit criterion is `BLOCKED`\n- Open P0/P1 or critical/high defects fail the gate unless the exact defect has an approved, time-bounded exception\n- A report cannot be `PASS` when evidence is only a claim or an external link that was not read\n- Do not change Plane, GitHub, Drive, deployment, or release state without the owning integration and explicit mutation request\n- Keep `FAIL` for a known failed gate distinct from `BLOCKED` for missing proof or authorization\n\n## Output contract\n\nReturn pretty JSON containing `decision`, `passed`, `errors`, `warnings`, `gates`, `release`, and `evidence`. Each gate must include `name`, `status`, `reason`, and relevant IDs or paths. The human summary should preserve the release ID and commit exactly.\n\n## References\n\n- [Gate matrix](references/GATE_MATRIX.md)\n- [Deterministic release evaluator](scripts/evaluate_release.py)\n",
+      "sourceHash": "227cb20fce657d22875164e36dd7652b84a81c34aa88c9fa67d837fe3fc659d6"
+    },
+    {
+      "name": "reliability-resilience-qa",
+      "title": "Reliability & Resilience QA",
+      "folder": "reliability-resilience-qa",
+      "group": "assurance",
+      "description": "Design and assess reliability, fault-injection, recovery, observability, disaster-recovery, RTO/RPO, retry, timeout, and graceful-degradation tests with explicit stop conditions. Trigger on resilience, chaos, fault injection, recovery testing, failover, disaster recovery, RTO, RPO, retry, timeout, graceful degradation, or incident readiness; do not require the skill name. Plans are local and read-only until an authorized execution is approved.",
+      "principle": "Make failure testing safe and measurable. The skill validates a resilience plan and its proof obligations; it does not inject faults into production, delete data, stop services, or run a load test by implication.",
+      "vi": {
+        "summary": "Validate bounded fault-injection, recovery, observability, rollback và RTO/RPO plan",
+        "advantages": [
+          "Buộc plan có SLO, stop, rollback, cleanup, observability và RTO/RPO",
+          "Ngăn active fault injection thiếu approval"
+        ],
+        "limitations": [
+          "Plan READY chưa phải measured recovery",
+          "Cần staging/device/service owner thật cho execution"
+        ]
+      },
+      "operationalBranches": [
+        {
+          "id": "RESILIENCE_HYPOTHESIS",
+          "titleVi": "Hypothesis và steady state",
+          "summaryVi": "Khai báo failure mode, SLO baseline, blast radius và kỳ vọng graceful degradation",
+          "childrenVi": [
+            "Dependency",
+            "SLO/SLI",
+            "Blast radius",
+            "Expected behavior"
+          ]
+        },
+        {
+          "id": "BOUNDED_INJECTION",
+          "titleVi": "Bounded fault injection",
+          "summaryVi": "Gắn stop condition, owner approval, rollback và cleanup trước active execution",
+          "childrenVi": [
+            "Target",
+            "Approval",
+            "Abort threshold",
+            "Injection",
+            "Cleanup"
+          ]
+        },
+        {
+          "id": "RECOVERY_MEASUREMENT",
+          "titleVi": "Đo recovery và RTO/RPO",
+          "summaryVi": "Thu metrics/logs/traces, đo thời gian hồi phục và kiểm data integrity sau restore",
+          "childrenVi": [
+            "RTO",
+            "RPO",
+            "Recovery evidence",
+            "Data integrity",
+            "Follow-up"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "level": 2,
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
+          "title": "Output contract"
+        },
+        {
+          "level": 2,
+          "title": "References"
+        }
+      ],
+      "interface": {
+        "displayName": "Reliability Resilience QA",
+        "shortDescription": "Verify recovery and failure resilience",
+        "defaultPrompt": "Use $reliability-resilience-qa to design a safe resilience test with failure injection, recovery evidence, and stop conditions."
+      },
+      "resources": {
+        "scripts": 2,
+        "references": 1,
+        "assets": 0
+      },
+      "metrics": {
+        "lines": 40,
+        "words": 287
+      },
+      "sourcePath": "reliability-resilience-qa/SKILL.md",
+      "source": "---\nname: reliability-resilience-qa\ndescription: Design and assess reliability, fault-injection, recovery, observability, disaster-recovery, RTO/RPO, retry, timeout, and graceful-degradation tests with explicit stop conditions. Trigger on resilience, chaos, fault injection, recovery testing, failover, disaster recovery, RTO, RPO, retry, timeout, graceful degradation, or incident readiness; do not require the skill name. Plans are local and read-only until an authorized execution is approved.\n---\n\n# Reliability & Resilience QA\n\nMake failure testing safe and measurable. The skill validates a resilience plan and its proof obligations; it does not inject faults into production, delete data, stop services, or run a load test by implication.\n\n## Workflow\n\n1. Define target, steady-state SLOs, dependency map, failure hypothesis, blast radius, and test environment\n2. Specify injection, observation, stop conditions, rollback/cleanup, recovery evidence, and RTO/RPO measurements\n3. Validate the plan locally with `validate_resilience_plan.py`\n4. Obtain owner approval immediately before any active injection or concurrency\n5. Execute one bounded experiment, observe metrics/logs/traces, restore the system, and compare measured recovery with the hypothesis\n\nHand measured recovery and unresolved resilience risk to `release-governance-qa` for the release gate\n\n```bash\npython3 reliability-resilience-qa/scripts/validate_resilience_plan.py resilience-plan.json\n```\n\n## Hard gates\n\n- Production or shared environment execution is `BLOCKED` without explicit owner approval, rollback, and stop conditions\n- Missing steady state, observability, cleanup, recovery evidence, or RTO/RPO target is `BLOCKED`\n- Never use destructive failure injection as a substitute for a missing test environment\n- Keep measured recovery separate from a source-derived or planned expectation\n- A retry or timeout check must prove bounded behavior and avoid amplifying traffic\n\n## Output contract\n\nReturn pretty JSON with `status`, `passed`, `errors`, `warnings`, `gates`, `hypothesis`, `recovery`, and `limitations`. Active experiments additionally require run ID, start/stop timestamps, observed metrics, cleanup proof, and owner approval reference.\n\n## References\n\n- [Resilience matrix](references/RESILIENCE_MATRIX.md)\n- [Safe plan validator](scripts/validate_resilience_plan.py)\n",
+      "sourceHash": "7c061c87bbcf3a9d8d02260e283699f36d4b2ae12c002b18fdde94e031fb947b"
+    },
+    {
       "name": "testcase-template",
       "title": "Test Case Template",
       "folder": "testcase-template",
@@ -2541,6 +3043,103 @@
       "sourcePath": "testcase-template/SKILL.md",
       "source": "---\nname: testcase-template\ndescription: Generate, edit, or review structured testcase documents with complete Markdown created before Excel and synchronized IDs/content from one JSON source. Trigger on write/create/review testcase, test case, test scenario, Scenario ID/Name, testcase Excel/CSV/Markdown, or explicit API testcase requests for endpoints, OpenAPI/Swagger, Postman, or curl; do not require the skill name. Use UI/functional flow by default and enable API mode only when explicitly requested. Not for exploratory notes or bug reports.\n---\n\n# Test Case Template\n\n**Core principle:** Same set of columns — do not invent new columns.\n\nOriginal template: `assets/Template.xlsx` (1 shared file for ALL projects). All project information (name, code, modules) is configurable from JSON input. **NO need to create separate templates per project**.\n\n> **When to use**: User wants to write Excel test cases according to team standards.\n> **DIFFERENT** from `qa-run` (live exploratory) and `playwright-pom-automation` (code automation `.spec.ts`): this skill = document Excel test cases (manual test design).\n> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI. Members can run immediately with any project after git clone.\n\n## Cross-model hard gates\n\nApply this exact order for all models:\n\n1. Choose mode before writing: default to current UI/FUNCTION flow; only use API mode when user explicitly requests writing API testcases or writing testcases for endpoints, OpenAPI/Swagger, Postman or curl; merely mentioning API artifacts is not enough to switch modes\n2. If API mode has source files, run `scripts/import-api-spec.py` first; do not manually read and copy endpoints\n3. Check `review_required`; if items remain, stop Excel generation and get missing expected from user or documents\n4. Read requirement/AC and list requirement IDs before writing cases\n5. Choose UI or FUNCTION correctly based on the behavior to prove; do not call a case UI-only just because it operates via dialog/button\n6. Split scenario when field, behavior or AC differs; one scenario contains only one specific functional group\n7. Create JSON with correct schema, preserve Scenario ID, Testcase ID and requirement reference\n8. Run `scripts/gen-testcases.py`; script must create `<output>.md` before `<output>.xlsx` with the same `Asia/Ho_Chi_Minh` date\n9. Read Markdown first then compare with Excel: number of cases, Scenario/Testcase ID and design content must match; columns I-M exist only in Excel and are left blank\n\nIf expected is not in requirements, pause that case in a clarification state; do not fabricate business rules.\n\n## The trap this skill exists to prevent\n\n**Freeform columns per author** — each tester invents their own column set, breaking cross-project aggregation and review tooling. Skill enforces a single shared template so test cases from different projects can be queried, compared, and rolled up.\n\n## Process\n\n### 1. Read & extract requirements\n**MANDATORY to stick to documents**. Every case must trace to 1 AC. If NO document -> ask user. Plane fetch details: `@references/plane-integration.md`.\n\n### 2. Organize in 2 parts + type order\n```\nPHẦN 1 — UI: 1.1. USER INTERFACE (kind=ui)    ← col C, xanh nhạt\n└─ Group (LOGIN, REGISTER...)                 ← col C, group header\n   └─ Scenario (SCN-LOG-001)                  ← col B\n      └─ Cases — type order\n\nPHẦN 2 — FUNCTIONAL: 1.2. FUNCTION (kind=function) ← col C, xanh lá\n└─ Group (LOGIN, REGISTER...)\n   └─ Scenario (SCN-LOG-001)\n      └─ Cases — type order\n```\n**Same feature can exist in both parts** (UI test for display, Functional test for logic). For UI testcases (`kind=ui`), you MUST read [references/ui-testcases.md](references/ui-testcases.md) to follow the UI testing checklist.\n\n**API mode is optional**: only when user requests API testcases, read [references/api-testcases.md](references/api-testcases.md). API cases still go in `1.2. FUNCTION`, use `kind=api` and keep columns B-M. If user does not request API, do not read this reference and continue current flow with `kind=ui` or `kind=function`.\n\n**Rule: 1 scenario = 1 specific functional group** (DO NOT group multiple fields/behaviors):\n- Split scenario when **field/input** differs (email validation != password validation -> 2 scenarios)\n- Split scenario when **behavior** differs (submit-fail != account-lock)\n- Split scenario when **AC** differs (AC3 != AC4 != AC5)\n- Same `scenario_name` SHARED across cases IN THE SAME scenario — but DO NOT share scenario_name for validations of different fields\n\nWRONG vs CORRECT examples for login page:\n```\n❌ WRONG: 1 scenario \\\"Validation email and password\\\" groups 6 cases\n       (3 cases email validation + 2 cases password validation + 1 case both empty)\n       -> Hard for tester to filter, hard to check coverage, ambiguous scenario_name\n\n✅ CORRECT: split 2 separate scenarios\n   - SCN-LOG-002 \\\"Validation email\\\"        -> email cases (empty, missing @, missing domain, subdomain)\n   - SCN-LOG-003 \\\"Validation password\\\"     -> password cases (empty, both empty, <8 chars, =8 chars)\n   -> Each scenario has 1 clear group, tester can filter, coverage easy to check\n```\n\n### 3. Gen cases by type order\n\n**Before writing any case, identify the BB technique:**\n\n- `happy` / `alternative` → Use Case Testing\n- `validation` → EP + BVA; if ≥2 combined conditions → **build Decision Table first**\n- `edge` → BVA: list min−1, min, min+1, max−1, max, max+1 before writing\n- `negative` → EP (invalid partition) + Error Guessing checklist\n- `error` → Error Guessing + State Transition\n- `additional` → Error Guessing; always flag `Ref: (out-of-spec)`\n\n8 types: `happy → alternative → validation → edge → negative → error → ui → additional`. Full technique guide + JSON examples: `@references/blackbox-techniques.md`.\n\n### 4. Build JSON input\n```json\n{\n  \"project\": {\"code\": \"BCP\", \"name\": \"BCP AI\", ...},\n  \"scenarios\": [{\n    \"scenario_id\": \"SCN-LOG-001\",\n    \"requirement\": \"AC1\",\n    \"scenario_name\": \"Đăng nhập thành công\",\n    \"cases\": [{\n      \"type\": \"happy\", \"req\": \"AC1\",\n      \"description\": \"Xác minh rằng người dùng có thể đăng nhập với email + password đúng\",\n      \"pre_condition\": \"Có account test\",\n      \"procedure\": \"1. Mở /login\\n2. Nhập email + password\\n3. Click nút Login\",\n      \"expected\": \"1. Đăng nhập thành công\",\n      \"priority\": \"High\"\n    }]\n  }]\n}\n```\n- `scenario_name` (string) — functional group name, **SHARED** for multiple cases in same scenario\n- `scenario_id` (string) — scenario code, e.g. `SCN-LOG-001`\n- Each case has `type` (1 of 8) + `req` (trace to AC) - MANDATORY\n- In API mode specifically, each case adds `api` object; see [examples/sample-api-input.json](examples/sample-api-input.json). Without `api` object, generator uses `pre_condition`, `procedure`, `expected` as is\n\n### 5. Run gen script\n\nIf user requests API testcases from source file/folder, import first:\n\n```bash\npython3 scripts/import-api-spec.py api-file output-api.json \\\n  --project-code CODE --project-name \"Project Name\"\n```\n\nOnly run Excel step when command returns exit code `0` and `review_required` is empty. For endpoints/curls without declared response status, user can confirm and pass `--default-success-status 200`; do not auto-add this option without confirmation.\n\n```bash\npython3 scripts/gen-testcases.py input.json OneBrain_Testcases.xlsx\n```\n-> Script auto-generates `OneBrain_Testcases_<DD-MM-YYYY>.md` first -> copies template -> updates Cover from JSON -> cleanups -> writes section/group/case rows -> hardcodes matching Testcase IDs -> saves `OneBrain_Testcases_<DD-MM-YYYY>.xlsx`.\n\n### Artifact filename date\n\n- Append the `Asia/Ho_Chi_Minh` creation date immediately before the extension as `_DD-MM-YYYY`, for example `OneBrain_Testcases_20-07-2026.xlsx`\n- Use the same date for the Markdown and Excel companions\n- Do not append a second date when the requested basename already ends in `_DD-MM-YYYY`\n- Do not rename existing artifacts\n- When the user supplies an exact filename that must remain unchanged, set `QA_PRESERVE_EXACT_FILENAME=1` for the generator\n\nMarkdown is the AI-readable version to understand testcases without parsing Excel. Read [references/markdown-testcases.md](references/markdown-testcases.md) and do not edit the two files independently.\n\nIn API mode, generator only maps the `api` object to F/G/H. Regular testcases lack the `api` object so it keeps the current execution path and row height settings.\n\n### Output cleanup (auto)\n\nOriginal template `assets/Template.xlsx` intentionally keeps **many sample group headers** (REGISTER, LOGIN, HOME, BOOKING, PROFILE, SETTING, NOTIFICATION, DASHBOARD) as reference for AI to know structure + row padding from Excel. When generating output, script automatically:\n\n1. **Dynamic whitelist**: only keep group headers declared in `JSON sections[].groups[].name`. Unused sample groups -> deleted completely.\n2. **Dynamic group**: auto-creates groups/tags not already in template and allocates enough rows for all cases\n3. **Delete rows**: any remaining empty rows (skipped groups + sample case rows) -> completely deleted via `ws.delete_rows()`, not keeping fill color / row height.\n4. **Sequential numbering**: `[CODE-UI-NN]` for UI (1-4), `[CODE-NN]` for Functional (5-30) in the same file.\n\n**Result**: output file is compact, containing only actual data for current project (e.g. demo project with 1 LOGIN group x 2 sections -> file ~43 rows instead of 657 template rows).\n\n### Column schema (Test cases_App sheet)\n\n| Col | Fill | Notes |\n|---|---|---|\n| B | Scenario ID | e.g. `SCN-LOG-001` |\n| C | **Scenario Name** (shared) | Feature group name, not the test case name |\n| D | **Test case ID** (hardcoded) | `[CODE-NN]` (Functional) or `[CODE-UI-NN]` (UI). Sequential. |\n| E | **Description** (manual) | Start with \"Verify that...\", NO technical prefix |\n| F | Pre-condition | State/data required before step 1 |\n| G | Procedure | Numbered steps `1. ...\\n2. ...` — manual language, detailed enough to execute without interpretation |\n| H | Expected Results | Observable, measurable outcome |\n| I-M | **LEAVE BLANK** | Tester fills during execution |\n\n**Important**: Columns I-M are left empty by the generator. Script applies style only — no value fill. Testers fill these when running actual tests.\n\n### Manual-Friendly Writing Rules (MANDATORY for every case)\n\n> **Invariant rule**: Every testcase in this system is written for a **Manual Tester who reads the Excel sheet and executes immediately** — not for developers or API tools.\n\n> **Language rule**: Rule files and skill instructions are written in English for faster AI parsing. However, ALL testcase content written into Excel/Markdown (Description, Pre-condition, Procedure, Expected Results) MUST be in **Vietnamese**, as Testers read and execute from those files.\n\n**1. Description — Use end-user language, written in Vietnamese:**\n- ✅ CORRECT: *Xác minh rằng người dùng không thể đăng nhập khi để trống ô Mật khẩu*\n- ❌ WRONG: *Verify POST /auth/login returns 400 when password=null*\n- ❌ WRONG: *[TC-03][negative] Empty password validation*\n\n**2. Procedure / Steps — Detailed enough for anyone to follow without interpretation:**\n\nEach step must specify: **What to do** + **Where** + **Exact value/content** (if applicable). Never combine multiple actions into one line.\n\n- ✅ CORRECT (Vietnamese content):\n  ```\n  1. Mở trình duyệt và truy cập trang đăng nhập: [URL]/login\n  2. Tại ô \"Email\", nhập email hợp lệ: test@example.com\n  3. Tại ô \"Mật khẩu\", để trống (không nhập gì)\n  4. Nhấp vào nút \"Đăng nhập\"\n  5. Quan sát kết quả hiển thị trên màn hình\n  ```\n- ❌ WRONG: *Nhập email hợp lệ và để trống mật khẩu, click login*\n- ❌ WRONG: *Send request with empty password field*\n\n**3. Expected Results — Observable, measurable, visible to the eye:**\n\nDescribe exactly what the Tester sees or can verify after performing the steps. Avoid vague language.\n\n- ✅ CORRECT (Vietnamese content):\n  ```\n  1. Hệ thống không thực hiện đăng nhập\n  2. Dưới ô \"Mật khẩu\" hiển thị thông báo màu đỏ: \"Mật khẩu không được để trống\"\n  3. Trang không chuyển hướng, vẫn ở màn hình đăng nhập\n  ```\n- ❌ WRONG: *Hệ thống xử lý đúng*\n- ❌ WRONG: *Response body: {\"error\": \"password required\"}*\n\n**4. Forbidden technical language in columns F, G, H (write in Vietnamese instead):**\n\n| Instead of this ❌ | Write this ✅ (Vietnamese) |\n|---|---|\n| `POST /api/login` | Nhấp nút \"Đăng nhập\" |\n| `HTTP 400 Bad Request` | Hiển thị thông báo lỗi |\n| `response.body.token` | Hệ thống cấp quyền truy cập |\n| `null`, `undefined`, `NaN` | Để trống, không nhập gì |\n| `assert status == 200` | Kiểm tra trang chuyển hướng về Dashboard |\n\n### Human-readable format\n\n- No trailing `.` at the end of Scenario Name, Description, Pre-condition, Procedure, or Expected Results\n- No emoji/icons in testcase content\n- Keep Scenario ID, Testcase ID, requirement ID, URL, filename, formula, code, and decimal numbers unchanged\n- New Markdown and Excel filenames must share the same basename with suffix `_DD-MM-YYYY`\n- Generator auto-validates icons and strips trailing dots from prose\n\n### Template structure details\n\nSee `@references/template-schema.md` for details on the 4 sheets (Cover, Test cases_App, Dropdown Keys, Report).\n\n## Black-Box Techniques\n\nMọi case phải dùng it́ nhát 1 kĩ thuạt BB. Xác định khi làm buước 3, ghi vào `bb_technique` để trace (generator bỏ qua, không ảnh huưởng Excel).\n\n| Kĩ thuạt | Type áp dụng | Khi nào bát buọc |\n|---|---|---|\n| **Equivalence Partitioning (EP)** | `validation`, `negative` | Luôn áp dụng khi có input partition |\n| **Boundary Value Analysis (BVA)** | `edge`, `validation` | Khi field có giới hạn số, độ dài, ngày |\n| **Decision Table** | `validation`, `negative`, `happy` | Bắt buộc khi ≥2 điều kiện kết hợp |\n| **State Transition** | `happy`, `alternative`, `error`, `negative` | Khi object có ≥2 trạng thái rõ ràng |\n| **Use Case Testing** | `happy`, `alternative`, `ui` | Mặc định cho flow AC |\n| **Error Guessing** | `negative`, `error`, `additional` | Luôn áp dụng sau các kỹ thuật khác |\n| **Pairwise** | `validation`, `edge` | Khi ≥3 input field độc lập |\n\n**Decision rule:**\n\n```\n≥2 điều kiện kết hợp?  → Decision Table bắt buộc trước\nCó giá trị biên (độ dài, số, ngày)?  → BVA bắt buộc cho edge\nCó ≥2 traạng thái?  → Veẽ state diagram trướng\nCó ≥3 field đọc lạp?  → Dùng Pairwise thay full factorial\nCòn lại?  → Use Case Testing + EP + Error Guessing\n```\n\nXem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.md`](references/blackbox-techniques.md)\n\n## Red flags\n\n| Symptom | Why it's wrong | Fix |\n|---|---|---|\n| Output file > 200 rows for a small project | Sample rows from template not deleted | Verify dynamic whitelist in JSON includes all required groups |\n| Non-sequential test case IDs (`[BCP-01]`, `[BCP-03]` missing `[BCP-02]`) | STT offset when type order changes | Re-run script; ensure correct 8-type canonical order |\n| Columns I-M pre-filled with data | Script applied value fill instead of style only | Verify `gen-testcases.py` branch applies style only, no value fill |\n| Description starts with `[STT]` or `[Type]` | Manual format violated | AI must reformat before writing to JSON |\n| Procedure is a single line combining multiple actions | Tester cannot identify where to act | Split each action into its own numbered step; include field/button name and input value |\n| Procedure or Expected uses technical terms (`POST`, `HTTP 400`, `null`, `assert`) | Not manual-tester language | Replace with UI descriptions the tester sees (button names, displayed messages) |\n| Expected result is vague (\"system works correctly\", \"error handled\") | Not measurable; tester does not know what to check | State the exact message shown, the page redirected to, or data displayed |\n| Expected result contains JSON body or HTTP status code | Written as an API test; tester cannot verify visually | Replace with what the user sees on the UI |\n| New columns added (Method/Endpoint/Status) | Breaks fixed template format | Put API data into F/G/H per the API reference |\n| API mode auto-enabled for regular testcases | Changes current configuration | Only enable when user explicitly requests API testcases |\n| API case only checks status code | Missing contract and business effect | Also verify body/schema/headers/side-effects when requirement defines them |\n| Real token, cookie, or API key written into workbook | Credential leak into artifact | Use placeholder like `<valid_token>` |\n| Status 200 assumed for endpoint with no response contract | Fabricated expected result | Let importer set `review_required` then ask user or read docs |\n| Swagger read manually with missed endpoints | Non-deterministic; weak models make mistakes | Always run `scripts/import-api-spec.py` |\n| Only Excel created, no Markdown testcase companion | AI must parse workbook next time | Always use generator to create Markdown before Excel |\n| Markdown and Excel content diverge | Two artifacts edited independently | Fix JSON source then regenerate both |\n\n## Common mistakes\n\n- **Every case MUST have `req` pointing to one AC** (Notes: `Ref: ACx`). No ref → case cannot be traced, fails coverage check.\n\n- **Grouping different fields/behaviors into one scenario** — e.g. one scenario \"Email and password validation\" combining both. WRONG. Must split into two: \"Email validation\" and \"Password validation\". See Process step 2 for split criteria.\n\n- **`additional` cases (outside spec)** → flag clearly with `Ref: (out-of-spec)` and notify user. Do not ship as a normal case.\n\n- **NEVER fabricate expected results** from vague spec — ask user. Spec says \"handle error gracefully\" → DO NOT self-define what \"gracefully\" means.\n\n- **Description format MANUAL**: \"Verify that...\" — no `[STT]`, `[Type]`, stray `/`. This format lets testers reading the Excel understand immediately.\n\n- **Multiple cases in the SAME scenario may share `scenario_name`** (shared feature group name). Don't duplicate names per case. BUT do not merge cases of different fields/behaviors — split them (see Process step 2).\n\n- **When cloning to a new machine**: run `pip install openpyxl PyYAML` first. `PyYAML` is required for Swagger/OpenAPI YAML. API key configured once in `config/api_keys.json` (gitignored) — shared across all 3 skills.\n\n- **Key configuration**: one shared config file `../config/api_keys.json` (gitignored), usable by all 3 skills. See [README.md](../README.md) section \"API Keys\".\n\n## References\n\n- [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), shared across all projects\n- [examples/sample-input.json](examples/sample-input.json) — complete JSON input example\n- [examples/sample-api-input.json](examples/sample-api-input.json) — optional, used only when user requests API testcases\n- [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)\n- [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer for OpenAPI/Swagger/Postman/JSON/curl/source endpoints\n- [references/template-schema.md](references/template-schema.md) — 4 sheet details (Cover, Test cases_App, Dropdown Keys, Report)\n- [references/test-types.md](references/test-types.md) — 8 test case types + BB technique mapping\n- [references/blackbox-techniques.md](references/blackbox-techniques.md) — 7 BB techniques: EP, BVA, Decision Table, State Transition, Use Case, Error Guessing, Pairwise\n- [references/ui-testcases.md](references/ui-testcases.md) — UI testing checklist (8 categories)\n- [references/api-testcases.md](references/api-testcases.md) — mapping and coverage for API mode only\n- [references/markdown-testcases.md](references/markdown-testcases.md) — contract: Markdown created before Excel, AI read order\n- [references/plane-integration.md](references/plane-integration.md) — fetch AC from Plane API\n- Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)\n- Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)\n",
       "sourceHash": "811e31798ff5ff6ebb0f3b55788a683617ca9b9445ae3b4078c00eb7c9deb82e"
+    },
+    {
+      "name": "ui-ux-design-qa",
+      "title": "UI/UX Design QA",
+      "folder": "ui-ux-design-qa",
+      "group": "design",
+      "description": "Audit UI and UX intent against requirements, design references, responsive layouts, interaction states, visual hierarchy, keyboard behavior, and screenshot evidence. Trigger on UI/UX review, Figma, design tokens, visual regression, responsive design, usability, layout, interaction states, or design-to-code fidelity; do not require the skill name. Use local artifacts first and route live browser execution to qa-run with same-session evidence.",
+      "principle": "Review the design contract before judging implementation quality. This skill covers visual and interaction intent; WCAG conformance is handed to accessibility-qa, while live navigation and network/console observation are handed to qa-run.",
+      "vi": {
+        "summary": "Đối chiếu design-to-code, visual hierarchy, responsive states, UX interaction và screenshot/video evidence",
+        "advantages": [
+          "Gắn visual review với requirement, viewport, state và evidence",
+          "Tách rõ design mismatch, implementation mismatch và accessibility handoff"
+        ],
+        "limitations": [
+          "Không thay thế human visual review hoặc live browser observation",
+          "Không tự kết luận WCAG nếu chưa qua accessibility-qa"
+        ]
+      },
+      "operationalBranches": [
+        {
+          "id": "DESIGN_REQUIREMENT_TRACE",
+          "titleVi": "Trace design và requirement",
+          "summaryVi": "Giữ design source, requirement, implementation và runtime observation thành các provenance riêng",
+          "childrenVi": [
+            "Requirement IDs",
+            "Design reference/token",
+            "Implementation observation",
+            "Runtime observation"
+          ]
+        },
+        {
+          "id": "VISUAL_STATE_REVIEW",
+          "titleVi": "Review visual và interaction states",
+          "summaryVi": "Kiểm tra hierarchy, spacing, typography, responsive và các state có thể nhìn thấy",
+          "childrenVi": [
+            "Default",
+            "Loading",
+            "Validation",
+            "Error",
+            "Empty",
+            "Success",
+            "Desktop/Mobile"
+          ]
+        },
+        {
+          "id": "UIUX_EVIDENCE",
+          "titleVi": "Evidence UI/UX",
+          "summaryVi": "Chỉ kết luận visual PASS khi có screenshot/video và ghi rõ limitation của review tĩnh",
+          "childrenVi": [
+            "Screenshot/video",
+            "State ID",
+            "Viewport",
+            "Accessibility handoff",
+            "Same-session browser run"
+          ]
+        }
+      ],
+      "headings": [
+        {
+          "level": 2,
+          "title": "Workflow"
+        },
+        {
+          "level": 2,
+          "title": "Local contract"
+        },
+        {
+          "level": 2,
+          "title": "Hard gates"
+        },
+        {
+          "level": 2,
+          "title": "Output contract"
+        },
+        {
+          "level": 2,
+          "title": "References"
+        }
+      ],
+      "interface": {
+        "displayName": "UI/UX Design QA",
+        "shortDescription": "Review visual UX and design-to-UI fidelity",
+        "defaultPrompt": "Use $ui-ux-design-qa to audit this UI against its design intent, responsive states, visual evidence, and UX acceptance criteria."
+      },
+      "resources": {
+        "scripts": 2,
+        "references": 1,
+        "assets": 0
+      },
+      "metrics": {
+        "lines": 45,
+        "words": 376
+      },
+      "sourcePath": "ui-ux-design-qa/SKILL.md",
+      "source": "---\nname: ui-ux-design-qa\ndescription: Audit UI and UX intent against requirements, design references, responsive layouts, interaction states, visual hierarchy, keyboard behavior, and screenshot evidence. Trigger on UI/UX review, Figma, design tokens, visual regression, responsive design, usability, layout, interaction states, or design-to-code fidelity; do not require the skill name. Use local artifacts first and route live browser execution to qa-run with same-session evidence.\n---\n\n# UI/UX Design QA\n\nReview the design contract before judging implementation quality. This skill covers visual and interaction intent; WCAG conformance is handed to `accessibility-qa`, while live navigation and network/console observation are handed to `qa-run`.\n\n## Workflow\n\n1. Resolve the exact page, design reference, requirement IDs, viewport matrix, and allowed evidence location\n2. Compare structure, spacing, typography, color, hierarchy, content states, interaction feedback, and responsive behavior\n3. Check default, loading, validation, error, empty, and success states where the feature supports them\n4. Verify keyboard/focus and contrast expectations through `accessibility-qa`; do not treat a screenshot-only review as an accessibility pass\n5. For a live app, use `qa-run` and keep screenshot, console, page-error, and network evidence in the same browser session\n6. Classify each observation as `PASS`, `FAIL`, `BLOCKED`, or `CANDIDATE`; never infer a business rule from visual appearance alone\n\n## Local contract\n\nUse the deterministic checker when a review packet is available:\n\n```bash\npython3 ui-ux-design-qa/scripts/check_uiux_artifact.py review.json --base-dir .\n```\n\nThe packet must map screens and states to requirement IDs, viewport evidence, and existing screenshot or video paths. The checker is a preflight, not a pixel-perfect replacement for a human review.\n\n## Hard gates\n\n- No target, design source, expected behavior, or role/data means `BLOCKED`, not a guessed review\n- Do not mutate an application, submit a form, or change design files during discovery without explicit approval\n- A `PASS` visual claim requires media evidence; JSON, DOM, or trace data alone is insufficient\n- Do not claim WCAG compliance from this skill; use `accessibility-qa` for automated and manual accessibility evidence\n- Keep design-source, requirement, implementation, and runtime evidence provenance separate\n\n## Output contract\n\nWrite a pretty-printed JSON report with `passed`, `errors`, `warnings`, `checks`, `screens`, and `evidence`. Findings must include a stable screen/state identifier, expected source, observed result, severity, and evidence path. A live report must also reference the same-session browser run ID.\n\n## References\n\n- [Review matrix](references/REVIEW_MATRIX.md)\n- [Deterministic artifact checker](scripts/check_uiux_artifact.py)\n",
+      "sourceHash": "5959df267892c5adb5d9dec50c355583a95416e504110cc3226df3a904368416"
     },
     {
       "name": "whitebox-qa",

@@ -51,7 +51,7 @@ Dry-run:
 ```powershell
 .\scripts\setup.ps1 -Agent antigravity -Profile core -DryRun -SkipDeps -Yes
 
-`-Profile core` cài 10 skill thường dùng và là mặc định. `-Profile full` cài đủ 18 skill; `ego-browser` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
+`-Profile core` cài 10 skill thường dùng và là mặc định. `-Profile full` cài đủ 23 skill; `ego-browser` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
 
 Khi chuyển từ full về core, installer chuyển skill chuyên sâu sang `qa-skill-disabled` ngoài discovery thay vì xóa
 

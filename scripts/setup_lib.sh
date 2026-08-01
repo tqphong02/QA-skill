@@ -40,7 +40,7 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 18 skill.
+Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 23 skill.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
@@ -223,7 +223,7 @@ warn_if_node_too_old() {
 
 # ==== Skills resolution ====
 CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa" "postman")
-SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "whitebox-qa" "ego-browser")
+SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "whitebox-qa" "ego-browser" "ui-ux-design-qa" "release-governance-qa" "appsec-supply-chain-qa" "reliability-resilience-qa" "compatibility-localization-qa")
 FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
 DEFAULT_SKILLS=("${CORE_SKILLS[@]}")
 RETIRED_SKILLS=("jmeter-qa")

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compatibility Localization QA"
+  short_description: "Check browsers devices locales and RTL"
+  default_prompt: "Use $compatibility-localization-qa to create a browser-device-locale matrix and verify i18n, timezone, currency, and RTL risks."

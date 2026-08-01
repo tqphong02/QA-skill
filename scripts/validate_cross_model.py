@@ -14,7 +14,9 @@ SKILLS = (
     "accessibility-qa",
     "ai-quality-qa",
     "api-contract-qa",
+    "appsec-supply-chain-qa",
     "business-analysis",
+    "compatibility-localization-qa",
     "data-quality-qa",
     "doc-to-md",
     "ego-browser",
@@ -27,7 +29,10 @@ SKILLS = (
     "playwright-pom-automation",
     "postman",
     "qa-run",
+    "release-governance-qa",
+    "reliability-resilience-qa",
     "testcase-template",
+    "ui-ux-design-qa",
     "whitebox-qa",
 )
 
@@ -135,6 +140,11 @@ REQUIRED = {
         "Test mobile app trên Android và iOS",
         "Phân tích white-box function processPayment",
         "Tạo JMeter JMX cho API",
+        "Review UI login theo Figma",
+        "Đánh giá release này có go/no-go không",
+        "Quét secret, dependency và SBOM readiness",
+        "Thiết kế resilience test khi payment timeout",
+        "Kiểm tra browser, locale vi-VN, timezone và RTL",
         "GitHub MCP đã có skill nhưng không dùng được",
         "Cài riêng qa-run cho intern",
     ],
@@ -274,6 +284,51 @@ REQUIRED = {
         "Mỗi lần generate Excel, tạo Markdown",
         "Testcase ID giống Excel",
         "Không mở Excel chỉ để hiểu testcase design",
+    ],
+    "ui-ux-design-qa/SKILL.md": [
+        "Workflow",
+        "qa-run",
+        "accessibility-qa",
+        "check_uiux_artifact.py",
+        "Hard gates",
+        "Output contract",
+        "screenshot or video",
+    ],
+    "release-governance-qa/SKILL.md": [
+        "Workflow",
+        "release quality gate",
+        "evaluate_release.py",
+        "Hard gates",
+        "Output contract",
+        "P0/P1",
+        "BLOCKED",
+    ],
+    "appsec-supply-chain-qa/SKILL.md": [
+        "Workflow",
+        "pentest-run",
+        "check_supply_chain.py",
+        "Hard gates",
+        "Output contract",
+        "Candidate",
+        "Redact values in reports",
+    ],
+    "reliability-resilience-qa/SKILL.md": [
+        "Workflow",
+        "fault-injection",
+        "validate_resilience_plan.py",
+        "Hard gates",
+        "Output contract",
+        "RTO/RPO",
+        "BLOCKED",
+    ],
+    "compatibility-localization-qa/SKILL.md": [
+        "Workflow",
+        "qa-run",
+        "mobile-qa",
+        "check_compatibility_matrix.py",
+        "Hard gates",
+        "Output contract",
+        "RTL",
     ],
     "qa-run/references/KNOWLEDGE_HANDOFF.md": [
         "qa-knowledge/<feature-slug>-business-guide.md",
@@ -775,6 +830,7 @@ def main():
             or ".git" in path.parts
             or "node_modules" in path.parts
             or "qa-knowledge" in path.parts
+            or "evidence" in path.parts
             or ".pentest" in path.parts
             or "coverage" in path.parts
             or "dist" in path.parts
