@@ -90,6 +90,8 @@ node scripts/writers/render-intelligence-html.mjs \
   --check /absolute/report.html
 ```
 
+Mọi interactive companion được sinh bởi renderer này phải dùng presentation contract `catalog-v2`, cùng visual family và interaction contract với `skill-catalog/.../QA-skill.html`: topbar QA-skill, tab nội bộ, intro/stat panel, canvas tương tác, tìm kiếm, detail drawer và dark mode. Trên trackpad, cuộn 2 ngón phải pan theo cả trục X/Y; chỉ pinch hoặc `Ctrl`/`Cmd`+wheel mới zoom. Edge label phải là pill có nền và dùng progressive disclosure: mặc định ẩn, chỉ hiện khi hover hoặc route active. Business-flow HTML phải sinh route chip từ module; chip nhánh phải giữ prefix/suffix của primary flow để hiển thị tuyến end-to-end. Click/tap node không vượt drag threshold phải chỉ sáng các edge vào/ra và mở detail drawer gồm `Làm được gì` lấy từ `module.purpose`, `Thông tin flow` lấy từ actor/entry/exit/status và `Đường đi liên quan` liệt kê `Đi từ`/`Đi tới`. `--check` phải từ chối output legacy hoặc output thiếu `trackpadPan`, `gestureZoom`, `pointerNodeDetail`, `readableEdgeLabels`, `progressiveEdgeLabels`, `routeNavigation`, `capabilityDetails`
+
 For Graphify input, the renderer embeds the complete retained node/relation index and exposes search across all of it. The SVG canvas intentionally displays a readable overview neighborhood instead of mounting thousands of SVG elements at once. Never describe the canvas count as project coverage
 
 The renderer must remain self-contained, use no external scripts or stylesheets, include dark mode, keyboard-operable nodes, a dismissible detail panel, full-project search, reduced-motion handling and pan/zoom controls

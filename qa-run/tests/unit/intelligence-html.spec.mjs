@@ -36,6 +36,12 @@ test('Intelligence HTML renders a self-contained accessible Graphify companion',
 
   const output = fs.readFileSync(html, 'utf8');
   assert.match(output, /^<!doctype html>/i);
+  assert.match(output, /qa-effective-html-layout" content="catalog-v2"/);
+  assert.match(output, /id="tab-diagram"/);
+  assert.match(output, /id="globalSearch"/);
+  assert.match(output, /transform\.x -= event\.deltaX/);
+  assert.match(output, /gesturechange/);
+  assert.match(output, /if \(activateNode\) showDetail/);
   assert.match(output, /<g id="svg-content"/);
   assert.match(output, /id="themeToggle"/);
   assert.match(output, /id="detailClose"/);
@@ -101,6 +107,43 @@ test('Intelligence HTML renders the canonical architecture map when Graphify is 
   assert.match(output, /qa-diagram-node-count" content="4"/);
 });
 
+test('Intelligence HTML renders route chips, readable edge labels and related-flow detail for business analysis', () => {
+  const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'business-flow-html-'));
+  const input = path.join(temporaryDir, 'business-flow.json');
+  const html = path.join(temporaryDir, 'business-flow.html');
+  fs.writeFileSync(input, JSON.stringify({
+    project: 'Example',
+    scope: 'Route navigation',
+    modules: [
+      { name: 'Primary — flow', purpose: 'Main route', flows: [
+        { id: 'P-01', name: 'Start', status: 'verified' },
+        { id: 'P-02', name: 'Finish', status: 'verified' },
+      ] },
+      { name: 'Branch — flow', purpose: 'Alternative route', flows: [
+        { id: 'B-01', name: 'Branch step', status: 'verified' },
+      ] },
+    ],
+    flow_links: [
+      { from_flow: 'P-01', to_flow: 'P-02', label: 'main' },
+      { from_flow: 'P-01', to_flow: 'B-01', label: 'branch entry' },
+      { from_flow: 'B-01', to_flow: 'P-02', label: 'branch return' },
+    ],
+    questions: [],
+    review_coverage: [],
+  }));
+
+  const rendered = spawnSync(process.execPath, [renderer, '--input', input, '--output', html], { encoding: 'utf8' });
+  assert.equal(rendered.status, 0, rendered.stderr);
+  const output = fs.readFileSync(html, 'utf8');
+  assert.match(output, /data-route-id="route-2"[^>]*>Branch<\/button>/);
+  assert.match(output, /class="edge-label"[^>]+transform=[\s\S]*?<rect/);
+  assert.match(output, /id="detailRoutes"/);
+  assert.match(output, /<h3>Làm được gì<\/h3>/);
+  assert.match(output, /id="detailCapability"/);
+  assert.match(output, /Alternative route/);
+  assert.match(output, /focusNodeRoutes/);
+});
+
 test('Intelligence HTML blocks an empty semantic diagram', () => {
   const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'empty-html-'));
   const input = path.join(temporaryDir, 'empty-whitebox.json');
@@ -120,6 +163,19 @@ test('Intelligence HTML blocks an empty semantic diagram', () => {
   assert.equal(rendered.status, 2);
   assert.match(rendered.stderr, /empty semantic diagram/);
   assert.equal(fs.existsSync(html), false);
+});
+
+test('Intelligence HTML validator rejects the legacy presentation layout', () => {
+  const temporaryDir = fs.mkdtempSync(path.join(os.tmpdir(), 'legacy-intelligence-html-'));
+  const html = path.join(temporaryDir, 'legacy.html');
+  fs.writeFileSync(html, `<!doctype html>
+<html><head><style>html.dark{color-scheme:dark}@media(prefers-reduced-motion:reduce){*{animation:none}}</style></head>
+<body><input id="fullSearch"><svg role="img" aria-label="legacy"><g id="svg-content"></g></svg><button id="detailClose"></button>
+<meta name="qa-diagram-node-count" content="1"><script>localStorage.getItem('qa-theme');const FULL_INDEX=[];</script></body></html>`);
+
+  const checked = spawnSync(process.execPath, [renderer, '--check', html], { encoding: 'utf8' });
+  assert.equal(checked.status, 2);
+  assert.equal(JSON.parse(checked.stdout).checks.catalogLayout, false);
 });
 
 test('Intelligence HTML keeps a large multi-community graph within a readable column bound', () => {

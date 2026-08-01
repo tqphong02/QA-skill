@@ -72,7 +72,7 @@ const GROUPS = [
     labelVi: 'Hệ thống kết nối',
     noteVi: 'Đọc và ghi an toàn trên các hệ thống QA bên ngoài',
     color: 'gold',
-    skills: ['plane-qa', 'google-drive-qa', 'github-mcp-qa', 'postman'],
+    skills: ['plane-qa', 'google-drive-qa', 'github-mcp-qa', 'postman', 'ego-browser'],
   },
   {
     id: 'auxiliary',
@@ -494,6 +494,7 @@ const VI_SKILL_TEXT = {
   'data-quality-qa': 'Kiểm tra database, ETL/ELT, reconciliation, lineage, freshness, schema drift và chất lượng dữ liệu theo ranh giới read-only',
   'doc-to-md': 'Chuyển PDF, DOCX, PPTX, XLSX và các artifact local sang Markdown có cấu trúc để skill khác sử dụng',
   'github-mcp-qa': 'Đọc và vận hành repository, PR, Issue và GitHub Actions qua GitHub MCP với ranh giới xác thực rõ ràng',
+  'ego-browser': 'Trình duyệt Chromium tách biệt cho AI agents kế thừa trạng thái đăng nhập thực tế',
   'google-drive-qa': 'Đọc và thực hiện CRUD trên Drive, Docs, Sheets, Slides, permissions, report và evidence qua Google Drive MCP',
   'mobile-qa': 'Lập kế hoạch, thực thi và chẩn đoán QA Android/iOS bằng Appium, emulator, real device và network capture được ủy quyền',
   'pentest-run': 'Điều phối pentest được ủy quyền từ engagement contract, reconnaissance đến validation, evidence và reporting',
@@ -534,6 +535,10 @@ const VI_SKILL_INSIGHTS = {
   'github-mcp-qa': {
     advantages: ['Đọc repository, PR, Issue và Actions qua API chính thức', 'Tách GitHub MCP auth khỏi Git SSH'],
     limitations: ['Phụ thuộc OAuth/PAT và quyền repository', 'Mutation cần xác định đúng account, repo và branch'],
+  },
+  'ego-browser': {
+    advantages: ['Cách ly không gian làm việc', 'Không cần thiết lập lại quá trình xác thực'],
+    limitations: ['Không hỗ trợ Windows/Linux', 'Không chặn được body/headers mạng đầy đủ'],
   },
   'google-drive-qa': {
     advantages: ['CRUD native cho Drive, Docs, Sheets và Slides', 'Có exact-target check và read-back sau mutation'],

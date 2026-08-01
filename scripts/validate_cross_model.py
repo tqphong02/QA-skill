@@ -149,6 +149,19 @@ REQUIRED = {
         "DockerScan `v2.1.0`",
         ".pentest/evidence/",
     ],
+    "pentest-run/references/PENTEST_SECURITY.md": [
+        "antigravity-host",
+        "--allow-hosted-model-review",
+        "HOST-INSTRUCTIONS.md",
+        "validation_status: unverified",
+        "Do not describe `antigravity-host` as the OpenAI CLI running on Gemini",
+    ],
+    "pentest-run/skills/pentest-security/scripts/antigravity-host-scan.mjs": [
+        "external_model_api: false",
+        "source drift detected",
+        "validation_status: 'unverified'",
+        "--allow-hosted-model-review",
+    ],
     "qa-run/SKILL.md": [
         "Cross-model hard gates",
         "Workflow composition router",
@@ -761,6 +774,7 @@ def main():
             or ".git" in path.parts
             or "node_modules" in path.parts
             or "qa-knowledge" in path.parts
+            or ".pentest" in path.parts
             or "coverage" in path.parts
             or "dist" in path.parts
         ):

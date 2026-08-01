@@ -13,6 +13,8 @@
     "security:ai-scan": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs",
     "security:ai-scan:gemini": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs --engine gemini",
     "security:ai-scan:claude": "node pentest-run/skills/pentest-security/scripts/ai-scan.mjs --engine claude",
+    "security:antigravity-host": "node pentest-run/skills/pentest-security/scripts/antigravity-host-scan.mjs",
+    "test:pentest-security": "node --test pentest-run/skills/pentest-security/tests/*.spec.mjs",
     "security:login": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs",
     "security:login:claude": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs claude",
     "security:login:gemini": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs gemini",

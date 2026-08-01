@@ -40,7 +40,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | ego-browser, ego-lite, ego lite, task space, browser automation không cần Playwright MCP, kế thừa login state thật của user | `ego-browser/SKILL.md` | Kiểm tra ego lite đã install chưa bằng `ego-browser nodejs <<'EOF' cliLog(typeof snapshotText) EOF`; nếu chưa, đọc `ego-browser/references/install.md` |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
-| Pentest được ủy quyền, security assessment, bug bounty, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor trước request mạng |
+| Pentest được ủy quyền, security assessment, bug bounty, source-security scan, Codex Security, recon, IDOR, SSRF, SSTI, JWT, GraphQL, race condition, Burp, Raccoon, DockerScan hoặc GhidraGPT | `pentest-run/SKILL.md` | Đọc engagement contract rồi chạy doctor; source scan trên Antigravity không API key thì đọc `references/PENTEST_SECURITY.md` → `antigravity-host` |
 | GitHub MCP, repository API, PR, Issues, Actions, CI/CD, OAuth/PAT hoặc đổi account MCP | `github-mcp-qa/SKILL.md` | Phân biệt MCP auth với Git SSH rồi chạy doctor |
 | Database, ETL/ELT, reconciliation, lineage, freshness, schema drift hoặc Database read-only MCP | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary thật ở DB role |
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
@@ -65,6 +65,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
 10. Với qa-run, chạy `scripts/helpers/context-builder.mjs` theo feature scope trước normal browser action; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu
 11. Với ego-browser: chạy `node ego-browser/scripts/detect.mjs` trước task; không dùng `drainEvents()` để claim request/response body; không thực hiện action phá huỷ với session thật khi chưa được user xác nhận; `browser-driver` và `network-observer` phải resolve độc lập theo [BROWSER-DRIVER-RESOLUTION.md](qa-run/references/BROWSER-DRIVER-RESOLUTION.md)
+12. Với `pentest-security` trên Antigravity không API key: chạy `detect --engine antigravity-host` → `prepare` → active host agent hoàn thành exact assignment result → `status` → `finalize`; không đọc token/keychain, không gọi Gemini API và không tuyên bố OpenAI `codex-security` CLI đang chạy bằng Gemini
+13. Với interactive companion HTML: chỉ render từ canonical JSON đã validate bằng `qa-run/scripts/writers/render-intelligence-html.mjs`; output phải dùng layout `catalog-v2` đồng bộ `QA-skill.html`, cuộn 2 ngón để pan, pinch/`Ctrl`/`Cmd`+wheel để zoom, có route chip làm nổi bật tuyến end-to-end, edge label dạng pill chỉ hiện khi hover/active và click node phải highlight đường vào/ra kèm detail drawer có `Làm được gì`, thông tin flow và đường liên quan, rồi pass `--check`; không bàn giao template legacy
 
 ### Invariant bắt buộc
 
@@ -82,6 +84,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Giữ nguyên ID, URL, filename, sheet/tab name, formula, code, decimal number và machine-readable value
 - Business analysis phải sinh `.xmind`, Q&A Markdown và Q&A Excel từ cùng một JSON; Question ID giữa hai Q&A phải khớp
 - Pentest scanner alert luôn là `Candidate` cho đến khi có reproduction evidence và control comparison
+- Antigravity host-native source scan là Codex Security-compatible pipeline, không phải thay provider bên trong OpenAI `codex-security`; mọi finding từ host model luôn `unverified` sau finalize
+- Interactive HTML luôn là derived presentation artifact; validator phải xác nhận `catalog-v2`, self-contained, dark mode, keyboard interaction, trackpad pan, gesture zoom, progressive edge labels, route navigation và capability detail drawer trước bàn giao
 - Whitebox path/testcase tĩnh luôn là `source-derived-candidate`; chỉ tuyên bố measured coverage sau `coverage`/`run-coverage`, giữ `unknown` khác `uncovered`, và không tự tạo template testcase ngoài `testcase-template`
 - ego-browser là browser driver riêng, không phải chỉ là fallback của Playwright; `browser-driver` và `network-observer` resolve độc lập; ego-browser chỉ cung cấp basic network events qua `drainEvents()` — không có request/response body
 - ego-browser `drainEvents()` luôn là `reduced_confidence` cho network assertion; muốn body/headers phải attach `chrome-devtools-mcp` vào đúng CDP port của ego lite
