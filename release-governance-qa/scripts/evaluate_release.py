@@ -29,7 +29,7 @@ def evaluate(packet: dict[str, Any], base_dir: Path) -> dict[str, Any]:
     def pass_gate(name: str, reason: str) -> None:
         gates.append({"name": name, "status": "PASS", "reason": reason})
 
-    required = ("release_id", "target", "scope", "risk", "test_summary", "defects", "evidence", "approvals", "exit_criteria")
+    required = ("release_id", "target", "scope", "risk", "test_summary", "quality_metrics", "defects", "evidence", "approvals", "exit_criteria", "post_release")
     for field in required:
         if field not in packet or packet[field] in (None, "", [], {}):
             fail("required_fields", f"missing {field}", "BLOCKED")
@@ -41,6 +41,35 @@ def evaluate(packet: dict[str, Any], base_dir: Path) -> dict[str, Any]:
         fail("test_summary", "pass_rate is below 1.0")
     else:
         pass_gate("test_summary", "required test summary and pass rate are PASS")
+
+    metrics = packet.get("quality_metrics", {})
+    metric_fields = ("executed", "passed", "failed", "blocked", "flaky", "with_evidence", "risk_coverage")
+    if not isinstance(metrics, dict) or any(field not in metrics for field in metric_fields):
+        fail("quality_metrics", "executed, passed, failed, blocked, flaky, with_evidence and risk_coverage are required", "BLOCKED")
+    else:
+        try:
+            executed = int(metrics["executed"])
+            passed = int(metrics["passed"])
+            failed = int(metrics["failed"])
+            blocked = int(metrics["blocked"])
+            flaky = int(metrics["flaky"])
+            with_evidence = int(metrics["with_evidence"])
+            risk_coverage = float(metrics["risk_coverage"])
+            valid_counts = min(executed, passed, failed, blocked, flaky, with_evidence) >= 0 and passed + failed <= executed and with_evidence <= passed + failed
+            if executed <= 0 or not valid_counts or not 0 <= risk_coverage <= 1:
+                fail("quality_metrics", "metric counts or risk_coverage are outside valid bounds")
+            elif failed or flaky or blocked or with_evidence < passed + failed or risk_coverage < 1:
+                fail("quality_metrics", "release metrics do not meet PASS thresholds")
+            else:
+                pass_gate("quality_metrics", "counts, evidence completeness and risk coverage are PASS")
+        except (TypeError, ValueError):
+            fail("quality_metrics", "metric values must be numeric")
+
+    post_release = packet.get("post_release", {})
+    if not isinstance(post_release, dict) or not post_release.get("owner") or post_release.get("smoke_required") is not True or post_release.get("rollback_ready") is not True:
+        fail("post_release", "post-release owner, smoke_required=true and rollback_ready=true are required", "BLOCKED")
+    else:
+        pass_gate("post_release", "post-release owner, smoke and rollback readiness are present")
 
     exceptions = {
         item.get("defect_id")

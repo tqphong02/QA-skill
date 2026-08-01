@@ -27,7 +27,7 @@ import { execSync } from 'node:child_process';
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const SKILL_DIR = process.env.QA_RUN_SKILL_DIR
-  || path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+  || path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
 const DATA = process.env.QA_DATA_DIR || process.cwd();
 
 // Load .env from project root
@@ -42,8 +42,8 @@ const JSON_OUT = path.join(OUT_DIR, 'app-flow-map.json');
 
 // CLI flags
 const args       = process.argv.slice(2);
-const MAX_PAGES  = parseInt(args[find(args,'--max-pages',1)] ?? '30', 10);
-const WAIT_MS    = parseInt(args[find(args,'--wait',1)] ?? '1200', 10);
+const MAX_PAGES  = parseInt(find(args, '--max-pages', 1) ?? '30', 10);
+const WAIT_MS    = parseInt(find(args, '--wait', 1) ?? '1200', 10);
 const FORCE_AUTH = args.includes('--reauth');
 const DRY_RUN    = args.includes('--dry-run');
 const TODAY      = new Date().toISOString().slice(0, 10);
@@ -528,7 +528,7 @@ async function writeOutputs(synthesis, today) {
   const tmpJson = path.join(OUT_DIR, '.extract-flow-tmp.json');
   fs.writeFileSync(tmpJson, JSON.stringify(guideData, null, 2), 'utf8');
 
-  const writeTool = path.join(SKILL_DIR, 'scripts', 'write-business-guide.mjs');
+  const writeTool = path.join(SKILL_DIR, 'scripts', 'writers', 'write-business-guide.mjs');
   if (!fs.existsSync(writeTool)) {
     console.warn('[extract-flow] write-business-guide.mjs not found — skip markdown render');
     fs.unlinkSync(tmpJson);

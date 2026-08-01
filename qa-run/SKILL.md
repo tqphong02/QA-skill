@@ -1,11 +1,19 @@
 ---
 name: qa-run
-description: Execute risk-driven browser QA using business logic recovered from source code, saved QA knowledge, requirements and runtime evidence, with same-session network/console observation. Trigger on app or repository discovery, exploratory/ad-hoc testing, sanity/regression, Plane ticket retest, Sheet testcase execution, UI/UX, browser response errors, business-flow or system-logic analysis, and release sign-off; do not require the skill name. Rank evidence-linked charters instead of generic clicking, compose RETEST_PLUS and SHEET_EXECUTION_PLUS, and write verified knowledge back after execution. Not for writing automation, native-mobile traffic interception, or testcase documents.
+description: Execute risk-driven browser QA using business logic recovered from source code, saved QA knowledge, requirements and runtime evidence, with same-session network/console observation. Trigger on app or repository discovery, exploratory/ad-hoc testing, sanity/regression, Plane ticket retest, Sheet testcase execution, UI/UX, browser response errors, business-flow or system-logic analysis, test strategy, defect triage, RCA, QA metrics, environment/test-data readiness, post-release verification, and release sign-off; do not require the skill name. Rank evidence-linked charters instead of generic clicking, compose RETEST_PLUS and SHEET_EXECUTION_PLUS, and write verified knowledge back after execution. Not for writing automation, native-mobile traffic interception, or testcase documents.
 ---
 
 # QA Run
 
 **Core principle:** Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
+
+## Senior QA operating layer
+
+Load [references/SENIOR-QA-OPERATING-MODEL.md](references/SENIOR-QA-OPERATING-MODEL.md) when the request includes planning, release readiness, defect triage, environment/data readiness, RCA, metrics or post-release verification. Keep this operating layer separate from the browser execution layer
+
+Before execution, establish a versioned plan containing scope, risk, build, environment, role, data, dependencies, entry/exit criteria and stop conditions. After execution, reconcile evidence into defect decisions, quality metrics and a release or post-release owner
+
+Use [references/RELEASE-QUALITY-METRICS.md](references/RELEASE-QUALITY-METRICS.md) when handing aggregated evidence to `release-governance-qa`. Preserve numerator, denominator, source run ID and limitations for every metric
 
 Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. **Data is fetched based on the working directory** (cwd or `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` are in the tested project folder — DO NOT mutate the skill folder. When loading knowledge, prioritize `qa-knowledge/knowledge-index.json` before reading specific scope files.
 
@@ -169,6 +177,7 @@ Apply the following exact order for all models, especially fast or small-context
     - Reusable assets (locators, data setups, routes, test accounts)
     - `latest_run` block: scope, verdict, key notes
     - Mark any previously `inferred` facts as `verified` if run confirmed them
+13. Complete the senior operating ledger before sign-off: record environment/data readiness, executed versus blocked counts, evidence completeness, flaky or infrastructure failures, defect triage decisions, risk coverage, unresolved limitations and the post-release owner when deployment is in scope. Do not report only a browser verdict
     If guide already exists: set `previous_guide` path and `merge_confirmed: true` in JSON update; do not delete any fact the current run did not touch
 
 State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`

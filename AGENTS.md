@@ -161,10 +161,24 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Khi REPO_BUSINESS_DISCOVERY cần cross-file graph, dùng `graphify-adapter.mjs` qua orchestrator với `--graphify auto|required|off`; không gọi `graphify codex install` hoặc `graphify hook install`
 - Khi user yêu cầu báo cáo/diagram HTML, chỉ chạy `render-intelligence-html.mjs` sau khi canonical JSON validate và giữ HTML là companion output
 
+### Senior QA operating layer
+- Khi lập kế hoạch, release gate, triage, RCA, metrics hoặc post-release verification, đọc `qa-run/references/SENIOR-QA-OPERATING-MODEL.md`
+- Mọi cycle phải ghi scope/risk, build/environment/data readiness, entry/exit criteria, executed/blocked counts, evidence completeness, defect decision và owner post-release khi áp dụng
+- Dùng `qa-run/references/RELEASE-QUALITY-METRICS.md` để giữ numerator/denominator, source run ID và limitation; không dùng test count thay cho risk coverage
+- Defect phải phân biệt severity/priority, giữ actual/expected/evidence/repro và ghi root-cause/prevention cho defect escaped hoặc reopened
+
 ### Nguyên tắc cốt lõi
 > Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
 
 Đọc chi tiết: [`qa-run/SKILL.md`](qa-run/SKILL.md)
+
+## Automation quality gates
+
+- Đọc `playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md` và `FLAKY-TEST-MANAGEMENT.md` trước khi tạo CI automation
+- Retry-pass phải được phân loại `flaky`, giữ first-attempt và retry evidence, không tự biến thành PASS sạch
+- CI phải kiểm tra compile/lint, placeholder/secret, failed test, flaky rate, evidence, duration, declared coverage và supported browser matrix
+- Dùng component/contract/API ở lower test level; UI chỉ giữ critical business journeys; service virtualization phải có ít nhất một real-dependency check
+- Visual baseline phải gắn commit/browser/viewport/locale/theme; axe không thay thế keyboard/focus/manual evidence
 
 ## Test Case Template
 

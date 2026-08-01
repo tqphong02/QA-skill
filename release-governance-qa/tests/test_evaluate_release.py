@@ -20,10 +20,12 @@ def release_packet() -> dict:
         "scope": ["login"],
         "risk": "medium",
         "test_summary": {"status": "PASS", "passed": True, "pass_rate": 1.0, "run_id": "run-local"},
+        "quality_metrics": {"executed": 10, "passed": 10, "failed": 0, "blocked": 0, "flaky": 0, "with_evidence": 10, "risk_coverage": 1.0},
         "defects": [{"id": "BUG-1", "severity": "P2", "status": "closed"}],
         "evidence": ["summary.md"],
         "approvals": {"qa_owner": True, "release_owner": True},
         "exit_criteria": [{"id": "functional", "passed": True}],
+        "post_release": {"owner": "qa-owner", "smoke_required": True, "rollback_ready": True},
     }
 
 

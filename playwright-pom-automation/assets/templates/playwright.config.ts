@@ -3,6 +3,15 @@ import { defineConfig, devices } from '@playwright/test';
 // Set once in the config process; every worker inherits the same run ID.
 process.env.RUN_ID ??= `local-${Date.now()}-${process.pid}`;
 
+function resolveRetries(): number {
+  if (!process.env.CI) return 0;
+  const retries = Number.parseInt(process.env.PW_RETRIES ?? '1', 10);
+  if (!Number.isInteger(retries) || retries < 0 || retries > 2) {
+    throw new Error(`PW_RETRIES must be an integer from 0 to 2, received: ${process.env.PW_RETRIES}`);
+  }
+  return retries;
+}
+
 function resolveWorkers(): number {
   if (!process.env.PW_WORKERS) return process.env.CI ? 4 : 1;
   const workers = Number.parseInt(process.env.PW_WORKERS, 10);
@@ -20,7 +29,7 @@ export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
   forbidOnly: !!process.env.CI, // cấm test.only trên CI
-  retries: process.env.CI ? 2 : 0,
+  retries: resolveRetries(),
   // Override locally/CI with PW_WORKERS. Parallel mutating tests must have
   // isolated runtime data and, when needed, one account per parallel slot.
   workers: resolveWorkers(),
@@ -32,7 +41,8 @@ export default defineConfig({
     ['list'],
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['junit', { outputFile: 'reports/junit.xml' }],
-    // ['allure-playwright', { outputFolder: 'reports/allure-results' }],
+    ['json', { outputFile: 'reports/playwright.json' }],
+    ['allure-playwright', { outputFolder: 'reports/allure-results' }],
   ],
 
   use: {
@@ -40,6 +50,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 10000,
+    navigationTimeout: 30000,
   },
 
   projects: [
@@ -53,6 +65,9 @@ export default defineConfig({
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
     },
-    // { name: 'webkit', use: { ...devices['Desktop Safari'] } }, // Safari support
+    ...(process.env.ENABLE_WEBKIT === 'true' ? [{
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    }] : []),
   ],
 });

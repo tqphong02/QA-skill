@@ -10,7 +10,8 @@
 5. Secrets management
 6. Tagging & filtering in CI
 7. k6 as a separate job
-8. Common anti-patterns
+8. Quality gates and flaky tests
+9. Common anti-patterns
 
 ---
 
@@ -30,11 +31,12 @@ New project / neither?             → ASK user which platform (offer both)
 |---|---|---|
 | 1 | **Checkout** | Get code |
 | 2 | **Install** (`npm ci`) + **cache** node_modules & browsers | Speed; `npm ci` = reproducible from lockfile |
-| 3 | **Lint** (optional) | Fail fast on type/syntax errors |
+| 3 | **Lint** | Fail fast on type/syntax errors |
 | 4 | **test:ui + test:api in parallel** | Browser matrix + parallel API → faster feedback |
 | 5 | **Publish Allure** | Human-readable report per run |
 | 6 | **Archive** trace.zip / screenshots / video on fail | Debug failures without re-running |
 | 7 | **k6 load test** — **separate job/stage** | Long-running; must NOT block main pipeline |
+| 8 | **Quality gate** | Failed tests, flaky tests, evidence, duration and declared coverage |
 
 Templates: `assets/templates/github-actions-ci.yml` + `assets/templates/Jenkinsfile`.
 
@@ -52,6 +54,7 @@ Templates: `assets/templates/github-actions-ci.yml` + `assets/templates/Jenkinsf
 - **Install browsers:** `npx playwright install --with-deps ${{ matrix.browser }}`.
 - **Parallelism:** each matrix job runs independently; within a job, Playwright shards (`--shard=${GITHUB_SHARD}`) if needed.
 - **Artifacts:** `actions/upload-artifact@v4` with `if: always()` so failures still upload reports/traces.
+- **Quality gate:** run `npm run quality-gate` with `if: always()` after Playwright. A retry-pass is recorded as flaky and does not disappear from the report
 - **Allure:** use `simple-elf/allure-report-action` or similar to generate + publish GH Pages report.
 - **k6:** separate job gated by `if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'`, using `grafana/k6-action`.
 
@@ -112,7 +115,15 @@ Map CI stages to tags: GH matrix job / Jenkins `stage` runs one tag group → pa
 
 Both: run against **staging/perf env** (not prod), warn stakeholders before scheduled runs, archive k6 summary as artifact.
 
-## 8. Common anti-patterns
+## 8. Quality gates and flaky tests
+
+- Keep `reports/playwright.json`, `reports/quality-gate.json`, JUnit, Allure, traces, screenshots and videos as build artifacts
+- Configure thresholds in `quality-gates.json`; do not hardcode thresholds in CI YAML
+- Record first-attempt and retry results. A test that passes only after retry is `flaky`, not a clean PASS
+- Quarantine requires an owner, issue ID, expiry date and retained scheduled execution
+- See [FLAKY-TEST-MANAGEMENT.md](FLAKY-TEST-MANAGEMENT.md) and [AUTOMATION-QUALITY-GATES.md](AUTOMATION-QUALITY-GATES.md)
+
+## 9. Common anti-patterns
 
 | Anti-pattern | Fix |
 |---|---|

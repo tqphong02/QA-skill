@@ -39,6 +39,9 @@ jobs:
       - name: Lint
         run: npm run lint --if-present
 
+      - name: Validate quality gate configuration
+        run: npm run quality-gate:config
+
       - name: Run UI + API tests
         env:
           BASE_URL: ${{ secrets.BASE_URL }}
@@ -47,13 +50,13 @@ jobs:
           TEST_PASS: ${{ secrets.TEST_PASS }}
         run: npx playwright test --project=${{ matrix.browser }} --grep '@ui|@api'
 
-      # Publish Allure report (cần action bên thứ 3, vd simple-elf/allure-report-action)
-      # - name: Generate Allure report
-      #   if: always()
-      #   uses: simple-elf/allure-report-action@v1.9
-      #   with:
-      #     allure_results: allure-results
-      #     allure_history: allure-history
+      - name: Evaluate quality gate
+        if: always()
+        run: npm run quality-gate
+
+      - name: Generate Allure report
+        if: always()
+        run: npm run allure:gen
 
       - name: Upload report + traces (on fail)
         uses: actions/upload-artifact@v4
@@ -64,6 +67,7 @@ jobs:
             reports/
             test-results/
             allure-results/
+            quality-gates.json
           retention-days: 14
 
   # k6 — JOB RIÊNG, không block pipeline chính

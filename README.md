@@ -100,6 +100,17 @@ npm run test:skills:strict-live
 
 Report dễ đọc nằm tại `evidence/skill-readiness/latest.md`, JSON pretty-print tại `evidence/skill-readiness/latest.json`. `PASS` là evidence đã chạy local, `BLOCKED` là integration cần credential/target/device/approval, còn `FAIL` là lỗi deterministic phải sửa. Strict-live chỉ PASS khi không còn integration BLOCKED
 
+## Senior QA operating model
+
+Bộ skill dùng thêm hai lớp vận hành để tránh chỉ có checklist mà thiếu quản trị chất lượng:
+
+- Manual QA: [qa-run/references/SENIOR-QA-OPERATING-MODEL.md](qa-run/references/SENIOR-QA-OPERATING-MODEL.md) — test strategy, risk, environment/test data, defect triage, RCA, metrics và post-release verification
+- Release packet: [qa-run/references/RELEASE-QUALITY-METRICS.md](qa-run/references/RELEASE-QUALITY-METRICS.md) — numerator/denominator, risk coverage, flaky rate, evidence rate và ownership
+- Automation: [playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md](playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md) — component/contract/UI routing, visual/axe, coverage và CI gates
+- Flaky tests: [playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md](playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md) — retry evidence, quarantine, owner và stability window
+
+Playwright template có `quality-gates.json` và `scripts/quality-gate.mjs` để đánh giá failed tests, retry-derived flaky tests, evidence completeness, duration và coverage sau khi tạo `reports/playwright.json`
+
 Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-COMPATIBILITY.md).
 
 ## Cài đặt (máy mới)

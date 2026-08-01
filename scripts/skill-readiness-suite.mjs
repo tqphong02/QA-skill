@@ -443,7 +443,7 @@ function planeChecks(skill) {
 
 function pomChecks(skill) {
   const templateRoot = path.join(ROOT, 'playwright-pom-automation/assets/templates')
-  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts']
+  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'quality-gates.json', 'scripts/quality-gate.mjs']
   const missing = required.filter(file => !fs.existsSync(path.join(templateRoot, file)))
   const specFiles = []
   function collect(directory) {
@@ -461,6 +461,8 @@ function pomChecks(skill) {
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
   const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: path.join(ROOT, 'playwright-pom-automation'), env: safeEnv({ npm_config_offline: 'true' }), timeout: 90000 })
   commandPass(skill, 'POM template TypeScript compile', tsc, 'template-only compile')
+  const qualityGate = runCommand(process.execPath, [path.join(templateRoot, 'scripts/quality-gate.mjs'), '--config', path.join(templateRoot, 'quality-gates.json'), '--report', path.join(templateRoot, 'reports/playwright.sample.json'), '--output', path.join(TMP_ROOT, 'quality-gate.json')], { cwd: ROOT, timeout: 30000 })
+  commandPass(skill, 'automation quality gate fixture', qualityGate, 'failed/flaky/evidence/duration/coverage gate fixture')
   addIntegration(skill, 'BLOCKED', 'no application URL, test account or approved browser target was supplied; template compilation is not a live UI certification')
 }
 

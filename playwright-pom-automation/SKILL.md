@@ -1,13 +1,13 @@
 ---
 name: playwright-pom-automation
-description: Scaffold or extend Playwright Page Object Model automation for UI, API, or performance tests and QA CI. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.
+description: Scaffold or extend Playwright Page Object Model automation for UI, API, component, contract, visual, accessibility, performance and CI quality-gate tests. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, flaky-test management, service virtualization, coverage, visual regression, axe, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.
 ---
 
 # Playwright POM Automation
 
 **Core principle:** All selectors must go through a Page Object — never write `page.locator()` directly in spec files.
 
-Covers 4 test types: **UI · API · Performance · CI/CD**, plus **Data-Driven Testing (DDT)** and parallel-safe test-data isolation. **Project-agnostic**: do NOT hardcode domain/URL/business logic.
+Covers **UI · API · component · contract · visual · accessibility · performance · CI/CD**, plus **Data-Driven Testing (DDT)** and parallel-safe test-data isolation. **Project-agnostic**: do NOT hardcode domain/URL/business logic.
 
 > **When to use**: When the user wants to automate web/API tests or set up a test pipeline.
 > **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.
@@ -221,6 +221,14 @@ See `references/performance-testing.md` for template + escalation matrix.
 
 **k6**: run standalone job/stage, DO NOT block main pipeline.
 
+### 9b. Enforce automation quality gates
+
+Read [references/AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md) and [references/FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) before finalizing CI. Copy `assets/templates/quality-gates.json` and `assets/templates/scripts/quality-gate.mjs` into the automation project
+
+The blocking lane must check compile/lint, placeholders/secrets, failed tests, retry-derived flaky tests, evidence completeness, duration budget, declared coverage and the supported browser matrix. Preserve first-attempt and retry artifacts. A retry must never silently convert a failure to PASS
+
+Use component or service-level tests for deterministic rules, contract/API tests for boundaries, and a small UI suite for critical journeys. Use mocks/service virtualization only with at least one approved real-dependency check
+
 **Secrets** (token, BASE_URL, TEST_USER/PASS):
 - GitHub Actions → Repository Secrets (`secrets.*`)
 - Jenkins → Credentials (`credentials('id')`)
@@ -264,6 +272,11 @@ Filter:
 - [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions
 - [ ] Secrets via env vars/credentials, NOT hardcoded
 - [ ] Allure annotations (step, attachment) for UI/API/perf
+- [ ] `quality-gates.json` copied and quality-gate result is archived
+- [ ] Retry-derived flaky tests are classified, owned and not silently passed
+- [ ] Component/contract/service-virtualization level is selected for each major risk
+- [ ] Visual baseline and axe accessibility checks are tied to browser, viewport, locale and commit
+- [ ] First-attempt and retry artifacts are preserved for every flaky result
 - [ ] Tests **sorted by type order** (if multiple types)
 - [ ] Cover metadata correct (especially **C3 = project code**)
 - [ ] Dropdown I (Results) + J (Priority) working

@@ -65,6 +65,7 @@ assets/templates/
 ├── sessions/                      ← runtime-generated auth state (gitignored) — xem README riêng
 ├── testdata/                      ← runtime-generated test data (gitignored) — xem README riêng
 ├── scripts/                       ← CI helpers (check-placeholders.sh)
+├── quality-gates.json             ← thresholds for failed/flaky/evidence/duration/coverage
 └── testcases/                     ← manual test case Excel template
 ```
 
@@ -92,6 +93,9 @@ Xem **[references/data-driven-testing.md](references/data-driven-testing.md)** v
 ```bash
 npm run placeholder-check        # quét <UPPERCASE_SNAKE> còn sót
 npm run lint                     # tsc --noEmit + eslint
+npm run quality-gate:config      # kiểm tra cấu hình quality gate
+# Sau khi Playwright tạo reports/playwright.json:
+npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.
@@ -104,6 +108,8 @@ Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets
 - `TEST_USER`, `TEST_PASS` — Jenkins Credentials / GitHub Secrets
 
 **KHÔNG commit secrets vào YAML** — xem **[references/cicd.md](references/cicd.md)**.
+
+Quality gate phải giữ lại first-attempt/retry evidence, phân loại flaky riêng và không biến retry-pass thành PASS sạch. Xem [references/FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) và [references/AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md)
 
 ## 🔗 Skill liên quan
 

@@ -40,6 +40,10 @@ pipeline {
       steps { sh 'npm run lint --if-present' }
     }
 
+    stage('Quality gate configuration') {
+      steps { sh 'npm run quality-gate:config' }
+    }
+
     // UI + API chạy song song (filter bằng tag --grep)
     stage('Test (UI + API parallel)') {
       parallel {
@@ -59,8 +63,10 @@ pipeline {
 
   post {
     always {
+      sh 'npm run quality-gate || true'
+      sh 'npm run allure:gen || true'
       // Archive trace + screenshot + report khi fail
-      archiveArtifacts artifacts: 'reports/**, test-results/**, allure-results/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'reports/**, test-results/**, allure-results/**, quality-gates.json', allowEmptyArchive: true
       // JUnit report — hiển thị test results trong Jenkins UI
       junit testResults: 'reports/junit.xml', allowEmptyResults: true
       // Allure report qua Allure Jenkins plugin (cài plugin + allure commandline):
