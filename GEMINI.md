@@ -5,7 +5,7 @@ Mirror of ./<skill>/SKILL.md — keep in sync.
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
-Repo này phân phối 17 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
+Repo này phân phối 18 skill Quality Engineering (QE), Security Engineering và MCP integration dùng chung cho nhiều AI coding assistant (Claude Code, Codex, Gemini/Antigravity, Cursor, Windsurf, Copilot). File này là router chính cho **Gemini và Antigravity**; phải đọc phần cross-model trước khi chọn skill.
 
 ## Cross-model deterministic mode
 
@@ -33,7 +33,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
 | App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; tạo plan bằng `scripts/helpers/execute-sheet.mjs --module <requested-if-known> --parallel --plan-only`, hiển thị resolved module rồi hỏi user xác nhận module, số worker 1-4 và all/worker ID/cancel; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
-| Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --page <slug>`; phân loại 9 kết quả, kiểm tra 10 ambiguity patterns, xuất `ui-business-guide.md` 12 sections |
+| Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; map từng UI item với requirement theo 7 trạng thái, kiểm tra 10 ambiguity patterns, xuất traceability JSON và guide 12 sections |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP; bare URL/ID thì đọc object |
 | Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
@@ -67,6 +67,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 11. Với ego-browser: chạy `node ego-browser/scripts/detect.mjs` trước task; không dùng `drainEvents()` để claim request/response body; không thực hiện action phá huỷ với session thật khi chưa được user xác nhận; `browser-driver` và `network-observer` phải resolve độc lập theo [BROWSER-DRIVER-RESOLUTION.md](qa-run/references/BROWSER-DRIVER-RESOLUTION.md)
 12. Với `pentest-security` trên Antigravity không API key: chạy `detect --engine antigravity-host` → `prepare` → active host agent hoàn thành exact assignment result → `status` → `finalize`; không đọc token/keychain, không gọi Gemini API và không tuyên bố OpenAI `codex-security` CLI đang chạy bằng Gemini
 13. Với interactive companion HTML: chỉ render từ canonical JSON đã validate bằng `qa-run/scripts/writers/render-intelligence-html.mjs`; output phải dùng layout `catalog-v2` đồng bộ `QA-skill.html`, cuộn 2 ngón để pan, pinch/`Ctrl`/`Cmd`+wheel để zoom, có route chip làm nổi bật tuyến end-to-end, edge label dạng pill chỉ hiện khi hover/active và click node phải highlight đường vào/ra kèm detail drawer có `Làm được gì`, thông tin flow và đường liên quan, rồi pass `--check`; không bàn giao template legacy
+14. UI business reconciliation phải có URL/snapshot thật và requirement registry có stable ID/source_ref; thiếu input thì fail closed, không dùng fixture ngầm; runtime click phải có `--verify-runtime` và exact selector được user duyệt
 
 ### Invariant bắt buộc
 

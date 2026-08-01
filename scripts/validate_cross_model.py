@@ -17,6 +17,7 @@ SKILLS = (
     "business-analysis",
     "data-quality-qa",
     "doc-to-md",
+    "ego-browser",
     "github-mcp-qa",
     "google-drive-qa",
     "mobile-qa",

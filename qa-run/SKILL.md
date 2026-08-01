@@ -53,6 +53,8 @@ For every live browser route, also create one `BROWSER_OBSERVABILITY` ledger row
 
 Before every executable browser route, build `TEST_INTELLIGENCE`. When the source repository is locally available, pass it to the canonical preparation command so stale or missing source knowledge is refreshed before risk selection. Execute ranked charters; do not replace them with a generic element checklist.
 
+For `UI_BUSINESS_RECONCILIATION`, require an explicit live URL or component snapshot plus an atomic requirement registry matching [references/UI_REQUIREMENT_TRACEABILITY_SCHEMA.json](references/UI_REQUIREMENT_TRACEABILITY_SCHEMA.json). Fail closed when either input is missing. Preserve a stable `uiItemId` and emit one row for every UI item and every requirement in `ui-requirement-traceability.json`; use only `MAPPED`, `UI_ONLY`, `REQ_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, or `NOT_APPLICABLE`. Runtime actions are opt-in and require `--verify-runtime` plus an exact user-authorized action selector immediately before execution
+
 Load optional references only when their condition occurs:
 
 - Tool choice is unresolved → [references/MCP-CHEATSHEET.md](references/MCP-CHEATSHEET.md)

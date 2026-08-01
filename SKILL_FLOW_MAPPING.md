@@ -1,6 +1,6 @@
-# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 16 Skills
+# QA-skill — Hướng dẫn Chi tiết Luồng & Mapping giữa 18 Skills
 
-Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **16 Skills** trong hệ thống **QA-skill Framework**.
+Tài liệu này ghi lại toàn bộ sơ đồ kiến trúc, luồng chuyển giao dữ liệu (Data Handover), router cố định và 6 quy trình thực thi thực tế giữa **18 Skills** trong hệ thống **QA-skill Framework**.
 
 ---
 
@@ -84,16 +84,16 @@ flowchart TD
 
 ---
 
-## 📊 3. Ma trận Chuyển giao giữa 17 Skills (Data Handover Matrix)
+## 📊 3. Ma trận Chuyển giao giữa 18 Skills (Data Handover Matrix)
 
 | Skill Nguồn (Input) | Luồng Xử lý (Process) | Output Sinh ra (Artifact) | Skill Tiếp nhận (Consumer) | Dữ liệu Chuyển giao |
 |:---|:---|:---|:---|:---|
 | **`doc-to-md`** | Convert PDF/DOCX/PPTX/HTML sang Markdown | File `.md` chuẩn heading/table | `business-analysis` | Nội dung tài liệu yêu cầu dạng text |
 | **`google-drive-qa`** | Đọc/Ghi remote Docs, Sheets, Slides qua MCP | Dữ liệu văn bản / bảng remote | `business-analysis`<br>`qa-run` | SRS/BRD hoặc danh sách Testcase từ Google Drive |
 | **`qa-run`** *(REPO_DISCOVERY)* | Quét AST/Regex 14 scripts từ Source Code | `system-business-guide.md`<br>`system-qna.json` | `business-analysis`<br>`qa-run` | Kiến trúc hệ thống, API contracts, State machines, Rules |
-| **`qa-run`** *(UI_RECONCILIATION)* | So sánh UI với Code & Docs 13 bước | `ui-business-guide.md`<br>`clarification-qna.json` | `testcase-template`<br>`business-analysis` | Mâu thuẫn UI vs Backend/BRD, Q&A cho BA/PO/Dev |
+| **`qa-run`** *(UI_RECONCILIATION)* | Map live UI/snapshot với requirement registry và evidence | `ui-requirement-traceability.json`<br>`ui-business-guide.md`<br>`clarification-qna.json` | `testcase-template`<br>`business-analysis` | UI item ↔ Requirement ID ↔ Doc/Source/Runtime evidence và Q&A cho BA/PO/Dev |
 | **`qa-run`** *(APP_DISCOVERY)* | Crawl routes, menu & components | `app-flow-map.json`<br>`app-business-guide.md` | `qa-run` | Bản đồ bao phủ (Coverage map) toàn bộ ứng dụng |
-| **`business-analysis`** | Phân tích Senior QA 18 vùng nghiệp vụ | `analysis.json`<br>`file.xmind`<br>`Q&A MD + Excel` | `testcase-template` | Flow nghiệp vụ đã xác minh, Mindmap & Q&A answers |
+| **`business-analysis`** | Phân tích Senior QA 18 vùng nghiệp vụ | `analysis.json`<br>`file.xmind`<br>`Q&A MD + Excel`<br>`.business-analysis/*_Requirements.json` | `testcase-template`<br>`qa-run UI_RECONCILIATION` | Flow, Q&A và atomic requirement có stable ID/source_ref cho browser mapping |
 | **`testcase-template`** | Generator sinh Testcase | `testcases.md` (trước)<br>`testcases.xlsx` (sau) | `playwright-pom-automation`<br>`qa-run` | Danh sách Testcases chuẩn schema (ID, Steps, Expected) |
 | **`playwright-pom-automation`** | Scaffold dự án Playwright POM | `selectors/`, `pages/`, `tests/` | Trình thực thi Playwright | Mã nguồn tự động hóa Playwright E2E / API |
 | **`qa-run`** *(SHEET_EXECUTION)* | Đọc Sheet URL & chạy Playwright CLI | Result + Screenshots | `qa-run Aggregation` | Kết quả thực thi testcase hàng loạt từ Google Sheet |
@@ -106,6 +106,8 @@ flowchart TD
 | **`data-quality-qa`** | Database ETL & Schema Drift check | `data-drift.json` | `qa-run Aggregation` | Bảng dữ liệu lệch schema, data lineage error |
 | **`mobile-qa`** | Appium testing trên Android / iOS | `mobile-report.json` | `qa-run Aggregation` | Kết quả test ứng dụng di động APK / IPA |
 | **`whitebox-qa`** | Phân tích AST đa ngôn ngữ, call graph/NestJS DI, sinh Jest/Vitest và đo runtime coverage | compact/full analysis + graph + executable test + coverage evidence | `testcase-template` | Source hash, branch/path IDs, test result và measured coverage |
+| **`ai-quality-qa`** | Đánh giá LLM/RAG/agent từ golden dataset và metric xác định trước | eval evidence + quality/cost report | `qa-run Aggregation` | Correctness, groundedness, safety, latency và cost |
+| **`ego-browser`** | Điều khiển browser macOS có login state thật theo external-effect safety gate | browser session + UI evidence | `qa-run` | UI observation; network body cần observer cùng CDP session |
 | **`plane-qa`** | CRUD Plane Tickets & Comments | Comment retest + Đổi Ticket Status | `github-mcp-qa` | PASS → `Done`, FAILED → `In Progress`, Bug mới → `Todo` |
 | **`github-mcp-qa`** | Đọc Git diff/PR, quản lý Issues & Actions | PR Comment + CI Check Status | `qa-run` | Nhận biết changed files để chọn testcases bị ảnh hưởng |
 
@@ -121,7 +123,7 @@ flowchart TD
 | **"Học toàn bộ web app này..." / Bootstrap app baseline** | `qa-run: APP_BASELINE_DISCOVERY` | Quét menu, route, API → Lưu `app-flow-map.json` & `app-business-guide.md` với `coverage_map` |
 | **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo plan → Hiển thị requested/resolved module → Hỏi xác nhận module + số worker 1-4 + all/worker ID/cancel → Chỉ ghi Pass/Fail có screenshot/video |
 | **Phân tích repo, học business flow từ source code** | `qa-run: REPO_BUSINESS_DISCOVERY` | Chạy `repo-business-discovery.mjs --repo <path> --mode full` → Merge vào `system-business-guide.md` & `system-qna.json` |
-| **Từ UI suy ra flow, đối chiếu Code + Docs + Runtime, tìm mâu thuẫn** | `qa-run: UI_BUSINESS_RECONCILIATION` | Chạy `ui-business-reconciliation.mjs --page <slug>` → Phân loại 9 kết quả, 10 ambiguity patterns → Xuất `ui-business-guide.md` & `clarification-qna.json` |
+| **Từ UI suy ra flow, đối chiếu Code + Docs + Runtime, tìm mâu thuẫn** | `qa-run: UI_BUSINESS_RECONCILIATION` | Chạy orchestrator với `--url/--snapshot`, `--page` và `--requirements` → Map 7 trạng thái, kiểm tra 10 ambiguity patterns → Xuất traceability JSON, guide và Q&A |
 | **Viết/sửa/review testcase, Scenario ID/Name** | `testcase-template` | Đọc testcase Markdown cũ nếu có → Generator tạo Markdown trước, Excel sau |
 | **Viết Playwright automation / POM code (`selectors/`, `pages/`)** | `playwright-pom-automation` | Đọc template POM → Scaffold cấu trúc `selectors/`, `pages/`, `tests/` |
 | **Phân tích BRD/SRS, dựng flow hệ thống, tạo XMind hoặc Q&A** | `business-analysis` (+ `doc-to-md` khi nguồn chưa là MD) | Convert đính kèm sang MD → Review 18 vùng Senior QA → Generate XMind + Q&A Markdown + Q&A Excel |
@@ -148,15 +150,15 @@ Source Code Repository
 
 ### 2️⃣ Flow 2: UI Business Reconciliation (Phân tích Mâu thuẫn UI vs Backend/BRD)
 ```text
-Live Page URL / DOM Snapshot
+Live Page URL / Component Snapshot + Atomic Requirement Registry
   └─► qa-run (UI_BUSINESS_RECONCILIATION)
-       ├─► Step 1: Component Extraction (data-testid > aria-label > role + name > id > CSS)
+       ├─► Step 1: Component Extraction + stable uiItemId (data-testid > aria-label > role + name > id > CSS)
        ├─► Step 2: Region Segmentation (Header, Sidebar, Toolbar, Form, Table, Modal)
        ├─► Step 3: Safe Multi-State Explorer (Action Safety Guard, Normalized State Hash)
-       ├─► Step 4: Runtime Transition Verifier (Reload persistence check, Redaction)
-       ├─► Step 5: 3-Angle Reconciliation (Actual UI vs Implemented Code vs Expected BRD)
+       ├─► Step 4: Optional authorized Runtime Transition Verifier (same-session network + reload persistence)
+       ├─► Step 5: UI item ↔ Requirement ID ↔ Doc/Source/Runtime reconciliation
        ├─► Step 6: 10 Ambiguity Patterns & Clarification Q&A Lifecycle
-       └─► Output: ui-business-guide.md & clarification-qna.json
+       └─► Output: ui-requirement-traceability.json, ui-business-guide.md & clarification-qna.json
 ```
 
 ### 3️⃣ Flow 3: Requirements to Testcase & XMind (Tài liệu -> Mindmap & Testcases)
@@ -165,10 +167,11 @@ File SRS/BRD (PDF/Drive)
   └─► doc-to-md / google-drive-qa
        └─► business-analysis (Review 18 vùng Senior QA)
             ├─► Sinh file JSON trung tâm: analysis.json
-            └─► Chạy generate.sh sinh 3 output đồng bộ 100%:
+            └─► Chạy generate.sh sinh 3 output đồng bộ và machine handoff:
                  ├── 1. file.xmind (Sơ đồ tư duy editable + Mũi tên liên kết thực)
                  ├── 2. clarification-qna.md (Bảng Q&A cho AI/QA đọc)
-                 └── 3. clarification-qna.xlsx (File Excel gửi BA/PO điền trả lời)
+                 ├── 3. clarification-qna.xlsx (File Excel gửi BA/PO điền trả lời)
+                 └── 4. .business-analysis/*_Requirements.json (Registry ẩn cho qa-run browser mapping)
             └─► testcase-template (Sinh testcases.md & testcases.xlsx)
 ```
 
@@ -224,6 +227,7 @@ qa-knowledge/
   ├── ui-business/                    # Kết quả phân tích UI vs Backend/BRD theo từng trang
   │   └── <page-slug>/
   │       ├── ui-business-guide.md    # Hướng dẫn nghiệp vụ UI 12 phần
+  │       ├── ui-requirement-traceability.json # Mapping UI item ↔ requirement ↔ evidence
   │       ├── business-conflicts.json # Danh sách mâu thuẫn & deep evidence bundle
   │       ├── transition-evidence.json# Bằng chứng transition & reload persistence
   │       ├── clarification-qna.json  # Câu hỏi Q&A phân định BA/PO/Dev
@@ -261,9 +265,9 @@ Update QA Knowledge:
 Sau khi chạy bất kỳ sub-pipeline nào của `qa-run` (`REPO_BUSINESS_DISCOVERY`, `UI_BUSINESS_RECONCILIATION`, hay `APP_BASELINE_DISCOVERY`), toàn bộ thông tin tính năng, API contracts, state transitions và rules sẽ được lưu tự động vào `qa-knowledge/`.
 
 Lần làm việc tiếp theo:
-- **KHÔNG đọc lại toàn bộ đống Source Code / Raw PDF / Full HTML DOM** (~100,000+ Tokens).
-- **CHỈ ĐỌC file Memory ngắn gọn trong `qa-knowledge/`** (`system-business-guide.md` hoặc `ui-business-guide.md` ~1,500 - 2,500 Tokens).
-- 👉 **Tiết kiệm tới ~98% Token tiêu thụ** cho mỗi lần retest hoặc thiết kế testcase mới.
+- Không đọc lại toàn bộ source, PDF đã convert hoặc full DOM khi `knowledge-index.json` đã trỏ tới shard phù hợp.
+- Chỉ đọc guide, requirement và source symbol đúng feature scope.
+- Repo chưa có telemetry tokenizer canonical, vì vậy không công bố phần trăm tiết kiệm như số đo thực nghiệm.
 
 ---
 
@@ -273,10 +277,10 @@ Lần làm việc tiếp theo:
 
 | Hạng | Luồng Thao tác QA | Chi phí Chưa tối ưu (Raw Prompting) | Nguyên nhân Ngốn Token | Giải pháp Engine Tối ưu Đã Triển khai | Chi phí Sau Tối ưu (Level 0-2) | Mức Tiết kiệm |
 |:---:|:---|:---:|:---|:---|:---:|:---:|
-| 🥇 **TOP 1** | **Phân tích Source Code trực tiếp bằng AI Prompt** | **80,000 – 150,000 Tokens/lần** | Nạp hàng chục nghìn dòng code thô trực tiếp vào Context Window | **Probe CLI** (`@probelabs/probe`) + **ast-grep** + **Understand-Anything** trích xuất `context-pack.json` | **1,500 – 3,000 Tokens** | 📉 **Giảm ~98%** |
-| 🥈 **TOP 2** | **Full-App Re-discovery nhiều lần trong các Retest nhỏ** | **50,000 – 90,000 Tokens/lần** | Quét lại toàn bộ ứng dụng nhiều lần từ đầu cho mỗi ticket retest | **`incremental-discovery.mjs`** + **SCIP** chỉ quét đúng module & changed symbols bị ảnh hưởng | **1,000 – 4,000 Tokens** | 📉 **Giảm ~95%** |
-| 🥉 **TOP 3** | **Đưa Raw Full HTML DOM / Full Screenshot 4K vào AI Vision** | **30,000 – 60,000 Tokens/lần** | Gửi nguyên cây DOM thô hoặc ảnh 4K full-page cho Vision LLM API | **`dom-pruner.mjs`** (Playwright Scoped ARIA Snapshot) + **OmniParser Bounding Boxes** (0 Vision Token) | **0 – 1,000 Tokens** *(Chỉ crop vùng lỗi)* | 📉 **Giảm ~93–100%** |
-| 🏅 **TOP 4** | **Parse PDF / DOCX thô chưa qua Indexing** | **20,000 – 50,000 Tokens/lần** | Nạp file nhị phân lớn hoặc văn bản chưa qua lọc định dạng | **Docling** + **`doc-indexer.mjs`** + **SQLite FTS** chỉ trích xuất 3–5 Section liên quan tới feature | **1,500 – 4,000 Tokens** | 📉 **Giảm ~90%** |
+| 🥇 **TOP 1** | **Phân tích Source Code trực tiếp bằng AI Prompt** | **Chưa benchmark** | Nạp repository thô trực tiếp vào context | `repo-business-discovery.mjs`, source index và Graphify code-only khi available tạo artifact có provenance | **Phải đo theo run** | Giảm theo kích thước scope |
+| 🥈 **TOP 2** | **Full-App Re-discovery nhiều lần trong các Retest nhỏ** | **Chưa benchmark** | Quét lại toàn ứng dụng cho ticket nhỏ | `prepare-test-intelligence.mjs` chọn feature scope và ranked impacted charters từ knowledge/source hiện tại | **Phải đo theo run** | Giảm theo module ảnh hưởng |
+| 🥉 **TOP 3** | **Đưa Raw Full HTML DOM / Full Screenshot vào AI** | **Chưa benchmark** | Gửi DOM/ảnh full-page không lọc | `ui-business-component-extractor.mjs` tạo inventory và `visual-evidence-router.mjs` route crop evidence khi có | **Phải đo theo run** | Giảm theo số component/crop |
+| 🏅 **TOP 4** | **Đọc PDF / DOCX lớn không theo scope** | **Chưa benchmark** | Đưa toàn bộ nội dung đã convert vào context | **`doc-to-md`** giữ heading rồi `knowledge-index.json` chỉ trỏ tới shard/guide đúng scope | **Phải đo theo run** | Giảm phụ thuộc kích thước tài liệu |
 
 ---
 
@@ -285,7 +289,7 @@ Lần làm việc tiếp theo:
    - `repo-business-discovery.mjs`: ast-grep & AST Scanners trích xuất API & ERD tự động.
    - `visual-evidence-router.mjs`: Microsoft OmniParser phân tích Bounding Boxes cục bộ (`omni-parsed-boxes.json`).
    - `execute-sheet.mjs`: Xác nhận module + worker count + worker selection, shard testcase và chỉ write-back Pass/Fail có ảnh/video.
-2. **Đọc File Caching Memory từ `qa-knowledge/` (`~1,500 Tokens`)**:
+2. **Đọc file knowledge theo scope từ `qa-knowledge/`**:
    - Đọc `system-business-guide.md` và `ui-business-guide.md` đã tóm tắt 12 phần chuẩn.
 3. **Targeted Visual Evidence Cropping (`~500 - 1,000 Tokens`)**:
    - Chỉ cắt đúng vùng component bị conflict gửi cho AI Vision khi DOM audit phát hiện mâu thuẫn.
@@ -295,14 +299,14 @@ Lần làm việc tiếp theo:
 ---
 
 ### 🚨 Điều kiện Nghiệm thu Token Optimization Engine:
-- [ ] Không gửi Full DOM thô mặc định cho AI (chỉ dùng Playwright Scoped ARIA Snapshot / `dom-pruner.mjs`).
+- [ ] Không gửi Full DOM thô mặc định cho AI; dùng scoped ARIA snapshot hoặc `ui-business-component-extractor.mjs`.
 - [ ] Không gửi toàn bộ Source Code repository cho AI (chỉ gửi Context Pack do Probe / AST-grep trích xuất).
-- [ ] Tài liệu chỉ lấy đúng Section liên quan đến tính năng đang test (qua Docling & `doc-indexer.mjs`).
+- [ ] Tài liệu chỉ lấy đúng section liên quan sau `doc-to-md`, dựa trên heading và `knowledge-index.json`.
 - [ ] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict (`visual-evidence-router.mjs`).
-- [ ] Repo không thay đổi bắt buộc dùng Cache (`artifact-cache.mjs`).
-- [ ] Retest ticket chỉ scan module bị ảnh hưởng (`incremental-discovery.mjs` + SCIP).
-- [ ] Context vượt Budget phải tự cắt gọt và ghi rõ phần đã loại bỏ (`token-budget-manager.mjs`).
-- [ ] Mọi Fallback lên Level cao hơn phải có lý do ghi rõ trong `token-usage.json`.
+- [ ] Dùng source hash và knowledge index để tránh discovery ngoài scope; cache canonical vẫn là gap.
+- [ ] Retest ticket chỉ chuẩn bị intelligence và charters cho module bị ảnh hưởng.
+- [ ] `prepare-test-intelligence.mjs` chỉ nạp source/knowledge theo feature scope và ghi provenance của phần đã dùng.
+- [ ] Số token và mức tiết kiệm chỉ được công bố khi có telemetry đo thật; repo hiện chưa có tokenizer/`token-usage.json` tự động.
 
 ---
 
@@ -326,15 +330,15 @@ Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision v
 ```mermaid
 flowchart TD
     L0["Level 0: Deterministic Script (0 AI Token)\n• AST/ast-grep Scanners, SCIP, Playwright CLI & Probe CLI"] --> L1
-    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• context-pack.json & dom-pruner output"] --> L2
-    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & Probe CLI scoped symbols"] --> L3
+    L1["Level 1: AI đọc JSON Tóm lược\n• business-execution-brief & UI component inventory"] --> L2
+    L2["Level 2: AI đọc Code / Document theo Scope\n• knowledge-index shards & scoped source symbols"] --> L3
     L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
     L4["Level 4: Scoped Module Fallback (Repomix Compressed XML)\n• Giới hạn theo Scope Module/Symbol, tuyệt đối không dump full repo"]
 ```
 
 - **Level 0**: Script deterministic hoàn toàn, **0 AI token** (dùng `ast-grep`, `SCIP`, `Probe CLI`, Playwright CLI).
-- **Level 1**: AI đọc JSON tóm lược (`context-pack.json` & `dom-pruner.mjs` output).
-- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections & Probe AST snippets).
+- **Level 1**: AI đọc JSON tóm lược (`business-execution-brief.json` và UI component inventory).
+- **Level 2**: AI chỉ đọc code hoặc tài liệu theo shard/heading và source symbol đúng scope; số token phải đo theo runtime thực tế.
 - **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`). Giới hạn theo số ảnh crop, kích thước vùng crop và số lần gọi Vision API.
 - **Level 4**: Scoped Module Fallback (`Repomix --compress` theo module) — Vẫn giới hạn phạm vi theo Module / Symbol boundary ngay cả khi fallback, **tuyệt đối không dump toàn bộ source code repository**.
 
@@ -351,37 +355,33 @@ Source Code
 └── Repomix               (Fallback nén code XML theo module cho Level 4)
 
 Web UI
-├── Playwright ARIA Snapshot (Scoped snapshot theo element #order-form với depth 4)
-├── dom-pruner.mjs        (Rút gọn DOM thô thành Business Components JSON)
-└── OmniParser            (Chỉ dùng làm visual fallback cho Canvas / WebGL / Obfuscated UI)
+├── Playwright ARIA Snapshot               (Scoped snapshot)
+├── ui-business-component-extractor.mjs    (Business Components + stable UI ID)
+└── OmniParser                              (Optional visual fallback khi runtime available)
 
 Documents
-├── Docling               (Convert PDF/DOCX/PPTX giữ nguyên layout/table)
-├── doc-indexer.mjs       (Indexing & Filter Section tài liệu)
-└── SQLite FTS            (Tìm kiếm section tài liệu liên quan đến feature)
+├── doc-to-md             (Convert PDF/DOCX/PPTX sang Markdown giữ heading/table)
+├── knowledge-index.json  (Entry point trỏ tới shard/guide đúng scope)
+└── Markdown headings     (Source reference cho requirement và retrieval)
 ```
 
 ---
 
-### 🛠️ Bộ 7 Script Hỗ trợ Tối ưu Token (`qa-run/scripts/`) & Cache Key Versioning
+### 🛠️ Cơ chế tối ưu token hiện có và gap còn mở
 
-1. **`artifact-cache.mjs`**: Cache kết quả trích xuất dựa trên phiên bản tổng hợp:
-   `CacheKey = MD5(commitHash | fileContentHash | inputHash | parserVersion | adapterVersion | knowledgeSchemaVersion)`
-   *(Tránh trường hợp dùng lại cache cũ sai cấu trúc schema).*
-5. **`visual-evidence-router.mjs`**: Tự động tích hợp **Microsoft OmniParser** (Screen Parsing Model) để phân tích bounding box của các phần tử giao diện cục bộ (Local Model):
+1. **`prepare-test-intelligence.mjs` + `context-builder.mjs`**: đọc `knowledge-index.json`, source artifact và requirement theo feature scope; trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED` thay vì tạo flow fallback.
+2. **`visual-evidence-router.mjs`**: route visual evidence và chỉ dùng crop khi cần:
    - Chạy OmniParser phân tích ảnh screenshot thành danh sách cấu trúc JSON chứa tọa độ `[x1, y1, x2, y2]` và nhãn phần tử tương tác (`button`, `input`, `badge`, `menu`).
    - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
    - Chỉ crop đúng vùng patch nghi ngờ gửi cho LLM Vision API khi OmniParser hoặc DOM audit phát hiện mâu thuẫn.
-6. **`incremental-discovery.mjs`**: Chỉ scan lại các route, module hoặc source file có sự thay đổi (dựa trên hash).
-7. **`token-budget-manager.mjs`**: Quản lý và kiểm soát Budget Token per Intent bằng Tokenizer thật.
-   - Budget Config: `RETEST_TICKET`: 8k, `EXPLORATORY_ADHOC`: 12k, `UI_BUSINESS_RECONCILIATION`: 15k, `REPO_BUSINESS_DISCOVERY`: 20k.
-   - Khi vượt budget: Tự động loại duplicate -> Bỏ phần confidence thấp -> Giữ High Risk -> Ghi phần đã cắt bớt.
+3. **`source-indexer.mjs` + source hash**: giới hạn discovery theo source hiện tại và giữ provenance cho artifact.
+4. **Gap đã biết**: chưa có tokenizer/telemetry tự động để chứng minh ngân sách hoặc phần trăm tiết kiệm token; không được claim số đo như kết quả thực nghiệm.
 
 ---
 
-### 📊 File Đo Lường Hiệu quả Token (`qa-knowledge/metrics/token-usage.json`)
+### 📊 Telemetry token đề xuất, chưa phải output hiện có
 
-Mọi phiên test tự động ghi nhận chỉ số thực tế để làm cơ sở benchmark:
+Schema dưới đây chỉ là đề xuất cho lần triển khai sau. Pipeline hiện tại không tự ghi file này, vì vậy mọi con số phải được ghi là ước lượng cho đến khi có tokenizer và test benchmark:
 
 ```json
 {
@@ -401,26 +401,24 @@ Mọi phiên test tự động ghi nhận chỉ số thực tế để làm cơ 
 
 ### 🚦 Thứ tự Triển khai & Điều kiện Nghiệm thu Token Optimization Engine
 
-#### Thứ tự Triển khai 7 Scripts:
+#### Thứ tự ưu tiên triển khai gap còn lại:
 ```text
-1. artifact-cache.mjs          (Cache key versioning & Hash check)
-2. dom-pruner.mjs              (Rút gọn DOM thành Business Components)
-3. doc-indexer.mjs             (Indexing & Filter Section tài liệu)
-4. incremental-discovery.mjs   (Scan theo module/route hash thay đổi)
-5. context-builder.mjs         (Tạo và validate Business Execution Brief theo scope)
-6. visual-evidence-router.mjs  (Điều phối crop ảnh nghi ngờ cho Vision)
-7. token-budget-manager.mjs    (Token budget guard & Real tokenizer metric)
+1. Giữ `prepare-test-intelligence.mjs` và `context-builder.mjs` làm scope gate canonical
+2. Bổ sung telemetry tokenizer nếu cần báo chi phí token định lượng
+3. Bổ sung benchmark fixture trước khi công bố phần trăm tiết kiệm
+4. Dùng `ui-business-component-extractor.mjs` cho component inventory thay vì full DOM
+5. Dùng `visual-evidence-router.mjs` cho evidence crop khi có screenshot thật
 ```
 
 #### Điều kiện Nghiệm thu:
 - [x] Không gửi Full DOM thô mặc định cho AI.
 - [x] Không gửi toàn bộ Source Code repository cho AI.
-- [x] Tài liệu chỉ lấy đúng Section liên quan đến tính năng đang test.
+- [x] Knowledge runtime chỉ nạp shard/guide được `knowledge-index.json` trỏ tới khi index tồn tại.
 - [x] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict.
-- [x] Repo không thay đổi bắt buộc dùng Cache.
-- [x] Retest ticket chỉ scan module bị ảnh hưởng (Incremental).
-- [x] Context vượt Budget phải tự cắt gọt và ghi rõ phần đã loại bỏ.
-- [x] Mọi Fallback lên Level cao hơn phải có lý do ghi rõ trong `token-usage.json`.
+- [ ] Cache artifact và invalidation policy chưa có script canonical riêng.
+- [x] Retest dùng feature scope và ranked impacted charters qua test intelligence.
+- [ ] Hard token budget và telemetry tokenizer chưa được triển khai.
+- [ ] Chưa có `token-usage.json` canonical; không claim fallback/token metric tự động.
 
 ---
 
@@ -444,15 +442,15 @@ Screenshot chỉ dùng khi DOM audit không đủ kết luận (Cropped Vision)
 ```mermaid
 flowchart TD
     L0["Level 0: Deterministic Script (0 AI Token)\n• AST/Regex Scanners & Playwright CLI Execution"] --> L1
-    L1["Level 1: AI đọc JSON Tóm lược (1k - 3k Tokens)\n• business-execution-brief.json & dom-pruner output"] --> L2
-    L2["Level 2: AI đọc Code / Document theo Đoạn nhỏ (2k - 5k Tokens)\n• doc-indexer sections & changed symbols"] --> L3
+    L1["Level 1: AI đọc JSON Tóm lược\n• business-execution-brief.json & UI component inventory"] --> L2
+    L2["Level 2: AI đọc Code / Document theo Scope\n• knowledge-index shards & changed symbols"] --> L3
     L3["Level 3: AI Vision xem Ảnh Crop (500 - 1k Tokens)\n• visual-evidence-router cropped region images"] --> L4
     L4["Level 4: Full Screenshot / Full Source Code\n• Chỉ dùng khi Level 0 - Level 3 bị FAIL"]
 ```
 
 - **Level 0**: Script deterministic hoàn toàn, **0 AI token**.
-- **Level 1**: AI đọc JSON tóm lược (`business-execution-brief.json` & `dom-pruner.mjs` output).
-- **Level 2**: AI chỉ đọc code hoặc tài liệu theo đoạn nhỏ (`doc-indexer.mjs` sections).
+- **Level 1**: AI đọc JSON tóm lược (`business-execution-brief.json` và UI component inventory).
+- **Level 2**: AI chỉ đọc source symbol hoặc document section được scope/index trỏ tới.
 - **Level 3**: AI Vision xem ảnh crop của component bị lỗi (`visual-evidence-router.mjs`).
 - **Level 4**: Full screenshot hoặc full source code **CHỈ KHI THỰC SỰ CẦN THIẾT**.
 
@@ -460,13 +458,12 @@ flowchart TD
 
 ### 🛠️ Bộ Script Hỗ trợ Tối ưu Token (`qa-run/scripts/`)
 
-1. **`artifact-cache.mjs`**: Cache kết quả trích xuất theo commit hash, file content hash và input hash. Nếu file không đổi, không phân tích lại.
-2. **`context-builder.mjs`**: Nhận Intent & feature scope, đọc knowledge thực tế, tạo `business-execution-brief.json` và trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED`; không sinh flow fallback.
-3. **`dom-pruner.mjs`**: Rút gọn cây DOM thô thành danh sách business components ngắn gọn (loại bỏ script, style, svg paths, class dài, hidden elements).
-4. **`doc-indexer.mjs`**: Chia nhỏ tài liệu PDF/DOCX theo section index, chỉ cung cấp đúng section liên quan tới feature đang test.
-5. **`visual-evidence-router.mjs`**: Tự động quyết định vùng visual nào thực sự cần gửi cho AI Vision (chỉ crop region khi DOM audit nghi ngờ).
-6. **`incremental-discovery.mjs`**: Chỉ scan lại các route, module hoặc source file có sự thay đổi (dựa trên hash).
-7. **`token-budget-manager.mjs`**: Quản lý và kiểm soát Budget Token per Intent (`RETEST_TICKET`: 8k, `EXPLORATORY_ADHOC`: 12k, `UI_BUSINESS_RECONCILIATION`: 15k, `REPO_BUSINESS_DISCOVERY`: 20k).
+1. **`prepare-test-intelligence.mjs`**: Điều phối requirement, knowledge và current source theo feature scope.
+2. **`context-builder.mjs`**: Tạo `business-execution-brief.json` và trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED`; không sinh flow fallback.
+3. **`ui-business-component-extractor.mjs`**: Chuyển live page/snapshot thành component inventory có stable UI item ID.
+4. **`visual-evidence-router.mjs`**: Quyết định visual evidence cần review/crop.
+5. **`source-indexer.mjs`**: Lập chỉ mục source phục vụ discovery có provenance.
+6. **Chưa có** hard token-budget manager hoặc telemetry tokenizer canonical; đây là gap cần đo và triển khai riêng.
 
 ---
 
@@ -474,10 +471,10 @@ flowchart TD
 
 | Luồng Xử lý | Chưa tối ưu (Raw Execution) | Sau khi tối ưu (Pruned + Cached) | Mức Tiết kiệm |
 |:---|:---:|:---:|:---:|
-| **Source Code Analysis** | 80,000 – 150,000 Tokens | **2,000 – 8,000 Tokens** | 📉 **Mục tiêu Giảm ~95%** |
-| **Raw DOM & Screenshots** | 30,000 – 60,000 Tokens | **1,000 – 5,000 Tokens** | 📉 **Mục tiêu Giảm ~93%** |
-| **Tài liệu PDF / DOCX** | 20,000 – 50,000 Tokens | **2,000 – 6,000 Tokens** | 📉 **Mục tiêu Giảm ~90%** |
-| **App Re-discovery** | ~50,000 Tokens | **1,000 – 10,000 Tokens** | 📉 **Mục tiêu Giảm ~90%** |
+| **Source Code Analysis** | Cần baseline theo repo | Scope theo source index/feature | Chưa đo |
+| **Raw DOM & Screenshots** | Cần baseline theo trang | Component inventory + crop evidence | Chưa đo |
+| **Tài liệu PDF / DOCX** | Cần baseline theo tài liệu | Markdown heading + knowledge shard | Chưa đo |
+| **App Re-discovery** | Cần baseline theo ứng dụng | Test intelligence theo module ảnh hưởng | Chưa đo |
 
 ---
 
@@ -501,7 +498,7 @@ flowchart TD
 
 ---
 
-## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 16 Skills
+## 🗂️ 11. Chi tiết Danh mục & Mối liên hệ Trực tiếp giữa Tất cả 18 Skills
 
 ### 1️⃣ `qa-run` (Core Execution Engine & Knowledge Hub)
 - **Đường dẫn**: `qa-run/SKILL.md`
@@ -543,7 +540,7 @@ flowchart TD
 - **Outputs**: File `.md` giữ nguyên cấu trúc heading, table và code blocks.
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: File local hoặc chat upload.
-  - 📤 **Chuyển dữ liệu tới**: `business-analysis` & `doc-indexer.mjs` (trích xuất section).
+  - 📤 **Chuyển dữ liệu tới**: `business-analysis`; `qa-run` nạp lại đúng shard/guide qua `knowledge-index.json` khi có.
 
 ---
 
@@ -687,3 +684,14 @@ flowchart TD
 - **Mối liên hệ / Mapping**:
   - 📥 **Nhận dữ liệu từ**: Source repository và requirement/AC đã xác nhận.
   - 📤 **Chuyển dữ liệu tới**: `testcase-template`; không sở hữu hoặc sao chép workbook template.
+
+---
+
+### 18. `ego-browser` (Browser Driver dùng login state thật)
+- **Đường dẫn**: `ego-browser/SKILL.md`
+- **Mục đích**: Điều khiển Chromium tách biệt trên macOS và kế thừa login state thật theo external-effect safety gate
+- **Inputs**: URL/task space, active browser state và phạm vi action được user cho phép
+- **Outputs**: UI observation, screenshot và basic network events ở mức `reduced_confidence`
+- **Mối liên hệ / Mapping**:
+  - 📥 **Nhận dữ liệu từ**: `qa-run` browser-driver resolution
+  - 📤 **Chuyển dữ liệu tới**: `qa-run`; cần `chrome-devtools-mcp` cùng CDP port khi assertion cần request/response body hoặc headers

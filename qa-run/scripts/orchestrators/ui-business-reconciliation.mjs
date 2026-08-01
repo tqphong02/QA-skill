@@ -1,126 +1,74 @@
 #!/usr/bin/env node
-/**
- * ui-business-reconciliation.mjs — Orchestrator for UI_BUSINESS_RECONCILIATION Phase 2
- *
- * Coordinates the full 13-step UI Business Reconciliation pipeline:
- *   1. Load Documents & Source Knowledge
- *   2. Open Browser with Role & Test Data
- *   3. Capture DOM, Accessibility & Screenshot
- *   4. Segment Business Regions (ui-region-segmenter.mjs)
- *   5. Explore UI States (ui-state-explorer.mjs)
- *   6. Extract Business Components (ui-business-component-extractor.mjs)
- *   7. Extract Visual Signals (visual-business-signal-extractor.mjs)
- *   8. Build Observed Action Graph (ui-observed-flow-builder.mjs)
- *   9. Capture Evidence Crops (capture-ui-business-evidence.mjs)
- *  10. Reconcile 3 Angles (ui-business-reconciler.mjs)
- *  11. Detect Ambiguity Patterns (ui-business-ambiguity-detector.mjs)
- *  12. Manage Q&A Lifecycle (ui-business-qna-generator.mjs)
- *  13. Write 12-Section Guide (write-ui-business-guide.mjs)
- *
- * Usage:
- *   node ui-business-reconciliation.mjs --page order-detail
- *   node ui-business-reconciliation.mjs --url http://localhost:9876 --page order-detail
- */
+/** Orchestrate fail-closed UI item to requirement reconciliation. */
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { resolveScriptPath } from '../registry.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 const args = process.argv.slice(2);
-const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
-
-const TARGET_URL = getArg('--url', null);
-const SNAPSHOT   = getArg('--snapshot', null);
-const PAGE_SLUG  = getArg('--page', 'page-ui');
+const getArg = (flag, def = null) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
+const hasFlag = flag => args.includes(flag);
+const TARGET_URL = getArg('--url');
+const SNAPSHOT = getArg('--snapshot') || getArg('--fixture');
+const REQUIREMENTS = getArg('--requirements');
+const STORAGE_STATE = getArg('--storage-state');
+const PAGE_SLUG = getArg('--page', 'page-ui');
+const ROLE = getArg('--role');
+const VERIFY_RUNTIME = hasFlag('--verify-runtime');
+const ACTION_SELECTOR = getArg('--runtime-action-selector');
+const ACTION_LABEL = getArg('--runtime-action-label');
+const EXPECTED_STATE = getArg('--runtime-expected-state');
 
 function runScript(scriptName, extraArgs = []) {
   const scriptPath = resolveScriptPath(scriptName);
-  if (!fs.existsSync(scriptPath)) {
-    console.warn(`[ui-orchestrator] ⚠️ Script not found: ${scriptName} — skipping`);
-    return false;
-  }
-  const result = spawnSync('node', [scriptPath, ...extraArgs], {
-    stdio: 'inherit',
-    env: { ...process.env },
-  });
-  if (result.status !== 0) {
-    console.error(`[ui-orchestrator] ❌ ${scriptName} failed (exit ${result.status})`);
-    return false;
-  }
-  return true;
+  if (!fs.existsSync(scriptPath)) throw new Error(`Required script not found: ${scriptName}`);
+  const result = spawnSync('node', [scriptPath, ...extraArgs], { stdio: 'inherit', env: { ...process.env } });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`${scriptName} failed with exit ${result.status}`);
 }
 
 async function main() {
-  console.log('\n' + '═'.repeat(60));
-  console.log(`[ui-orchestrator] 🚀 UI_BUSINESS_RECONCILIATION Pipeline (Phase 2)`);
-  console.log(`  Page Slug: ${PAGE_SLUG}`);
-  console.log(`  Target:    ${TARGET_URL || SNAPSHOT || 'fixture snapshot'}`);
-  console.log('═'.repeat(60) + '\n');
+  if (!TARGET_URL && !SNAPSHOT) throw new Error('Provide explicit --url or --snapshot/--fixture');
+  if (!REQUIREMENTS) throw new Error('Provide --requirements; browser-to-document mapping cannot run without a requirement registry');
+  if (!fs.existsSync(REQUIREMENTS)) throw new Error(`Requirement registry not found: ${REQUIREMENTS}`);
+  if (VERIFY_RUNTIME && (!TARGET_URL || !ACTION_SELECTOR)) {
+    throw new Error('--verify-runtime requires --url and --runtime-action-selector (explicit state-changing authorization)');
+  }
 
-  const startTime = Date.now();
-  const extractorArgs = ['--page', PAGE_SLUG];
-  if (TARGET_URL) extractorArgs.push('--url', TARGET_URL);
-  if (SNAPSHOT) extractorArgs.push('--snapshot', SNAPSHOT);
+  const inputArgs = ['--page', PAGE_SLUG];
+  if (TARGET_URL) inputArgs.push('--url', TARGET_URL);
+  if (SNAPSHOT) inputArgs.push('--snapshot', SNAPSHOT);
+  if (STORAGE_STATE) inputArgs.push('--storage-state', STORAGE_STATE);
+  if (ROLE) inputArgs.push('--role', ROLE);
 
-  // 1. Extract Components
-  runScript('ui-business-component-extractor.mjs', extractorArgs);
-
-  // 2. Segment Regions
+  console.log(`[ui-orchestrator] Start page=${PAGE_SLUG} input=${TARGET_URL || SNAPSHOT} requirements=${REQUIREMENTS}`);
+  runScript('ui-business-component-extractor.mjs', inputArgs);
   runScript('ui-region-segmenter.mjs', ['--page', PAGE_SLUG]);
-
-  // 3. Classify Action Intents
   runScript('ui-action-intent-classifier.mjs', ['--page', PAGE_SLUG]);
-
-  // 4. Explore Multi-State UI Graph
-  runScript('ui-state-explorer.mjs', extractorArgs);
-
-  // 5. Extract Visual Signals & Anomalies
+  runScript('ui-state-explorer.mjs', inputArgs);
   runScript('visual-business-signal-extractor.mjs', ['--page', PAGE_SLUG]);
-
-  // 5b. Route Visual Evidence via Microsoft OmniParser (Zero Vision Token Grounding)
   runScript('visual-evidence-router.mjs', ['--page', PAGE_SLUG]);
-
-  // 6. Build UI Observed Flow
   runScript('ui-observed-flow-builder.mjs', ['--page', PAGE_SLUG]);
 
-  // 7. Reconcile 3 Angles (Actual vs Implemented vs Expected)
-  runScript('ui-business-reconciler.mjs', ['--page', PAGE_SLUG]);
-
-  // 8. Detect 10 Ambiguity Patterns
-  runScript('ui-business-ambiguity-detector.mjs', ['--page', PAGE_SLUG]);
-
-  // 9. Capture Evidence Screenshot Crops
-  if (TARGET_URL) {
-    runScript('capture-ui-business-evidence.mjs', extractorArgs);
+  if (VERIFY_RUNTIME) {
+    const runtimeArgs = ['--page', PAGE_SLUG, '--url', TARGET_URL, '--action-selector', ACTION_SELECTOR];
+    if (ACTION_LABEL) runtimeArgs.push('--action-label', ACTION_LABEL);
+    if (EXPECTED_STATE) runtimeArgs.push('--expected-state', EXPECTED_STATE);
+    if (STORAGE_STATE) runtimeArgs.push('--storage-state', STORAGE_STATE);
+    runScript('ui-runtime-transition-verifier.mjs', runtimeArgs);
   }
 
-  // 10. Manage Q&A Lifecycle
+  const reconcileArgs = ['--page', PAGE_SLUG, '--requirements', REQUIREMENTS];
+  if (ROLE) reconcileArgs.push('--role', ROLE);
+  runScript('ui-business-reconciler.mjs', reconcileArgs);
+  runScript('ui-business-ambiguity-detector.mjs', ['--page', PAGE_SLUG]);
+  if (TARGET_URL) runScript('capture-ui-business-evidence.mjs', inputArgs);
   runScript('ui-business-qna-generator.mjs', ['--page', PAGE_SLUG]);
-
-  // 11. Write 12-Section Guide
   runScript('write-ui-business-guide.mjs', ['--page', PAGE_SLUG]);
 
-  const duration = ((Date.now() - startTime) / 1000).toFixed(1);
   const outDir = path.join(process.env.QA_DATA_DIR || process.cwd(), 'qa-knowledge', 'ui-business', PAGE_SLUG);
-
-  console.log('\n' + '═'.repeat(60));
-  console.log(`[ui-orchestrator] ✅ UI_BUSINESS_RECONCILIATION COMPLETE in ${duration}s`);
-  console.log(`  Output Directory: ${outDir}`);
-  if (fs.existsSync(outDir)) {
-    fs.readdirSync(outDir).forEach(f => {
-      const stat = fs.statSync(path.join(outDir, f));
-      console.log(`    📄 ${f.padEnd(32)} ${(stat.size / 1024).toFixed(1)}KB`);
-    });
-  }
-  console.log('═'.repeat(60));
-  process.exit(0);
+  console.log(`[ui-orchestrator] Complete: ${path.join(outDir, 'ui-requirement-traceability.json')}`);
 }
 
-main().catch(err => {
-  console.error('[ui-orchestrator] FATAL:', err.message);
-  process.exit(1);
-});
+main().catch(err => { console.error('[ui-orchestrator] FATAL:', err.message); process.exit(1); });

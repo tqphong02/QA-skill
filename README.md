@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 17 skill
+## 18 skill
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -10,7 +10,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [testcase-template](./testcase-template/SKILL.md) | Sinh test case Excel theo template Nina Studio (4 sheet, formulas, dropdowns) | `Template.xlsx` |
 | [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Scaffold & viết Playwright + TS + POM (UI / API / Performance / CI-CD) | `.spec.ts` + `pages/` + `selectors/` + pipeline |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
-| [business-analysis](./business-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md` + `.xlsx` |
+| [business-analysis](./business-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
 | [pentest-run](./pentest-run/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |
 | [plane-qa](./plane-qa/SKILL.md) | CRUD ticket Plane đa workspace, log bug, comment retest và evidence inline | ticket/comment Plane |
 | [google-drive-qa](./google-drive-qa/SKILL.md) | CRUD Drive, Docs, Sheets, Slides và permissions qua MCP | file/folder/report trên Drive |
@@ -23,6 +23,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, Appium MCP, WebdriverIO, scrcpy Wi-Fi và authorized network proxy inspection | mobile QA evidence + sanitized HAR/network report + test code |
 | [whitebox-qa](./whitebox-qa/SKILL.md) | White-box đa ngôn ngữ, call graph, NestJS DI, Jest/Vitest và runtime coverage | compact/full analysis + executable test + coverage evidence + testcase-template handoff |
 | [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
+| [ego-browser](./ego-browser/SKILL.md) | Browser driver macOS kế thừa login state thật, có safety gate cho external effects | browser session + UI evidence |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram
 
@@ -35,7 +36,7 @@ Bundle tiếng Việt ngày `30-07-2026` theo `plannotator/effective-html/html-d
 - [QA-skill — kiến trúc, danh mục và luồng định tuyến trong một file](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html)
 - [Dữ liệu JSON chuẩn](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill-du-lieu.json)
 
-File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `17 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Catalog lập chỉ mục đủ `173` mục H2–H4 từ các `SKILL.md` công khai và `23` mục mô tả capability phụ trợ, tổng cộng `196` mục cấu trúc. Nhánh thực thi được mô hình hóa riêng: `qa-run` có `9` workflow nội bộ và `mobile-qa` có `8`, tổng cộng `17` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
+File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `18 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Catalog lập chỉ mục `181` mục H2–H4 từ các `SKILL.md` công khai và `23` mục capability phụ trợ, tổng cộng `204` mục cấu trúc, `22` relationship và `17` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
 
 Format tương tác hiện tại:
 
@@ -95,7 +96,7 @@ cd QA-skill
 # 2c. Claude Code
 ./scripts/setup.sh --agent=claude --profile=core --yes
 
-# Cài đủ 17 skill chuyên sâu khi cần
+# Cài đủ 18 skill chuyên sâu khi cần
 ./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # Cài Postman skill + MCP + Postman CLI + Newman

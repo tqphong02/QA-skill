@@ -1,226 +1,147 @@
 #!/usr/bin/env node
-/**
- * ui-business-component-extractor.mjs — Business-meaningful UI Component Extractor
- *
- * Uses Stable Selector Strategy (precedence):
- *   1. data-testid / data-test / data-cy
- *   2. aria-label / aria-labelledby
- *   3. role + accessible name
- *   4. stable ID
- *   5. CSS selector
- *   6. XPath fallback
- *
- * Usage:
- *   node ui-business-component-extractor.mjs --url http://localhost:9876 --page order-detail
- */
+/** Extract business-relevant UI items from an explicit live page or snapshot. */
 
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { chromiumLaunchOptions } from '../helpers/browser-launch.mjs';
 
 const args = process.argv.slice(2);
-const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
+const getArg = (flag, def = null) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
 
-const TARGET_URL   = getArg('--url', null);
-const PAGE_SLUG    = getArg('--page', 'page-ui');
-const SNAPSHOT     = getArg('--snapshot', null);
-const OUTPUT_FILE  = getArg('--output', null);
-const DATA_DIR     = process.env.QA_DATA_DIR || process.cwd();
+const TARGET_URL = getArg('--url');
+const SNAPSHOT = getArg('--snapshot') || getArg('--fixture');
+const STORAGE_STATE = getArg('--storage-state');
+const PAGE_SLUG = getArg('--page', 'page-ui');
+const ROLE = getArg('--role');
+const OUTPUT_FILE = getArg('--output');
+const DATA_DIR = process.env.QA_DATA_DIR || process.cwd();
+
+function stableUiItemId(component) {
+  const identity = [PAGE_SLUG, component.category, component.label, component.selector, component.href]
+    .map(value => String(value || '').trim().toLowerCase()).join('|');
+  return `UI-${crypto.createHash('sha256').update(identity).digest('hex').slice(0, 12).toUpperCase()}`;
+}
+
+function normalizeComponents(components) {
+  return components.map(component => ({ ...component, uiItemId: component.uiItemId || stableUiItemId(component) }));
+}
 
 async function extractFromLivePage(url) {
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  const page = await browser.newPage();
+  const browser = await chromium.launch(chromiumLaunchOptions());
+  const context = await browser.newContext(STORAGE_STATE ? { storageState: STORAGE_STATE } : {});
+  const page = await context.newPage();
 
   try {
-    const res = await fetch(url);
-    const html = await res.text();
-    await page.setContent(html);
-  } catch (err) {
-    try {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch (e) {
-      console.warn(`[ui-component-extractor] Warning: ${e.message}`);
-    }
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    return await page.evaluate(() => {
+      const visible = el => {
+        const rect = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      const text = el => (el.innerText || el.textContent || el.getAttribute('aria-label') ||
+        el.getAttribute('placeholder') || el.getAttribute('title') || '').trim().replace(/\s+/g, ' ').slice(0, 140);
+      const cssEscape = value => globalThis.CSS?.escape ? globalThis.CSS.escape(value) : value.replace(/["\\]/g, '\\$&');
+      const selector = (el, defaultTag = el.tagName.toLowerCase()) => {
+        for (const attr of ['data-testid', 'data-test', 'data-cy']) {
+          const value = el.getAttribute(attr);
+          if (value) return `[${attr}="${cssEscape(value)}"]`;
+        }
+        const aria = el.getAttribute('aria-label');
+        if (aria) return `[aria-label="${cssEscape(aria)}"]`;
+        if (el.id && !/\d{5,}/.test(el.id)) return `#${cssEscape(el.id)}`;
+        const role = el.getAttribute('role');
+        const label = text(el);
+        if (role && label) return `[role="${role}"]:has-text("${cssEscape(label.slice(0, 40))}")`;
+        if (label) return `${defaultTag}:has-text("${cssEscape(label.slice(0, 40))}")`;
+        return defaultTag;
+      };
+      const components = [];
+      const add = item => components.push(item);
+
+      document.querySelectorAll('nav a, [role="navigation"] a, header a, .sidebar a, .menu-item, [role="menuitem"]').forEach(el => {
+        if (visible(el) && text(el)) add({ category: 'navigation_menu', label: text(el), href: el.getAttribute('href') || null, selector: selector(el, 'a') });
+      });
+      document.querySelectorAll('button, a.btn, a.button, [role="button"], input[type="submit"], input[type="button"]').forEach(el => {
+        if (!visible(el) || !text(el)) return;
+        const primary = el.classList.contains('primary') || el.classList.contains('btn-primary') || el.getAttribute('type') === 'submit';
+        add({
+          category: primary ? 'primary_action_button' : 'secondary_action_button',
+          label: text(el),
+          isDisabled: Boolean(el.disabled || el.classList.contains('disabled') || el.getAttribute('aria-disabled') === 'true'),
+          isHidden: false,
+          selector: selector(el, 'button'),
+        });
+      });
+      document.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+        if (!visible(el)) return;
+        let label = el.id ? text(document.querySelector(`label[for="${cssEscape(el.id)}"]`) || el) : '';
+        if (!label) label = text(el.closest('label') || el) || el.getAttribute('name') || 'field';
+        add({
+          category: 'form_field', label,
+          fieldType: el.getAttribute('type') || el.tagName.toLowerCase(),
+          isRequired: Boolean(el.required || el.getAttribute('aria-required') === 'true' || el.closest('.form-group, label')?.querySelector('.required, .asterisk, [data-required]')),
+          defaultValue: el.value || null,
+          allowedValues: el.tagName === 'SELECT' ? [...el.options].map(option => option.value || option.textContent.trim()) : undefined,
+          isDisabled: Boolean(el.disabled || el.readOnly),
+          selector: selector(el),
+        });
+      });
+      document.querySelectorAll('.badge, .status, .tag, [data-status], .state-indicator').forEach(el => {
+        if (visible(el) && text(el)) add({ category: 'status_badge', label: text(el), statusValue: text(el).toUpperCase(), selector: selector(el, 'span') });
+      });
+      document.querySelectorAll('.user-role, .profile-role, [data-user-role]').forEach(el => {
+        if (visible(el) && text(el)) add({ category: 'role_indicator', label: text(el), selector: selector(el) });
+      });
+      document.querySelectorAll('[role="dialog"], dialog, .modal').forEach(el => {
+        if (visible(el)) add({ category: 'dialog', label: text(el) || 'Dialog', selector: selector(el) });
+      });
+      document.querySelectorAll('[role="tab"], th, [role="columnheader"], [role="alert"], .alert, .toast').forEach(el => {
+        if (!visible(el) || !text(el)) return;
+        const role = el.getAttribute('role');
+        const category = role === 'tab' ? 'tab' : (role === 'alert' || el.matches('.alert, .toast') ? 'message' : 'table_column');
+        add({ category, label: text(el), selector: selector(el) });
+      });
+      return components;
+    });
+  } finally {
+    await browser.close();
   }
-
-  const inventory = await page.evaluate(() => {
-    const isVisible = el => {
-      const r = el.getBoundingClientRect();
-      const s = getComputedStyle(el);
-      return s.visibility !== 'hidden' && s.display !== 'none';
-    };
-
-    const getText = el => (
-      el.innerText || el.textContent || el.getAttribute('aria-label') ||
-      el.getAttribute('placeholder') || el.getAttribute('title') || ''
-    ).trim().replace(/\s+/g, ' ').slice(0, 100);
-
-    const getStableSelector = (el, defaultTag = 'button') => {
-      const testId = el.getAttribute('data-testid') || el.getAttribute('data-test') || el.getAttribute('data-cy');
-      if (testId) return `[data-testid="${testId}"]`;
-
-      const ariaLabel = el.getAttribute('aria-label');
-      if (ariaLabel) return `[aria-label="${ariaLabel}"]`;
-
-      if (el.id && !/\d{5,}/.test(el.id)) return `#${el.id}`;
-
-      const text = getText(el);
-      if (text) return `${defaultTag}:has-text("${text.slice(0, 20)}")`;
-
-      if (el.className && typeof el.className === 'string') {
-        const firstClass = el.className.split(' ')[0];
-        if (firstClass) return `.${firstClass}`;
-      }
-
-      return defaultTag;
-    };
-
-    const components = [];
-
-    // 1. Menus
-    document.querySelectorAll('nav a, [role="navigation"] a, header a, sidebar a, .sidebar a, .menu-item, [role="menuitem"]').forEach(el => {
-      if (!isVisible(el)) return;
-      const label = getText(el);
-      if (label) {
-        components.push({
-          category: 'navigation_menu',
-          label,
-          href: el.getAttribute('href') || null,
-          selector: getStableSelector(el, 'a'),
-        });
-      }
-    });
-
-    // 2. Buttons
-    document.querySelectorAll('button, a.btn, a.button, [role="button"], input[type="submit"], input[type="button"]').forEach(el => {
-      if (!isVisible(el)) return;
-      const label = getText(el);
-      if (!label) return;
-
-      const isPrimary = el.classList.contains('primary') || el.classList.contains('btn-primary') || el.getAttribute('type') === 'submit';
-      const isDisabled = el.disabled || el.classList.contains('disabled') || el.getAttribute('aria-disabled') === 'true';
-
-      components.push({
-        category: isPrimary ? 'primary_action_button' : 'secondary_action_button',
-        label,
-        isDisabled,
-        isHidden: false,
-        selector: getStableSelector(el, 'button'),
-      });
-    });
-
-    // 3. Form Fields
-    document.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
-      if (!isVisible(el)) return;
-
-      let labelText = '';
-      if (el.id) {
-        const lbl = document.querySelector(`label[for="${el.id}"]`);
-        if (lbl) labelText = getText(lbl);
-      }
-      if (!labelText) {
-        const parentLbl = el.closest('label');
-        if (parentLbl) labelText = getText(parentLbl);
-      }
-      if (!labelText) {
-        labelText = el.getAttribute('placeholder') || el.getAttribute('name') || el.id || 'field';
-      }
-
-      const isRequired = el.required || el.getAttribute('aria-required') === 'true' || !!el.closest('.form-group, label')?.querySelector('.required, .asterisk, [data-required]');
-      const fieldType = el.getAttribute('type') || el.tagName.toLowerCase();
-
-      components.push({
-        category: 'form_field',
-        label: labelText,
-        fieldType,
-        isRequired,
-        defaultValue: el.value || null,
-        isDisabled: el.disabled || el.readOnly,
-        selector: getStableSelector(el, el.tagName.toLowerCase()),
-      });
-    });
-
-    // 4. Badges
-    document.querySelectorAll('.badge, .status, .tag, [data-status], .state-indicator').forEach(el => {
-      if (!isVisible(el)) return;
-      const text = getText(el);
-      if (text) {
-        components.push({
-          category: 'status_badge',
-          label: text,
-          statusValue: text.toUpperCase(),
-          selector: getStableSelector(el, 'span'),
-        });
-      }
-    });
-
-    // 5. Role Indicator
-    document.querySelectorAll('.user-role, .profile-role, [data-user-role]').forEach(el => {
-      if (!isVisible(el)) return;
-      const text = getText(el);
-      if (text) {
-        components.push({
-          category: 'role_indicator',
-          label: text,
-        });
-      }
-    });
-
-    return components;
-  });
-
-  await browser.close();
-  return inventory;
 }
 
 async function main() {
-  let components = [];
+  if (!TARGET_URL && !SNAPSHOT) {
+    throw new Error('Missing explicit input: provide --url or --snapshot/--fixture');
+  }
 
-  if (SNAPSHOT && fs.existsSync(SNAPSHOT)) {
-    console.log(`[ui-component-extractor] Loading snapshot from: ${SNAPSHOT}`);
+  let components;
+  let inputType;
+  if (SNAPSHOT) {
+    if (!fs.existsSync(SNAPSHOT)) throw new Error(`Snapshot not found: ${SNAPSHOT}`);
     const data = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8'));
     components = data.components || data;
-  } else if (TARGET_URL) {
-    console.log(`[ui-component-extractor] Scraping live page: ${TARGET_URL}`);
-    components = await extractFromLivePage(TARGET_URL);
+    if (!Array.isArray(components)) throw new Error('Snapshot must be an array or contain components[]');
+    inputType = 'snapshot';
   } else {
-    console.log(`[ui-component-extractor] ℹ️ Using fixture components with stable selectors.`);
-    components = [
-      { category: 'navigation_menu', label: 'Orders', href: '/orders', selector: 'a.menu-item[href="/orders"]' },
-      { category: 'navigation_menu', label: 'Payment Settings', href: '/settings/payment', selector: 'a.menu-item[href="/settings/payment"]' },
-      { category: 'primary_action_button', label: 'Approve', isDisabled: false, isHidden: false, selector: 'button#approve' },
-      { category: 'secondary_action_button', label: 'Save Draft', isDisabled: false, isHidden: false, selector: 'button#save-draft' },
-      { category: 'primary_action_button', label: 'Submit', isDisabled: false, isHidden: false, selector: 'button#submit' },
-      { category: 'primary_action_button', label: 'Submit Order Error', isDisabled: false, isHidden: false, selector: 'button#submit-error' },
-      { category: 'secondary_action_button', label: 'Cancel', isDisabled: false, isHidden: false, selector: 'button#cancel' },
-      { category: 'secondary_action_button', label: 'Delete', isDisabled: false, isHidden: false, selector: 'button#delete' },
-      { category: 'form_field', label: 'Amount', fieldType: 'number', isRequired: true, isDisabled: false, selector: 'input#amount' },
-      { category: 'form_field', label: 'Status', fieldType: 'select', isRequired: true, isDisabled: false, selector: 'select#status' },
-      { category: 'status_badge', label: 'DRAFT', statusValue: 'DRAFT', selector: 'span.badge' },
-      { category: 'role_indicator', label: 'Role: Staff' },
-    ];
+    components = await extractFromLivePage(TARGET_URL);
+    inputType = 'live_browser';
   }
+  components = normalizeComponents(components);
 
   const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', PAGE_SLUG);
   fs.mkdirSync(outDir, { recursive: true });
-
   const result = {
-    tool: 'ui-business-component-extractor.mjs',
-    pageSlug: PAGE_SLUG,
-    targetUrl: TARGET_URL || 'snapshot/fixture',
-    extractedAt: new Date().toISOString(),
-    totalComponents: components.length,
+    tool: 'ui-business-component-extractor.mjs', pageSlug: PAGE_SLUG,
+    target: TARGET_URL || SNAPSHOT, inputType, role: ROLE,
+    extractedAt: new Date().toISOString(), totalComponents: components.length,
     byCategory: components.reduce((acc, c) => { acc[c.category] = (acc[c.category] || 0) + 1; return acc; }, {}),
     components,
   };
-
   const outputPath = OUTPUT_FILE || path.join(outDir, 'ui-components.json');
   fs.writeFileSync(outputPath, JSON.stringify(result, null, 2), 'utf8');
-  console.log(`[ui-component-extractor] ✅ Saved ${components.length} components with stable selectors to: ${outputPath}`);
-  process.exit(0);
+  console.log(`[ui-component-extractor] Saved ${components.length} components to: ${outputPath}`);
 }
 
-main().catch(err => {
-  console.error('[ui-component-extractor] FATAL:', err.message);
-  process.exit(1);
-});
+main().catch(err => { console.error('[ui-component-extractor] FATAL:', err.message); process.exit(1); });

@@ -21,9 +21,41 @@ Store this file as `<project-output>/.business-analysis/<project-name>_Analysis_
   "sanity_journeys": [],
   "cross_cutting": [],
   "review_coverage": [],
+  "requirements": [],
   "questions": []
 }
 ```
+
+## Atomic requirement for browser traceability
+
+Add `requirements` when a later browser run must map every UI item back to BRD, SRS or FRS content. Do not derive this list from vague prose during generation. Each row must be atomic, have a stable ID and keep the exact source reference
+
+```json
+{
+  "id": "REQ-AUTH-001",
+  "text": "Chỉ tài khoản đang hoạt động được đăng nhập",
+  "source_ref": "account-portal.md#login",
+  "page": "login",
+  "actor": "Người dùng đã đăng ký",
+  "expected_behavior": "Tài khoản đã vô hiệu không tạo phiên mới",
+  "fact_status": "verified",
+  "human_confirmed": false,
+  "ui": {
+    "labels": ["Đăng nhập"],
+    "intents": ["SUBMIT"]
+  },
+  "expected": {
+    "enabled": true,
+    "api": "POST /login"
+  },
+  "source_refs": ["src/auth/login.service.ts"],
+  "testcase_ids": []
+}
+```
+
+Allowed `fact_status`: `verified`, `inferred`, `unresolved`. `human_confirmed` is true only when an authority supplied the answer. `ui` may contain `item_ids`, `labels`, `selectors`, `intents`, `categories`. A requirement without `ui` is valid and must appear as `REQ_ONLY` until a browser item is observed
+
+The generator exports the exact list to `.business-analysis/<project-name>_Requirements.json`. Pass that file to `qa-run` with `--requirements`; XMind and Q&A remain the user-facing BA deliverables
 
 ## Fact status
 

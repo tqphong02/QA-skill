@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "project": "conflict-app",
+  "requirements": [
+    {
+      "id": "REQ-ORD-001",
+      "text": "Chỉ Manager và Admin được thấy và thực hiện Approve",
+      "source_ref": "Order-SRS.md#permission-matrix",
+      "actor": "Staff",
+      "expected_behavior": "Staff không được thấy nút Approve",
+      "ui": { "labels": ["Approve"], "intents": ["APPROVE"] },
+      "expected": { "visible_roles": ["Manager", "Admin"], "api": "PUT /orders/:id/approve" },
+      "source_refs": ["src/order/order.controller.ts:25"],
+      "testcase_ids": ["TC-ORD-001"]
+    },
+    {
+      "id": "REQ-ORD-002",
+      "text": "Amount là optional và backend chỉ chấp nhận số lớn hơn 0 khi có giá trị",
+      "source_ref": "Order-SRS.md#amount-validation",
+      "expected_behavior": "Amount không bắt buộc và không chấp nhận số âm",
+      "ui": { "labels": ["Amount"], "categories": ["form_field"] },
+      "expected": { "required": false, "forbidden_values": [-500, 0], "api": "PUT /orders/:id" },
+      "source_refs": ["src/order/order.service.ts:18"],
+      "testcase_ids": ["TC-ORD-002"]
+    },
+    {
+      "id": "REQ-ORD-003",
+      "text": "Delete phải yêu cầu xác nhận và thực hiện soft delete",
+      "source_ref": "Order-SRS.md#data-retention",
+      "expected_behavior": "Hiển thị confirmation trước khi soft delete",
+      "ui": { "labels": ["Delete"], "intents": ["DELETE"] },
+      "expected": { "confirmation_required": true, "api": "DELETE /orders/:id" },
+      "testcase_ids": ["TC-ORD-003"]
+    },
+    {
+      "id": "REQ-ORD-004",
+      "text": "Save Draft và Submit phải tạo trạng thái khác nhau",
+      "source_ref": "Order-SRS.md#save-submit",
+      "expected_behavior": "Save Draft giữ DRAFT, Submit chuyển SUBMITTED",
+      "ui": { "labels": ["Save Draft", "Submit"], "intents": ["SAVE_DRAFT", "SUBMIT"] },
+      "expected": { "api": "POST /api/save" },
+      "testcase_ids": ["TC-ORD-004"]
+    },
+    {
+      "id": "REQ-ORD-005",
+      "text": "Không được chuyển trực tiếp từ DRAFT sang COMPLETED",
+      "source_ref": "Order-SRS.md#lifecycle",
+      "state": "DRAFT",
+      "expected_behavior": "COMPLETED chỉ đạt được sau APPROVED",
+      "ui": { "labels": ["Status"], "intents": ["STATUS_CHANGE"] },
+      "expected": { "forbidden_values": ["COMPLETED"], "api": "PUT /orders/:id" },
+      "source_refs": ["src/order/order.service.ts:40"],
+      "testcase_ids": ["TC-ORD-005"]
+    },
+    {
+      "id": "REQ-ORD-006",
+      "text": "UI chỉ báo submit thành công khi API trả thành công và trạng thái được lưu",
+      "source_ref": "Order-SRS.md#submit-result",
+      "expected_behavior": "API lỗi phải hiển thị lỗi và không báo thành công",
+      "ui": { "labels": ["Submit Order Error"] },
+      "expected": { "state_transition": { "from": "DRAFT", "to": "SUBMITTED" }, "api": "POST /api/submit-error" },
+      "testcase_ids": ["TC-ORD-006"]
+    },
+    {
+      "id": "REQ-ORD-007",
+      "text": "Trang phải hiển thị audit history",
+      "source_ref": "Order-SRS.md#audit-history",
+      "expected_behavior": "Có vùng Audit history trên trang",
+      "ui": { "labels": ["Audit history"] },
+      "testcase_ids": ["TC-ORD-007"]
+    }
+  ]
+}

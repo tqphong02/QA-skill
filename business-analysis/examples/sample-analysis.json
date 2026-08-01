@@ -178,6 +178,34 @@
     {"area": "Compatibility and migration", "status": "not_applicable", "notes": "Không có migration trong phạm vi", "source_ref": "Phạm vi review", "question_ids": []},
     {"area": "Testability and acceptance criteria", "status": "checked", "notes": "Kết quả mong đợi khi thu hồi phiên cần xác nhận", "source_ref": "Thiếu trong tài liệu nguồn", "question_ids": ["QA-001"]}
   ],
+  "requirements": [
+    {
+      "id": "REQ-AUTH-001",
+      "text": "Chỉ tài khoản đang hoạt động được đăng nhập",
+      "source_ref": "account-portal.md#login",
+      "page": "login",
+      "actor": "Người dùng đã đăng ký",
+      "expected_behavior": "Tài khoản đã vô hiệu không tạo phiên mới",
+      "fact_status": "verified",
+      "human_confirmed": false,
+      "ui": {"labels": ["Đăng nhập"], "intents": ["SUBMIT"]},
+      "expected": {"enabled": true, "api": "POST /login"},
+      "testcase_ids": []
+    },
+    {
+      "id": "REQ-ACCOUNT-001",
+      "text": "Chỉ quản trị viên có quyền mới được vô hiệu tài khoản",
+      "source_ref": "account-portal.md#administration",
+      "page": "account-detail",
+      "actor": "Quản trị viên",
+      "expected_behavior": "Người không có quyền không thấy hoặc không thực hiện được action vô hiệu",
+      "fact_status": "verified",
+      "human_confirmed": false,
+      "ui": {"labels": ["Vô hiệu tài khoản"], "intents": ["UPDATE"]},
+      "expected": {"visible_roles": ["Quản trị viên"], "api": "PATCH /accounts/{id}"},
+      "testcase_ids": []
+    }
+  ],
   "questions": [
     {
       "id": "QA-001",

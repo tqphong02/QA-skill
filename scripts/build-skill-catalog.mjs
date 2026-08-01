@@ -749,6 +749,20 @@ function validateSourceRef(root, relation, sourceRef) {
   }
 }
 
+function resolveEvidenceLines(items, root) {
+  return items.map((item) => ({
+    ...item,
+    sourceRefs: (item.sourceRefs || []).map((sourceRef) => {
+      const sourceFile = path.resolve(root, sourceRef.path);
+      if (!fs.existsSync(sourceFile)) return { ...sourceRef };
+      const lines = readText(sourceFile).split('\n');
+      const matches = lines.flatMap((line, index) => line.includes(sourceRef.quote) ? [index + 1] : []);
+      if (matches.length === 1) return { ...sourceRef, line: matches[0] };
+      return { ...sourceRef };
+    }),
+  }));
+}
+
 function validateCatalog(catalog, root = defaultRoot) {
   if (catalog.schemaVersion !== 1) throw new Error('Unsupported schemaVersion');
   if (!Array.isArray(catalog.skills) || catalog.skills.length === 0) throw new Error('Catalog has no skills');
@@ -833,6 +847,8 @@ function validateCatalog(catalog, root = defaultRoot) {
 
 function buildCatalog(root) {
   const skills = collectSkills(root);
+  const flows = resolveEvidenceLines(FLOWS, root);
+  const relationships = resolveEvidenceLines(RELATIONSHIPS, root);
   const sourceDigest = crypto
     .createHash('sha256')
     .update(skills.map((skill) => `${skill.sourcePath}:${skill.sourceHash}`).join('\n'))
@@ -854,15 +870,15 @@ function buildCatalog(root) {
       auxiliaryBranchCount: AUXILIARY.reduce((sum, item) => sum + item.headings.length, 0),
       branchCount: [...skills, ...AUXILIARY].reduce((sum, item) => sum + item.headings.length, 0),
       operationalBranchCount: skills.reduce((sum, skill) => sum + skill.operationalBranches.length, 0),
-      relationshipCount: RELATIONSHIPS.length,
+      relationshipCount: relationships.length,
       groupCount: GROUPS.length,
       scriptCount: skills.reduce((sum, skill) => sum + skill.resources.scripts, 0),
       referenceCount: skills.reduce((sum, skill) => sum + skill.resources.references, 0),
       assetCount: skills.reduce((sum, skill) => sum + skill.resources.assets, 0),
     },
     groups: GROUPS,
-    flows: FLOWS,
-    relationships: RELATIONSHIPS,
+    flows,
+    relationships,
     auxiliary: AUXILIARY,
     skills,
   };

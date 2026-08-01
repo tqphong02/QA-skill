@@ -30,6 +30,9 @@ python3 "$SCRIPT_DIR/render-qa.py" --check \
   "$OUTPUT_DIR/${BASE_NAME}_Q&A.md" \
   "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx"
 node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind" "$INPUT"
+python3 "$SCRIPT_DIR/export-requirements.py" \
+  "$INPUT" \
+  "$OUTPUT_DIR/.business-analysis/${BASE_NAME}_Requirements.json"
 
 echo "BUSINESS ANALYSIS PASS"
 echo "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"

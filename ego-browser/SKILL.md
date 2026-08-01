@@ -1,6 +1,6 @@
 ---
 name: ego-browser
-description: ego-browser (ego-lite) là Chromium browser được thiết kế cho AI agents, cho phép chạy browser automation trong isolated task space với login state thật của user. Dùng skill này khi cần tương tác web, điền form, click, chụp screenshot, exploratory testing, test web app đã login mà không muốn setup lại auth. Trigger khi user nhắc đến ego-browser, ego-lite, ego lite, task space, browser automation không cần Playwright MCP, hoặc kế thừa login state thật của user. macOS only; Windows/Linux fallback sang Playwright MCP hoặc Chrome DevTools MCP.
+description: ego-browser (ego-lite) là Chromium browser được thiết kế cho AI agents, cho phép chạy browser automation trong isolated task space với login state thật của user. Dùng skill này khi cần tương tác web, điền form, click, chụp screenshot, exploratory testing, test web app đã login mà không muốn setup lại auth. Trigger khi user nhắc đến ego-browser, ego-lite, ego lite, task space, browser automation không cần Playwright MCP, hoặc kế thừa login state thật của user; do not require the skill name. macOS only; Windows/Linux fallback sang Playwright MCP hoặc Chrome DevTools MCP.
 ---
 
 # ego-browser

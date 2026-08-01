@@ -1,0 +1,16 @@
+{
+  "components": [
+    { "category": "navigation_menu", "label": "Orders", "href": "/orders", "selector": "a.menu-item[href=\"/orders\"]" },
+    { "category": "navigation_menu", "label": "Payment Settings", "href": "/settings/payment", "selector": "a.menu-item[href=\"/settings/payment\"]" },
+    { "category": "primary_action_button", "label": "Approve", "isDisabled": false, "isHidden": false, "selector": "#approve" },
+    { "category": "secondary_action_button", "label": "Save Draft", "isDisabled": false, "isHidden": false, "selector": "#save-draft" },
+    { "category": "primary_action_button", "label": "Submit", "isDisabled": false, "isHidden": false, "selector": "#submit" },
+    { "category": "primary_action_button", "label": "Submit Order Error", "isDisabled": false, "isHidden": false, "selector": "#submit-error" },
+    { "category": "secondary_action_button", "label": "Cancel", "isDisabled": false, "isHidden": false, "selector": "#cancel" },
+    { "category": "secondary_action_button", "label": "Delete", "isDisabled": false, "isHidden": false, "selector": "#delete" },
+    { "category": "form_field", "label": "Amount", "fieldType": "number", "isRequired": true, "defaultValue": "-500", "isDisabled": false, "selector": "#amount" },
+    { "category": "form_field", "label": "Status", "fieldType": "select", "isRequired": true, "allowedValues": ["DRAFT", "SUBMITTED", "APPROVED", "COMPLETED"], "isDisabled": false, "selector": "#status" },
+    { "category": "status_badge", "label": "DRAFT", "statusValue": "DRAFT", "selector": "#order-status" },
+    { "category": "role_indicator", "label": "Role: Staff", "selector": ".user-role" }
+  ]
+}

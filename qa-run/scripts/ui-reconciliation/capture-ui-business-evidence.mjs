@@ -13,12 +13,14 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { chromiumLaunchOptions } from '../helpers/browser-launch.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? args[i + 1] : def; };
 
 const TARGET_URL = getArg('--url', null);
 const PAGE_SLUG  = getArg('--page', 'page-ui');
+const STORAGE_STATE = getArg('--storage-state', null);
 const DATA_DIR   = process.env.QA_DATA_DIR || process.cwd();
 
 async function main() {
@@ -42,16 +44,10 @@ async function main() {
 
   console.log(`[capture-evidence] Capturing visual evidence crops from: ${TARGET_URL}`);
 
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
-  const page = await browser.newPage();
-
-  try {
-    const res = await fetch(TARGET_URL);
-    const html = await res.text();
-    await page.setContent(html);
-  } catch (err) {
-    console.warn(`[capture-evidence] Warning: ${err.message}`);
-  }
+  const browser = await chromium.launch(chromiumLaunchOptions());
+  const context = await browser.newContext(STORAGE_STATE ? { storageState: STORAGE_STATE } : {});
+  const page = await context.newPage();
+  await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
   const evidenceMap = [];
 
@@ -62,7 +58,8 @@ async function main() {
 
   // Crop elements for conflicts
   for (const c of conflicts) {
-    const selector = c.selector || `button:has-text("${c.component}"), input#${c.component?.toLowerCase()}, select#${c.component?.toLowerCase()}`;
+    const selector = c.evidenceBundle?.selector || c.selector;
+    if (!selector) continue;
     const cropName = `${c.issueId || 'crop'}.png`;
     const cropPath = path.join(evidenceDir, cropName);
 

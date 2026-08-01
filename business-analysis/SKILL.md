@@ -29,6 +29,7 @@ Convert first, reason once, render deterministically
 8. Never turn an observed behavior or inference into a confirmed business rule
 9. Run `scripts/generate.sh` to create XMind and both Q&A formats
 10. Validate and read back the generated Markdown, Excel IDs and XMind package before reporting success
+11. When browser reconciliation is in scope, add atomic `requirements` with stable IDs and source references to the same JSON; the generator exports `.business-analysis/<project-name>_Requirements.json` for `qa-run`
 
 Do not write testcases in this skill. Hand the confirmed Markdown and Q&A answers to `testcase-template` later
 
@@ -108,6 +109,8 @@ Outputs:
 <project-name>_Q&A.xlsx
 ```
 
+When the analysis JSON contains explicit `requirements`, the generator also writes the hidden machine handoff `.business-analysis/<project-name>_Requirements.json`. Browser QA must consume this registry instead of trying to infer requirement IDs from XMind, Markdown or Excel
+
 The XMind file is generated with the official `xmindmark` package and remains editable in XMind
 
 The XMind is a business and system flow map, not a document dump or test report. It must show the end-to-end system sequence, prerequisites, entry and exit states, required business outcomes, related functions and real relationship arrows between linked flows. Keep detailed Q&A and review coverage in Markdown and Excel only
@@ -170,5 +173,6 @@ This HTML is optional and derived. The required `.xmind`, Q&A Markdown and Q&A E
 - [scripts/generate.sh](scripts/generate.sh) for the complete renderer pipeline
 - [scripts/render-qa.py](scripts/render-qa.py) for matching Markdown and Excel Q&A
 - [scripts/render-xmind.mjs](scripts/render-xmind.mjs) for editable XMind output
+- [scripts/export-requirements.py](scripts/export-requirements.py) for the browser traceability handoff
 - [examples/sample-analysis.json](examples/sample-analysis.json) for a cross-model example
 - [Graphify and effective HTML integration](../qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md) for optional source graph candidates and interactive HTML companions

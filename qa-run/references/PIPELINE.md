@@ -52,17 +52,41 @@ When `system-business-guide.md` exists at `qa-knowledge/merged/`, `qa-run` and `
 Activated when the user requests: `Infer flow from UI`, `Reconcile UI with backend/BRD`, `Find UI vs Source Code conflicts`, `Generate questions for BA/PO/Dev from UI`.
 
 ```bash
-# Scan a live page or snapshot and run the 7-step pipeline:
-node scripts/ui-business-reconciliation.mjs --page order-detail
-node scripts/ui-business-reconciliation.mjs --url https://app.example.com/orders/123 --page order-detail
+# Read-only live reconciliation
+node scripts/orchestrators/ui-business-reconciliation.mjs \
+  --url https://app.example.com/orders/123 \
+  --page order-detail \
+  --requirements .business-analysis/project_Requirements.json \
+  --role Staff
+
+# Deterministic snapshot reconciliation
+node scripts/orchestrators/ui-business-reconciliation.mjs \
+  --snapshot fixtures/order-detail-components.json \
+  --page order-detail \
+  --requirements .business-analysis/project_Requirements.json
 ```
 
-5-tier reconciliation source priority: **Runtime Verified → Source Code & API → BRD/SRS Docs → UI Observed → AI Inference**.
+Both browser/snapshot input and the requirement registry are mandatory. The pipeline does not silently substitute demo data. Each observed component receives a stable `uiItemId`, and every UI item and requirement must appear in the traceability result
+
+Runtime verification is a separate state-changing gate. Run it only after authorization for the exact selector:
+
+```bash
+node scripts/orchestrators/ui-business-reconciliation.mjs \
+  --url https://app.example.com/orders/123 \
+  --page order-detail \
+  --requirements .business-analysis/project_Requirements.json \
+  --verify-runtime \
+  --runtime-action-selector '#submit' \
+  --runtime-expected-state SUBMITTED
+```
+
+Evidence levels are additive: `ui_observed`, `document_supported`, `source_derived`, `runtime_verified`, `human_confirmed`. Never promote UI observation or static source candidates to runtime or human confirmation
 
 Output: `qa-knowledge/ui-business/<page-slug>/` includes:
 - `ui-components.json` — Filter components with business meaning & intent
 - `observed-flow.json` — UI observed flow & state sequence (DRAFT → SUBMITTED → APPROVED → COMPLETED / CANCELLED)
-- `business-conflicts.json` — Report classifying 9 results (`MATCHED`, `UI_ONLY`, `DOC_ONLY`, `CODE_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, `MISSING_TRANSITION`, `PERMISSION_CONFLICT`)
+- `ui-requirement-traceability.json` — Source of truth mapping UI item ↔ requirement ↔ source/runtime with 7 statuses (`MAPPED`, `UI_ONLY`, `REQ_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, `NOT_APPLICABLE`)
+- `business-conflicts.json` — Review queue derived from conflict, ambiguity and orphan requirement mappings
 - `unresolved-rules.json` — Detect 10 specific ambiguity patterns
 - `clarification-qna.json` — Clarification questions for BA, PO, Dev
 - `ui-business-guide.md` — Full 12-section Markdown report

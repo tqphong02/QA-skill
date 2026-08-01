@@ -7,99 +7,67 @@ import { fileURLToPath } from 'node:url';
 import { resolveScriptPath } from '../../scripts/registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCRIPTS_DIR = path.resolve(__dirname, '../../scripts');
 const DATA_DIR = process.cwd();
+const FIXTURE = path.resolve(__dirname, '../fixtures/conflict-app/components.json');
+const REQUIREMENTS = path.resolve(__dirname, '../fixtures/conflict-app/requirements.json');
+const PAGE = 'test-order-detail';
+const OUT_DIR = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', PAGE);
+const readJSON = name => JSON.parse(fs.readFileSync(path.join(OUT_DIR, name), 'utf8'));
 
-function runScript(scriptName, args) {
-  const scriptPath = resolveScriptPath(scriptName);
-  const result = spawnSync('node', [scriptPath, ...args], {
-    encoding: 'utf8',
-    env: { ...process.env },
-  });
-  return { code: result.status, stdout: result.stdout, stderr: result.stderr };
-}
-
-function readJSON(filePath) {
-  try { return JSON.parse(fs.readFileSync(filePath, 'utf8')); } catch { return null; }
-}
-
-test('UI Reconciliation Test 1: Full pipeline execution on page order-detail', () => {
-  const res = runScript('ui-business-reconciliation.mjs', ['--page', 'test-order-detail']);
-  assert.equal(res.code, 0, `Orchestrator failed: ${res.stderr}`);
-
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  assert.ok(fs.existsSync(outDir), 'Should create test-order-detail output directory');
-
-  const expectedFiles = [
-    'ui-components.json',
-    'observed-flow.json',
-    'business-conflicts.json',
-    'unresolved-rules.json',
-    'clarification-qna.json',
-    'ui-business-guide.md',
-  ];
-
-  for (const f of expectedFiles) {
-    assert.ok(fs.existsSync(path.join(outDir, f)), `Missing expected output file: ${f}`);
+test('UI reconciliation maps explicit snapshot to explicit requirements', () => {
+  const result = spawnSync('node', [resolveScriptPath('ui-business-reconciliation.mjs'),
+    '--page', PAGE, '--snapshot', FIXTURE, '--requirements', REQUIREMENTS, '--role', 'Staff'],
+  { encoding: 'utf8', env: { ...process.env } });
+  assert.equal(result.status, 0, `Orchestrator failed:\n${result.stdout}\n${result.stderr}`);
+  for (const name of ['ui-components.json', 'observed-flow.json', 'business-conflicts.json',
+    'ui-requirement-traceability.json', 'unresolved-rules.json', 'clarification-qna.json', 'ui-business-guide.md']) {
+    assert.ok(fs.existsSync(path.join(OUT_DIR, name)), `Missing ${name}`);
   }
 });
 
-test('UI Reconciliation Test 2: Intent classification', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const componentsData = readJSON(path.join(outDir, 'ui-components.json'));
-
-  assert.ok(componentsData?.components, 'Should have components array');
-  const approveComponent = componentsData.components.find(c => c.label === 'Approve');
-  assert.ok(approveComponent, 'Should find Approve button');
-  assert.equal(approveComponent.intent, 'APPROVE');
-  assert.equal(approveComponent.expectedState, 'APPROVED');
+test('every observed component has a deterministic UI item ID and intent', () => {
+  const data = readJSON('ui-components.json');
+  assert.ok(data.components.every(item => /^UI-[A-F0-9]{12}$/.test(item.uiItemId)));
+  assert.equal(new Set(data.components.map(item => item.uiItemId)).size, data.components.length);
+  assert.equal(data.components.find(item => item.label === 'Approve')?.intent, 'APPROVE');
 });
 
-test('UI Reconciliation Test 3: Observed Flow state sequence builder', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const flowData = readJSON(path.join(outDir, 'observed-flow.json'));
-
-  assert.ok(flowData?.observedStates, 'Should extract observed states');
-  assert.ok(flowData.observedStates.includes('DRAFT'), 'Should observe DRAFT state');
-  assert.ok(flowData.observedStates.includes('APPROVED'), 'Should observe APPROVED state');
-  assert.ok(flowData.transitions.length > 0, 'Should build transitions sequence');
+test('traceability includes component mappings and requirement orphans', () => {
+  const trace = readJSON('ui-requirement-traceability.json');
+  assert.equal(trace.summary.requirements, 7);
+  assert.ok(trace.mappings.some(row => row.requirementId === 'REQ-ORD-001' && row.mappingStatus === 'CONFLICT'));
+  assert.ok(trace.mappings.some(row => row.requirementId === 'REQ-ORD-007' && row.mappingStatus === 'REQ_ONLY'));
+  assert.ok(trace.mappings.some(row => row.mappingStatus === 'UI_ONLY'));
+  assert.ok(trace.mappings.every(row => row.evidenceLevel && Array.isArray(row.evidenceLevels)));
 });
 
-test('UI Reconciliation Test 4: Reconciler classification & PERMISSION_CONFLICT detection', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const conflictsData = readJSON(path.join(outDir, 'business-conflicts.json'));
-
-  assert.ok(conflictsData?.conflicts, 'Should have conflicts array');
-  const permConflict = conflictsData.conflicts.find(c => c.type === 'PERMISSION_CONFLICT');
-  assert.ok(permConflict, 'Should detect PERMISSION_CONFLICT when Staff role sees Approve button');
-  assert.equal(permConflict.owner, 'BA');
+test('permission and validation conflicts are evidence-linked', () => {
+  const conflicts = readJSON('business-conflicts.json').conflicts;
+  const permission = conflicts.find(item => item.type === 'PERMISSION_CONFLICT' && item.requirementId === 'REQ-ORD-001');
+  assert.ok(permission);
+  assert.equal(permission.evidenceBundle.role, 'Staff');
+  assert.equal(permission.confidence, 'source_derived');
+  assert.ok(conflicts.some(item => item.requirementId === 'REQ-ORD-002'));
 });
 
-test('UI Reconciliation Test 5: Ambiguity detector 10 patterns', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const ambiguityData = readJSON(path.join(outDir, 'unresolved-rules.json'));
-
-  assert.ok(ambiguityData?.unresolvedRules, 'Should detect unresolved rules');
-  assert.ok(ambiguityData.totalUnresolvedRules > 0, 'Should detect unresolved business rules');
+test('ambiguity detector reports coverage for exactly ten named patterns', () => {
+  const data = readJSON('unresolved-rules.json');
+  assert.equal(data.requiredPatternCount, 10);
+  assert.equal(data.patternCoverage.length, 10);
+  assert.equal(new Set(data.patternCoverage.map(item => item.patternId)).size, 10);
+  assert.ok(data.patternCoverage.every(item => ['detected', 'not_detected', 'not_applicable'].includes(item.status)));
+  assert.ok(data.unresolvedRules.every(item => item.question && item.observedUI && item.risk));
 });
 
-test('UI Reconciliation Test 6: Q&A Generator BA/PO/Dev assignment', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const qnaData = readJSON(path.join(outDir, 'clarification-qna.json'));
-
-  assert.ok(qnaData?.questions, 'Should have questions array');
-  assert.ok(qnaData.byOwner.BA || qnaData.byOwner.PO || qnaData.byOwner.Dev, 'Should classify questions by owner');
+test('Q&A uses the shared business-analysis lifecycle vocabulary', () => {
+  const data = readJSON('clarification-qna.json');
+  assert.ok(data.questions.length > 0);
+  assert.ok(data.questions.every(item => ['Open', 'Answered', 'Blocked', 'Cancelled'].includes(item.status)));
 });
 
-test('UI Reconciliation Test 7: 12-Section Markdown Guide generation', () => {
-  const outDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', 'test-order-detail');
-  const guidePath = path.join(outDir, 'ui-business-guide.md');
-  const content = fs.readFileSync(guidePath, 'utf8');
-
-  assert.ok(content.includes('# UI Business Reconciliation:'), 'Header missing');
-  assert.ok(content.includes('## 1. Tổng quan mục tiêu trang'), 'Section 1 missing');
-  assert.ok(content.includes('## 4. Business flow suy ra từ UI'), 'Section 4 missing');
-  assert.ok(content.includes('## 8. Điểm mâu thuẫn'), 'Section 8 missing');
-  assert.ok(content.includes('## 10. Q&A cần BA, PO, Dev xác nhận'), 'Section 10 missing');
-  assert.ok(content.includes('## 12. Evidence và source reference'), 'Section 12 missing');
+test('guide contains traceability and all required sections without hard-coded modules', () => {
+  const guide = fs.readFileSync(path.join(OUT_DIR, 'ui-business-guide.md'), 'utf8');
+  for (let section = 1; section <= 12; section += 1) assert.match(guide, new RegExp(`## ${section}\\.`));
+  assert.match(guide, /UI Item ID/);
+  assert.match(guide, /REQ-ORD-007/);
 });

@@ -4,8 +4,8 @@
  *
  * Q&A Fingerprinting & Lifecycle:
  *   - SHA256(page | component | conflict_type | normalized_question) for deterministic questionId
- *   - Statuses: OPEN, ANSWERED, ACCEPTED, REJECTED, OBSOLETE
- *   - Promotes ACCEPTED/ANSWERED human responses into Expected Business Rules in `resolved-business-rules.json`
+ *   - Shared BA statuses: Open, Answered, Blocked, Cancelled
+ *   - Promotes Answered human responses into Expected Business Rules in `resolved-business-rules.json`
  *   - Prevents regenerating already resolved questions as OPEN
  *
  * Usage:
@@ -34,13 +34,21 @@ function generateSha256Id(page, component, type, question) {
   return `UI-QA-${hash}`;
 }
 
+function normalizeStatus(status) {
+  const value = String(status || 'Open').toUpperCase();
+  if (value === 'ANSWERED' || value === 'ACCEPTED') return 'Answered';
+  if (value === 'BLOCKED') return 'Blocked';
+  if (value === 'CANCELLED' || value === 'REJECTED' || value === 'OBSOLETE') return 'Cancelled';
+  return 'Open';
+}
+
 async function main() {
   const uiDir = path.join(DATA_DIR, 'qa-knowledge', 'ui-business', PAGE_SLUG);
   const lifecyclePath = path.join(uiDir, 'question-lifecycle.json');
   const resolvedRulesPath = path.join(uiDir, 'resolved-business-rules.json');
 
   const conflictsData  = readJSON(path.join(uiDir, 'business-conflicts.json'));
-  const componentsData = readJSON(path.join(uiDir, 'ui-components.json'));
+  const unresolvedData = readJSON(path.join(uiDir, 'unresolved-rules.json'));
 
   // Load existing lifecycle state
   let existingLifecycle = readJSON(lifecyclePath) || { questions: [] };
@@ -64,48 +72,21 @@ async function main() {
         affectedComponents: [c.component],
         affectedFlows: [`${PAGE_SLUG}_flow`],
         severity: c.severity || 'Medium',
-        confidence: c.confidence || 'verified',
+        confidence: c.confidence || 'document_supported',
         createdAt: new Date().toISOString(),
       });
     });
   }
 
-  // Standard domain questions
-  const components = componentsData?.components || [];
-
-  if (components.some(c => c.intent === 'REJECT')) {
-    const qText = 'Khi thực hiện Reject có bắt buộc nhập lý do (Reject Reason) không';
-    const qId = generateSha256Id(PAGE_SLUG, 'Reject button', 'AMBIGUOUS', qText);
+  for (const rule of unresolvedData?.unresolvedRules || []) {
+    const component = rule.component || rule.field || rule.button || rule.menu || '';
+    const questionId = generateSha256Id(PAGE_SLUG, component, rule.rulePattern, rule.question);
+    if (candidateQuestions.some(item => item.questionId === questionId)) continue;
     candidateQuestions.push({
-      questionId: qId,
-      owner: 'BA',
-      module: PAGE_SLUG,
-      component: 'Reject button',
-      type: 'AMBIGUOUS',
-      question: qText,
-      affectedComponents: ['Reject button'],
-      affectedFlows: ['order_reject_flow'],
-      severity: 'Medium',
-      confidence: 'verified',
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  if (components.some(c => c.intent === 'CANCEL')) {
-    const qText = 'Hành động Cancel có được thực hiện sau khi đơn đã ở trạng thái Approved không';
-    const qId = generateSha256Id(PAGE_SLUG, 'Cancel button', 'AMBIGUOUS', qText);
-    candidateQuestions.push({
-      questionId: qId,
-      owner: 'BA',
-      module: PAGE_SLUG,
-      component: 'Cancel button',
-      type: 'AMBIGUOUS',
-      question: qText,
-      affectedComponents: ['Cancel button'],
-      affectedFlows: ['order_cancel_flow'],
-      severity: 'High',
-      confidence: 'verified',
-      createdAt: new Date().toISOString(),
+      questionId, owner: 'BA', module: PAGE_SLUG, region: 'UI', component,
+      type: rule.rulePattern, question: rule.question,
+      affectedComponents: component ? [component] : [], affectedFlows: [`${PAGE_SLUG}_flow`],
+      severity: 'Medium', confidence: 'ui_observed', createdAt: new Date().toISOString(),
     });
   }
 
@@ -115,7 +96,8 @@ async function main() {
   candidateQuestions.forEach(cand => {
     const existing = existingMap.get(cand.questionId);
 
-    if (existing && (existing.status === 'ANSWERED' || existing.status === 'ACCEPTED')) {
+    const existingStatus = normalizeStatus(existing?.status);
+    if (existing && existingStatus === 'Answered') {
       // Keep answered question & promote to expected rule
       updatedQuestions.push(existing);
       resolvedRules.push({
@@ -123,16 +105,17 @@ async function main() {
         owner: existing.owner,
         question: existing.question,
         confirmedAnswer: existing.answer,
-        status: existing.status,
+        status: 'Answered',
+        evidenceLevel: 'human_confirmed',
         promotedToRule: true,
         resolvedAt: existing.resolvedAt || new Date().toISOString(),
       });
-    } else if (existing && existing.status === 'REJECTED') {
-      updatedQuestions.push(existing);
+    } else if (existing && existingStatus === 'Cancelled') {
+      updatedQuestions.push({ ...existing, status: 'Cancelled' });
     } else {
       updatedQuestions.push({
         ...cand,
-        status: existing?.status || 'OPEN',
+        status: existingStatus,
         answer: existing?.answer || null,
         resolvedAt: existing?.resolvedAt || null,
       });
@@ -142,19 +125,21 @@ async function main() {
   // Preserve obsolete / resolved questions no longer in candidates
   existingMap.forEach((q, qId) => {
     if (!updatedQuestions.some(uq => uq.questionId === qId)) {
-      if (q.status === 'ANSWERED' || q.status === 'ACCEPTED') {
-        updatedQuestions.push(q);
+      const oldStatus = normalizeStatus(q.status);
+      if (oldStatus === 'Answered') {
+        updatedQuestions.push({ ...q, status: 'Answered' });
         resolvedRules.push({
           ruleId: q.questionId,
           owner: q.owner,
           question: q.question,
           confirmedAnswer: q.answer,
-          status: q.status,
+          status: 'Answered',
+          evidenceLevel: 'human_confirmed',
           promotedToRule: true,
           resolvedAt: q.resolvedAt || new Date().toISOString(),
         });
       } else {
-        updatedQuestions.push({ ...q, status: 'OBSOLETE' });
+        updatedQuestions.push({ ...q, status: 'Cancelled' });
       }
     }
   });

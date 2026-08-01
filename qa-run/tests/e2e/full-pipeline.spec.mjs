@@ -1,18 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { resolveScriptPath } from '../../scripts/registry.mjs';
+
+function run(args) {
+  const result = spawnSync('node', [resolveScriptPath('run-manifest.mjs'), ...args], { encoding: 'utf8', env: { ...process.env } });
+  assert.equal(result.status, 0, `run-manifest failed:\n${result.stdout}\n${result.stderr}`);
+  return result.stdout;
+}
 
 test('Full Pipeline E2E: Run manifest start and finish cycle', () => {
-  // Start manifest
-  const startStdout = execSync('node scripts/run-manifest.mjs start --workers 2 --mode FULL_E2E', { encoding: 'utf8' });
+  const briefPath = path.join(process.cwd(), 'qa-knowledge', 'context', 'business-execution-brief.json');
+  fs.mkdirSync(path.dirname(briefPath), { recursive: true });
+  fs.writeFileSync(briefPath, JSON.stringify({
+    schema_version: 2,
+    status: 'READY',
+    scope: 'full-e2e-fixture',
+    source_files: ['test-fixture'],
+    source_hash: 'fixture-hash',
+    risk_inventory: [{ id: 'RISK-E2E-001', priority: 'high', evidence_refs: ['test-fixture'] }],
+    exploratory_charters: [{ id: 'CHARTER-E2E-001', risk_ids: ['RISK-E2E-001'], oracles: ['Manifest persists final verdict'] }],
+    missing_required: [],
+  }, null, 2));
+  const startStdout = run(['start', '--workers', '2', '--mode', 'FULL_E2E', '--business-context', briefPath]);
   assert.match(startStdout, /Manifest initialized/);
-  const runIdMatch = startStdout.match(/run-\d+/);
-  assert.ok(runIdMatch, 'Run ID should be generated');
+  const runId = startStdout.match(/run-\d+/)?.[0];
+  assert.ok(runId, 'Run ID should be generated');
 
-  const runId = runIdMatch[0];
-
-  // Finish manifest
-  const finishStdout = execSync(`node scripts/run-manifest.mjs finish ${runId} --verdict PASS --total-cases 10 --passed 10`, { encoding: 'utf8' });
+  const finishStdout = run(['finish', runId, '--verdict', 'PASS', '--total-cases', '10', '--passed', '10']);
   assert.match(finishStdout, /Manifest finalized/);
   assert.match(finishStdout, /Verdict:\s+PASS/);
 });
