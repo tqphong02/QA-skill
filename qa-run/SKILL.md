@@ -108,11 +108,11 @@ Apply the following exact order for all models, especially fast or small-context
    ```
    `run-manifest.mjs` must reject every non-discovery run whose brief is missing, invalid or not `READY`.
    - `browser-driver` and `network-observer` are resolved **independently**; read [references/BROWSER-DRIVER-RESOLUTION.md](references/BROWSER-DRIVER-RESOLUTION.md) for the full flowchart and combination rules
-   - `auto` resolves driver priority: `playwright-mcp → ego-browser → chrome-devtools-mcp → antigravity-native → unavailable`
-   - `auto` resolves network observer priority: `chrome-devtools-mcp → playwright-mcp → ego-browser → unavailable`
+   - `auto` resolves driver priority: `chrome-devtools-mcp → playwright-mcp → ego-browser → antigravity-native → unavailable`
+   - `auto` binds the network observer to the resolved driver first: `chrome-devtools-mcp → playwright-mcp → ego-browser → unavailable`; Chrome DevTools is used as a secondary observer only after same-page/session attach is verified
    - ego-browser provides basic network events via `drainEvents()` only (no request/response body); mark network assertions `reduced_confidence` when `network-observer: ego-browser`
    - ego-browser as driver requires macOS; on other platforms resolve to next available driver
-   - Prefer `playwright-mcp` network tools when Playwright MCP drives the UI (same session); prefer `chrome-devtools-mcp` network tools only when Chrome DevTools drives or is attached to that exact page
+   - Prefer Chrome DevTools tools when Chrome DevTools drives the UI; prefer Playwright tools when Playwright is the fallback driver; a cross-tool observer is valid only after attachment to that exact page/session is verified
    - Never use an isolated Chrome DevTools browser to claim network evidence for an ego-browser or Playwright session, or the reverse
    - Start observation before the first critical action. After each submit, save, delete, calculation, navigation, upload, retry, permission change, or other business transition, inspect matching XHR/fetch/document requests and console/page errors
    - Inspect response bodies only for failed or contract-relevant requests, including GraphQL HTTP 200 responses with `errors`; redact secrets and personal data before persistence

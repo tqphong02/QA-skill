@@ -25,7 +25,7 @@ unavailable
 not-applicable
 ```
 
-Use `playwright-mcp` when Playwright MCP drives the UI. Use `chrome-devtools-mcp` only when Chrome DevTools drives or is attached to the exact target page. Use `playwright-runtime` for bundled CLI scripts that attach `scripts/helpers/runtime-observer.mjs` to their Playwright `page`.
+Use `chrome-devtools-mcp` when Chrome DevTools drives the UI. Use `playwright-mcp` when it is the fallback driver. A cross-tool observer is valid only when it is attached to the exact target page/session. Use `playwright-runtime` for bundled CLI scripts that attach `scripts/helpers/runtime-observer.mjs` to their Playwright `page`.
 
 Chrome DevTools MCP and Playwright MCP commonly launch separate isolated browsers. Never use network output from one to support UI actions executed in the other.
 
@@ -37,7 +37,7 @@ For Antigravity, install the `qa-run` skill through the repository setup or run 
 python3 scripts/helpers/configure-browser-mcp.py --agent antigravity
 ```
 
-This enables Playwright MCP in `~/.gemini/config/mcp_config.json` while preserving all other MCP servers. Restart Antigravity after configuration so it loads the new server. Chrome DevTools MCP remains an optional fallback or deep-dive tool; do not start it as a second browser and use its evidence for Playwright-driven actions.
+This enables Playwright MCP in `~/.gemini/config/mcp_config.json` while preserving all other MCP servers. Restart Antigravity after configuration so it loads the fallback server. Chrome DevTools MCP is the primary driver when available; do not start it as a second browser and use its evidence for actions driven by another session.
 
 ## Tool routing
 

@@ -2,6 +2,7 @@
 node_modules/
 dist/
 coverage/
+vendor/chrome-devtools-mcp/
 
 # macOS
 .DS_Store

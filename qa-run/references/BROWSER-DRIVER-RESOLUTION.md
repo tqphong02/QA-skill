@@ -18,7 +18,8 @@ Có thể kết hợp bất kỳ combination hợp lệ:
 
 | browser_driver | network_observer | Khi nào |
 |---|---|---|
-| playwright-mcp | playwright-mcp | Default, cross-platform, rich obs |
+| chrome-devtools-mcp | chrome-devtools-mcp | Default Chrome-first driver and deep observability |
+| playwright-mcp | playwright-mcp | Fallback, cross-platform, rich DOM automation |
 | ego-browser | chrome-devtools-mcp | macOS + real login + full network |
 | ego-browser | ego-browser | macOS + real login + basic obs only |
 | ego-browser | playwright-mcp | Không nên — khác session |
@@ -32,14 +33,14 @@ Có thể kết hợp bất kỳ combination hợp lệ:
 Browser task requested
         │
         ▼
+Chrome DevTools MCP available AND can start or attach to Chrome?
+  YES → Use chrome-devtools-mcp
+  NO  ▼
 Playwright MCP available?
   YES → Use playwright-mcp
   NO  ▼
 macOS AND ego-browser ready (detect.mjs exit 0)?
   YES → Use ego-browser
-  NO  ▼
-Chrome DevTools MCP available AND tab running?
-  YES → Use chrome-devtools-mcp
   NO  ▼
 Antigravity native browser available?
   YES → Use antigravity-native
@@ -49,7 +50,7 @@ Mark browser_driver: unavailable
 
 **Lưu ý quan trọng:**
 - ego-browser là **browser driver riêng**, không phải chỉ là fallback của Playwright
-- Chrome DevTools MCP trong vai trò driver chỉ phù hợp khi cần attach vào tab đang chạy
+- Chrome DevTools MCP là driver mặc định khi có thể khởi động hoặc attach Chrome
 - Trên Windows/Linux: ego-browser unavailable → resolve sang playwright-mcp hoặc chrome-devtools-mcp
 
 ## network_observer — Resolution flow
@@ -58,11 +59,11 @@ Mark browser_driver: unavailable
 Network evidence needed?
         │
         ▼
-Chrome DevTools MCP available?
-  YES → Use chrome-devtools-mcp (body, headers, timing, WebSocket, full detail)
+Resolved browser_driver is chrome-devtools-mcp?
+  YES → Use chrome-devtools-mcp (same session)
   NO  ▼
-Playwright MCP is the browser_driver AND same session?
-  YES → Use playwright-mcp (body + status)
+Resolved browser_driver is playwright-mcp?
+  YES → Use playwright-mcp (same session)
   NO  ▼
 ego-browser is the browser_driver?
   YES → Use ego-browser / drainEvents() [basic events only, no body]

@@ -73,18 +73,18 @@ Một 4xx/5xx là candidate cho đến khi có correlation với triggering acti
 
 | Tình huống | Driver |
 |---|---|
-| Cross-platform, rich obs, default | playwright-mcp |
+| Chrome functional/retest QA, network/performance evidence | chrome-devtools-mcp |
+| Chrome DevTools unavailable | playwright-mcp |
 | macOS + cần login state thật | ego-browser |
 | Playwright MCP unavailable, macOS | ego-browser |
-| Attach vào tab đang chạy | chrome-devtools-mcp |
-| ego-browser không available (Windows/Linux/not installed) | playwright-mcp → chrome-devtools-mcp → antigravity-native |
+| Chrome DevTools and Playwright unavailable | antigravity-native |
 
 ### network_observer
 
 | Khi cần | Observer |
 |---|---|
-| Request/response body, headers, timing đầy đủ | chrome-devtools-mcp |
-| Playwright đang làm driver cùng session | playwright-mcp |
+| Chrome DevTools đang làm driver cùng session | chrome-devtools-mcp |
+| Playwright đang làm fallback driver cùng session | playwright-mcp |
 | Exploratory, không cần body | ego-browser (mark reduced_confidence) |
 | Không có observer nào available | unavailable — mark BLOCKED nếu network là part of contract |
 

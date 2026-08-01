@@ -1,6 +1,6 @@
 # QA Run — Antigravity Fallback & Common Mistakes
 
-> Read this file when: Claude Code + Playwright MCP is unavailable, or when debugging common workflow mistakes.
+> Read this file when: Chrome DevTools MCP and Playwright MCP are unavailable, or when debugging common workflow mistakes.
 
 ## 2-track browser capability model
 
@@ -9,19 +9,19 @@
 ### browser_driver priority
 
 ```
-Playwright MCP → ego-browser → Chrome DevTools MCP → Antigravity native → unavailable
+Chrome DevTools MCP → Playwright MCP → ego-browser → Antigravity native → unavailable
 ```
 
-- **Playwright MCP**: driver mặc định; cross-platform; rich obs cùng session
+- **Playwright MCP**: fallback driver; cross-platform; rich obs cùng session
 - **ego-browser**: browser driver riêng, không phải chỉ fallback của Playwright; macOS only; kế thừa login state thật của user; đọc [`../../ego-browser/SKILL.md`](../../ego-browser/SKILL.md)
-- **Chrome DevTools MCP**: dùng khi attach vào tab đang chạy; limited interaction
+- **Chrome DevTools MCP**: driver mặc định; Chrome automation, network, console và performance evidence
 - **Antigravity native**: Gemini-in-Chrome; last resort
 - **unavailable**: mark BROWSER_DRIVER ledger BLOCKED
 
 ### network_observer priority
 
 ```
-Chrome DevTools MCP → Playwright MCP (same session) → ego-browser (basic) → unavailable
+Resolved driver observer → verified same-session observer → ego-browser (basic) → unavailable
 ```
 
 - **Chrome DevTools MCP**: body, headers, timing, WebSocket — full detail
