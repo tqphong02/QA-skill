@@ -285,6 +285,7 @@ if (command === 'start') {
     } : null,
     test_intelligence: businessContext ? {
       knowledge_confidence: businessContext.knowledge_health?.confidence || 'unknown',
+      run_mode: businessContext.run_mode || 'auto',
       runtime_evidence_present: Boolean(businessContext.knowledge_health?.runtime_evidence_present),
       source_evidence_count: businessContext.source_evidence?.length || 0,
       high_risk_ids: (businessContext.risk_inventory || [])
@@ -307,6 +308,7 @@ if (command === 'start') {
       context_budget: contextBudget ? {
         path: path.relative(DATA, contextBudgetPath),
         cache_hit: Boolean(contextBudget.cache_hit),
+        cache_mode: contextBudget.cache_mode || 'unknown',
         estimator: contextBudget.estimator || 'utf8_bytes_div_4_estimate',
         estimated_tokens: contextBudget.model_context_card?.estimated_tokens || null,
         max_estimated_tokens: contextBudget.model_context_card?.max_estimated_tokens || null,

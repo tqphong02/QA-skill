@@ -159,6 +159,7 @@ test('Test intelligence reuses an unchanged brief and records a cache hit', () =
     const second = run(tempRoot);
     assert.equal(second.status, 0, second.stderr || second.stdout);
     assert.match(second.stdout, /CACHE_HIT/);
+    assert.match(second.stdout, /CACHE_HIT_FAST/);
     assert.doesNotMatch(second.stdout, /Phase 1: Core Scanner/);
 
     const budget = JSON.parse(fs.readFileSync(
@@ -166,6 +167,7 @@ test('Test intelligence reuses an unchanged brief and records a cache hit', () =
       'utf8',
     ));
     assert.equal(budget.cache_hit, true);
+    assert.equal(budget.cache_mode, 'stat_fast');
     assert.ok(budget.cache_key);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });

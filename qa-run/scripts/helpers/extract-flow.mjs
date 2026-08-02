@@ -23,6 +23,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
+import { installNetworkTracker, waitForUiReady } from '../../lib/wait.mjs';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,11 @@ const JSON_OUT = path.join(OUT_DIR, 'app-flow-map.json');
 // CLI flags
 const args       = process.argv.slice(2);
 const MAX_PAGES  = parseInt(find(args, '--max-pages', 1) ?? '30', 10);
-const WAIT_MS    = parseInt(find(args, '--wait', 1) ?? '1200', 10);
+const WAIT_MS    = parseInt(find(args, '--wait', 1) ?? process.env.QA_LEGACY_SETTLE_MS ?? '0', 10);
+const READY_TIMEOUT_MS = parseInt(
+  find(args, '--ready-timeout', 1) ?? process.env.QA_READY_TIMEOUT_MS ?? '12000',
+  10,
+);
 const FORCE_AUTH = args.includes('--reauth');
 const DRY_RUN    = args.includes('--dry-run');
 const TODAY      = new Date().toISOString().slice(0, 10);
@@ -242,8 +247,10 @@ async function ensureAuth(browser) {
   console.log('[extract-flow] Logging in...');
   const ctx  = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
+  installNetworkTracker(page);
   await page.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(2500);
+  await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
+  if (WAIT_MS > 0) await page.waitForTimeout(WAIT_MS);
 
   const emailSels = ['input[type=email]','input[name*=email i]','input[placeholder*=email i]','input[name=username]'];
   const passSels  = ['input[type=password]','input[name*=pass i]','input[placeholder*=pass i]'];
@@ -252,7 +259,8 @@ async function ensureAuth(browser) {
 
   const btn = page.locator('button[type=submit],button:has-text("Sign in"),button:has-text("Log in"),button:has-text("Đăng nhập"),button:has-text("Login")').first();
   if (await btn.count()) await btn.click(); else await page.keyboard.press('Enter');
-  await page.waitForTimeout(4000);
+  await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
+  if (WAIT_MS > 0) await page.waitForTimeout(WAIT_MS);
 
   const url = page.url();
   if (!/\/login/.test(url)) {
@@ -268,7 +276,8 @@ async function ensureAuth(browser) {
 
 async function discoverNavLinks(page) {
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await page.waitForTimeout(WAIT_MS);
+  await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
+  if (WAIT_MS > 0) await page.waitForTimeout(WAIT_MS);
 
   const result = await page.evaluate(() => {
     const vis = el => {
@@ -299,9 +308,8 @@ async function discoverNavLinks(page) {
 async function extractPage(page, url, netCollector) {
   try {
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForTimeout(WAIT_MS);
-    // Extra wait for async renders
-    try { await page.waitForLoadState('networkidle', { timeout: 4000 }); } catch { /* ok */ }
+    await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
+    if (WAIT_MS > 0) await page.waitForTimeout(WAIT_MS);
 
     const ctx = await page.evaluate(extractPageContext);
     return { url, ...ctx };
@@ -574,6 +582,7 @@ async function main() {
   ctx.setDefaultTimeout(15000);
   ctx.setDefaultNavigationTimeout(25000);
   const page = await ctx.newPage();
+  installNetworkTracker(page);
 
   // Step 3: Setup network collector
   const net = makeNetworkCollector();

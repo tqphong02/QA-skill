@@ -2,6 +2,20 @@
 
 Toàn bộ script trong thư mục `qa-run/scripts/` (hơn 55 file) được tổ chức theo kiến trúc **7 nhóm chức năng (Categorized Architecture)** với một lớp **Registry tương thích ngược (`registry.mjs`)**. Kiến trúc này vừa giúp con người dễ dàng duy trì, mở rộng mã nguồn theo domain, vừa đảm bảo các AI agent hoặc hệ thống CI/CD cũ không bị gãy vỡ đường dẫn.
 
+## Run optimization contract
+
+Preparation is portable across projects and hosts:
+
+```bash
+node qa-run/scripts/helpers/prepare-test-intelligence.mjs \
+  --intent RETEST_TICKET \
+  --scope <feature> \
+  --run-mode auto \
+  --repo <source-repo>
+```
+
+Use `fast` for repeated runs, `scoped` for a feature shard and `deep` after a generator, architecture or requirement change. `repo-business-discovery.mjs` defaults to safe parallel independent scanners and accepts `--parallel off` for diagnosis. The preparation card and cache stay under the tested project's `QA_DATA_DIR`
+
 ---
 
 ## 1. Bản đồ Kiến trúc 7 Nhóm Thư mục

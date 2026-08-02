@@ -27,11 +27,11 @@
  *   node repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full
  */
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { resolveScriptPath, runScript as registryRunScript } from '../registry.mjs';
+import { resolveScriptPath } from '../registry.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,6 +44,10 @@ const REPOS_CSV     = getArg('--repos', null);
 const MODE          = getArg('--mode', 'full');
 const ANALYSIS_MODE = getArg('--analysis-mode', 'deterministic');
 const GRAPHIFY_MODE = getArg('--graphify', 'auto').toLowerCase();
+const SCOPE         = getArg('--scope', '').trim();
+const PARALLEL_MODE = (args.includes('--no-parallel')
+  ? 'off'
+  : getArg('--parallel', process.env.QA_DISCOVERY_PARALLEL || 'auto')).toLowerCase();
 const DATA_DIR      = process.env.QA_DATA_DIR || process.cwd();
 const KNOW_BASE     = path.join(DATA_DIR, 'qa-knowledge', 'repositories');
 const MERGED_DIR    = path.join(DATA_DIR, 'qa-knowledge', 'merged');
@@ -52,22 +56,47 @@ if (!['auto', 'required', 'off'].includes(GRAPHIFY_MODE)) {
   console.error('[repo-orchestrator] BLOCKED: --graphify must be auto, required, or off');
   process.exit(2);
 }
+if (!['auto', 'on', 'off'].includes(PARALLEL_MODE)) {
+  console.error('[repo-orchestrator] BLOCKED: --parallel must be auto, on, or off');
+  process.exit(2);
+}
+const PARALLEL_ENABLED = PARALLEL_MODE !== 'off';
 
-function runScript(scriptName, extraArgs = []) {
+function runScriptAsync(scriptName, extraArgs = []) {
   const scriptPath = resolveScriptPath(scriptName);
   if (!fs.existsSync(scriptPath)) {
     console.warn(`[orchestrator] ⚠️  Script không tồn tại: ${scriptName} — bỏ qua`);
-    return false;
+    return Promise.resolve({ name: scriptName, ok: false, durationSeconds: 0 });
   }
-  const result = spawnSync('node', [scriptPath, ...extraArgs], {
-    stdio: 'inherit',
-    env: { ...process.env },
+  const startedAt = Date.now();
+  return new Promise(resolve => {
+    const child = spawn(process.execPath, [scriptPath, ...extraArgs], {
+      stdio: 'inherit',
+      env: { ...process.env },
+    });
+    child.on('error', error => {
+      console.error(`[orchestrator] ❌ ${scriptName} process error: ${error.message}`);
+      resolve({ name: scriptName, ok: false, durationSeconds: (Date.now() - startedAt) / 1000 });
+    });
+    child.on('close', status => {
+      const ok = status === 0;
+      if (!ok) console.error(`[orchestrator] ❌ ${scriptName} thất bại (exit ${status})`);
+      resolve({ name: scriptName, ok, durationSeconds: (Date.now() - startedAt) / 1000 });
+    });
   });
-  if (result.status !== 0) {
-    console.error(`[orchestrator] ❌ ${scriptName} thất bại (exit ${result.status})`);
-    return false;
+}
+
+async function runStage(stageName, tasks, telemetry) {
+  const startedAt = Date.now();
+  const results = PARALLEL_ENABLED
+    ? await Promise.all(tasks.map(task => runScriptAsync(task.name, task.args)))
+    : [];
+  if (!PARALLEL_ENABLED) {
+    for (const task of tasks) results.push(await runScriptAsync(task.name, task.args));
   }
-  return true;
+  telemetry.phaseDurations[stageName] = (Date.now() - startedAt) / 1000;
+  for (const result of results) telemetry.scriptDurations[result.name] = result.durationSeconds;
+  return results;
 }
 
 function getGitCommit(repoPath) {
@@ -227,6 +256,8 @@ async function analyzeRepo(repoPath) {
   console.log(`[repo-orchestrator] 🚀 REPO_BUSINESS_DISCOVERY Pipeline`);
   console.log(`  Target Repo:    ${repoPath}`);
   console.log(`  Mode:           ${MODE}`);
+  console.log(`  Scope:          ${SCOPE || '(all)'}`);
+  console.log(`  Parallel:       ${PARALLEL_ENABLED ? 'on' : 'off'}`);
   console.log(`  Analysis Mode:  ${ANALYSIS_MODE}`);
   console.log(`  Graphify:       ${GRAPHIFY_MODE}`);
   console.log(`  Semantic Engine: ${isUABundled ? '🟢 BUNDLED (Egonex-AI Understand-Anything)' : '⚪ AST Default'}`);
@@ -235,51 +266,57 @@ async function analyzeRepo(repoPath) {
   console.log('═'.repeat(60) + '\n');
 
   const startTime = Date.now();
+  const telemetry = { phaseDurations: {}, scriptDurations: {} };
 
   // ── Phase 1: Core Scanner ───────────────────────────────────────────────────
   console.log('[orchestrator] ── Phase 1: Core Scanner ──────────────────');
 
-  const ok1 = runScript('repo-fingerprint.mjs', [
-    '--repo', repoPath,
-    '--output', path.join(outputDir, 'repo-metadata.json'),
-  ]);
-
-  const ok2 = runScript('source-indexer.mjs', [
-    '--repo', repoPath,
-    '--output', path.join(outputDir, 'symbol-index.json'),
-  ]);
-
   const graphifyOutput = path.join(outputDir, 'graphify-discovery.json');
-  const okGraphify = runScript('graphify-adapter.mjs', [
-    '--repo', repoPath,
-    '--output', graphifyOutput,
-    '--graph-root', path.join(outputDir, 'graphify-code-only'),
-    '--mode', GRAPHIFY_MODE,
-  ]);
+  const phase1Results = await runStage('phase1', [
+    {
+      name: 'repo-fingerprint.mjs',
+      args: ['--repo', repoPath, '--output', path.join(outputDir, 'repo-metadata.json')],
+    },
+    {
+      name: 'source-indexer.mjs',
+      args: ['--repo', repoPath, '--output', path.join(outputDir, 'symbol-index.json')],
+    },
+    {
+      name: 'graphify-adapter.mjs',
+      args: [
+        '--repo', repoPath,
+        '--output', graphifyOutput,
+        '--graph-root', path.join(outputDir, 'graphify-code-only'),
+        '--mode', GRAPHIFY_MODE,
+      ],
+    },
+    {
+      name: 'architecture-discovery.mjs',
+      args: ['--repo', repoPath, '--output', path.join(outputDir, 'architecture-map.json')],
+    },
+    {
+      name: 'api-contract-extractor.mjs',
+      args: ['--repo', repoPath, '--output', path.join(outputDir, 'api-contracts.json')],
+    },
+    {
+      name: 'business-rule-extractor.mjs',
+      args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-rules.json')],
+    },
+  ], telemetry);
+  const resultByName = new Map(phase1Results.map(result => [result.name, result]));
+  const ok1 = resultByName.get('repo-fingerprint.mjs')?.ok || false;
+  const ok2 = resultByName.get('source-indexer.mjs')?.ok || false;
+  const okGraphify = resultByName.get('graphify-adapter.mjs')?.ok || false;
+  const ok3 = resultByName.get('architecture-discovery.mjs')?.ok || false;
+  const ok4 = resultByName.get('api-contract-extractor.mjs')?.ok || false;
+  const ok5 = resultByName.get('business-rule-extractor.mjs')?.ok || false;
   if (GRAPHIFY_MODE === 'required' && (!okGraphify || !fs.existsSync(graphifyOutput))) {
     throw new Error('Graphify was required but no normalized discovery artifact was produced');
   }
 
-  const ok3 = runScript('architecture-discovery.mjs', [
-    '--repo', repoPath,
-    '--output', path.join(outputDir, 'architecture-map.json'),
-  ]);
-
-  const ok4 = runScript('api-contract-extractor.mjs', [
-    '--repo', repoPath,
-    '--output', path.join(outputDir, 'api-contracts.json'),
-  ]);
-
-  const ok5 = runScript('business-rule-extractor.mjs', [
-    '--repo', repoPath,
-    '--output', path.join(outputDir, 'business-rules.json'),
-  ]);
-
   // ── Phase 2: Flow, State, Permission, Domain ──────────────────────────────
   if (['full', 'incremental', 'phase2', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 2: Flow, State, Permission, Domain ──');
-    runScript('business-flow-builder.mjs',       ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')]);
-    runScript('state-machine-extractor.mjs',     ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')]);
     const pmArgs = ['--repo', repoPath, '--output', path.join(outputDir, 'permission-matrix.json')];
     if (fs.existsSync(path.join(outputDir, 'business-rules.json'))) {
       pmArgs.push('--req-knowledge', path.join(outputDir, 'business-rules.json'));
@@ -287,20 +324,48 @@ async function analyzeRepo(repoPath) {
     if (fs.existsSync(path.join(outputDir, 'runtime-findings.json'))) {
       pmArgs.push('--runtime-findings', path.join(outputDir, 'runtime-findings.json'));
     }
-    runScript('permission-matrix-extractor.mjs', pmArgs);
-    runScript('database-domain-extractor.mjs',   ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')]);
+    await runStage('phase2', [
+      {
+        name: 'business-flow-builder.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')],
+      },
+      {
+        name: 'state-machine-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')],
+      },
+      { name: 'permission-matrix-extractor.mjs', args: pmArgs },
+      {
+        name: 'database-domain-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')],
+      },
+    ], telemetry);
   }
 
   // ── Phase 3: Reconciliation, Q&A, Guide, Traceability ────────────────────
   if (['full', 'incremental', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 3: Reconciliation, Q&A, Guide, Traceability ──');
-    runScript('repo-runtime-reconciler.mjs',     ['--repo-knowledge', outputDir]);
-    runScript('business-qna-generator.mjs',      ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')]);
-    runScript('write-repo-business-guide.mjs',   ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')]);
-    if (fs.existsSync(path.join(outputDir, 'permission-matrix.json'))) {
-      runScript('write-rbac-matrix.mjs',         ['--input', path.join(outputDir, 'permission-matrix.json'), '--output', path.join(outputDir, 'rbac-matrix.md')]);
-    }
-    runScript('traceability-matrix-generator.mjs', ['--repo', repoName]);
+    // Reconciliation is a dependency for Q&A; derived reports are independent
+    // after that barrier and can safely run concurrently.
+    await runStage('phase3-reconcile', [
+      { name: 'repo-runtime-reconciler.mjs', args: ['--repo-knowledge', outputDir] },
+    ], telemetry);
+    await runStage('phase3-derived', [
+      {
+        name: 'business-qna-generator.mjs',
+        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')],
+      },
+      {
+        name: 'write-repo-business-guide.mjs',
+        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')],
+      },
+      ...(fs.existsSync(path.join(outputDir, 'permission-matrix.json'))
+        ? [{
+            name: 'write-rbac-matrix.mjs',
+            args: ['--input', path.join(outputDir, 'permission-matrix.json'), '--output', path.join(outputDir, 'rbac-matrix.md')],
+          }]
+        : []),
+      { name: 'traceability-matrix-generator.mjs', args: ['--repo', repoName] },
+    ], telemetry);
   }
 
   // ── Semantic Enrichment Mode (Optional) ──────────────────────────────────
@@ -324,6 +389,13 @@ async function analyzeRepo(repoPath) {
     repoPath,
     mode: MODE,
     analysisMode: ANALYSIS_MODE,
+    scope: SCOPE || null,
+    optimization: {
+      parallel_mode: PARALLEL_MODE,
+      parallel_enabled: PARALLEL_ENABLED,
+      phase_durations_seconds: telemetry.phaseDurations,
+      script_durations_seconds: telemetry.scriptDurations,
+    },
     commit: currentCommit,
     phase1: {
       fingerprint: ok1,

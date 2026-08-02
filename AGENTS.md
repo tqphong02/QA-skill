@@ -153,13 +153,16 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Mọi critical browser transition phải kiểm tra network, console và page error trong cùng session; Playwright MCP dùng tool Playwright, Chrome DevTools MCP chỉ dùng khi điều khiển hoặc attach đúng tab
 - Mỗi testcase `Pass`/`Fail` phải có ít nhất một screenshot hoặc video tồn tại; JSON/trace/network đơn lẻ không đủ evidence; append media reference vào Note rồi mới write-back
 - Evidence Sheet phải tách theo `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`; plan/result metadata vào `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`, không gộp media nhiều chức năng vào một folder
-- Tối ưu token (execution card, context-budget telemetry, fingerprint cache, scope snapshot, batch fill, deterministic wait)
+- Tối ưu token/tốc độ (execution card, context-budget telemetry, stat-fast fingerprint cache, `run-mode auto|fast|scoped|deep`, scope snapshot, batch fill, adaptive same-session wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 - Đọc `qa-knowledge/<feature>-business-guide.md` trước browser action nếu có
 - Sau mọi run, ghi và validate business guide bằng `scripts/writers/write-business-guide.mjs`
 - Khi khám phá tổng thể hoặc bootstrap app, tạo `qa-knowledge/app-business-guide.md` với module coverage map; retest không lặp lại full-app baseline
 - Khi REPO_BUSINESS_DISCOVERY cần cross-file graph, dùng `graphify-adapter.mjs` qua orchestrator với `--graphify auto|required|off`; không gọi `graphify codex install` hoặc `graphify hook install`
 - Khi user yêu cầu báo cáo/diagram HTML, chỉ chạy `render-intelligence-html.mjs` sau khi canonical JSON validate và giữ HTML là companion output
+- `prepare-test-intelligence.mjs` phải dùng cache khi source-inventory và invocation fingerprint không đổi; source stale/missing phải escalate, không âm thầm dùng oracle cũ
+- `repo-business-discovery.mjs` được phép chạy scanner độc lập song song (`--parallel auto|on|off`) nhưng phải giữ barrier trước reconciliation/Q&A và ghi timing telemetry
+- Adaptive wait chỉ thay fixed sleep bằng document/XHR/fetch quiet-state bounded; timeout không phải PASS và không được bỏ same-session network/console/page-error/evidence gate
 
 ### Senior QA operating layer
 - Khi lập kế hoạch, release gate, triage, RCA, metrics hoặc post-release verification, đọc `qa-run/references/SENIOR-QA-OPERATING-MODEL.md`

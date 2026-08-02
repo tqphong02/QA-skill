@@ -33,6 +33,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { installNetworkTracker, waitForUiReady } from '../../lib/wait.mjs';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,10 @@ const getArg = (flag, def) => { const i = args.indexOf(flag); return i !== -1 ? 
 const URL_PATH   = getArg('--path', '/');
 const SCOPE_SEL  = getArg('--selector', '');
 const OUTPUT_FILE = getArg('--output', path.join(EVID, `visual-audit-${TODAY}.json`));
+const READY_TIMEOUT_MS = Number.parseInt(
+  getArg('--ready-timeout', process.env.QA_READY_TIMEOUT_MS || '12000'),
+  10,
+);
 
 // ─── Color contrast helper (injected into page) ───────────────────────────────
 
@@ -236,10 +241,10 @@ async function auditViewport(browser, targetUrl, viewport, label) {
   ctx.setDefaultTimeout(15000);
   ctx.setDefaultNavigationTimeout(25000);
   const page = await ctx.newPage();
+  installNetworkTracker(page);
 
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-  try { await page.waitForLoadState('networkidle', { timeout: 4000 }); } catch { /* ok */ }
-  await page.waitForTimeout(1000);
+  await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
 
   // Screenshot
   const slug = URL_PATH.replace(/\//g, '-').replace(/^-/, '') || 'home';

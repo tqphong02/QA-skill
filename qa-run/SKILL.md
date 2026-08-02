@@ -71,6 +71,7 @@ Load optional references only when their condition occurs:
 - A workflow step failed → [references/COMMON-MISTAKES.md](references/COMMON-MISTAKES.md)
 - Playwright was proven unavailable → [references/ANTIGRAVITY-FALLBACK.md](references/ANTIGRAVITY-FALLBACK.md)
 - A verdict is shallow, contradictory or unsupported → [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md)
+- Speed, token budget, repeated runs or cross-project portability is in scope → [references/RUN-OPTIMIZATION.md](references/RUN-OPTIMIZATION.md)
 - Repository-wide graph, cross-file impact, call-flow diagram or interactive intelligence report is requested → [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md)
 
 Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; vendor code is an optional development dependency, not a user-selectable QA skill.
@@ -85,13 +86,14 @@ Apply the following exact order for all models, especially fast or small-context
    node scripts/helpers/prepare-test-intelligence.mjs \
      --intent <RETEST_TICKET|SHEET_TESTCASE_EXECUTION|SANITY_REGRESSION|EXPLORATORY_ADHOC> \
      --scope <feature-slug> \
+     --run-mode <auto|fast|scoped|deep> \
      --repo <source-repo-if-available> \
      --target <route-or-ticket-url-if-known> \
      --expected <ticket-or-testcase-expected-if-known> \
      --role <role-if-known> \
      --impact <comma-separated-impacted-areas-if-known>
    ```
-   The command reuses an unchanged input fingerprint by default and writes `business-execution-card.json` plus `context-budget.json`. The default model-facing budget is 3,200 deterministic token-estimate units; use `--no-cache` only after changing retrieval/generator policy and `--card-max-tokens <N>` only for a deliberate host/context trade-off
+   The command reuses an unchanged input fingerprint by default and writes `business-execution-card.json` plus `context-budget.json`. The default model-facing budget is 3,200 deterministic token-estimate units; use `--no-cache` only after changing retrieval/generator policy and `--card-max-tokens <N>` only for a deliberate host/context trade-off. `auto` is the portable default; `fast` reuses stat-fast knowledge metadata, `scoped` limits retrieval to the requested feature and `deep` forces full source discovery. A stale source or missing oracle escalates instead of being silently accepted
    Read `qa-knowledge/context/business-execution-card.json` first. The full `business-execution-brief.json` remains the canonical gate/audit artifact and the Markdown file is human-facing; open either full artifact only when the card requests escalation or a source/evidence conflict requires it. `Business Execution Brief` is the machine gate and risk model:
    - `READY` → use the card's exact execution contract, high-risk charters, bounded evidence and retrieval pointers; use the full brief for scoped escalation
    - `NEEDS_DISCOVERY` → run only scoped runtime/UI discovery needed by `missing_required`, write knowledge, then rebuild the brief
@@ -284,6 +286,7 @@ These must be observed at all times, even before reading any reference file:
 | `scripts/helpers/login.mjs` | Create auth.json |
 | `lib/driver.mjs` | Headless browser + screenshot to file |
 | `lib/ui.mjs` | Scope snapshot, network recording, `withRevert` |
+| `lib/wait.mjs` | Same-session adaptive document/XHR/fetch readiness and bounded quiet-window telemetry |
 | `lib/assert.mjs` | `check/eq/summary` compact |
 
 ## Related skills

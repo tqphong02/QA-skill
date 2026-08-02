@@ -318,7 +318,7 @@ Lần làm việc tiếp theo:
 - [ ] Không gửi toàn bộ Source Code repository cho AI (chỉ gửi Context Pack do Probe / AST-grep trích xuất).
 - [ ] Tài liệu chỉ lấy đúng section liên quan sau `doc-to-md`, dựa trên heading và `knowledge-index.json`.
 - [ ] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict (`visual-evidence-router.mjs`).
-- [ ] Dùng source hash và knowledge index để tránh discovery ngoài scope; cache canonical vẫn là gap.
+- [x] Dùng source-inventory fingerprint, source hash và knowledge index để tránh re-read/re-discovery ngoài scope; cache đổi nội dung vẫn fallback content hash.
 - [ ] Retest ticket chỉ chuẩn bị intelligence và charters cho module bị ảnh hưởng.
 - [ ] `prepare-test-intelligence.mjs` chỉ nạp source/knowledge theo feature scope và ghi provenance của phần đã dùng.
 - [ ] Số token và mức tiết kiệm chỉ được công bố khi có telemetry đo thật; repo hiện chưa có tokenizer/`token-usage.json` tự động.
@@ -390,7 +390,7 @@ Documents
    - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
    - Chỉ crop đúng vùng patch nghi ngờ gửi cho LLM Vision API khi OmniParser hoặc DOM audit phát hiện mâu thuẫn.
 3. **`source-indexer.mjs` + source hash**: giới hạn discovery theo source hiện tại và giữ provenance cho artifact.
-4. **Giới hạn còn lại**: `context-card.mjs` đã ghi `context-budget.json` với ước lượng UTF-8 byte/4 và fingerprint cache; provider tokenizer telemetry và phần trăm tiết kiệm thực nghiệm vẫn chưa có, không được claim số đo như kết quả thực nghiệm.
+4. **Giới hạn còn lại**: `context-card.mjs` ghi `context-budget.json` với ước lượng UTF-8 byte/4 và `context-builder.mjs` có stat-fast/content-hash cache; provider tokenizer telemetry và phần trăm tiết kiệm thực nghiệm vẫn chưa có, không được claim số đo như kết quả thực nghiệm.
 
 ---
 
@@ -432,7 +432,9 @@ Documents
 - [x] Không gửi toàn bộ Source Code repository cho AI.
 - [x] Knowledge runtime chỉ nạp shard/guide được `knowledge-index.json` trỏ tới khi index tồn tại.
 - [x] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict.
-- [x] Cache artifact và invalidation policy theo input fingerprint được `context-builder.mjs` thực thi.
+- [x] Cache artifact và invalidation policy theo source-inventory + input fingerprint được `context-builder.mjs` thực thi; thay đổi inventory fallback content hash.
+- [x] Scanner độc lập chạy song song có thể tắt bằng `--parallel off`, dependency barrier và timing telemetry được ghi trong `discovery-session.json`.
+- [x] Browser helper dùng adaptive same-session readiness; fixed settle chỉ còn compatibility override có bounded timeout.
 - [x] Retest dùng feature scope và ranked impacted charters qua test intelligence.
 - [x] Bounded model-facing card có deterministic context budget và explicit truncation/deferred retrieval.
 - [ ] Provider tokenizer và `token-usage.json` theo từng model chưa được triển khai; không claim token metric chính xác.

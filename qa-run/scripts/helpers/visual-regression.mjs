@@ -23,6 +23,7 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { installNetworkTracker, waitForUiReady } from '../../lib/wait.mjs';
 
 const DATA = process.env.QA_DATA_DIR || process.cwd();
 try { process.loadEnvFile(path.join(DATA, '.env')); } catch { /* optional */ }
@@ -47,6 +48,10 @@ const URL_PATH   = getArg('--path', '/');
 const IS_APPROVE = args.includes('--approve');
 const REVIEWER   = getArg('--reviewer', process.env.QA_REVIEWER || 'QA Lead');
 const MASK_SEL   = getArg('--mask', '');
+const READY_TIMEOUT_MS = Number.parseInt(
+  getArg('--ready-timeout', process.env.QA_READY_TIMEOUT_MS || '12000'),
+  10,
+);
 
 // Precise Threshold Config
 const THRESHOLDS = {
@@ -89,9 +94,10 @@ async function main() {
     storageState: fs.existsSync(AUTH) ? AUTH : undefined,
   });
   const page = await ctx.newPage();
+  installNetworkTracker(page);
 
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-  try { await page.waitForLoadState('networkidle', { timeout: 4000 }); } catch {}
+  await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
 
   // Mask dynamic elements
   await page.evaluate((extraMask) => {

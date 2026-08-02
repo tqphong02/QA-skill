@@ -32,6 +32,7 @@ const DATA_DIR = path.resolve(process.env.QA_DATA_DIR || process.cwd());
 const KNOW_DIR = path.join(DATA_DIR, 'qa-knowledge');
 const INTENT = getArg('--intent', 'EXPLORATORY_ADHOC').toUpperCase();
 const SCOPE = getArg('--scope', getArg('--module', '')).trim();
+const RUN_MODE = getArg('--run-mode', process.env.QA_RUN_MODE || 'auto').toLowerCase();
 const TARGET = getArg('--target', '').trim();
 const EXPECTED = getArg('--expected', '').trim();
 const ROLE = getArg('--role', '').trim();
@@ -53,6 +54,10 @@ const CONTEXT_BUILDER_VERSION = 'context-builder-v3-card-cache';
 
 if (!SCOPE) {
   console.error('[business-context] BLOCKED: --scope is required');
+  process.exit(2);
+}
+if (!['auto', 'fast', 'scoped', 'deep'].includes(RUN_MODE)) {
+  console.error('[business-context] BLOCKED: --run-mode must be auto, fast, scoped, or deep');
   process.exit(2);
 }
 
@@ -275,6 +280,35 @@ function walkFiles(directory, found = []) {
     else if (/\.(json|md)$/i.test(entry.name)) found.push(fullPath);
   }
   return found;
+}
+
+// Fast cache invalidation: walk metadata only before deciding whether the
+// content hashes need to be recomputed. Any path/size/mtime change falls back
+// to the existing content-hash path, so the optimization never hides a normal
+// knowledge update. The short metadata fingerprint is stored in the brief and
+// remains project-agnostic.
+function sourceInventoryFingerprint() {
+  const inventory = walkFiles(KNOW_DIR)
+    .map(filePath => {
+      try {
+        const stat = fs.statSync(filePath);
+        return {
+          path: path.relative(DATA_DIR, filePath),
+          size: stat.size,
+          mtime_ms: Math.trunc(stat.mtimeMs),
+          ctime_ms: Math.trunc(stat.ctimeMs),
+          inode: stat.ino || 0,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  return {
+    fingerprint: hashValue(inventory),
+    count: inventory.length,
+  };
 }
 
 function collectIndexRefs(node, refs = []) {
@@ -1084,25 +1118,62 @@ function collectMarkdown(markdown, sourcePath) {
   }
 }
 
+const cardPath = deriveCardPath(OUTPUT);
+const budgetPath = path.join(path.dirname(cardPath), 'context-budget.json');
+const cachedBriefPreflight = readJson(OUTPUT);
+const inventory = sourceInventoryFingerprint();
+
+function buildInputFingerprint(sourceFiles) {
+  return hashValue({
+    builder: CONTEXT_BUILDER_VERSION,
+    intent: INTENT,
+    scope: SCOPE,
+    run_mode: RUN_MODE,
+    target: TARGET,
+    expected: EXPECTED,
+    role: ROLE,
+    impact: IMPACT,
+    ticket: TICKET,
+    card_max_estimated_tokens: CARD_MAX_TOKENS,
+    source_files: sourceFiles,
+  });
+}
+
+// Do not read every knowledge artifact again on a repeated run when the
+// metadata inventory and invocation contract are unchanged. The old content
+// hash cache below remains as a compatibility fallback for older briefs.
+if (
+  !NO_CACHE
+  && cachedBriefPreflight?.source_inventory_fingerprint === inventory.fingerprint
+  && Array.isArray(cachedBriefPreflight.source_files)
+  && fs.existsSync(cardPath)
+  && fs.existsSync(budgetPath)
+) {
+  const preflightFingerprint = buildInputFingerprint(cachedBriefPreflight.source_files);
+  if (cachedBriefPreflight.input_fingerprint === preflightFingerprint) {
+    const cachedBudget = readJson(budgetPath);
+    if (cachedBudget && typeof cachedBudget === 'object') {
+      cachedBudget.cache_hit = true;
+      cachedBudget.cache_mode = 'stat_fast';
+      cachedBudget.cache_key = preflightFingerprint;
+      cachedBudget.cache_hit_at = new Date().toISOString();
+      fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
+    }
+    console.log(`[business-context] CACHE_HIT_FAST: ${OUTPUT}`);
+    console.log(
+      `[business-context] sources=${cachedBriefPreflight.source_files.length}`
+      + ` inventory=${inventory.fingerprint}`,
+    );
+    process.exit(statusCode(cachedBriefPreflight.status));
+  }
+}
+
 const sources = candidateSources();
 const sourceFiles = sources.map(source => ({
   path: path.relative(DATA_DIR, source),
   sha256_12: hashFile(source),
 }));
-const inputFingerprint = hashValue({
-  builder: CONTEXT_BUILDER_VERSION,
-  intent: INTENT,
-  scope: SCOPE,
-  target: TARGET,
-  expected: EXPECTED,
-  role: ROLE,
-  impact: IMPACT,
-  ticket: TICKET,
-  card_max_estimated_tokens: CARD_MAX_TOKENS,
-  source_files: sourceFiles,
-});
-const cardPath = deriveCardPath(OUTPUT);
-const budgetPath = path.join(path.dirname(cardPath), 'context-budget.json');
+const inputFingerprint = buildInputFingerprint(sourceFiles);
 const cachedBrief = readJson(OUTPUT);
 if (
   !NO_CACHE
@@ -1113,6 +1184,7 @@ if (
   const cachedBudget = readJson(budgetPath);
   if (cachedBudget && typeof cachedBudget === 'object') {
     cachedBudget.cache_hit = true;
+    cachedBudget.cache_mode = 'content_hash';
     cachedBudget.cache_key = inputFingerprint;
     cachedBudget.cache_hit_at = new Date().toISOString();
     fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
@@ -1582,8 +1654,11 @@ const brief = {
   status,
   intent: INTENT,
   scope: SCOPE,
+  run_mode: RUN_MODE,
   ticket: TICKET || null,
   generated_at: new Date().toISOString(),
+  source_inventory_fingerprint: inventory.fingerprint,
+  source_inventory_count: inventory.count,
   source_files: sourceFiles,
   knowledge_health: {
     source_count: sources.length,

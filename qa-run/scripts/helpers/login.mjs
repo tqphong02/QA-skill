@@ -1,6 +1,7 @@
 // Đăng nhập app rồi lưu phiên vào <project>/auth.json để mọi script tái dùng.
 // Cần trong .env của project: QA_BASE_URL, QA_EMAIL, QA_PASSWORD
 import { browser, snap, printSnap, shot, AUTH, BASE } from '../../lib/driver.mjs';
+import { waitForUiReady } from '../../lib/wait.mjs';
 
 const EMAIL = process.env.QA_EMAIL;
 const PASS = process.env.QA_PASSWORD;
@@ -8,7 +9,7 @@ if (!BASE || !EMAIL || !PASS) { console.error('❌ Thiếu QA_BASE_URL/QA_EMAIL/
 
 const { b, ctx, page } = await browser(false); // fresh, no auth
 await page.goto(BASE + '/login', { waitUntil: 'domcontentloaded' });
-await page.waitForTimeout(2500);
+await waitForUiReady(page, { timeout: Number(process.env.QA_READY_TIMEOUT_MS || 12000) });
 printSnap(await snap(page), 'LOGIN PAGE (before)');
 await shot(page, '00-login-page');
 
@@ -21,7 +22,7 @@ try {
   console.log('filled email=', filledE, 'pass=', filledP);
   const btn = page.locator('button[type=submit], button:has-text("Sign in"), button:has-text("Log in"), button:has-text("Đăng nhập"), button:has-text("Sign In")').first();
   if (await btn.count()) await btn.click(); else await page.keyboard.press('Enter');
-  await page.waitForTimeout(5000);
+  await waitForUiReady(page, { timeout: Number(process.env.QA_READY_TIMEOUT_MS || 12000) });
 } catch (e) { console.log('LOGIN STEP ERR:', e.message.split('\n')[0]); }
 
 printSnap(await snap(page), 'AFTER LOGIN');

@@ -21,6 +21,7 @@
 import { chromium, firefox, webkit } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { installNetworkTracker, waitForUiReady } from '../../lib/wait.mjs';
 
 let env = {};
 try { env = Object.fromEntries(fs.readFileSync('.env', 'utf8').split('\n').filter(Boolean).map(l => l.split('=').map(s => s.trim()))); }
@@ -34,6 +35,18 @@ if (!BASE) { console.error('❌ Thiếu QA_BASE_URL trong .env'); process.exit(1
 const urlPath = process.argv[2] || '/';
 const engines = (process.argv[3] || 'chromium,firefox,webkit').split(',').map(s => s.trim()).filter(Boolean);
 const devices = (process.argv[4] || '').split(',').map(s => s.trim()).filter(Boolean);
+const getArg = (flag, fallback) => {
+  const index = process.argv.indexOf(flag);
+  return index === -1 ? fallback : process.argv[index + 1] || fallback;
+};
+const READY_TIMEOUT_MS = Number.parseInt(
+  getArg('--ready-timeout', process.env.QA_READY_TIMEOUT_MS || '12000'),
+  10,
+);
+const WORKERS = Math.max(1, Math.min(
+  4,
+  Number.parseInt(getArg('--workers', process.env.QA_COMPAT_WORKERS || '2'), 10) || 2,
+));
 
 // Device preset (viewport + userAgent + isMobile + hasTouch). Mở rộng tuỳ nhu cầu.
 const DEVICE_PRESET = {
@@ -61,6 +74,7 @@ async function probeOne(engineName, deviceName) {
   });
   ctx.setDefaultTimeout(15000);
   const page = await ctx.newPage();
+  installNetworkTracker(page);
   const errs = [];
   page.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text().slice(0, 100)); });
   page.on('pageerror', e => errs.push('PAGEERR ' + String(e).slice(0, 100)));
@@ -70,7 +84,7 @@ async function probeOne(engineName, deviceName) {
   const out = { engine: engineName, device: deviceName || 'desktop' };
   try {
     const resp = await page.goto(BASE + urlPath, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await page.waitForTimeout(1500);
+    await waitForUiReady(page, { timeout: READY_TIMEOUT_MS });
     out.navStatus = resp ? resp.status() : '?';
     out.loadMs = Date.now() - t0;
     out.title = await page.title();
@@ -98,15 +112,22 @@ for (const eng of engines) {
   }
 }
 
-const results = [];
-for (const [eng, dev] of combos) {
-  process.stdout.write(`→ ${eng}/${dev || 'desktop'}… `);
-  const r = await probeOne(eng, dev);
-  results.push(r);
-  const ok = !r.error;
-  const errN = r.errors?.length || 0;
-  console.log(ok ? `${r.navStatus} (${r.loadMs}ms)${errN ? ` ⚠️ ${errN} err` : ' ✓'}` : `❌ ${r.error}`);
+const results = new Array(combos.length);
+let nextIndex = 0;
+async function runWorker() {
+  while (true) {
+    const index = nextIndex++;
+    if (index >= combos.length) return;
+    const [eng, dev] = combos[index];
+    process.stdout.write(`→ ${eng}/${dev || 'desktop'}… `);
+    const r = await probeOne(eng, dev);
+    results[index] = r;
+    const ok = !r.error;
+    const errN = r.errors?.length || 0;
+    console.log(ok ? `${r.navStatus} (${r.loadMs}ms)${errN ? ` ⚠️ ${errN} err` : ' ✓'}` : `❌ ${r.error}`);
+  }
 }
+await Promise.all(Array.from({ length: Math.min(WORKERS, combos.length) }, () => runWorker()));
 
 // Matrix tóm tắt
 console.log(`\n--- MATRIX ---`);

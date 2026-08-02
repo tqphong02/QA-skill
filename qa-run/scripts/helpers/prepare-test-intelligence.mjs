@@ -22,6 +22,11 @@ const scope = getArg('--scope', getArg('--module', '')).trim();
 const intent = getArg('--intent', 'EXPLORATORY_ADHOC').toUpperCase();
 const repoArg = getArg('--repo', '').trim();
 const refreshSource = getArg('--refresh-source', 'auto').toLowerCase();
+const runMode = getArg('--run-mode', process.env.QA_RUN_MODE || 'auto').toLowerCase();
+const discoveryParallel = getArg(
+  '--discovery-parallel',
+  process.env.QA_DISCOVERY_PARALLEL || 'auto',
+).toLowerCase();
 const cardMaxTokens = getArg('--card-max-tokens', '').trim();
 const noCache = args.includes('--no-cache');
 const output = path.resolve(getArg(
@@ -37,6 +42,14 @@ if (!['auto', 'always', 'never'].includes(refreshSource)) {
   console.error('[test-intelligence] BLOCKED: --refresh-source must be auto, always, or never');
   process.exit(2);
 }
+if (!['auto', 'fast', 'scoped', 'deep'].includes(runMode)) {
+  console.error('[test-intelligence] BLOCKED: --run-mode must be auto, fast, scoped, or deep');
+  process.exit(2);
+}
+if (!['auto', 'on', 'off'].includes(discoveryParallel)) {
+  console.error('[test-intelligence] BLOCKED: --discovery-parallel must be auto, on, or off');
+  process.exit(2);
+}
 
 function gitCommit(repoPath) {
   try {
@@ -47,6 +60,20 @@ function gitCommit(repoPath) {
     }).trim();
   } catch {
     return 'unknown';
+  }
+}
+
+function gitWorkingTreeChanged(repoPath) {
+  try {
+    return Boolean(execFileSync('git', [
+      'status', '--porcelain', '--untracked-files=all', '--', '.',
+    ], {
+      cwd: repoPath,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim());
+  } catch {
+    return false;
   }
 }
 
@@ -85,6 +112,7 @@ function sourceRefreshReason(repoPath) {
   ) {
     return `source commit changed (${metadata.commit} -> ${currentCommit})`;
   }
+  if (gitWorkingTreeChanged(repoPath)) return 'source working tree has uncommitted changes';
   return '';
 }
 
@@ -96,18 +124,34 @@ if (repoArg) {
   }
 
   const reason = sourceRefreshReason(repoPath);
-  const shouldRefresh = refreshSource === 'always' || (refreshSource === 'auto' && Boolean(reason));
+  const shouldRefresh = refreshSource !== 'never' && (
+    refreshSource === 'always'
+    || runMode === 'deep'
+    || (refreshSource === 'auto' && Boolean(reason))
+  );
   if (shouldRefresh) {
-    console.log(`[test-intelligence] Refreshing source knowledge: ${reason || 'forced refresh'}`);
+    const discoveryMode = refreshSource === 'always' || runMode === 'deep' ? 'full' : 'incremental';
+    console.log(
+      `[test-intelligence] Refreshing source knowledge: ${reason || 'forced refresh'}`
+      + ` mode=${discoveryMode} parallel=${discoveryParallel}`,
+    );
     const discovery = spawnSync(process.execPath, [
       path.join(skillRoot, 'scripts', 'orchestrators', 'repo-business-discovery.mjs'),
       '--repo',
       repoPath,
       '--mode',
-      refreshSource === 'always' ? 'full' : 'incremental',
+      discoveryMode,
+      '--scope',
+      scope,
+      '--parallel',
+      discoveryParallel,
     ], {
       cwd: dataDir,
-      env: { ...process.env, QA_DATA_DIR: dataDir },
+      env: {
+        ...process.env,
+        QA_DATA_DIR: dataDir,
+        QA_DISCOVERY_PARALLEL: discoveryParallel,
+      },
       stdio: 'inherit',
     });
     if (discovery.status !== 0) {
@@ -118,7 +162,7 @@ if (repoArg) {
     console.log(
       refreshSource === 'never'
         ? '[test-intelligence] Source refresh disabled by --refresh-source never'
-        : '[test-intelligence] Source knowledge is current',
+        : `[test-intelligence] Source knowledge is current; run-mode=${runMode}`,
     );
   }
 }
@@ -129,6 +173,8 @@ const contextArgs = [
   intent,
   '--scope',
   scope,
+  '--run-mode',
+  runMode,
   '--output',
   output,
 ];

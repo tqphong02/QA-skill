@@ -10,7 +10,8 @@ const source = fs.readFileSync(extractFlow, 'utf8');
 
 test('extract-flow reads positional CLI values for discovery limits', () => {
   assert.match(source, /parseInt\(find\(args, '--max-pages', 1\) \?\? '30'/);
-  assert.match(source, /parseInt\(find\(args, '--wait', 1\) \?\? '1200'/);
+  assert.match(source, /parseInt\(find\(args, '--wait', 1\) \?\? process\.env\.QA_LEGACY_SETTLE_MS \?\? '0'/);
+  assert.match(source, /find\(args, '--ready-timeout', 1\)/);
 });
 
 test('extract-flow resolves the canonical business-guide writer path', () => {

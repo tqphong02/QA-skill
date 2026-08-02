@@ -6,6 +6,7 @@
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import { installNetworkTracker, waitForUiReady } from './wait.mjs';
 
 export const SKILL_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 export const DATA = process.env.QA_DATA_DIR || process.cwd();
@@ -25,6 +26,7 @@ export async function browser(useAuth = true) {
   ctx.setDefaultTimeout(8000);
   ctx.setDefaultNavigationTimeout(20000);
   const page = await ctx.newPage();
+  installNetworkTracker(page);
   const errors = [];
   page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text().slice(0, 160)); });
   page.on('pageerror', e => errors.push('PAGEERR ' + String(e).slice(0, 160)));
@@ -41,7 +43,10 @@ export async function shot(page, name) {
 
 // Concise structured snapshot: URL, title, headings, inputs, buttons, links, toasts, errors.
 export async function snap(page, { max = 40 } = {}) {
-  await page.waitForTimeout(400);
+  await waitForUiReady(page, {
+    timeout: Number.parseInt(process.env.QA_SNAPSHOT_READY_TIMEOUT_MS || '2500', 10),
+    quietMs: Number.parseInt(process.env.QA_SNAPSHOT_READY_QUIET_MS || '100', 10),
+  });
   const data = await page.evaluate((MAX) => {
     const vis = el => {
       const r = el.getBoundingClientRect(); const s = getComputedStyle(el);

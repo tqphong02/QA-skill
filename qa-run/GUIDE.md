@@ -98,7 +98,7 @@ AI tự xử lý: **(a)** hỏi user khi cần data thật/không tạo được
 | `compat.mjs` | `node compat.mjs /path engines devices` | cross-browser/device |
 | `log-bug.mjs` | `node log-bug.mjs ...` | log bug Plane (3 mode) |
 
-**Lib** (`lib/`): `driver.mjs` (browser/snap/shot) · `ui.mjs` (recordNet/waitForText/waitForStable/clickText/withRevert) · `assert.mjs` (check/eq/summary).
+**Lib** (`lib/`): `driver.mjs` (browser/snap/shot) · `ui.mjs` (recordNet/waitForText/waitForStable/clickText/withRevert) · `wait.mjs` (same-session adaptive readiness) · `assert.mjs` (check/eq/summary).
 
 ---
 
@@ -111,12 +111,13 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 ## ⚡ Tối ưu khi AI lái browser
 - **Scope snapshot** (`target` + `depth`) thay vì full page → nhỏ 5-20×
 - **Batch fill** (`browser_fill_form`) + **batch evaluate** (1 call đọc nhiều value)
-- **Wait deterministic** (`wait_for text`) thay vì sleep cứng
+- **Adaptive wait** (`lib/wait.mjs`) theo document/XHR/fetch readiness và quiet window; `--wait`/`QA_LEGACY_SETTLE_MS` chỉ là compatibility escape hatch
 - **Cross-verify** mỗi verdict: DOM + network + console (đừng chỉ tin snapshot)
 - **Heuristic checklists** theo loại feature (form/table/filter/auth/modal/concurrency)
 - **Pattern memory**: đọc `FINDINGS.md` cũ → nhận regression/root-cause lặp
 - **Execution card**: đọc `business-execution-card.json` trước, chỉ mở full brief khi có deferred/truncation hoặc conflict
-- **Fingerprint cache**: `prepare-test-intelligence.mjs` tự reuse context không đổi; dùng `--no-cache` khi cần rebuild
+- **Fingerprint cache**: `prepare-test-intelligence.mjs` tự reuse context không đổi bằng stat-fast inventory rồi mới fallback content hash; dùng `--run-mode auto|fast|scoped|deep` và `--no-cache` khi cần rebuild
+- **Parallel discovery**: `repo-business-discovery.mjs --parallel auto|on|off`; phase dependencies vẫn giữ barrier và telemetry trong `discovery-session.json`
 
 ---
 

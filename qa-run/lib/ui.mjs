@@ -4,6 +4,7 @@
 //   import { recordNet, waitForText, clickText, withRevert } from '<skill>/lib/ui.mjs';
 
 import { BASE } from './driver.mjs';
+export { installNetworkTracker, waitForNetworkQuiet, waitForUiReady } from './wait.mjs';
 
 /**
  * Bắt network cho assertion. Gọi TRƯỚC khi thao tác; trả về mảng tự lớn dần.
