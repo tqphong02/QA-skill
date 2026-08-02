@@ -30,6 +30,7 @@ import { execSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { resolveModelUsage } from '../../lib/model-telemetry.mjs';
 
 const DATA = process.env.QA_DATA_DIR || process.cwd();
 try { process.loadEnvFile(path.join(DATA, '.env')); } catch { /* optional */ }
@@ -190,6 +191,7 @@ if (command === 'start') {
   }
   let contextCard = null;
   let contextBudget = null;
+  const modelUsage = resolveModelUsage(DATA);
   if (fs.existsSync(contextCardPath)) {
     try {
       contextCard = JSON.parse(fs.readFileSync(contextCardPath, 'utf8'));
@@ -310,6 +312,8 @@ if (command === 'start') {
         cache_hit: Boolean(contextBudget.cache_hit),
         cache_mode: contextBudget.cache_mode || 'unknown',
         estimator: contextBudget.estimator || 'utf8_bytes_div_4_estimate',
+        token_measurement: contextBudget.token_measurement || 'deterministic_estimate',
+        provider_token_usage: contextBudget.provider_token_usage || modelUsage,
         estimated_tokens: contextBudget.model_context_card?.estimated_tokens || null,
         max_estimated_tokens: contextBudget.model_context_card?.max_estimated_tokens || null,
         within_budget: contextBudget.model_context_card?.within_budget ?? null,

@@ -30,6 +30,8 @@ node scripts/orchestrators/repo-business-discovery.mjs --repo /path/to/backend -
 node scripts/orchestrators/repo-business-discovery.mjs --workspace /path/to/project --repos frontend,backend --mode full --graphify auto
 ```
 
+Incremental mode unions committed, staged, unstaged and untracked paths, selects a conservative change-impact scanner set and fails closed if a scanner or canonical artifact fails. It never skips dirty source merely because `HEAD` is unchanged
+
 Graphify is an optional code-only discovery provider in this orchestrator. Default `--graphify auto` uses it when installed and continues with canonical scanners when unavailable. Use `--graphify required` only when the requested result explicitly depends on Graphify and read [GRAPHIFY-EFFECTIVE-HTML.md](GRAPHIFY-EFFECTIVE-HTML.md) before changing this boundary
 
 Output: `qa-knowledge/repositories/<repo-name>/` includes:

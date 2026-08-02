@@ -23,12 +23,13 @@ import fs from 'fs';
 import path from 'path';
 import { installNetworkTracker, waitForUiReady } from '../../lib/wait.mjs';
 
+const DATA = path.resolve(process.env.QA_DATA_DIR || process.cwd());
 let env = {};
-try { env = Object.fromEntries(fs.readFileSync('.env', 'utf8').split('\n').filter(Boolean).map(l => l.split('=').map(s => s.trim()))); }
+try { env = Object.fromEntries(fs.readFileSync(path.join(DATA, '.env'), 'utf8').split('\n').filter(Boolean).map(l => l.split('=').map(s => s.trim()))); }
 catch { /* optional */ }
 const BASE  = process.env.QA_BASE_URL || env.QA_BASE_URL || '';
-const AUTH  = path.join(process.env.QA_DATA_DIR || process.cwd(), 'auth.json');
-const EVID  = path.join(process.env.QA_DATA_DIR || process.cwd(), 'evidence');
+const AUTH  = path.join(DATA, 'auth.json');
+const EVID  = path.join(DATA, 'evidence');
 fs.mkdirSync(EVID, { recursive: true });
 if (!BASE) { console.error('❌ Thiếu QA_BASE_URL trong .env'); process.exit(1); }
 

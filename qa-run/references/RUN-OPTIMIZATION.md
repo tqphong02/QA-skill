@@ -23,7 +23,9 @@ The cache is project-local under `QA_DATA_DIR/qa-knowledge`; it never writes int
 
 ## Discovery parallelism
 
-`repo-business-discovery.mjs` accepts `--parallel auto|on|off` and defaults to `auto`. Independent Phase 1 and Phase 2 scanners run concurrently. Phase 3 keeps reconciliation as a barrier, then runs independent derived reports concurrently. Use `--parallel off` only for diagnosing a tool or resource conflict. `discovery-session.json` records phase and script timings
+`repo-business-discovery.mjs` accepts `--parallel auto|on|off` and defaults to `auto`. Independent Phase 1 and Phase 2 scanners run concurrently. Phase 3 keeps reconciliation as a barrier, then runs independent derived reports concurrently. In `incremental`, the orchestrator unions committed, staged, unstaged and untracked paths, applies a conservative impact plan, and reuses only a complete baseline artifact set. UI-only, API-only, database-only, RBAC-only and test-only deltas can avoid unrelated scanners; ambiguous/config/documentation deltas escalate to the full scanner set. Use `--parallel off` only for diagnosing a tool or resource conflict. `discovery-session.json` records phase timings, selected tasks, changed paths and reused artifacts
+
+Every selected scanner is behind a fail-closed gate. A non-zero exit or missing canonical artifact aborts discovery before the old knowledge can be treated as current. A dirty working tree is never skipped merely because `HEAD` is unchanged
 
 ## Adaptive browser readiness
 
@@ -40,4 +42,8 @@ Timeout is an observation result, not a PASS. Continue collecting UI, network, c
 
 Use the execution card as the default context surface. A fast/deterministic model may classify, select scoped facts and format evidence. Escalate to a stronger model or a full-brief read only when a high/critical oracle is unresolved, sources conflict, a new state/role/dependency appears, or runtime contradicts the card. Never route an ambiguous or missing oracle to an automatic PASS
 
-Measure optimization with run ID, cache mode, preparation duration, browser duration, risk coverage, evidence completeness, blocked count and false-PASS/reopened-defect rate. Token estimates remain UTF-8 byte estimates unless the host provides provider tokenizer telemetry
+Measure optimization with run ID, cache mode, preparation duration, browser duration, risk coverage, evidence completeness, blocked count and false-PASS/reopened-defect rate. The bounded card remains trimmed with the deterministic UTF-8/4 estimate; when the host reports real usage, write a redacted JSON file through `record-model-usage.mjs` and set `QA_TOKEN_USAGE_FILE`. `context-budget.json` and the run manifest then preserve provider, model, input/output/total tokens, latency and cost separately from the estimate
+
+Measure business-flow intelligence with `scripts/helpers/evaluate-business-intelligence.mjs` and a project-owned golden dataset. Its precision/recall is a retrieval coverage signal, not semantic proof; runtime evidence and reviewer confirmation remain required
+
+Antigravity is not considered live-tested by documentation alone. Run the actual host smoke, capture same-session screenshot/network/console/page-error evidence, and pass it through `scripts/helpers/validate-host-smoke.mjs`; missing evidence is `BLOCKED`

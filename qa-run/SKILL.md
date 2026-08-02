@@ -72,6 +72,7 @@ Load optional references only when their condition occurs:
 - Playwright was proven unavailable → [references/ANTIGRAVITY-FALLBACK.md](references/ANTIGRAVITY-FALLBACK.md)
 - A verdict is shallow, contradictory or unsupported → [references/INTELLIGENCE-BOOST.md](references/INTELLIGENCE-BOOST.md)
 - Speed, token budget, repeated runs or cross-project portability is in scope → [references/RUN-OPTIMIZATION.md](references/RUN-OPTIMIZATION.md)
+- Business-flow intelligence comparison or model-quality measurement is in scope → [references/BUSINESS-INTELLIGENCE-EVAL.md](references/BUSINESS-INTELLIGENCE-EVAL.md)
 - Repository-wide graph, cross-file impact, call-flow diagram or interactive intelligence report is requested → [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md)
 
 Treat `qa-run` as one public skill. Never load or expose `vendor/**/SKILL.md`; vendor code is an optional development dependency, not a user-selectable QA skill.
@@ -93,7 +94,7 @@ Apply the following exact order for all models, especially fast or small-context
      --role <role-if-known> \
      --impact <comma-separated-impacted-areas-if-known>
    ```
-   The command reuses an unchanged input fingerprint by default and writes `business-execution-card.json` plus `context-budget.json`. The default model-facing budget is 3,200 deterministic token-estimate units; use `--no-cache` only after changing retrieval/generator policy and `--card-max-tokens <N>` only for a deliberate host/context trade-off. `auto` is the portable default; `fast` reuses stat-fast knowledge metadata, `scoped` limits retrieval to the requested feature and `deep` forces full source discovery. A stale source or missing oracle escalates instead of being silently accepted
+   The command reuses an unchanged input fingerprint by default and writes `business-execution-card.json` plus `context-budget.json`. The default model-facing budget is 3,200 deterministic token-estimate units; use `--no-cache` only after changing retrieval/generator policy and `--card-max-tokens <N>` only for a deliberate host/context trade-off. `auto` is the portable default; `fast` reuses stat-fast knowledge metadata, `scoped` limits retrieval to the requested feature and `deep` forces full source discovery. A stale source or missing oracle escalates instead of being silently accepted. When `--repo` is present, dirty/staged/untracked paths are included in the source delta; an incremental run never treats unchanged `HEAD` as proof that the working tree is unchanged
    Read `qa-knowledge/context/business-execution-card.json` first. The full `business-execution-brief.json` remains the canonical gate/audit artifact and the Markdown file is human-facing; open either full artifact only when the card requests escalation or a source/evidence conflict requires it. `Business Execution Brief` is the machine gate and risk model:
    - `READY` → use the card's exact execution contract, high-risk charters, bounded evidence and retrieval pointers; use the full brief for scoped escalation
    - `NEEDS_DISCOVERY` → run only scoped runtime/UI discovery needed by `missing_required`, write knowledge, then rebuild the brief
@@ -165,6 +166,7 @@ Apply the following exact order for all models, especially fast or small-context
    - When source or UI is available only for reading, use it to form candidate oracles and impacted areas; do not mutate code, app data or permissions and do not upgrade a static claim to runtime truth
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
    - If NO guide exists at all: run scoped discovery for a retest; use `APP_BASELINE_DISCOVERY` only for an explicit full-app/bootstrap request
+   - If a discovery scanner exits non-zero or a canonical artifact is missing, keep the run `BLOCKED`; do not reuse an older artifact as a fresh oracle
 6. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
 7. Copy the test contract from the `READY` brief. Do not rewrite it from memory or replace missing fields with generic steps.
 8. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
@@ -195,7 +197,7 @@ State map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `
 ## Knowledge scope decision
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
-- `REPO_BUSINESS_DISCOVERY`: run `node scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode <full|incremental> --graphify auto`. Graphify runs code-only when available and contributes dependency candidates; canonical QA-skill scanners still produce rules, flows, contracts and permissions. Use `--graphify required` only when Graphify itself is required by the user
+- `REPO_BUSINESS_DISCOVERY`: run `node scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode <full|incremental> --parallel auto --graphify auto`. Incremental mode collects committed, staged, unstaged and untracked changes, selects conservative API/UI/DB/RBAC/state scanner impact, and fails closed on scanner/artifact errors. Graphify runs code-only when available and contributes dependency candidates; canonical QA-skill scanners still produce rules, flows, contracts and permissions. Use `--graphify required` only when Graphify itself is required by the user
 - `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --module <requested-if-known> --parallel --plan-only`, show the resolved module scope, then ask the user to confirm module, worker count 1-4 and worker selection. Run only confirmed assignments and import image/video-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
 - `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
 - `SANITY_REGRESSION` and `EXPLORATORY_ADHOC`: reuse existing guides, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope.
@@ -266,6 +268,9 @@ These must be observed at all times, even before reading any reference file:
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
 | `scripts/helpers/context-card.mjs` | Project a bounded model-facing execution card and write deterministic context-budget telemetry |
 | `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
+| `scripts/helpers/record-model-usage.mjs` | Ingest provider/host-reported token, latency and cost telemetry without putting it into the model-facing card |
+| `scripts/helpers/evaluate-business-intelligence.mjs` | Compare a READY brief with a project golden dataset using deterministic precision/recall |
+| `scripts/helpers/validate-host-smoke.mjs` | Fail-closed validation of Antigravity same-session smoke evidence |
 | `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, retain the complete normalized project graph and produce a separate token-bounded context slice |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
 | `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
@@ -287,6 +292,10 @@ These must be observed at all times, even before reading any reference file:
 | `lib/driver.mjs` | Headless browser + screenshot to file |
 | `lib/ui.mjs` | Scope snapshot, network recording, `withRevert` |
 | `lib/wait.mjs` | Same-session adaptive document/XHR/fetch readiness and bounded quiet-window telemetry |
+| `lib/change-impact.mjs` | Conservative incremental scanner selection by changed-file business impact |
+| `lib/git-changes.mjs` | Collect committed, staged, unstaged and untracked source paths |
+| `lib/discovery-gate.mjs` | Fail-closed scanner result and canonical-artifact gate |
+| `lib/model-telemetry.mjs` | Normalize optional provider-reported token/latency/cost telemetry |
 | `lib/assert.mjs` | `check/eq/summary` compact |
 
 ## Related skills

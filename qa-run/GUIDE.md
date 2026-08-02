@@ -117,7 +117,11 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 - **Pattern memory**: đọc `FINDINGS.md` cũ → nhận regression/root-cause lặp
 - **Execution card**: đọc `business-execution-card.json` trước, chỉ mở full brief khi có deferred/truncation hoặc conflict
 - **Fingerprint cache**: `prepare-test-intelligence.mjs` tự reuse context không đổi bằng stat-fast inventory rồi mới fallback content hash; dùng `--run-mode auto|fast|scoped|deep` và `--no-cache` khi cần rebuild
+- **Change-impact incremental**: `repo-business-discovery.mjs` gom delta commit/staged/unstaged/untracked, chọn scanner theo impact API/UI/DB/RBAC/state; dirty `HEAD` không còn được coi là source sạch
+- **Fail-closed discovery**: scanner exit lỗi hoặc canonical artifact thiếu sẽ block preparation, không giữ artifact cũ rồi báo thành công
 - **Parallel discovery**: `repo-business-discovery.mjs --parallel auto|on|off`; phase dependencies vẫn giữ barrier và telemetry trong `discovery-session.json`
+- **Provider token telemetry**: host ghi `QA_TOKEN_USAGE_FILE` bằng `record-model-usage.mjs`; `context-budget.json` giữ provider-reported usage riêng với estimate UTF-8/4
+- **Business intelligence eval**: dùng `scripts/helpers/evaluate-business-intelligence.mjs` với golden dataset per project để đo recall/precision, không dùng test count thay cho intelligence
 
 ---
 
@@ -126,6 +130,7 @@ Phần lớn asset portable (lib, scripts, methodology). Chỉ đổi "bộ não
 - MCP Playwright → **Gemini-in-Chrome** (Antigravity)
 - WebFetch → Antigravity web tool / curl
 - Script npm (`node scripts/x.mjs`) → chạy y hệt từ Antigravity terminal
+- Antigravity smoke PASS chỉ hợp lệ sau khi chạy host thật và validate `evidence/antigravity-smoke.json` bằng `scripts/helpers/validate-host-smoke.mjs`
 
 Chi tiết: `SKILL.md` §🔁. Skill cũng dùng được với Cursor/Cline/Aider+playwright-mcp.
 

@@ -16,6 +16,8 @@ node qa-run/scripts/helpers/prepare-test-intelligence.mjs \
 
 Use `fast` for repeated runs, `scoped` for a feature shard and `deep` after a generator, architecture or requirement change. `repo-business-discovery.mjs` defaults to safe parallel independent scanners and accepts `--parallel off` for diagnosis. The preparation card and cache stay under the tested project's `QA_DATA_DIR`
 
+Incremental discovery collects committed, staged, unstaged and untracked changes, selects a conservative impact plan and fails closed when a scanner or canonical artifact fails. Provider-reported model usage is optional and stays outside the bounded card; use `record-model-usage.mjs` with `QA_TOKEN_USAGE_FILE`. A project-specific example belongs under `qa-run/examples/` and is intentionally absent from the generic registry
+
 ---
 
 ## 1. Bản đồ Kiến trúc 7 Nhóm Thư mục
@@ -85,6 +87,9 @@ qa-run/scripts/
     ├── login.mjs
     ├── run-manifest.mjs
     ├── runtime-observer.mjs
+    ├── record-model-usage.mjs
+    ├── evaluate-business-intelligence.mjs
+    ├── validate-host-smoke.mjs
     ├── sweep.mjs
     ├── ux-health.mjs
     ├── visual-audit.mjs

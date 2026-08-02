@@ -12,6 +12,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readModelUsage } from '../../lib/model-telemetry.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (flag, fallback = '') => {
@@ -52,6 +53,8 @@ const BUDGET_PATH = path.resolve(getArg(
   '--budget-output',
   path.join(path.dirname(CARD_PATH), 'context-budget.json'),
 ));
+const TOKEN_USAGE_FILE = getArg('--token-usage-file', process.env.QA_TOKEN_USAGE_FILE || '');
+const PROVIDER_TOKEN_USAGE = readModelUsage(TOKEN_USAGE_FILE, DATA_DIR);
 
 const PRIORITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
 const CONFIDENCE_RANK = {
@@ -509,6 +512,8 @@ export function buildContextCard(brief, {
     schema_version: 1,
     artifact: 'context-budget',
     estimator: 'utf8_bytes_div_4_estimate',
+    token_measurement: PROVIDER_TOKEN_USAGE ? 'provider_reported' : 'deterministic_estimate',
+    provider_token_usage: PROVIDER_TOKEN_USAGE,
     generated_at: new Date().toISOString(),
     intent: brief.intent,
     scope: brief.scope,
@@ -539,7 +544,9 @@ export function buildContextCard(brief, {
       source_evidence_count: card.source_evidence.length,
     },
     limitations: [
-      'Token counts are deterministic UTF-8 byte estimates, not provider tokenizer measurements',
+      ...(PROVIDER_TOKEN_USAGE
+        ? []
+        : ['Token counts are deterministic UTF-8 byte estimates; provide QA_TOKEN_USAGE_FILE for provider measurements']),
       'The full brief remains the canonical artifact and is available for scoped escalation',
     ],
   };

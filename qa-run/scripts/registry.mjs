@@ -100,8 +100,6 @@ export const SCRIPT_REGISTRY = {
   'repo-business-discovery': 'orchestrators/repo-business-discovery.mjs',
   'ui-business-reconciliation.mjs': 'orchestrators/ui-business-reconciliation.mjs',
   'ui-business-reconciliation': 'orchestrators/ui-business-reconciliation.mjs',
-  'retest-aifa-337.mjs': 'orchestrators/retest-aifa-337.mjs',
-  'retest-aifa-337': 'orchestrators/retest-aifa-337.mjs',
 
   // ── 7. Helpers (Execution, Data, Evidence, Utils) ────────────────────
   'execute-sheet.mjs': 'helpers/execute-sheet.mjs',
@@ -132,6 +130,12 @@ export const SCRIPT_REGISTRY = {
   'context-card': 'helpers/context-card.mjs',
   'prepare-test-intelligence.mjs': 'helpers/prepare-test-intelligence.mjs',
   'prepare-test-intelligence': 'helpers/prepare-test-intelligence.mjs',
+  'record-model-usage.mjs': 'helpers/record-model-usage.mjs',
+  'record-model-usage': 'helpers/record-model-usage.mjs',
+  'evaluate-business-intelligence.mjs': 'helpers/evaluate-business-intelligence.mjs',
+  'evaluate-business-intelligence': 'helpers/evaluate-business-intelligence.mjs',
+  'validate-host-smoke.mjs': 'helpers/validate-host-smoke.mjs',
+  'validate-host-smoke': 'helpers/validate-host-smoke.mjs',
   'drive_common.py': 'helpers/drive_common.py',
   'drive_common': 'helpers/drive_common.py',
   'explore.mjs': 'helpers/explore.mjs',

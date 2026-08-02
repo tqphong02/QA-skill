@@ -282,7 +282,7 @@ Sau khi chạy bất kỳ sub-pipeline nào của `qa-run` (`REPO_BUSINESS_DISCO
 Lần làm việc tiếp theo:
 - Không đọc lại toàn bộ source, PDF đã convert hoặc full DOM khi `knowledge-index.json` đã trỏ tới shard phù hợp.
 - Chỉ đọc guide, requirement và source symbol đúng feature scope.
-- Repo chưa có telemetry tokenizer canonical, vì vậy không công bố phần trăm tiết kiệm như số đo thực nghiệm.
+- Repo có contract telemetry provider tùy host qua `QA_TOKEN_USAGE_FILE`; nếu host không cung cấp file này, token vẫn phải ghi là ước lượng UTF-8/4 và benchmark phải ghi rõ là fixture.
 
 ---
 
@@ -321,7 +321,7 @@ Lần làm việc tiếp theo:
 - [x] Dùng source-inventory fingerprint, source hash và knowledge index để tránh re-read/re-discovery ngoài scope; cache đổi nội dung vẫn fallback content hash.
 - [ ] Retest ticket chỉ chuẩn bị intelligence và charters cho module bị ảnh hưởng.
 - [ ] `prepare-test-intelligence.mjs` chỉ nạp source/knowledge theo feature scope và ghi provenance của phần đã dùng.
-- [ ] Số token và mức tiết kiệm chỉ được công bố khi có telemetry đo thật; repo hiện chưa có tokenizer/`token-usage.json` tự động.
+- [x] Số token provider-reported được ingest qua `record-model-usage.mjs`; khi thiếu telemetry, report vẫn giữ rõ là estimate và không claim token thật.
 
 ---
 
@@ -390,13 +390,13 @@ Documents
    - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
    - Chỉ crop đúng vùng patch nghi ngờ gửi cho LLM Vision API khi OmniParser hoặc DOM audit phát hiện mâu thuẫn.
 3. **`source-indexer.mjs` + source hash**: giới hạn discovery theo source hiện tại và giữ provenance cho artifact.
-4. **Giới hạn còn lại**: `context-card.mjs` ghi `context-budget.json` với ước lượng UTF-8 byte/4 và `context-builder.mjs` có stat-fast/content-hash cache; provider tokenizer telemetry và phần trăm tiết kiệm thực nghiệm vẫn chưa có, không được claim số đo như kết quả thực nghiệm.
+4. **Giới hạn còn lại**: `context-card.mjs` vẫn trim card bằng ước lượng UTF-8 byte/4 để giữ tính portable; provider-reported usage được ghi riêng khi host cung cấp, còn business-flow intelligence phải đánh giá bằng golden dataset và runtime evidence.
 
 ---
 
 ### 📊 Telemetry token hiện có và giới hạn đo lường
 
-`context-budget.json` là output canonical cho budget/retrieval. Provider tokenizer và test benchmark chưa được tích hợp, vì vậy mọi token count hiện tại phải được ghi là ước lượng. Output thực tế có dạng rút gọn:
+`context-budget.json` là output canonical cho budget/retrieval. Mặc định vẫn có estimate deterministic; khi host ghi `QA_TOKEN_USAGE_FILE`, output thêm `provider_token_usage` với provider/model/input/output/total/latency/cost để so sánh thực tế. Output rút gọn:
 
 ```json
 {
@@ -410,7 +410,9 @@ Documents
     "within_budget": false
   },
   "retrieval": { "high_risk_count": 3, "deferred_charter_count": 1 },
-  "estimator": "utf8_bytes_div_4_estimate"
+  "estimator": "utf8_bytes_div_4_estimate",
+  "token_measurement": "provider_reported",
+  "provider_token_usage": { "provider": "host", "model": "model", "input_tokens": 100, "output_tokens": 20, "total_tokens": 120 }
 }
 ```
 
@@ -421,8 +423,8 @@ Documents
 #### Thứ tự ưu tiên triển khai gap còn lại:
 ```text
 1. Giữ `prepare-test-intelligence.mjs` và `context-builder.mjs` làm scope gate canonical
-2. Bổ sung provider tokenizer nếu cần báo chi phí token định lượng
-3. Bổ sung benchmark fixture trước khi công bố phần trăm tiết kiệm
+2. Host ghi provider tokenizer usage qua `record-model-usage.mjs` nếu cần báo chi phí token định lượng
+3. Chạy golden business-flow evaluation và benchmark fixture trước khi công bố phần trăm tiết kiệm hoặc intelligence score
 4. Dùng `ui-business-component-extractor.mjs` cho component inventory thay vì full DOM
 5. Dùng `visual-evidence-router.mjs` cho evidence crop khi có screenshot thật
 ```
@@ -437,7 +439,7 @@ Documents
 - [x] Browser helper dùng adaptive same-session readiness; fixed settle chỉ còn compatibility override có bounded timeout.
 - [x] Retest dùng feature scope và ranked impacted charters qua test intelligence.
 - [x] Bounded model-facing card có deterministic context budget và explicit truncation/deferred retrieval.
-- [ ] Provider tokenizer và `token-usage.json` theo từng model chưa được triển khai; không claim token metric chính xác.
+- [x] Có provider usage ingest tùy host; khi không có dữ liệu provider, report vẫn giữ rõ `deterministic_estimate` và không claim token thật.
 
 ---
 
@@ -482,7 +484,7 @@ flowchart TD
 3. **`ui-business-component-extractor.mjs`**: Chuyển live page/snapshot thành component inventory có stable UI item ID.
 4. **`visual-evidence-router.mjs`**: Quyết định visual evidence cần review/crop.
 5. **`source-indexer.mjs`**: Lập chỉ mục source phục vụ discovery có provenance.
-6. **Chưa có** hard token-budget manager hoặc telemetry tokenizer canonical; đây là gap cần đo và triển khai riêng.
+6. **Giới hạn hiện tại**: hard token-budget trimming vẫn dùng estimate portable; provider telemetry là ingest tùy host và phải được đánh dấu `provider_reported` trong artifact.
 
 ---
 

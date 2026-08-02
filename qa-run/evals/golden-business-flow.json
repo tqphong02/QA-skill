@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "generic-order-approval-v1",
+  "description": "Portable golden contract for comparing business-flow retrieval across projects",
+  "required": {
+    "routes": ["/orders"],
+    "roles": ["Buyer"],
+    "preconditions": ["Authenticated session"],
+    "happy_flow": ["Create order", "Order is created"],
+    "business_rules": ["Order code must be unique"],
+    "expected_results": ["Order is created"],
+    "invariants": ["One result per selected version"]
+  },
+  "thresholds": {
+    "min_recall": 1,
+    "min_precision": 0.35
+  }
+}

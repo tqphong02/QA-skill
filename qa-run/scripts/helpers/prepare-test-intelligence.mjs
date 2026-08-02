@@ -104,11 +104,14 @@ function sourceRefreshReason(repoPath) {
     return 'source knowledge is incomplete';
   }
   const currentCommit = gitCommit(repoPath);
+  if (currentCommit === 'unknown') {
+    return 'source freshness cannot be proven without git metadata';
+  }
+  if (!metadata.commit || metadata.commit === 'unknown') {
+    return 'source knowledge has no stable source commit';
+  }
   if (
-    currentCommit !== 'unknown'
-    && metadata.commit
-    && metadata.commit !== 'unknown'
-    && metadata.commit !== currentCommit
+    metadata.commit !== currentCommit
   ) {
     return `source commit changed (${metadata.commit} -> ${currentCommit})`;
   }
@@ -130,7 +133,12 @@ if (repoArg) {
     || (refreshSource === 'auto' && Boolean(reason))
   );
   if (shouldRefresh) {
-    const discoveryMode = refreshSource === 'always' || runMode === 'deep' ? 'full' : 'incremental';
+    const needsFullBaseline = /missing|incomplete|cannot be proven|no stable source commit/i.test(reason);
+    const discoveryMode = refreshSource === 'always'
+      || runMode === 'deep'
+      || needsFullBaseline
+      ? 'full'
+      : 'incremental';
     console.log(
       `[test-intelligence] Refreshing source knowledge: ${reason || 'forced refresh'}`
       + ` mode=${discoveryMode} parallel=${discoveryParallel}`,

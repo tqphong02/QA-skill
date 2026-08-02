@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { resolveModelUsage } from '../../lib/model-telemetry.mjs';
 
 const args = process.argv.slice(2);
 const getArg = (flag, fallback = '') => {
@@ -1139,6 +1140,23 @@ function buildInputFingerprint(sourceFiles) {
   });
 }
 
+function annotateBudget(budgetPath, cacheMode, cacheKey) {
+  const cachedBudget = readJson(budgetPath);
+  if (!cachedBudget || typeof cachedBudget !== 'object') return;
+  const providerUsage = resolveModelUsage(DATA_DIR);
+  cachedBudget.cache_hit = true;
+  cachedBudget.cache_mode = cacheMode;
+  cachedBudget.cache_key = cacheKey;
+  cachedBudget.cache_hit_at = new Date().toISOString();
+  if (providerUsage) {
+    cachedBudget.token_measurement = 'provider_reported';
+    cachedBudget.provider_token_usage = providerUsage;
+    cachedBudget.limitations = (cachedBudget.limitations || [])
+      .filter(item => !/deterministic UTF-8 byte estimates/i.test(String(item)));
+  }
+  fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
+}
+
 // Do not read every knowledge artifact again on a repeated run when the
 // metadata inventory and invocation contract are unchanged. The old content
 // hash cache below remains as a compatibility fallback for older briefs.
@@ -1151,14 +1169,7 @@ if (
 ) {
   const preflightFingerprint = buildInputFingerprint(cachedBriefPreflight.source_files);
   if (cachedBriefPreflight.input_fingerprint === preflightFingerprint) {
-    const cachedBudget = readJson(budgetPath);
-    if (cachedBudget && typeof cachedBudget === 'object') {
-      cachedBudget.cache_hit = true;
-      cachedBudget.cache_mode = 'stat_fast';
-      cachedBudget.cache_key = preflightFingerprint;
-      cachedBudget.cache_hit_at = new Date().toISOString();
-      fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
-    }
+    annotateBudget(budgetPath, 'stat_fast', preflightFingerprint);
     console.log(`[business-context] CACHE_HIT_FAST: ${OUTPUT}`);
     console.log(
       `[business-context] sources=${cachedBriefPreflight.source_files.length}`
@@ -1181,14 +1192,7 @@ if (
   && fs.existsSync(cardPath)
   && fs.existsSync(budgetPath)
 ) {
-  const cachedBudget = readJson(budgetPath);
-  if (cachedBudget && typeof cachedBudget === 'object') {
-    cachedBudget.cache_hit = true;
-    cachedBudget.cache_mode = 'content_hash';
-    cachedBudget.cache_key = inputFingerprint;
-    cachedBudget.cache_hit_at = new Date().toISOString();
-    fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
-  }
+  annotateBudget(budgetPath, 'content_hash', inputFingerprint);
   console.log(`[business-context] CACHE_HIT: ${OUTPUT}`);
   console.log(`[business-context] sources=${sourceFiles.length} fingerprint=${inputFingerprint}`);
   process.exit(statusCode(cachedBrief.status));

@@ -32,6 +32,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveScriptPath } from '../registry.mjs';
+import {
+  buildFullImpactPlan,
+  buildIncrementalImpactPlan,
+  planTaskNames,
+} from '../../lib/change-impact.mjs';
+import { collectChangedFiles } from '../../lib/git-changes.mjs';
+import { assertDiscoveryStage } from '../../lib/discovery-gate.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -66,7 +73,7 @@ function runScriptAsync(scriptName, extraArgs = []) {
   const scriptPath = resolveScriptPath(scriptName);
   if (!fs.existsSync(scriptPath)) {
     console.warn(`[orchestrator] ⚠️  Script không tồn tại: ${scriptName} — bỏ qua`);
-    return Promise.resolve({ name: scriptName, ok: false, durationSeconds: 0 });
+    return Promise.resolve({ name: scriptName, ok: false, status: null, durationSeconds: 0 });
   }
   const startedAt = Date.now();
   return new Promise(resolve => {
@@ -76,12 +83,12 @@ function runScriptAsync(scriptName, extraArgs = []) {
     });
     child.on('error', error => {
       console.error(`[orchestrator] ❌ ${scriptName} process error: ${error.message}`);
-      resolve({ name: scriptName, ok: false, durationSeconds: (Date.now() - startedAt) / 1000 });
+      resolve({ name: scriptName, ok: false, status: null, durationSeconds: (Date.now() - startedAt) / 1000 });
     });
     child.on('close', status => {
       const ok = status === 0;
       if (!ok) console.error(`[orchestrator] ❌ ${scriptName} thất bại (exit ${status})`);
-      resolve({ name: scriptName, ok, durationSeconds: (Date.now() - startedAt) / 1000 });
+      resolve({ name: scriptName, ok, status, durationSeconds: (Date.now() - startedAt) / 1000 });
     });
   });
 }
@@ -110,15 +117,103 @@ function getGitCommit(repoPath) {
   }
 }
 
-function getChangedFiles(repoPath, lastCommit) {
-  if (!/^[0-9a-f]{4,40}$/i.test(lastCommit || '')) return [];
-  try {
-    const out = execFileSync('git', ['diff', `${lastCommit}..HEAD`, '--name-only'], {
-      cwd: repoPath,
-      encoding: 'utf8',
-    });
-    return out.trim().split('\n').filter(Boolean);
-  } catch { return []; }
+const BASELINE_ARTIFACTS = [
+  'repo-metadata.json',
+  'symbol-index.json',
+  'architecture-map.json',
+  'api-contracts.json',
+  'business-rules.json',
+  'business-flows.json',
+  'state-machines.json',
+  'permission-matrix.json',
+  'domain-model.json',
+  'reconciliation-report.json',
+  'business-qna.json',
+  'business-guide.md',
+  'traceability-matrix.md',
+  'rbac-matrix.md',
+];
+
+function hasCompleteBaseline(outputDir) {
+  return BASELINE_ARTIFACTS.every(file => fs.existsSync(path.join(outputDir, file)));
+}
+
+function stageTaskDefinitions(outputDir, repoPath, repoName, graphifyOutput, pmArgs) {
+  return {
+    phase1: [
+      {
+        name: 'repo-fingerprint.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'repo-metadata.json')],
+      },
+      {
+        name: 'source-indexer.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'symbol-index.json')],
+      },
+      {
+        name: 'graphify-adapter.mjs',
+        args: [
+          '--repo', repoPath,
+          '--output', graphifyOutput,
+          '--graph-root', path.join(outputDir, 'graphify-code-only'),
+          '--mode', GRAPHIFY_MODE,
+        ],
+      },
+      {
+        name: 'architecture-discovery.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'architecture-map.json')],
+      },
+      {
+        name: 'api-contract-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'api-contracts.json')],
+      },
+      {
+        name: 'business-rule-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-rules.json')],
+      },
+    ],
+    phase2: [
+      {
+        name: 'business-flow-builder.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')],
+      },
+      {
+        name: 'state-machine-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')],
+      },
+      { name: 'permission-matrix-extractor.mjs', args: pmArgs },
+      {
+        name: 'database-domain-extractor.mjs',
+        args: ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')],
+      },
+    ],
+    phase3Reconcile: [
+      { name: 'repo-runtime-reconciler.mjs', args: ['--repo-knowledge', outputDir] },
+    ],
+    phase3Derived: [
+      {
+        name: 'business-qna-generator.mjs',
+        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')],
+      },
+      {
+        name: 'write-repo-business-guide.mjs',
+        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')],
+      },
+      {
+        name: 'write-rbac-matrix.mjs',
+        args: ['--input', path.join(outputDir, 'permission-matrix.json'), '--output', path.join(outputDir, 'rbac-matrix.md')],
+      },
+      { name: 'traceability-matrix-generator.mjs', args: ['--repo', repoName] },
+    ],
+  };
+}
+
+function selectedTasks(definitions, plan, phase, { forceAll = false } = {}) {
+  if (forceAll) {
+    return definitions.filter(task => GRAPHIFY_MODE !== 'off' || task.name !== 'graphify-adapter.mjs');
+  }
+  const selected = new Set(planTaskNames(plan, phase));
+  if (GRAPHIFY_MODE === 'off') selected.delete('graphify-adapter.mjs');
+  return definitions.filter(task => selected.has(task.name));
 }
 
 function generateSystemBusinessMap() {
@@ -233,21 +328,47 @@ async function analyzeRepo(repoPath) {
 
   const currentCommit = getGitCommit(repoPath);
   const metaPath = path.join(outputDir, 'repo-metadata.json');
+  const previousMetadata = readJSON(outputDir, 'repo-metadata.json');
+  const lastCommit = previousMetadata?.commit || '';
+  const baselineComplete = fs.existsSync(metaPath) && hasCompleteBaseline(outputDir);
+  let changedFiles = [];
+  let impactPlan;
 
   // Incremental scan check
   if (MODE === 'incremental' && fs.existsSync(metaPath)) {
-    const prev = readJSON(outputDir, 'repo-metadata.json');
-    const lastCommit = prev?.commit;
-    if (lastCommit && lastCommit !== 'unknown' && lastCommit === currentCommit) {
+    changedFiles = collectChangedFiles(repoPath, lastCommit);
+    if (
+      lastCommit
+      && lastCommit !== 'unknown'
+      && currentCommit !== 'unknown'
+      && lastCommit === currentCommit
+      && changedFiles.length === 0
+      && baselineComplete
+    ) {
       console.log(`[orchestrator] ✅ Knowledge up-to-date at commit ${currentCommit}. Skipping.`);
       return;
     }
-    const changedFiles = getChangedFiles(repoPath, lastCommit);
-    console.log(`[orchestrator] Incremental mode: ${changedFiles.length} files changed since ${lastCommit}`);
+    const stableDelta = currentCommit !== 'unknown'
+      && lastCommit
+      && lastCommit !== 'unknown'
+      && (lastCommit === currentCommit || changedFiles.length > 0);
+    impactPlan = buildIncrementalImpactPlan(changedFiles, {
+      hasBaseline: baselineComplete && stableDelta,
+    });
+    console.log(
+      `[orchestrator] Incremental mode: ${changedFiles.length} changed files; `
+      + `plan=${impactPlan.mode}; ${impactPlan.reason}`,
+    );
     if (changedFiles.length > 0) {
       console.log('  Changed:', changedFiles.slice(0, 10).join(', ') + (changedFiles.length > 10 ? '...' : ''));
     }
+  } else {
+    impactPlan = buildFullImpactPlan(
+      MODE === 'full' ? 'full mode requested' : `mode=${MODE} uses the canonical full baseline`,
+    );
   }
+
+  if (!impactPlan) impactPlan = buildFullImpactPlan('no safe incremental baseline');
 
   const uaVendorDir = path.join(DATA_DIR, 'qa-run', 'vendor', 'Understand-Anything');
   const isUABundled = fs.existsSync(uaVendorDir);
@@ -267,49 +388,39 @@ async function analyzeRepo(repoPath) {
 
   const startTime = Date.now();
   const telemetry = { phaseDurations: {}, scriptDurations: {} };
+  let phase2Tasks = [];
+  let phase3ReconcileTasks = [];
+  let phase3DerivedTasks = [];
 
   // ── Phase 1: Core Scanner ───────────────────────────────────────────────────
   console.log('[orchestrator] ── Phase 1: Core Scanner ──────────────────');
 
   const graphifyOutput = path.join(outputDir, 'graphify-discovery.json');
-  const phase1Results = await runStage('phase1', [
-    {
-      name: 'repo-fingerprint.mjs',
-      args: ['--repo', repoPath, '--output', path.join(outputDir, 'repo-metadata.json')],
-    },
-    {
-      name: 'source-indexer.mjs',
-      args: ['--repo', repoPath, '--output', path.join(outputDir, 'symbol-index.json')],
-    },
-    {
-      name: 'graphify-adapter.mjs',
-      args: [
-        '--repo', repoPath,
-        '--output', graphifyOutput,
-        '--graph-root', path.join(outputDir, 'graphify-code-only'),
-        '--mode', GRAPHIFY_MODE,
-      ],
-    },
-    {
-      name: 'architecture-discovery.mjs',
-      args: ['--repo', repoPath, '--output', path.join(outputDir, 'architecture-map.json')],
-    },
-    {
-      name: 'api-contract-extractor.mjs',
-      args: ['--repo', repoPath, '--output', path.join(outputDir, 'api-contracts.json')],
-    },
-    {
-      name: 'business-rule-extractor.mjs',
-      args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-rules.json')],
-    },
-  ], telemetry);
+  const pmArgs = ['--repo', repoPath, '--output', path.join(outputDir, 'permission-matrix.json')];
+  if (fs.existsSync(path.join(outputDir, 'business-rules.json'))) {
+    pmArgs.push('--req-knowledge', path.join(outputDir, 'business-rules.json'));
+  }
+  if (fs.existsSync(path.join(outputDir, 'runtime-findings.json'))) {
+    pmArgs.push('--runtime-findings', path.join(outputDir, 'runtime-findings.json'));
+  }
+  const definitions = stageTaskDefinitions(outputDir, repoPath, repoName, graphifyOutput, pmArgs);
+  const forceAllPhase1 = MODE !== 'incremental' || impactPlan.mode === 'full';
+  const phase1Tasks = selectedTasks(definitions.phase1, impactPlan, 'phase1', { forceAll: forceAllPhase1 });
+  const phase1Results = await runStage('phase1', phase1Tasks, telemetry);
+  assertDiscoveryStage({
+    stage: 'phase1',
+    outputDir,
+    tasks: phase1Tasks,
+    results: phase1Results,
+    optional: GRAPHIFY_MODE === 'auto' || GRAPHIFY_MODE === 'off' ? ['graphify-adapter.mjs'] : [],
+  });
   const resultByName = new Map(phase1Results.map(result => [result.name, result]));
-  const ok1 = resultByName.get('repo-fingerprint.mjs')?.ok || false;
-  const ok2 = resultByName.get('source-indexer.mjs')?.ok || false;
+  const ok1 = resultByName.get('repo-fingerprint.mjs')?.ok || fs.existsSync(path.join(outputDir, 'repo-metadata.json'));
+  const ok2 = resultByName.get('source-indexer.mjs')?.ok || fs.existsSync(path.join(outputDir, 'symbol-index.json'));
   const okGraphify = resultByName.get('graphify-adapter.mjs')?.ok || false;
-  const ok3 = resultByName.get('architecture-discovery.mjs')?.ok || false;
-  const ok4 = resultByName.get('api-contract-extractor.mjs')?.ok || false;
-  const ok5 = resultByName.get('business-rule-extractor.mjs')?.ok || false;
+  const ok3 = resultByName.get('architecture-discovery.mjs')?.ok || fs.existsSync(path.join(outputDir, 'architecture-map.json'));
+  const ok4 = resultByName.get('api-contract-extractor.mjs')?.ok || fs.existsSync(path.join(outputDir, 'api-contracts.json'));
+  const ok5 = resultByName.get('business-rule-extractor.mjs')?.ok || fs.existsSync(path.join(outputDir, 'business-rules.json'));
   if (GRAPHIFY_MODE === 'required' && (!okGraphify || !fs.existsSync(graphifyOutput))) {
     throw new Error('Graphify was required but no normalized discovery artifact was produced');
   }
@@ -317,55 +428,48 @@ async function analyzeRepo(repoPath) {
   // ── Phase 2: Flow, State, Permission, Domain ──────────────────────────────
   if (['full', 'incremental', 'phase2', 'phase3'].includes(MODE)) {
     console.log('\n[orchestrator] ── Phase 2: Flow, State, Permission, Domain ──');
-    const pmArgs = ['--repo', repoPath, '--output', path.join(outputDir, 'permission-matrix.json')];
-    if (fs.existsSync(path.join(outputDir, 'business-rules.json'))) {
-      pmArgs.push('--req-knowledge', path.join(outputDir, 'business-rules.json'));
-    }
-    if (fs.existsSync(path.join(outputDir, 'runtime-findings.json'))) {
-      pmArgs.push('--runtime-findings', path.join(outputDir, 'runtime-findings.json'));
-    }
-    await runStage('phase2', [
-      {
-        name: 'business-flow-builder.mjs',
-        args: ['--repo', repoPath, '--output', path.join(outputDir, 'business-flows.json')],
-      },
-      {
-        name: 'state-machine-extractor.mjs',
-        args: ['--repo', repoPath, '--output', path.join(outputDir, 'state-machines.json')],
-      },
-      { name: 'permission-matrix-extractor.mjs', args: pmArgs },
-      {
-        name: 'database-domain-extractor.mjs',
-        args: ['--repo', repoPath, '--output', path.join(outputDir, 'domain-model.json')],
-      },
-    ], telemetry);
+    const forceAllPhase2 = MODE !== 'incremental' || impactPlan.mode === 'full';
+    phase2Tasks = selectedTasks(definitions.phase2, impactPlan, 'phase2', { forceAll: forceAllPhase2 });
+    const phase2Results = await runStage('phase2', phase2Tasks, telemetry);
+    assertDiscoveryStage({
+      stage: 'phase2',
+      outputDir,
+      tasks: phase2Tasks,
+      results: phase2Results,
+    });
   }
 
   // ── Phase 3: Reconciliation, Q&A, Guide, Traceability ────────────────────
-  if (['full', 'incremental', 'phase3'].includes(MODE)) {
+  if (
+    ['full', 'phase3'].includes(MODE)
+    || (MODE === 'incremental' && impactPlan.refresh_derived)
+  ) {
     console.log('\n[orchestrator] ── Phase 3: Reconciliation, Q&A, Guide, Traceability ──');
     // Reconciliation is a dependency for Q&A; derived reports are independent
     // after that barrier and can safely run concurrently.
-    await runStage('phase3-reconcile', [
-      { name: 'repo-runtime-reconciler.mjs', args: ['--repo-knowledge', outputDir] },
-    ], telemetry);
-    await runStage('phase3-derived', [
-      {
-        name: 'business-qna-generator.mjs',
-        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-qna.json')],
-      },
-      {
-        name: 'write-repo-business-guide.mjs',
-        args: ['--repo', repoName, '--output', path.join(outputDir, 'business-guide.md')],
-      },
-      ...(fs.existsSync(path.join(outputDir, 'permission-matrix.json'))
-        ? [{
-            name: 'write-rbac-matrix.mjs',
-            args: ['--input', path.join(outputDir, 'permission-matrix.json'), '--output', path.join(outputDir, 'rbac-matrix.md')],
-          }]
-        : []),
-      { name: 'traceability-matrix-generator.mjs', args: ['--repo', repoName] },
-    ], telemetry);
+    phase3ReconcileTasks = definitions.phase3Reconcile;
+    const phase3ReconcileResults = await runStage(
+      'phase3-reconcile',
+      phase3ReconcileTasks,
+      telemetry,
+    );
+    assertDiscoveryStage({
+      stage: 'phase3-reconcile',
+      outputDir,
+      tasks: phase3ReconcileTasks,
+      results: phase3ReconcileResults,
+    });
+    phase3DerivedTasks = definitions.phase3Derived.filter(task => (
+      task.name !== 'write-rbac-matrix.mjs'
+      || fs.existsSync(path.join(outputDir, 'permission-matrix.json'))
+    ));
+    const phase3DerivedResults = await runStage('phase3-derived', phase3DerivedTasks, telemetry);
+    assertDiscoveryStage({
+      stage: 'phase3-derived',
+      outputDir,
+      tasks: phase3DerivedTasks,
+      results: phase3DerivedResults,
+    });
   }
 
   // ── Semantic Enrichment Mode (Optional) ──────────────────────────────────
@@ -395,7 +499,14 @@ async function analyzeRepo(repoPath) {
       parallel_enabled: PARALLEL_ENABLED,
       phase_durations_seconds: telemetry.phaseDurations,
       script_durations_seconds: telemetry.scriptDurations,
+      selected_tasks: {
+        phase1: phase1Tasks.map(task => task.name),
+        phase2: phase2Tasks.map(task => task.name),
+        phase3_reconcile: phase3ReconcileTasks.map(task => task.name),
+        phase3_derived: phase3DerivedTasks.map(task => task.name),
+      },
     },
+    change_impact: impactPlan,
     commit: currentCommit,
     phase1: {
       fingerprint: ok1,

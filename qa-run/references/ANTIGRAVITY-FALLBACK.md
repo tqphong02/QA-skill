@@ -67,6 +67,19 @@ If Claude Code loses access, or Playwright MCP is removed/broken -> **skill stil
 4. When logging bug -> agent runs `node log-bug.mjs ...` (portable script)
 5. Verdict + report in same format (`report/REPORT-TEMPLATE.md`)
 
+Before claiming an Antigravity smoke PASS, save a redacted JSON result with
+`host: "antigravity"`, `browser_driver: "antigravity-native"`,
+`same_session: true`, `screenshot_paths` pointing to existing files, and true
+`network_observed`, `console_observed` and `page_errors_observed` fields, then
+validate it:
+
+```bash
+node scripts/helpers/validate-host-smoke.mjs --result evidence/antigravity-smoke.json
+```
+
+The validator is a fail-closed evidence gate. It does not pretend to run
+Antigravity; a host without a live smoke artifact remains `BLOCKED`
+
 ### Notes on fallback
 - `auth.json` must exist (Antigravity running npm Playwright scripts needs `auth.json`)
 - Antigravity's Gemini-in-Chrome **DOES NOT** auto-share with playwright headless -> must re-login using `login.mjs`
