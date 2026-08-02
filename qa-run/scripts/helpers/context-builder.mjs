@@ -19,6 +19,8 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const getArg = (flag, fallback = '') => {
@@ -35,10 +37,19 @@ const EXPECTED = getArg('--expected', '').trim();
 const ROLE = getArg('--role', '').trim();
 const IMPACT = getArg('--impact', '').split(',').map(item => item.trim()).filter(Boolean);
 const TICKET = getArg('--ticket', '').trim();
+const CARD_MAX_TOKENS = Math.max(
+  600,
+  Number.parseInt(getArg(
+    '--card-max-tokens',
+    process.env.QA_CONTEXT_CARD_MAX_TOKENS || '3200',
+  ), 10) || 3200,
+);
+const NO_CACHE = args.includes('--no-cache');
 const OUTPUT = path.resolve(getArg(
   '--output',
   path.join(KNOW_DIR, 'context', 'business-execution-brief.json'),
 ));
+const CONTEXT_BUILDER_VERSION = 'context-builder-v3-card-cache';
 
 if (!SCOPE) {
   console.error('[business-context] BLOCKED: --scope is required');
@@ -78,6 +89,11 @@ const result = {
   apiContracts: [],
   knownIssues: [],
   unresolved: [],
+  businessModel: {
+    nodes: [],
+    relations: [],
+    invariants: [],
+  },
 };
 const sourceEvidence = [];
 let runtimeEvidencePresent = false;
@@ -94,6 +110,97 @@ function addEvidence(kind, value, source, confidence = 'inferred') {
   if (!sourceEvidence.some(item => `${item.kind}|${item.value}|${item.source}` === key)) {
     sourceEvidence.push(record);
   }
+}
+
+const MODEL_CONFIDENCE = new Set([
+  'verified',
+  'runtime_verified',
+  'documented',
+  'source-derived-candidate',
+  'inferred',
+  'ambiguous',
+]);
+
+function modelConfidence(value, fallback = 'source-derived-candidate') {
+  const normalized = String(value || '').trim();
+  if (!normalized) return fallback;
+  if (normalized === 'EXTRACTED') return 'source-derived-candidate';
+  if (normalized === 'INFERRED') return 'inferred';
+  if (normalized === 'AMBIGUOUS') return 'ambiguous';
+  if (MODEL_CONFIDENCE.has(normalized)) return normalized;
+  if (/ambiguous|unknown|risk|unresolved|needs_review/i.test(normalized)) return 'ambiguous';
+  if (/candidate|supported|pattern/i.test(normalized)) return 'source-derived-candidate';
+  if (/runtime.*verified|verified.*runtime/i.test(normalized)) return 'runtime_verified';
+  if (/verified/i.test(normalized)) return 'verified';
+  return 'ambiguous';
+}
+
+function modelId(value, fallback = 'unknown') {
+  const rendered = String(value || fallback)
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 96);
+  return rendered || fallback;
+}
+
+function addModelNode({ id, type = 'domain', label, source, confidence } = {}) {
+  if (!isUsefulSignal(label || id) || !source) return '';
+  const nodeId = modelId(id || label);
+  const record = {
+    id: nodeId,
+    type: String(type || 'domain').trim().toLowerCase(),
+    label: String(label || id).replace(/\s+/g, ' ').trim().slice(0, 240),
+    source: String(source),
+    confidence: modelConfidence(confidence),
+  };
+  const existing = result.businessModel.nodes.find(item => item.id === nodeId);
+  if (existing) {
+    if (existing.confidence === 'inferred' && record.confidence !== 'inferred') {
+      existing.confidence = record.confidence;
+    }
+    if (existing.source === 'unknown' && record.source !== 'unknown') existing.source = record.source;
+    return nodeId;
+  }
+  result.businessModel.nodes.push(record);
+  return nodeId;
+}
+
+function addModelRelation({ from, to, type = 'related_to', source, confidence } = {}) {
+  if (!isUsefulSignal(from) || !isUsefulSignal(to) || !source) return;
+  const record = {
+    from: modelId(from),
+    to: modelId(to),
+    type: String(type || 'related_to').trim().toLowerCase().replace(/\s+/g, '_').slice(0, 80),
+    source: String(source),
+    confidence: modelConfidence(confidence),
+  };
+  const key = `${record.from}|${record.type}|${record.to}`;
+  if (!result.businessModel.relations.some(item => `${item.from}|${item.type}|${item.to}` === key)) {
+    result.businessModel.relations.push(record);
+  }
+}
+
+function addModelInvariant({ id, statement, oracle, source, confidence } = {}) {
+  if (!isUsefulSignal(statement) || !source) return;
+  const normalizedStatement = String(statement).replace(/\s+/g, ' ').trim().slice(0, 420);
+  const record = {
+    id: modelId(id || normalizedStatement),
+    statement: normalizedStatement,
+    oracle: String(oracle || normalizedStatement).replace(/\s+/g, ' ').trim().slice(0, 520),
+    source: String(source),
+    confidence: modelConfidence(confidence),
+  };
+  const existing = result.businessModel.invariants.find(item => item.id === record.id);
+  if (existing) {
+    if (existing.confidence === 'inferred' && record.confidence !== 'inferred') {
+      existing.confidence = record.confidence;
+    }
+    return;
+  }
+  result.businessModel.invariants.push(record);
+  addEvidence('model_invariant', record.statement, record.source, record.confidence);
 }
 
 function matchesScope(...values) {
@@ -114,6 +221,39 @@ function hashFile(filePath) {
     .update(fs.readFileSync(filePath))
     .digest('hex')
     .slice(0, 12);
+}
+
+function hashValue(value) {
+  return crypto.createHash('sha256')
+    .update(JSON.stringify(value))
+    .digest('hex')
+    .slice(0, 16);
+}
+
+function readJson(filePath) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function statusCode(status) {
+  if (status === 'READY') return 0;
+  if (status === 'NEEDS_DISCOVERY') return 3;
+  return 2;
+}
+
+function deriveCardPath(briefPath) {
+  const replaced = briefPath.replace(
+    /business-execution-brief\.json$/i,
+    'business-execution-card.json',
+  );
+  if (replaced !== briefPath) return replaced;
+  return path.join(
+    path.dirname(briefPath),
+    `${path.basename(briefPath, path.extname(briefPath))}-card.json`,
+  );
 }
 
 function safeRead(filePath) {
@@ -201,7 +341,9 @@ function candidateSources() {
     if (text && text.toLowerCase().includes(scopeKey)) add(filePath);
   }
 
-  return unique(sources).slice(0, 30);
+  return unique(sources)
+    .sort((left, right) => left.localeCompare(right))
+    .slice(0, 30);
 }
 
 function stringifyItem(item) {
@@ -235,9 +377,117 @@ function collectValues(value, destination) {
   }
 }
 
+function modelSource(item, fallback) {
+  return item?.source
+    || item?.sourceRef
+    || item?.source_ref
+    || item?.evidence?.source
+    || fallback;
+}
+
+function modelEndpoint(value) {
+  if (value && typeof value === 'object') {
+    return value.id || value.key || value.name || value.label || value.path || value.value;
+  }
+  return value;
+}
+
+function collectExplicitBusinessModel(data, sourcePath) {
+  const relativeSource = path.relative(DATA_DIR, sourcePath);
+  const model = data.business_model
+    || data.businessModel
+    || data.business_graph
+    || data.businessGraph
+    || data.domain_model
+    || data.domainModel
+    || data.domain_graph
+    || data.domainGraph;
+  const modelObject = model && typeof model === 'object' ? model : {};
+  const nodes = Array.isArray(model)
+    ? model
+    : modelObject.nodes || modelObject.entities || modelObject.concepts || [];
+  const relations = Array.isArray(model)
+    ? []
+    : modelObject.relations || modelObject.edges || modelObject.links || [];
+  const invariants = Array.isArray(model)
+    ? []
+    : modelObject.invariants || modelObject.assertions || modelObject.oracles || [];
+  const directInvariants = data.invariants || data.business_assertions || data.businessAssertions;
+  let collected = false;
+
+  for (const node of (Array.isArray(nodes) ? nodes : [nodes])) {
+    if (!node || typeof node !== 'object') continue;
+    const label = node.label || node.name || node.title || node.id || node.key;
+    const source = modelSource(node, relativeSource);
+    const id = addModelNode({
+      id: node.id || node.key || label,
+      type: node.type || node.kind || node.category || 'domain',
+      label,
+      source,
+      confidence: node.confidence || modelObject.confidence || 'documented',
+    });
+    if (id) collected = true;
+  }
+
+  for (const relation of (Array.isArray(relations) ? relations : [relations])) {
+    if (!relation || typeof relation !== 'object') continue;
+    const from = modelEndpoint(relation.from || relation.source || relation.sourceId);
+    const to = modelEndpoint(relation.to || relation.target || relation.targetId);
+    const source = modelSource(relation, relativeSource);
+    if (!from || !to) continue;
+    addModelNode({ id: from, label: from, type: 'domain', source, confidence: relation.confidence });
+    addModelNode({ id: to, label: to, type: 'domain', source, confidence: relation.confidence });
+    addModelRelation({
+      from,
+      to,
+      type: relation.type || relation.relation || relation.kind || 'related_to',
+      source,
+      confidence: relation.confidence || modelObject.confidence || 'documented',
+    });
+    collected = true;
+  }
+
+  const allInvariants = [
+    ...(Array.isArray(invariants) ? invariants : [invariants]),
+    ...(Array.isArray(directInvariants) ? directInvariants : directInvariants ? [directInvariants] : []),
+  ];
+  for (const invariant of allInvariants) {
+    const statement = typeof invariant === 'string'
+      ? invariant
+      : invariant?.statement
+        || invariant?.description
+        || invariant?.rule
+        || invariant?.condition
+        || invariant?.text;
+    if (!statement) continue;
+    const source = modelSource(invariant, relativeSource);
+    const oracle = typeof invariant === 'string'
+      ? statement
+      : invariant.oracle
+        || invariant.expected
+        || invariant.expectedResult
+        || invariant.failureResult
+        || statement;
+    addModelInvariant({
+      id: typeof invariant === 'object' ? invariant.id || invariant.key : undefined,
+      statement,
+      oracle,
+      source,
+      confidence: typeof invariant === 'object'
+        ? invariant.confidence || modelObject.confidence || 'documented'
+        : modelObject.confidence || 'documented',
+    });
+    result.businessRules.push(statement);
+    if (oracle && oracle !== statement) result.expectedResults.push(oracle);
+    collected = true;
+  }
+  return collected;
+}
+
 function collectKnownArtifact(data, sourcePath) {
   const relativeSource = path.relative(DATA_DIR, sourcePath);
   const confidenceOf = item => item?.confidence || 'inferred';
+  const modelCollected = collectExplicitBusinessModel(data, sourcePath);
 
   if (data.tool === 'graphify-adapter' && data.status === 'generated') {
     const graphifyContext = data.contextSlice?.candidates || data.candidates || [];
@@ -261,6 +511,27 @@ function collectKnownArtifact(data, sourcePath) {
         candidate.sourceRef || relativeSource,
         confidence,
       );
+      const sourceId = addModelNode({
+        id: candidate.source,
+        type: 'code_candidate',
+        label: candidate.source,
+        source: candidate.sourceRef || relativeSource,
+        confidence,
+      });
+      const targetId = addModelNode({
+        id: candidate.target,
+        type: 'code_candidate',
+        label: candidate.target,
+        source: candidate.sourceRef || relativeSource,
+        confidence,
+      });
+      addModelRelation({
+        from: sourceId,
+        to: targetId,
+        type: candidate.relation || 'dependency_candidate',
+        source: candidate.sourceRef || relativeSource,
+        confidence,
+      });
       if (candidate.confidence === 'AMBIGUOUS') {
         result.unresolved.push(`Graphify ambiguous dependency: ${rendered}`);
       }
@@ -285,6 +556,45 @@ function collectKnownArtifact(data, sourcePath) {
       if (endpoint.auth_required) result.preconditions.push('Authenticated session');
       result.happyFlow.push(`Call ${contract}`);
       addEvidence('api_contract', contract, endpoint.source || relativeSource, confidenceOf(endpoint));
+      const endpointId = addModelNode({
+        id: `endpoint-${endpoint.method}-${endpoint.path}`,
+        type: 'endpoint',
+        label: contract,
+        source: endpoint.source || relativeSource,
+        confidence: confidenceOf(endpoint),
+      });
+      if (endpoint.module) {
+        const moduleId = addModelNode({
+          id: endpoint.module,
+          type: 'module',
+          label: endpoint.module,
+          source: endpoint.source || relativeSource,
+          confidence: confidenceOf(endpoint),
+        });
+        addModelRelation({
+          from: moduleId,
+          to: endpointId,
+          type: 'exposes',
+          source: endpoint.source || relativeSource,
+          confidence: confidenceOf(endpoint),
+        });
+      }
+      for (const role of endpoint.roles || []) {
+        const roleId = addModelNode({
+          id: `role-${role}`,
+          type: 'role',
+          label: role,
+          source: endpoint.source || relativeSource,
+          confidence: confidenceOf(endpoint),
+        });
+        addModelRelation({
+          from: roleId,
+          to: endpointId,
+          type: 'can_access',
+          source: endpoint.source || relativeSource,
+          confidence: confidenceOf(endpoint),
+        });
+      }
     }
     return true;
   }
@@ -301,6 +611,13 @@ function collectKnownArtifact(data, sourcePath) {
       result.businessRules.push(rendered);
       if (rule.failureResult) result.expectedResults.push(rule.failureResult);
       addEvidence('business_rule', rendered, rule.source || relativeSource, confidenceOf(rule));
+      addModelInvariant({
+        id: rule.id || `${rule.category}-${rule.condition}`,
+        statement: rendered,
+        oracle: rule.failureResult || rule.expected || rendered,
+        source: rule.source || relativeSource,
+        confidence: confidenceOf(rule),
+      });
     }
     return true;
   }
@@ -313,21 +630,81 @@ function collectKnownArtifact(data, sourcePath) {
       item.sourceReferences,
     ))) {
       const trigger = flow.trigger || flow.name;
+      const flowId = addModelNode({
+        id: flow.id || flow.name || trigger,
+        type: 'flow',
+        label: flow.name || trigger,
+        source: relativeSource,
+        confidence: confidenceOf(flow),
+      });
       if (trigger) {
         result.happyFlow.push(`Trigger ${trigger}`);
+        const triggerId = addModelNode({
+          id: `trigger-${trigger}`,
+          type: 'trigger',
+          label: trigger,
+          source: relativeSource,
+          confidence: confidenceOf(flow),
+        });
+        addModelRelation({
+          from: triggerId,
+          to: flowId,
+          type: 'triggers',
+          source: relativeSource,
+          confidence: confidenceOf(flow),
+        });
         const routeMatch = String(trigger).match(/^(?:GET|POST|PUT|PATCH|DELETE)\s+(\S+)/i);
         if (routeMatch?.[1]?.startsWith('/')) result.routes.push(routeMatch[1]);
       }
-      if (flow.actor) result.roles.push(flow.actor);
+      if (flow.actor) {
+        result.roles.push(flow.actor);
+        const actorId = addModelNode({
+          id: `role-${flow.actor}`,
+          type: 'role',
+          label: flow.actor,
+          source: relativeSource,
+          confidence: confidenceOf(flow),
+        });
+        addModelRelation({
+          from: actorId,
+          to: flowId,
+          type: 'executes',
+          source: relativeSource,
+          confidence: confidenceOf(flow),
+        });
+      }
       result.preconditions.push(...(flow.preconditions || []));
       for (const step of flow.steps || []) {
         const rendered = step.action || stringifyItem(step);
         if (!rendered) continue;
         result.happyFlow.push(rendered);
         addEvidence('flow_step', rendered, step.source || relativeSource, confidenceOf(flow));
+        const stepId = addModelNode({
+          id: step.id || `step-${rendered}`,
+          type: 'step',
+          label: rendered,
+          source: step.source || relativeSource,
+          confidence: confidenceOf(step) || confidenceOf(flow),
+        });
+        addModelRelation({
+          from: flowId,
+          to: stepId,
+          type: 'contains',
+          source: step.source || relativeSource,
+          confidence: confidenceOf(step) || confidenceOf(flow),
+        });
       }
       result.expectedResults.push(...(flow.failureFlows || []));
       result.impactAreas.push(...(flow.sideEffects || []));
+      for (const failure of flow.failureFlows || []) {
+        addModelInvariant({
+          id: `failure-${flow.name || trigger}-${failure}`,
+          statement: `${flow.name || trigger}: ${failure}`,
+          oracle: failure,
+          source: relativeSource,
+          confidence: confidenceOf(flow),
+        });
+      }
       for (const reference of flow.sourceReferences || []) {
         const rendered = [reference.file, reference.line].filter(Boolean).join(':');
         addEvidence('business_flow', flow.name || trigger, rendered || relativeSource, confidenceOf(flow));
@@ -346,6 +723,29 @@ function collectKnownArtifact(data, sourcePath) {
         const rendered = `${machine.entity}: ${machine.states.join(' | ')}`;
         result.states.push(rendered);
         addEvidence('state_model', rendered, machine.sources?.[0] || relativeSource, 'verified');
+        const entityId = addModelNode({
+          id: machine.entity,
+          type: 'entity',
+          label: machine.entity,
+          source: machine.sources?.[0] || relativeSource,
+          confidence: 'verified',
+        });
+        for (const state of machine.states) {
+          const stateId = addModelNode({
+            id: `${machine.entity}-${state}`,
+            type: 'state',
+            label: state,
+            source: machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
+          addModelRelation({
+            from: entityId,
+            to: stateId,
+            type: 'has_state',
+            source: machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
+        }
       }
       for (const transition of machine.transitions || []) {
         const rendered = `${machine.entity}: ${transition.from} -> ${transition.to}`;
@@ -356,6 +756,34 @@ function collectKnownArtifact(data, sourcePath) {
         } else {
           result.states.push(rendered);
           result.businessRules.push(`Allowed state transition: ${rendered}`);
+          const fromId = addModelNode({
+            id: `${machine.entity}-${transition.from}`,
+            type: 'state',
+            label: transition.from,
+            source: transition.source || machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
+          const toId = addModelNode({
+            id: `${machine.entity}-${transition.to}`,
+            type: 'state',
+            label: transition.to,
+            source: transition.source || machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
+          addModelRelation({
+            from: fromId,
+            to: toId,
+            type: 'allowed_transition',
+            source: transition.source || machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
+          addModelInvariant({
+            id: `transition-${machine.entity}-${transition.from}-${transition.to}`,
+            statement: `Allowed state transition: ${rendered}`,
+            oracle: `Only allow ${transition.from} -> ${transition.to} for ${machine.entity}`,
+            source: transition.source || machine.sources?.[0] || relativeSource,
+            confidence: 'verified',
+          });
         }
         addEvidence('state_transition', rendered, transition.source || machine.sources?.[0] || relativeSource, 'verified');
       }
@@ -381,6 +809,34 @@ function collectKnownArtifact(data, sourcePath) {
         const rendered = `${role} -> ${target}`;
         result.businessRules.push(`Permission: ${rendered}`);
         addEvidence('permission', rendered, entry.source || relativeSource, entry.confidence || 'verified');
+        const roleId = addModelNode({
+          id: `role-${role}`,
+          type: 'role',
+          label: role,
+          source: entry.source || relativeSource,
+          confidence: entry.confidence || 'verified',
+        });
+        const targetId = addModelNode({
+          id: `permission-${target}`,
+          type: 'permission_target',
+          label: target,
+          source: entry.source || relativeSource,
+          confidence: entry.confidence || 'verified',
+        });
+        addModelRelation({
+          from: roleId,
+          to: targetId,
+          type: 'can_access',
+          source: entry.source || relativeSource,
+          confidence: entry.confidence || 'verified',
+        });
+        addModelInvariant({
+          id: `permission-${role}-${target}`,
+          statement: `Permission: ${rendered}`,
+          oracle: `Only ${role} may access ${target}`,
+          source: entry.source || relativeSource,
+          confidence: entry.confidence || 'verified',
+        });
       }
     }
     const conflicts = data.conflictSummary || {};
@@ -434,7 +890,7 @@ function collectKnownArtifact(data, sourcePath) {
   if (data.latest_run || data.happy_flow || data.business_rules) {
     runtimeEvidencePresent ||= Boolean(data.latest_run);
   }
-  return false;
+  return modelCollected;
 }
 
 function objectMatchesScope(node) {
@@ -451,9 +907,9 @@ function objectMatchesScope(node) {
   return !identity || identity.includes(scopeKey) || scopeKey.includes(identity);
 }
 
-function collectJson(node, parentKey = '') {
+function collectJson(node, parentKey = '', sourcePath = '') {
   if (Array.isArray(node)) {
-    node.forEach(item => collectJson(item, parentKey));
+    node.forEach(item => collectJson(item, parentKey, sourcePath));
     return;
   }
   if (!node || typeof node !== 'object') return;
@@ -461,6 +917,12 @@ function collectJson(node, parentKey = '') {
 
   for (const [key, value] of Object.entries(node)) {
     const normalized = key.toLowerCase().replace(/[^a-z]/g, '');
+
+    if (/^(businessmodel|businessgraph|domainmodel|domaingraph|invariants|businessassertions)$/.test(normalized)) {
+      collectExplicitBusinessModel({ business_model: normalized === 'invariants' || normalized === 'businessassertions'
+        ? { invariants: value }
+        : value }, sourcePath || path.join(DATA_DIR, 'knowledge-json'));
+    }
 
     if (/^(route|routes|url|urls|path|paths|entrypoint|entrypoints|baseurl)$/.test(normalized)) {
       collectValues(value, result.routes);
@@ -503,12 +965,14 @@ function collectJson(node, parentKey = '') {
       collectValues(value, result.unresolved);
     }
 
-    if (value && typeof value === 'object') collectJson(value, key || parentKey);
+    if (value && typeof value === 'object') collectJson(value, key || parentKey, sourcePath);
   }
 }
 
 function collectMarkdown(markdown, sourcePath) {
   let section = '';
+  let currentBusinessRule = '';
+  let currentBusinessRuleConfidence = 'documented';
   const source = path.relative(DATA_DIR, sourcePath);
   const record = (destination, kind, value) => {
     if (!isUsefulSignal(value)) return;
@@ -516,12 +980,19 @@ function collectMarkdown(markdown, sourcePath) {
     addEvidence(kind, value, source, 'documented');
   };
   for (const rawLine of markdown.split(/\r?\n/)) {
+    const indentation = (rawLine.match(/^\s*/) || [''])[0].length;
     const line = rawLine.trim();
     const heading = line.match(/^(#{1,3})\s+(.+)$/);
     if (heading) {
       const level = heading[1].length;
       const title = heading[2].trim();
-      if (level <= 2) section = title.toLowerCase();
+      if (level <= 2) {
+        section = title.toLowerCase();
+        if (!section.includes('business rule')) {
+          currentBusinessRule = '';
+          currentBusinessRuleConfidence = 'documented';
+        }
+      }
       if (level === 3 && section.includes('happy business flow') && /^step\s+\d+/i.test(title)) {
         record(result.happyFlow, 'business_flow', title);
       }
@@ -530,6 +1001,7 @@ function collectMarkdown(markdown, sourcePath) {
     if (!/^[-*]\s+/.test(line)) continue;
     const text = line.replace(/^[-*]\s*/, '').replace(/\*\*/g, '').trim();
     if (!text) continue;
+    const detailLine = /^(status|observed|evidence|implementation|behavior|severity|impact|source|confidence):/i.test(text);
 
     if (/(role|permission|vai trò|phân quyền)/i.test(section) && /^(role|vai trò):/i.test(text)) {
       record(result.roles, 'role', text.replace(/^(role|vai trò):\s*/i, ''));
@@ -552,12 +1024,47 @@ function collectMarkdown(markdown, sourcePath) {
           'expected_result',
           text.replace(/^(expected|kết quả mong đợi):\s*/i, ''),
         );
+      } else if (detailLine) {
+        addEvidence('knowledge_detail', text, source, 'documented');
       } else {
         record(result.happyFlow, 'business_flow', text);
       }
     }
+    if (detailLine) {
+      const detailValue = text.replace(/^[^:]+:\s*/, '').trim();
+      const statusMatch = text.match(/^status:\s*(.+)$/i);
+      if (statusMatch && /business rule/i.test(section) && indentation > 0) {
+        currentBusinessRuleConfidence = modelConfidence(statusMatch[1], 'documented');
+        const primaryInvariant = result.businessModel.invariants.find(item => (
+          item.id === modelId(`documented-rule-${currentBusinessRule}`)
+        ));
+        if (primaryInvariant) primaryInvariant.confidence = currentBusinessRuleConfidence;
+      }
+      if (/(procedure_version_id|one result|một result|selected version|version identity|version.*result|result.*version|version.*id|distinct.*id|do not collapse|status.*conclusion|result text|ct17|ct15|ct16|denominator|doc_type)/i.test(detailValue)) {
+        addModelInvariant({
+          id: `detail-invariant-${detailValue}`,
+          statement: detailValue,
+          oracle: detailValue,
+          source,
+          confidence: currentBusinessRuleConfidence,
+        });
+      }
+      addEvidence('knowledge_detail', text, source, 'documented');
+      continue;
+    }
     if (/(business rule|quy tắc nghiệp vụ|nguyên tắc nghiệp vụ)/i.test(section)) {
       record(result.businessRules, 'business_rule', text);
+      if (indentation <= 1) {
+        currentBusinessRule = text;
+        currentBusinessRuleConfidence = 'documented';
+      }
+      addModelInvariant({
+        id: `documented-rule-${text}`,
+        statement: text,
+        oracle: text,
+        source,
+        confidence: currentBusinessRuleConfidence,
+      });
     }
     if (/(state|transition|trạng thái|chuyển trạng thái)/i.test(section)) {
       record(result.states, 'state_model', text);
@@ -578,6 +1085,43 @@ function collectMarkdown(markdown, sourcePath) {
 }
 
 const sources = candidateSources();
+const sourceFiles = sources.map(source => ({
+  path: path.relative(DATA_DIR, source),
+  sha256_12: hashFile(source),
+}));
+const inputFingerprint = hashValue({
+  builder: CONTEXT_BUILDER_VERSION,
+  intent: INTENT,
+  scope: SCOPE,
+  target: TARGET,
+  expected: EXPECTED,
+  role: ROLE,
+  impact: IMPACT,
+  ticket: TICKET,
+  card_max_estimated_tokens: CARD_MAX_TOKENS,
+  source_files: sourceFiles,
+});
+const cardPath = deriveCardPath(OUTPUT);
+const budgetPath = path.join(path.dirname(cardPath), 'context-budget.json');
+const cachedBrief = readJson(OUTPUT);
+if (
+  !NO_CACHE
+  && cachedBrief?.input_fingerprint === inputFingerprint
+  && fs.existsSync(cardPath)
+  && fs.existsSync(budgetPath)
+) {
+  const cachedBudget = readJson(budgetPath);
+  if (cachedBudget && typeof cachedBudget === 'object') {
+    cachedBudget.cache_hit = true;
+    cachedBudget.cache_key = inputFingerprint;
+    cachedBudget.cache_hit_at = new Date().toISOString();
+    fs.writeFileSync(budgetPath, JSON.stringify(cachedBudget, null, 2), 'utf8');
+  }
+  console.log(`[business-context] CACHE_HIT: ${OUTPUT}`);
+  console.log(`[business-context] sources=${sourceFiles.length} fingerprint=${inputFingerprint}`);
+  process.exit(statusCode(cachedBrief.status));
+}
+
 for (const source of sources) {
   const text = safeRead(source);
   if (!text) continue;
@@ -586,7 +1130,7 @@ for (const source of sources) {
       const data = JSON.parse(text);
       const collected = collectKnownArtifact(data, source);
       const repositoryArtifact = source.includes(`${path.sep}repositories${path.sep}`);
-      if (!collected && !repositoryArtifact) collectJson(data);
+      if (!collected && !repositoryArtifact) collectJson(data, '', source);
     } catch {
       result.unresolved.push(`${path.relative(DATA_DIR, source)} is not valid JSON`);
     }
@@ -600,11 +1144,117 @@ for (const source of sources) {
   }
 }
 
+function deriveBusinessModelFromFacts() {
+  const fallbackSource = sourceFiles[0]?.path || 'derived-context';
+  for (const route of result.routes.slice(0, 20)) {
+    addModelNode({
+      id: `route-${route}`,
+      type: 'route',
+      label: route,
+      source: sourceEvidence.find(item => item.kind === 'route' && item.value === route)?.source || fallbackSource,
+      confidence: 'documented',
+    });
+  }
+  for (const role of result.roles.slice(0, 20)) {
+    addModelNode({
+      id: `role-${role}`,
+      type: 'role',
+      label: role,
+      source: sourceEvidence.find(item => item.kind === 'role' && item.value === role)?.source || fallbackSource,
+      confidence: 'documented',
+    });
+  }
+  for (const contract of result.apiContracts.slice(0, 20)) {
+    const endpointId = addModelNode({
+      id: `contract-${contract}`,
+      type: 'endpoint',
+      label: contract,
+      source: sourceEvidence.find(item => item.kind === 'api_contract' && item.value === contract)?.source || fallbackSource,
+      confidence: 'documented',
+    });
+    const methodPath = String(contract).match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)/i);
+    if (methodPath && result.routes.includes(methodPath[2])) {
+      const routeId = addModelNode({
+        id: `route-${methodPath[2]}`,
+        type: 'route',
+        label: methodPath[2],
+        source: fallbackSource,
+        confidence: 'documented',
+      });
+      addModelRelation({
+        from: routeId,
+        to: endpointId,
+        type: 'implements',
+        source: fallbackSource,
+        confidence: 'documented',
+      });
+    }
+  }
+
+  for (const state of result.states.slice(0, 30)) {
+    const transition = String(state).match(/^(.+?):\s*([^|]+?)\s*->\s*([^|]+)$/);
+    if (!transition) continue;
+    const source = sourceEvidence.find(item => item.kind === 'state_transition' && item.value === state)?.source || fallbackSource;
+    const fromId = addModelNode({
+      id: `${transition[1]}-${transition[2]}`,
+      type: 'state',
+      label: transition[2],
+      source,
+      confidence: 'documented',
+    });
+    const toId = addModelNode({
+      id: `${transition[1]}-${transition[3]}`,
+      type: 'state',
+      label: transition[3],
+      source,
+      confidence: 'documented',
+    });
+    addModelRelation({ from: fromId, to: toId, type: 'allowed_transition', source, confidence: 'documented' });
+  }
+
+  const factText = [
+    ...result.businessRules,
+    ...result.expectedResults,
+    ...result.apiContracts,
+    ...result.happyFlow,
+  ].join(' | ');
+  const versionSource = sourceEvidence.find(item => (
+    /version|phiên bản|procedure_version_id|one result|một kết quả|selected/i.test(item.value)
+  ))?.source || fallbackSource;
+  if (
+    /version|phiên bản/i.test(factText)
+    && /(result|kết quả|procedure_version_id|selected|được chọn)/i.test(factText)
+  ) {
+    addModelInvariant({
+      id: 'selected-version-result-mapping',
+      statement: 'Mỗi procedure version được chọn phải ánh xạ đúng một result tương ứng và giữ đúng procedure_version_id',
+      oracle: 'Đối chiếu selected procedure_version_ids với result IDs, số lượng và kết luận có ý nghĩa',
+      source: versionSource,
+      confidence: sourceEvidence.some(item => item.source === versionSource && item.confidence === 'verified')
+        ? 'verified'
+        : 'inferred',
+    });
+  }
+  const formula = result.businessRules.find(rule => /ct17|ct15|ct16/i.test(rule));
+  if (formula) {
+    addModelInvariant({
+      id: 'tax-formula-consistency',
+      statement: formula,
+      oracle: 'Tính lại công thức từ các ô nguồn và đối chiếu với giá trị hiển thị hoặc persisted result',
+      source: sourceEvidence.find(item => item.value === formula)?.source || fallbackSource,
+      confidence: 'documented',
+    });
+  }
+}
+
+deriveBusinessModelFromFacts();
+
 if (TARGET) result.routes.unshift(TARGET);
 if (ROLE) result.roles.unshift(ROLE);
 if (EXPECTED) result.expectedResults.unshift(EXPECTED);
 
 for (const key of Object.keys(result)) {
+  if (key === 'businessModel') continue;
   if (key === 'unresolved') {
     result[key] = result[key].filter(value => (
       !/^`?(?:GET|POST|PUT|PATCH|DELETE)\s+\/[^`]+`?$/i.test(String(value).trim())
@@ -613,9 +1263,48 @@ for (const key of Object.keys(result)) {
   result[key] = clipped(result[key]);
 }
 
+const modelConfidenceRank = {
+  runtime_verified: 0,
+  verified: 0,
+  documented: 1,
+  'source-derived-candidate': 2,
+  inferred: 3,
+  ambiguous: 4,
+};
+result.businessModel.nodes = result.businessModel.nodes
+  .filter(node => isUsefulSignal(node.id) && isUsefulSignal(node.label))
+  .slice(0, 40);
+result.businessModel.relations = result.businessModel.relations
+  .filter(relation => isUsefulSignal(relation.from) && isUsefulSignal(relation.to))
+  .slice(0, 60);
+const modelInvariantSignal = value => {
+  const rendered = `${value.statement} ${value.oracle}`;
+  return (
+    (/(procedure_version_id)/i.test(rendered) ? 12 : 0)
+    + (/(one result|một result|result.*version|version.*result)/i.test(rendered) ? 10 : 0)
+    + (/(ct17|ct15|ct16|formula|công thức)/i.test(rendered) ? 12 : 0)
+    + (/(status.*conclusion|meaningful|kết luận|denominator)/i.test(rendered) ? 8 : 0)
+    + (/(selected|được chọn|mapping|ánh xạ|version|phiên bản)/i.test(rendered) ? 3 : 0)
+  );
+};
+result.businessModel.invariants = result.businessModel.invariants
+  .filter(invariant => isUsefulSignal(invariant.statement))
+  .sort((left, right) => (
+    (modelInvariantSignal(right) - modelInvariantSignal(left))
+    || ((modelConfidenceRank[left.confidence] ?? 9) - (modelConfidenceRank[right.confidence] ?? 9))
+  ))
+  .slice(0, 12);
+
 function evidenceFor(pattern) {
   return sourceEvidence
     .filter(item => pattern.test(`${item.kind} ${item.value}`))
+    .sort((left, right) => {
+      const confidence = { verified: 0, documented: 1, 'source-derived-candidate': 2, inferred: 3, ambiguous: 4 };
+      const leftScope = `${left.value} ${left.source}`.toLowerCase().includes(scopeKey) ? 0 : 1;
+      const rightScope = `${right.value} ${right.source}`.toLowerCase().includes(scopeKey) ? 0 : 1;
+      return (leftScope - rightScope)
+        || ((confidence[left.confidence] ?? 9) - (confidence[right.confidence] ?? 9));
+    })
     .slice(0, 4)
     .map(item => item.source);
 }
@@ -638,6 +1327,11 @@ function buildRiskInventory(context) {
   const rulesText = context.businessRules.join(' ');
   const apiText = context.apiContracts.join(' ');
   const impactText = context.impactAreas.join(' ');
+  const modelText = JSON.stringify(context.business_model || {});
+  const versionMappingInvariant = context.business_model?.invariants?.find(item => (
+    /procedure_version_id|selected|version|phiên bản/i.test(`${item.statement} ${item.oracle}`)
+    && /result|kết quả|mapping|ánh xạ/i.test(`${item.statement} ${item.oracle}`)
+  ));
 
   if (
     context.roles.length > 1
@@ -673,6 +1367,20 @@ function buildRiskInventory(context) {
         .slice(0, 4)
         .join(' | '),
       evidenceFor(/rule|validation|unique|financial|existence/i),
+    );
+  }
+
+  if (
+    /procedure_version_id|selected-version-result-mapping|one result per|mỗi .*result|multiple versions/i.test(modelText + rulesText + apiText)
+    || (/(version|phiên bản)/i.test(modelText + rulesText) && /(result|kết quả)/i.test(modelText + rulesText))
+  ) {
+    add(
+      'version-result-integrity',
+      'high',
+      'Khi chạy nhiều phiên hoặc nhiều version, result có thể lệch procedure_version_id, sai denominator hoặc pass nhưng thiếu kết luận có ý nghĩa',
+      versionMappingInvariant?.oracle
+        || 'Đối chiếu selected version IDs với từng result, số lượng result và nội dung kết luận của từng version',
+      evidenceFor(/model_invariant|version|result|procedure_version_id|api_contract/i),
     );
   }
 
@@ -719,9 +1427,32 @@ function buildRiskInventory(context) {
     );
   }
 
+  const scoreRisk = risk => {
+    const factors = [];
+    let score = { critical: 100, high: 80, medium: 50, low: 20 }[risk.priority] || 10;
+    const addScore = (value, label) => {
+      score += value;
+      factors.push(`${label}+${value}`);
+    };
+
+    if (context.roles.length > 1) addScore(8, 'multiple_roles');
+    if (context.states.length) addScore(8, 'state_model');
+    if (risk.category === 'version-result-integrity') addScore(10, 'version_mapping');
+    if (context.apiContracts.some(contract => /^(POST|PUT|PATCH|DELETE)/i.test(contract))) {
+      addScore(10, 'mutation_surface');
+    }
+    if (context.impactAreas.some(area => /(payment|queue|event|email|sms|external|cache|integration)/i.test(area))) {
+      addScore(8, 'external_side_effect');
+    }
+    if (context.unresolved.length || context.knownIssues.length) addScore(7, 'uncertainty_or_known_issue');
+    if (!runtimeEvidencePresent) addScore(5, 'runtime_not_correlated');
+    if (risk.source_refs.length > 1) addScore(Math.min(6, risk.source_refs.length), 'cross_source_evidence');
+    return { ...risk, score, score_factors: factors };
+  };
   const rank = { critical: 0, high: 1, medium: 2, low: 3 };
   return risks
-    .sort((a, b) => rank[a.priority] - rank[b.priority])
+    .map(scoreRisk)
+    .sort((a, b) => (rank[a.priority] - rank[b.priority]) || (b.score - a.score))
     .slice(0, 8)
     .map((risk, index) => ({ risk_id: `RISK-${String(index + 1).padStart(2, '0')}`, ...risk }));
 }
@@ -735,11 +1466,13 @@ function buildExploratoryCharters(risks, context) {
     'integration-resilience': ['failure-injection', 'timeout-retry', 'eventual-consistency'],
     'knowledge-runtime-gap': ['source-vs-runtime reconciliation', 'contract comparison'],
     'workflow-coherence': ['end-to-end workflow', 'persistence check', 'adjacent-flow'],
+    'version-result-integrity': ['mapping-integrity', 'count-denominator', 'per-version oracle'],
   };
   const expectationPatterns = {
     'authorization-boundary': /(unauthor|forbidden|access|permission|quyền)/i,
     'state-integrity': /(state|status|trạng thái)/i,
     'validation-data-integrity': /(invalid|duplicate|tồn tại|không hợp lệ|not found|số dư)/i,
+    'version-result-integrity': /(version|phiên bản|result|kết quả|mapping|ánh xạ)/i,
   };
   const mutationTargets = context.apiContracts.filter(contract => /^(POST|PUT|PATCH|DELETE)/i.test(contract));
 
@@ -750,6 +1483,8 @@ function buildExploratoryCharters(risks, context) {
       : [];
     return {
       charter_id: `EXP-${String(index + 1).padStart(2, '0')}`,
+      risk_id: risk.risk_id,
+      risk_score: risk.score,
       priority: risk.priority,
       mission: `Khám phá ${SCOPE} để kiểm chứng rủi ro ${risk.category}: ${risk.hypothesis}`,
       target: (
@@ -771,6 +1506,56 @@ function buildExploratoryCharters(risks, context) {
 
 const riskInventory = buildRiskInventory(result);
 const exploratoryCharters = buildExploratoryCharters(riskInventory, result);
+const highRiskRefs = new Set(riskInventory
+  .filter(risk => ['critical', 'high'].includes(risk.priority))
+  .flatMap(risk => risk.source_refs));
+const evidenceConfidence = {
+  verified: 0,
+  documented: 1,
+  'source-derived-candidate': 2,
+  inferred: 3,
+  ambiguous: 4,
+};
+const rankedSourceEvidence = [...sourceEvidence].sort((left, right) => {
+  const leftText = `${left.value} ${left.source}`.toLowerCase();
+  const rightText = `${right.value} ${right.source}`.toLowerCase();
+  const leftPriority = highRiskRefs.has(left.source) ? 0 : 1;
+  const rightPriority = highRiskRefs.has(right.source) ? 0 : 1;
+  const leftScope = leftText.includes(scopeKey) ? 0 : 1;
+  const rightScope = rightText.includes(scopeKey) ? 0 : 1;
+  const evidenceKind = {
+    model_invariant: 0,
+    business_rule: 1,
+    api_contract: 1,
+    state_model: 1,
+    state_transition: 1,
+    business_flow: 2,
+    flow_step: 2,
+    knowledge_detail: 3,
+  };
+  return (leftPriority - rightPriority)
+    || (leftScope - rightScope)
+    || ((evidenceKind[left.kind] ?? 4) - (evidenceKind[right.kind] ?? 4))
+    || ((evidenceConfidence[left.confidence] ?? 9) - (evidenceConfidence[right.confidence] ?? 9))
+    || left.source.localeCompare(right.source);
+});
+const selectedSourceEvidence = [];
+let knowledgeDetailCount = 0;
+for (const evidence of rankedSourceEvidence) {
+  if (evidence.kind === 'knowledge_detail') {
+    if (knowledgeDetailCount >= 12) continue;
+    knowledgeDetailCount += 1;
+  }
+  selectedSourceEvidence.push(evidence);
+  if (selectedSourceEvidence.length >= 30) break;
+}
+if (
+  !selectedSourceEvidence.some(item => item.kind === 'knowledge_detail')
+  && rankedSourceEvidence.some(item => item.kind === 'knowledge_detail')
+) {
+  selectedSourceEvidence.pop();
+  selectedSourceEvidence.push(rankedSourceEvidence.find(item => item.kind === 'knowledge_detail'));
+}
 
 const missing = [];
 if (!sources.length) missing.push('sources');
@@ -793,15 +1578,13 @@ if (/(RETEST|SHEET)/.test(INTENT) && criticalMissing.length) status = 'BLOCKED';
 
 const brief = {
   schema_version: 2,
+  input_fingerprint: inputFingerprint,
   status,
   intent: INTENT,
   scope: SCOPE,
   ticket: TICKET || null,
   generated_at: new Date().toISOString(),
-  source_files: sources.map(source => ({
-    path: path.relative(DATA_DIR, source),
-    sha256_12: hashFile(source),
-  })),
+  source_files: sourceFiles,
   knowledge_health: {
     source_count: sources.length,
     source_artifact_count: sources.filter(source => source.includes(`${path.sep}repositories${path.sep}`)).length,
@@ -812,7 +1595,7 @@ const brief = {
     unresolved_count: result.unresolved.length,
     confidence: runtimeEvidencePresent ? 'runtime_correlated' : 'static_or_document_derived',
   },
-  source_evidence: sourceEvidence.slice(0, 60),
+  source_evidence: selectedSourceEvidence,
   missing_required: missing,
   business_context: {
     routes: result.routes,
@@ -826,6 +1609,7 @@ const brief = {
     api_contracts: result.apiContracts,
     known_issues: result.knownIssues,
     unresolved: result.unresolved,
+    business_model: result.businessModel,
   },
   risk_inventory: riskInventory,
   exploratory_charters: exploratoryCharters,
@@ -838,6 +1622,11 @@ const brief = {
     stop_condition: status === 'READY'
       ? 'Stop on destructive scope, missing permission/data, or evidence conflict'
       : 'Do not start normal test execution until this brief is READY',
+  },
+  context_artifacts: {
+    card: path.relative(DATA_DIR, cardPath),
+    budget: path.relative(DATA_DIR, budgetPath),
+    max_estimated_tokens: CARD_MAX_TOKENS,
   },
   allowed_next_actions: status === 'READY'
     ? ['START_RUN_MANIFEST', 'EXECUTE_REQUIRED_WORKFLOW_LAYERS']
@@ -875,6 +1664,12 @@ const markdown = [
   '',
   ...brief.business_context.business_rules.map(rule => `- ${rule}`),
   '',
+  '## Business model invariants',
+  '',
+  ...brief.business_context.business_model.invariants.map(invariant => (
+    `- ${invariant.id} [${invariant.confidence}] ${invariant.statement} | Oracle: ${invariant.oracle}`
+  )),
+  '',
   '## Ranked risks',
   '',
   ...brief.risk_inventory.map(risk => (
@@ -890,9 +1685,34 @@ const markdown = [
 ];
 fs.writeFileSync(markdownPath, markdown.join('\n'), 'utf8');
 
-console.log(`[business-context] ${status}: ${OUTPUT}`);
-console.log(`[business-context] sources=${sources.length} missing=${missing.join(',') || 'none'}`);
+const cardScript = path.join(path.dirname(fileURLToPath(import.meta.url)), 'context-card.mjs');
+const cardBuild = spawnSync(process.execPath, [
+  cardScript,
+  '--brief',
+  OUTPUT,
+  '--output',
+  cardPath,
+  '--budget-output',
+  budgetPath,
+  '--max-estimated-tokens',
+  String(CARD_MAX_TOKENS),
+], {
+  cwd: DATA_DIR,
+  env: { ...process.env, QA_DATA_DIR: DATA_DIR },
+  encoding: 'utf8',
+});
+if (cardBuild.stdout) process.stdout.write(cardBuild.stdout);
+if (cardBuild.stderr) process.stderr.write(cardBuild.stderr);
+if (cardBuild.status !== 0 && cardBuild.status !== 3) {
+  console.error(`[business-context] BLOCKED: context card generation failed with exit ${cardBuild.status}`);
+  process.exit(2);
+}
 
-if (status === 'READY') process.exit(0);
-if (status === 'NEEDS_DISCOVERY') process.exit(3);
-process.exit(2);
+console.log(`[business-context] ${status}: ${OUTPUT}`);
+console.log(
+  `[business-context] sources=${sources.length}`
+  + ` fingerprint=${inputFingerprint}`
+  + ` missing=${missing.join(',') || 'none'}`,
+);
+
+process.exit(statusCode(status));

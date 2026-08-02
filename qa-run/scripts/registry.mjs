@@ -128,6 +128,8 @@ export const SCRIPT_REGISTRY = {
   'compat': 'helpers/compat.mjs',
   'context-builder.mjs': 'helpers/context-builder.mjs',
   'context-builder': 'helpers/context-builder.mjs',
+  'context-card.mjs': 'helpers/context-card.mjs',
+  'context-card': 'helpers/context-card.mjs',
   'prepare-test-intelligence.mjs': 'helpers/prepare-test-intelligence.mjs',
   'prepare-test-intelligence': 'helpers/prepare-test-intelligence.mjs',
   'drive_common.py': 'helpers/drive_common.py',

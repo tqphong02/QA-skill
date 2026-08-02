@@ -68,7 +68,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 7. Với pentest, phải có `.pentest/engagement.md`, target, authorization, exclusions và rate limit trước request mạng; Level 2 hoặc Level 3 phải xin duyệt ngay trước khi chạy
 8. Source pentest đã clone chỉ là `source_available`; chỉ chạy tool khi doctor xác nhận executable và dependency là `available`
 9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
-10. Với qa-run, chạy `scripts/helpers/prepare-test-intelligence.mjs` theo feature scope trước normal browser action, truyền `--repo` khi source có sẵn; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu
+10. Với qa-run, chạy `scripts/helpers/prepare-test-intelligence.mjs` theo feature scope trước normal browser action, truyền `--repo` khi source có sẵn; đọc `qa-knowledge/context/business-execution-card.json` trước, ưu tiên `business_model.invariants` làm oracle; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu; mở full brief theo retrieval escalation
 11. Live browser qa-run phải quan sát network, console và page error trong đúng session đang thực thi UI; không ghép evidence từ browser MCP khác session
 12. Graphify chỉ là optional static discovery provider: không chạy installer/hook/AGENTS mutation, mặc định `--code-only`, giữ đầy đủ normalized node/relation của project, tách `contextSlice` giới hạn token, giữ `EXTRACTED`/`INFERRED`/`AMBIGUOUS` và không nâng relation thành business truth, runtime evidence hay measured coverage
 13. effective-html chỉ ảnh hưởng companion HTML sinh từ JSON đã validate; mọi interactive companion phải dùng `render-intelligence-html.mjs` với layout `catalog-v2` đồng bộ `QA-skill.html`, cuộn 2 ngón để pan, pinch/`Ctrl`/`Cmd`+wheel để zoom, có route chip làm nổi bật tuyến end-to-end, edge label dạng pill chỉ hiện khi hover/active và click node phải highlight đường vào/ra kèm detail drawer có `Làm được gì`, thông tin flow và đường liên quan, rồi pass `--check`; JSON, Markdown, Excel, XMind và evidence chuẩn hiện tại vẫn là source of truth
@@ -85,7 +85,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 
 - `DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 - `BROWSER_OBSERVABILITY` = same-session Network + Console + Page Error correlation, chạy cùng mọi live browser workflow nhưng không thay đổi số lớp trong `DISCOVERY_CORE`
-- `TEST_INTELLIGENCE` = Requirement + Runtime Knowledge + Current Source + UI Observation → provenance-aware brief → ranked risks → exploratory charters
+- `TEST_INTELLIGENCE` = Requirement + Runtime Knowledge + Current Source + UI Observation → provenance-aware business model/brief → ranked risks → exploratory charters; static code/UI chỉ là read-only candidate cho tới khi runtime xác nhận
 - `performance-qa` là public skill duy nhất cho performance; JMeter và k6 là engine nội bộ dùng chung config, smoke gate và result schema
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; vẫn giữ ledger RETEST_PLUS 6 dòng riêng
 - Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; chỉ thêm Original Retest và Plane action cho row có ticket/previous failure
@@ -153,7 +153,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Mọi critical browser transition phải kiểm tra network, console và page error trong cùng session; Playwright MCP dùng tool Playwright, Chrome DevTools MCP chỉ dùng khi điều khiển hoặc attach đúng tab
 - Mỗi testcase `Pass`/`Fail` phải có ít nhất một screenshot hoặc video tồn tại; JSON/trace/network đơn lẻ không đủ evidence; append media reference vào Note rồi mới write-back
 - Evidence Sheet phải tách theo `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`; plan/result metadata vào `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`, không gộp media nhiều chức năng vào một folder
-- Tối ưu token (scope snapshot, batch fill, deterministic wait)
+- Tối ưu token (execution card, context-budget telemetry, fingerprint cache, scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 - Đọc `qa-knowledge/<feature>-business-guide.md` trước browser action nếu có
 - Sau mọi run, ghi và validate business guide bằng `scripts/writers/write-business-guide.mjs`

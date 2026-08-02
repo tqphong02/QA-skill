@@ -56,6 +56,7 @@ qa-run/scripts/
     ├── api-health.mjs
     ├── collect-evidence.mjs
     ├── compat.mjs
+    ├── context-card.mjs
     ├── context-builder.mjs
     ├── data-factory.mjs
     ├── drive_common.py

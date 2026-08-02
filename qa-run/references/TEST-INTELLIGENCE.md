@@ -31,18 +31,50 @@ node <skill-root>/scripts/helpers/prepare-test-intelligence.mjs \
 
 When `--repo` is present, the command refreshes source knowledge only when it is missing, incomplete or behind the current commit. `--refresh-source always` forces refresh; `never` uses saved knowledge only.
 
-Read both generated files:
+The preparation step reuses an unchanged context fingerprint by default. Use
+`--no-cache` only after changing a generator, budget policy or retrieval rule;
+`--card-max-tokens <N>` changes the bounded model-facing card budget
+
+Read the bounded model-facing card first:
+
+- `qa-knowledge/context/business-execution-card.json`
+
+Keep these as canonical/audit artifacts and open them only for scoped escalation:
 
 - `qa-knowledge/context/business-execution-brief.json`
 - `qa-knowledge/context/business-execution-brief.md`
+- `qa-knowledge/context/context-budget.json`
 
-The JSON includes:
+The full JSON includes:
 
 - `knowledge_health`: whether facts are runtime-correlated or static/document-derived
 - `source_evidence`: fact-to-file/line provenance
-- `business_context`: routes, roles, flows, rules, states, side effects and contracts
+- `business_context`: routes, roles, flows, rules, states, side effects, contracts and a compact `business_model`
 - `risk_inventory`: ranked hypotheses derived from those facts
 - `exploratory_charters`: executable, evidence-aware missions
+
+## Compact business model and invariant retrieval
+
+The builder keeps a small deterministic model beside the verbose audit brief:
+
+```text
+business_model = {
+  nodes:      domain/module/route/role/state/endpoint candidates,
+  relations:  ownership, transition, access and sequence candidates,
+  invariants: statements with an executable oracle and provenance
+}
+```
+
+Use `invariants` before generic UI checks. A source-derived relation is still only a candidate; preserve its confidence and confirm it with runtime. For flows with multiple versions or sessions, use the invariant to compare selected IDs, result count, ID mapping and each result conclusion. Do not treat `status=pass` as sufficient when the result body is empty or unmapped
+
+The model-facing card is intentionally smaller than the canonical brief (default 3,200 deterministic token-estimate units). It retains high risks, high charters, invariant-first facts, observability requirements and retrieval pointers. The full brief is an escalation artifact, not default context. Cache hits reuse the same fingerprint; rebuild with `--no-cache` only after source, generator or retrieval policy changes
+
+Static code and UI observation are read-only inputs. They can identify routes, permissions, states, side effects and candidate oracles, but they cannot prove persistence, authorization, concurrency or external side effects without same-session runtime evidence. Mark those claims unresolved instead of filling the gap with a generic flow
+
+The card contains the execution contract, high-risk charters, bounded evidence,
+source hashes and explicit `retrieval.deferred_*` / `truncation` signals. If a
+high-risk oracle is unresolved or evidence conflicts, read only the referenced
+full brief/source next. Do not load both card and full projections by default
 
 ## Charter execution
 

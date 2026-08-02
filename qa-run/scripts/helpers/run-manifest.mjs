@@ -56,6 +56,18 @@ function getGitBranch() {
   }
 }
 
+function deriveContextCardPath(briefPath) {
+  const replaced = briefPath.replace(
+    /business-execution-brief\.json$/i,
+    'business-execution-card.json',
+  );
+  if (replaced !== briefPath) return replaced;
+  return path.join(
+    path.dirname(briefPath),
+    `${path.basename(briefPath, path.extname(briefPath))}-card.json`,
+  );
+}
+
 if (command === 'start') {
   const testMode = getArg('--mode', 'EXPLORATORY_ADHOC').toUpperCase();
   const discoveryModes = new Set([
@@ -68,6 +80,8 @@ if (command === 'start') {
     '--business-context',
     path.join(DATA, 'qa-knowledge', 'context', 'business-execution-brief.json'),
   ));
+  const contextCardPath = deriveContextCardPath(businessContextPath);
+  const contextBudgetPath = path.join(path.dirname(contextCardPath), 'context-budget.json');
   // ── Browser 3-track resolution ─────────────────────────────────────────────
   //
   // Allowed values per track:
@@ -174,6 +188,22 @@ if (command === 'start') {
       process.exit(2);
     }
   }
+  let contextCard = null;
+  let contextBudget = null;
+  if (fs.existsSync(contextCardPath)) {
+    try {
+      contextCard = JSON.parse(fs.readFileSync(contextCardPath, 'utf8'));
+    } catch {
+      console.warn(`[run-manifest] Warning: context card is invalid at ${contextCardPath}`);
+    }
+  }
+  if (fs.existsSync(contextBudgetPath)) {
+    try {
+      contextBudget = JSON.parse(fs.readFileSync(contextBudgetPath, 'utf8'));
+    } catch {
+      console.warn(`[run-manifest] Warning: context budget is invalid at ${contextBudgetPath}`);
+    }
+  }
 
   if (!discoveryModes.has(testMode)) {
     if (!businessContext) {
@@ -184,6 +214,18 @@ if (command === 'start') {
     if (businessContext.status !== 'READY') {
       console.error(`[run-manifest] BLOCKED: business execution brief status=${businessContext.status}`);
       console.error(`Missing: ${(businessContext.missing_required || []).join(', ') || 'unknown'}`);
+      process.exit(2);
+    }
+    if (
+      contextCard
+      && contextCard.retrieval?.full_brief_sha256_12
+      && crypto.createHash('sha256')
+        .update(fs.readFileSync(businessContextPath))
+        .digest('hex')
+        .slice(0, 12) !== contextCard.retrieval.full_brief_sha256_12
+    ) {
+      console.error('[run-manifest] BLOCKED: business execution card is stale relative to the full brief');
+      console.error('Run scripts/helpers/prepare-test-intelligence.mjs --no-cache to rebuild the card');
       process.exit(2);
     }
     if (
@@ -249,6 +291,27 @@ if (command === 'start') {
         .filter(risk => ['critical', 'high'].includes(risk.priority))
         .map(risk => risk.risk_id),
       charter_ids: (businessContext.exploratory_charters || []).map(charter => charter.charter_id),
+      context_card: contextCard ? {
+        path: path.relative(DATA, contextCardPath),
+        status: contextCard.status || 'unknown',
+        sha256_12: crypto.createHash('sha256')
+          .update(fs.readFileSync(contextCardPath))
+          .digest('hex')
+          .slice(0, 12),
+        estimated_tokens: contextCard.budget?.estimated_tokens || null,
+        max_estimated_tokens: contextCard.budget?.max_estimated_tokens || null,
+        within_budget: contextCard.budget?.within_budget ?? null,
+        deferred_risk_count: contextCard.retrieval?.deferred_risk_ids?.length || 0,
+        deferred_charter_count: contextCard.retrieval?.deferred_charter_ids?.length || 0,
+      } : null,
+      context_budget: contextBudget ? {
+        path: path.relative(DATA, contextBudgetPath),
+        cache_hit: Boolean(contextBudget.cache_hit),
+        estimator: contextBudget.estimator || 'utf8_bytes_div_4_estimate',
+        estimated_tokens: contextBudget.model_context_card?.estimated_tokens || null,
+        max_estimated_tokens: contextBudget.model_context_card?.max_estimated_tokens || null,
+        within_budget: contextBudget.model_context_card?.within_budget ?? null,
+      } : null,
     } : null,
     started_time: new Date().toISOString(),
     finished_time: null,

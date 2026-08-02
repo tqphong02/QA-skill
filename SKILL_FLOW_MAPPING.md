@@ -384,31 +384,33 @@ Documents
 
 ### 🛠️ Cơ chế tối ưu token hiện có và gap còn mở
 
-1. **`prepare-test-intelligence.mjs` + `context-builder.mjs`**: đọc `knowledge-index.json`, source artifact và requirement theo feature scope; trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED` thay vì tạo flow fallback.
+1. **`prepare-test-intelligence.mjs` + `context-builder.mjs` + `context-card.mjs`**: đọc `knowledge-index.json`, source artifact và requirement theo feature scope; trả `READY`, `NEEDS_DISCOVERY` hoặc `BLOCKED`, sau đó chiếu execution card bounded thay vì đưa toàn bộ brief vào model.
 2. **`visual-evidence-router.mjs`**: route visual evidence và chỉ dùng crop khi cần:
    - Chạy OmniParser phân tích ảnh screenshot thành danh sách cấu trúc JSON chứa tọa độ `[x1, y1, x2, y2]` và nhãn phần tử tương tác (`button`, `input`, `badge`, `menu`).
    - Chuyển đổi toàn bộ giao diện thị giác thành **Dữ liệu JSON Nguồn thấp (0 LLM Vision Token)**.
    - Chỉ crop đúng vùng patch nghi ngờ gửi cho LLM Vision API khi OmniParser hoặc DOM audit phát hiện mâu thuẫn.
 3. **`source-indexer.mjs` + source hash**: giới hạn discovery theo source hiện tại và giữ provenance cho artifact.
-4. **Gap đã biết**: chưa có tokenizer/telemetry tự động để chứng minh ngân sách hoặc phần trăm tiết kiệm token; không được claim số đo như kết quả thực nghiệm.
+4. **Giới hạn còn lại**: `context-card.mjs` đã ghi `context-budget.json` với ước lượng UTF-8 byte/4 và fingerprint cache; provider tokenizer telemetry và phần trăm tiết kiệm thực nghiệm vẫn chưa có, không được claim số đo như kết quả thực nghiệm.
 
 ---
 
-### 📊 Telemetry token đề xuất, chưa phải output hiện có
+### 📊 Telemetry token hiện có và giới hạn đo lường
 
-Schema dưới đây chỉ là đề xuất cho lần triển khai sau. Pipeline hiện tại không tự ghi file này, vì vậy mọi con số phải được ghi là ước lượng cho đến khi có tokenizer và test benchmark:
+`context-budget.json` là output canonical cho budget/retrieval. Provider tokenizer và test benchmark chưa được tích hợp, vì vậy mọi token count hiện tại phải được ghi là ước lượng. Output thực tế có dạng rút gọn:
 
 ```json
 {
-  "intent": "UI_BUSINESS_RECONCILIATION",
-  "rawEstimatedTokens": 42000,
-  "finalContextTokens": 4800,
-  "cacheHit": true,
-  "documentsRetrieved": 3,
-  "screenshotsSent": 2,
-  "fullPageVisionUsed": false,
-  "fallbackLevel": 3,
-  "recordedAt": "2026-07-24T00:05:00.000Z"
+  "artifact": "context-budget",
+  "cache_hit": true,
+  "source": { "file_count": 3, "estimated_tokens": 42000 },
+  "canonical_brief": { "estimated_tokens": 9000 },
+  "model_context_card": {
+    "estimated_tokens": 4800,
+    "max_estimated_tokens": 3200,
+    "within_budget": false
+  },
+  "retrieval": { "high_risk_count": 3, "deferred_charter_count": 1 },
+  "estimator": "utf8_bytes_div_4_estimate"
 }
 ```
 
@@ -419,7 +421,7 @@ Schema dưới đây chỉ là đề xuất cho lần triển khai sau. Pipeline
 #### Thứ tự ưu tiên triển khai gap còn lại:
 ```text
 1. Giữ `prepare-test-intelligence.mjs` và `context-builder.mjs` làm scope gate canonical
-2. Bổ sung telemetry tokenizer nếu cần báo chi phí token định lượng
+2. Bổ sung provider tokenizer nếu cần báo chi phí token định lượng
 3. Bổ sung benchmark fixture trước khi công bố phần trăm tiết kiệm
 4. Dùng `ui-business-component-extractor.mjs` cho component inventory thay vì full DOM
 5. Dùng `visual-evidence-router.mjs` cho evidence crop khi có screenshot thật
@@ -430,10 +432,10 @@ Schema dưới đây chỉ là đề xuất cho lần triển khai sau. Pipeline
 - [x] Không gửi toàn bộ Source Code repository cho AI.
 - [x] Knowledge runtime chỉ nạp shard/guide được `knowledge-index.json` trỏ tới khi index tồn tại.
 - [x] Ảnh AI Vision chỉ gửi vùng crop bị nghi ngờ / conflict.
-- [ ] Cache artifact và invalidation policy chưa có script canonical riêng.
+- [x] Cache artifact và invalidation policy theo input fingerprint được `context-builder.mjs` thực thi.
 - [x] Retest dùng feature scope và ranked impacted charters qua test intelligence.
-- [ ] Hard token budget và telemetry tokenizer chưa được triển khai.
-- [ ] Chưa có `token-usage.json` canonical; không claim fallback/token metric tự động.
+- [x] Bounded model-facing card có deterministic context budget và explicit truncation/deferred retrieval.
+- [ ] Provider tokenizer và `token-usage.json` theo từng model chưa được triển khai; không claim token metric chính xác.
 
 ---
 

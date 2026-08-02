@@ -22,6 +22,8 @@ const scope = getArg('--scope', getArg('--module', '')).trim();
 const intent = getArg('--intent', 'EXPLORATORY_ADHOC').toUpperCase();
 const repoArg = getArg('--repo', '').trim();
 const refreshSource = getArg('--refresh-source', 'auto').toLowerCase();
+const cardMaxTokens = getArg('--card-max-tokens', '').trim();
+const noCache = args.includes('--no-cache');
 const output = path.resolve(getArg(
   '--output',
   path.join(dataDir, 'qa-knowledge', 'context', 'business-execution-brief.json'),
@@ -134,6 +136,8 @@ for (const flag of ['--target', '--expected', '--role', '--impact', '--ticket'])
   const value = getArg(flag, '').trim();
   if (value) contextArgs.push(flag, value);
 }
+if (cardMaxTokens) contextArgs.push('--card-max-tokens', cardMaxTokens);
+if (noCache) contextArgs.push('--no-cache');
 
 const build = spawnSync(process.execPath, contextArgs, {
   cwd: dataDir,

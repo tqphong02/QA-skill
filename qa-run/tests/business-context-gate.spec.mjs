@@ -96,6 +96,21 @@ try {
   assert.ok(manifest.test_intelligence.charter_ids.length > 0);
   assert.ok(manifest.test_intelligence.high_risk_ids.length > 0);
   assert.equal(manifest.test_intelligence.knowledge_confidence, 'static_or_document_derived');
+  assert.equal(manifest.test_intelligence.context_card.status, 'READY');
+  assert.equal(manifest.test_intelligence.context_card.within_budget, true);
+  assert.ok(manifest.test_intelligence.context_budget);
+
+  const staleBrief = JSON.parse(fs.readFileSync(readyBrief, 'utf8'));
+  staleBrief.scope = 'checkout-changed-without-card-refresh';
+  fs.writeFileSync(readyBrief, JSON.stringify(staleBrief, null, 2), 'utf8');
+  const staleManifest = run(runManifest, [
+    'start',
+    '--mode', 'RETEST_TICKET',
+    '--business-context', readyBrief,
+    '--browser-observer', 'playwright-mcp',
+  ], readyRoot);
+  assert.equal(staleManifest.status, 2);
+  assert.match(staleManifest.stderr, /business execution card is stale/);
 
   const missingRoot = path.join(tempRoot, 'missing');
   fs.mkdirSync(missingRoot, { recursive: true });

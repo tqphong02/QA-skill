@@ -27,7 +27,7 @@
 
 Run `prepare-test-intelligence.mjs` as defined in [TEST-INTELLIGENCE.md](TEST-INTELLIGENCE.md). When source is available, pass `--repo`; the resolver refreshes stale source-derived knowledge and merges it with the exact feature knowledge.
 
-Execute the ranked `exploratory_charters` from the resulting brief. Use the first UI snapshot only to:
+Execute the ranked `exploratory_charters` from the resulting execution card. Use the full brief only for explicit scoped escalation. Use the first UI snapshot only to:
 
 - verify known entry points and actions
 - add UI-only states or controls missing from knowledge/source
@@ -52,7 +52,7 @@ Do not generate a generic “click every element” checklist before checking so
 6. **3rd party integration**: payment, email, calendar, notification, search, AI
 
 ### Step C — Form a charter (purposeful exploratory goal)
-Use the ranked charters from `business-execution-brief.json`. Each charter must retain its risk, oracle, source references, target role/data and safety rule. Add an ad-hoc branch only when a runtime observation changes the risk model.
+Use the ranked charters from `business-execution-card.json`. Each charter must retain its risk, oracle, source references, target role/data and safety rule. If the card contains deferred or truncated items, retrieve only the referenced full brief/source. Add an ad-hoc branch only when a runtime observation changes the risk model.
 
 ### Step D — Goal-oriented UI driving (via MCP Playwright)
 - Happy path -> snapshot every step -> verify state changes correctly

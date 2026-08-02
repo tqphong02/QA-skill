@@ -175,15 +175,22 @@ Flash has smaller context window. Load in this strict priority order — stop wh
 
 ```
 1. SKILL.md router + hard gates (already loaded — DO NOT reload)
-2. knowledge-index.json → identify relevant shard keys
-3. Only the shard(s) matching the feature under test (NOT the full app guide)
-4. The ticket AC / spec (only the relevant section)
-5. Previous FINDINGS.md entries for the same feature (skip if not retest)
+2. business-execution-card.json → bounded contract, business-model invariants, high risks and retrieval pointers
+3. knowledge-index.json → identify relevant shard keys only when the card escalates
+4. Only the shard(s) matching the feature under test (NOT the full app guide)
+5. The ticket AC / spec (only the relevant section)
+6. Previous FINDINGS.md entries for the same feature (skip if not retest)
 
 NEVER load simultaneously:
+- business-execution-card.json + business-execution-brief.md (pick the card first)
 - Full app-business-guide.md + feature shard (pick one)
 - All screenshots from evidence/ (load only the specific evidence file)
 - Multiple reference .md files at once (load only what the router says for current task)
+
+For a multi-version or multi-session flow, spend the first reasoning pass on the card's
+`business_model.invariants`: compare selected IDs, result count, ID mapping and each
+per-version conclusion before checking cosmetic UI details. Static code/UI facts remain
+read-only candidates until same-session runtime evidence confirms them
 ```
 
 ---
@@ -240,9 +247,11 @@ Step 1: Run the deterministic intelligence preparation:
   Add --repo when source is available; add --target, --expected, --role and --impact
   when the ticket/testcase supplies them
 
-Step 2: Read qa-knowledge/context/business-execution-brief.json:
-  READY → use its execution_contract, source_evidence, risk_inventory and
-          exploratory_charters exactly
+Step 2: Read qa-knowledge/context/business-execution-card.json first:
+  READY → use its execution_contract, bounded source_evidence, high-risk
+          risk_inventory and exploratory_charters exactly
+  Read business-execution-brief.json only when retrieval.deferred_* or
+  truncation signals require scoped escalation
   NEEDS_DISCOVERY → run scoped discovery, write knowledge, rebuild
   BLOCKED → report missing_required and do not open the browser for normal execution
 

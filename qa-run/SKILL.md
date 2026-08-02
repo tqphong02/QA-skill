@@ -41,7 +41,7 @@ BROWSER_OBSERVABILITY =
 
 TEST_INTELLIGENCE =
   Requirement + Runtime Knowledge + Current Source + UI Observation
-  -> Provenance-aware Business Brief -> Ranked Risks -> Exploratory Charters
+  -> Provenance-aware Business Model + Brief -> Ranked Risks -> Exploratory Charters
 ```
 
 | User entrypoint | Required stack | Read now |
@@ -91,12 +91,17 @@ Apply the following exact order for all models, especially fast or small-context
      --role <role-if-known> \
      --impact <comma-separated-impacted-areas-if-known>
    ```
-   Read both generated files under `qa-knowledge/context/`. `Business Execution Brief` is the machine gate and risk model:
-   - `READY` → use its exact execution contract, `knowledge_health`, fact-level `source_evidence`, ranked `risk_inventory` and `exploratory_charters`
+   The command reuses an unchanged input fingerprint by default and writes `business-execution-card.json` plus `context-budget.json`. The default model-facing budget is 3,200 deterministic token-estimate units; use `--no-cache` only after changing retrieval/generator policy and `--card-max-tokens <N>` only for a deliberate host/context trade-off
+   Read `qa-knowledge/context/business-execution-card.json` first. The full `business-execution-brief.json` remains the canonical gate/audit artifact and the Markdown file is human-facing; open either full artifact only when the card requests escalation or a source/evidence conflict requires it. `Business Execution Brief` is the machine gate and risk model:
+   - `READY` → use the card's exact execution contract, high-risk charters, bounded evidence and retrieval pointers; use the full brief for scoped escalation
    - `NEEDS_DISCOVERY` → run only scoped runtime/UI discovery needed by `missing_required`, write knowledge, then rebuild the brief
    - `BLOCKED` → stop normal execution and report `missing_required`; never invent a route, role, rule, flow or expected result
    - Source facts remain static/document-derived until runtime confirms them. Discovery modes may start without `READY` only to produce missing knowledge
+   - Read `business_context.business_model` before generic facts: use its compact nodes/relations to reconstruct ownership and sequence, then execute its `invariants` as explicit oracles. Keep `runtime_verified`, `documented`, `source-derived-candidate`, `inferred` and `ambiguous` distinct
+   - For multi-version or multi-session flows, prove the selected-version denominator, one-result-per-selected-version mapping, stable IDs and a meaningful per-version conclusion; a `pass` status alone is not sufficient
    - Execute high-priority charters first. Branch only when evidence changes the risk model; record why a charter was added, deferred or stopped
+   - The card is bounded by a deterministic context budget; `retrieval.deferred_*` and `truncation` are explicit escalation signals, never silent omissions
+   - Source-code and UI access are read-only intelligence inputs. Do not claim persistence, authorization, concurrency or side-effect behavior from static code/UI alone; mark it unresolved until runtime evidence proves it
 3. **Initialize Run Manifest** only after the business gate:
    ```bash
    node scripts/helpers/run-manifest.mjs start \
@@ -107,6 +112,7 @@ Apply the following exact order for all models, especially fast or small-context
      --network-observer <auto|chrome-devtools-mcp|playwright-mcp|ego-browser|unavailable>
    ```
    `run-manifest.mjs` must reject every non-discovery run whose brief is missing, invalid or not `READY`.
+   When a context card exists, it must match the full brief hash; a stale card is `BLOCKED` and must be rebuilt
    - `browser-driver` and `network-observer` are resolved **independently**; read [references/BROWSER-DRIVER-RESOLUTION.md](references/BROWSER-DRIVER-RESOLUTION.md) for the full flowchart and combination rules
    - `auto` resolves driver priority: `chrome-devtools-mcp → playwright-mcp → ego-browser → antigravity-native → unavailable`
    - `auto` binds the network observer to the resolved driver first: `chrome-devtools-mcp → playwright-mcp → ego-browser → unavailable`; Chrome DevTools is used as a secondary observer only after same-page/session attach is verified
@@ -150,9 +156,11 @@ Apply the following exact order for all models, especially fast or small-context
    - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
 5. **[BEFORE TEST — VERIFY intelligence provenance]** The preparation command must resolve `<project-root>/qa-knowledge/knowledge-index.json` and current source artifacts before UI execution:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
+   - For the prepared run, read `business-execution-card.json` before any full brief or Markdown; do not load both projections simultaneously
    - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
    - Read `permission-matrix.json` (machine-readable, NOT `rbac-matrix.md`) when preparing role-based or security tests
-   - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, side effects, reusable assets, source file/line and confidence
+   - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, side effects, compact business-model nodes/relations/invariants, reusable assets, source file/line and confidence
+   - When source or UI is available only for reading, use it to form candidate oracles and impacted areas; do not mutate code, app data or permissions and do not upgrade a static claim to runtime truth
    - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
    - If NO guide exists at all: run scoped discovery for a retest; use `APP_BASELINE_DISCOVERY` only for an explicit full-app/bootstrap request
 6. With `RETEST_TICKET` -> read ticket via `plane-qa`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
@@ -229,6 +237,10 @@ These must be observed at all times, even before reading any reference file:
 │   ├── app-business-guide.md       ← compatibility/overview layer
 │   ├── app-flow-map.json
 │   ├── checklists/, merged/, repositories/, ui-business/
+│   ├── context/
+│   │   ├── business-execution-brief.json  ← canonical gate/audit artifact
+│   │   ├── business-execution-card.json   ← bounded model-facing projection
+│   │   └── context-budget.json             ← deterministic budget/cache telemetry
 │   ├── repositories/<repo>/graphify-discovery.json
 │   ├── repositories/<repo>/graphify-code-only/graphify-out/
 ├── FINDINGS.md
@@ -250,6 +262,7 @@ These must be observed at all times, even before reading any reference file:
 | Script | Purpose |
 |---|---|
 | `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
+| `scripts/helpers/context-card.mjs` | Project a bounded model-facing execution card and write deterministic context-budget telemetry |
 | `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
 | `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, retain the complete normalized project graph and produce a separate token-bounded context slice |
 | `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |

@@ -74,6 +74,11 @@ Attach before the first action:
 import { createRuntimeObserver } from '<qa-run>/scripts/helpers/runtime-observer.mjs'
 
 const observer = createRuntimeObserver(page)
+
+// Keep a cursor before each critical transition and pass only the delta onward
+const cursor = observer.getCursor()
+// perform one UI transition here
+const compactTransition = observer.summarizeSince(cursor, { actionId: 'submit-order' })
 ```
 
 The observer writes a bounded sanitized event stream to `evidence/.runtime-events.json`.
@@ -86,7 +91,7 @@ For every critical action:
 2. Ensure observation is already active
 3. Execute the UI action
 4. Assert visible or persisted state
-5. List matching document/XHR/fetch requests
+5. List only matching document/XHR/fetch requests or the runtime event delta since the action cursor
 6. Inspect non-2xx, failed, cancelled, duplicated, retried, or contract-relevant responses
 7. Inspect console `error` and `warning` plus uncaught page exceptions
 8. Correlate findings with the action and expected result

@@ -69,6 +69,11 @@ test('Runtime Observer: Captures and redacts browser failures', async () => {
   assert.doesNotMatch(serialized, /secret-token/);
   assert.doesNotMatch(serialized, /user@example\.com/);
   assert.match(serialized, /<redacted>/);
+  const transition = observer.summarizeSince(0, { actionId: 'submit-order' });
+  assert.equal(transition.action_id, 'submit-order');
+  assert.ok(transition.counts.HTTP_FAILURE >= 1);
+  assert.ok(transition.counts.CONSOLE_ERROR >= 1);
+  assert.equal(observer.getEventsSince(observer.getCursor()).length, 0);
   assert.ok(fs.existsSync(eventsFile));
   fs.rmSync(tempDir, { recursive: true, force: true });
 });

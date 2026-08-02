@@ -115,6 +115,8 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 - **Cross-verify** mỗi verdict: DOM + network + console (đừng chỉ tin snapshot)
 - **Heuristic checklists** theo loại feature (form/table/filter/auth/modal/concurrency)
 - **Pattern memory**: đọc `FINDINGS.md` cũ → nhận regression/root-cause lặp
+- **Execution card**: đọc `business-execution-card.json` trước, chỉ mở full brief khi có deferred/truncation hoặc conflict
+- **Fingerprint cache**: `prepare-test-intelligence.mjs` tự reuse context không đổi; dùng `--no-cache` khi cần rebuild
 
 ---
 

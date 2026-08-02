@@ -96,6 +96,50 @@ function appendEvent(eventsFile, entry) {
   fs.writeFileSync(eventsFile, JSON.stringify(existing.slice(-500), null, 2), 'utf8');
 }
 
+function compactEvent(event) {
+  const payload = event?.payload || {};
+  const compact = value => value === undefined || value === null
+    ? undefined
+    : String(value).replace(/\s+/g, ' ').trim().slice(0, 360);
+  return {
+    type: event?.type || 'UNKNOWN',
+    timestamp: event?.timestamp || null,
+    method: compact(payload.method),
+    url: compact(payload.url),
+    status: payload.status,
+    error: compact(payload.error || payload.message || payload.response_error || payload.bodyPreview),
+    console: compact(payload.text),
+  };
+}
+
+export function summarizeRuntimeEvents(events, { actionId = null, maxPerType = 8 } = {}) {
+  const grouped = {
+    HTTP_FAILURE: [],
+    REQUEST_FAILED: [],
+    GRAPHQL_ERROR: [],
+    CONSOLE_ERROR: [],
+    PAGE_CRASH_ERROR: [],
+    WEBSOCKET_ERROR: [],
+  };
+  for (const event of events || []) {
+    if (!grouped[event?.type]) continue;
+    if (grouped[event.type].length < maxPerType) {
+      grouped[event.type].push(compactEvent(event));
+    }
+  }
+  return {
+    action_id: actionId,
+    event_count: (events || []).length,
+    counts: Object.fromEntries(Object.entries(grouped).map(([type, items]) => [type, items.length])),
+    failures: grouped.HTTP_FAILURE,
+    request_failures: grouped.REQUEST_FAILED,
+    graphql_errors: grouped.GRAPHQL_ERROR,
+    console_errors: grouped.CONSOLE_ERROR,
+    page_errors: grouped.PAGE_CRASH_ERROR,
+    websocket_errors: grouped.WEBSOCKET_ERROR,
+  };
+}
+
 export function createRuntimeObserver(page, { eventsFile = EVENTS_FILE } = {}) {
   const events = [];
 
@@ -176,6 +220,12 @@ export function createRuntimeObserver(page, { eventsFile = EVENTS_FILE } = {}) {
 
   return {
     getEvents: () => events,
+    getCursor: () => events.length,
+    getEventsSince: cursor => events.slice(Math.max(0, Number(cursor) || 0)),
+    summarizeSince: (cursor = 0, metadata = {}) => summarizeRuntimeEvents(
+      events.slice(Math.max(0, Number(cursor) || 0)),
+      metadata,
+    ),
     clearEvents: () => { events.length = 0; },
   };
 }
