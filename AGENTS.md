@@ -50,7 +50,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Database, ETL/ELT, reconciliation, lineage, freshness, schema drift hoặc Database read-only MCP | `data-quality-qa/SKILL.md` | Xác nhận nguồn/đích và read-only boundary thật ở DB role |
 | LLM, chatbot, RAG, agent, prompt/model evaluation | `ai-quality-qa/SKILL.md` | Xác định golden dataset và metric trước run |
 | WCAG, axe, keyboard, focus hoặc screen reader | `accessibility-qa/SKILL.md` | Kết hợp automated scan với manual interaction |
-| Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition |
+| Latency, load, stress, spike, soak, k6, JMeter, `.jmx`, JTL, Chrome DevTools MCP, k6 MCP hoặc bottleneck | `performance-qa/SKILL.md` | Chọn engine nội bộ, xác nhận common workload contract và stop condition; nếu có `.env` thì dùng `wizard --env-file` |
 | Postman setup, Postman MCP/CLI, Newman, OAuth, collection run, workspace, environment, spec, mock hoặc monitor operation | `postman/SKILL.md` | Bootstrap MCP, chạy runtime doctor, ưu tiên Postman CLI và chỉ fallback Newman cho collection v2/v2.1 |
 | OpenAPI, Swagger, Postman contract/collection validation, GraphQL, gRPC hoặc webhook contract | `api-contract-qa/SKILL.md` | Validate spec rồi đối chiếu implementation |
 | Android/iOS, APK/IPA, Appium, emulator, real device, scrcpy, `scrcpy-wifi`, Proxyman, Charles, mitmproxy, HTTP Toolkit, Fiddler, HAR hoặc mobile network traffic | `mobile-qa/SKILL.md` | Chạy mobile/network doctor phù hợp, chọn device matrix, lifecycle và authorized capture scope |
@@ -87,6 +87,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - `BROWSER_OBSERVABILITY` = same-session Network + Console + Page Error correlation, chạy cùng mọi live browser workflow nhưng không thay đổi số lớp trong `DISCOVERY_CORE`
 - `TEST_INTELLIGENCE` = Requirement + Runtime Knowledge + Current Source + UI Observation → provenance-aware business model/brief → ranked risks → exploratory charters; static code/UI chỉ là read-only candidate cho tới khi runtime xác nhận
 - `performance-qa` là public skill duy nhất cho performance; JMeter và k6 là engine nội bộ dùng chung config, smoke gate và result schema
+- Performance `.env` chỉ là lớp input `PERF_*` bị ignore bởi Git; YAML sinh ra vẫn là canonical config, request/body/secret dùng placeholder và không được commit credential
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; vẫn giữ ledger RETEST_PLUS 6 dòng riêng
 - Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; chỉ thêm Original Retest và Plane action cho row có ticket/previous failure
 - Không được tự thay business flow thiếu bằng flow generic; test contract phải copy từ Business Execution Brief `READY` cùng source hash

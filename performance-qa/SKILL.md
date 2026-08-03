@@ -19,10 +19,15 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
    - Exact k6 `.js`, `.ts`, or `.mjs` → k6
    - `engine: auto` with exactly one discovered engine → that engine
    - Both engines or no script → ask only for the engine; do not guess
-4. Copy [assets/run-config.example.yaml](assets/run-config.example.yaml) or run:
+4. Create the canonical run config by copying [assets/run-config.example.yaml](assets/run-config.example.yaml) or run:
    ```bash
    python3 scripts/performance_orchestrator.py wizard --output run-config.yaml
    ```
+   For explicit inputs in one ignored file, copy
+   [assets/performance.env.example](assets/performance.env.example) to `.env` and run
+   `wizard --env-file .env`. Add `--non-interactive` when the `.env` file is
+   complete and the wizard must fail instead of prompting for missing required
+   values
 5. Ask only fields required by the chosen workload model:
    - `concurrent-users`: users, ramp-up, hold, ramp-down, think time
    - `request-rate`: target rate, time unit, pre-allocated VUs, max VUs, duration
@@ -66,7 +71,9 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
 5. More than `safety.maxUsers` (default 100) also requires
    `--approve-high-load`; production also requires `--approve-production`
 6. Never hardcode passwords, tokens, cookies, API keys or private keys in config,
-   JMX, k6 script, commands, logs or reports; use environment placeholders
+   JMX, k6 script, commands, logs or reports; use environment placeholders.
+   A local `.env` is an input convenience only and must remain ignored by Git;
+   the committed `performance.env.example` contains no credentials
 7. Always capture idle health and run one user/one iteration before load
 8. Stop when smoke fails, service health fails, connectivity is lost, resource
    saturation appears, or an agreed abort condition is met

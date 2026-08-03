@@ -44,10 +44,23 @@ Doctor se bao ro `available`, `runtime_missing`, `mcp_not_configured` hoac loi a
 Tu folder `performance-qa`:
 
 ```bash
-python3 scripts/performance_orchestrator.py wizard --output run-config.yaml
+# Cach tuong tac: file env chi dien gia tri mac dinh, wizard van cho phep xem va sua
+cp assets/performance.env.example .env
+python3 scripts/performance_orchestrator.py wizard --env-file .env --output run-config.yaml
+
+# Cach khong tuong tac: dung gia tri trong .env va fail neu thieu input bat buoc
+python3 scripts/performance_orchestrator.py wizard --env-file .env --non-interactive --output run-config.yaml
+
 python3 scripts/performance_orchestrator.py validate --config run-config.yaml
 python3 scripts/performance_orchestrator.py prepare --config run-config.yaml --project-root . --output-root artifacts
 ```
+
+`.env` duoc ignore boi Git. `PERF_*` trong file nay gom target, user, ramp-up,
+duration, thresholds, safety, volume va scalability profile. Request mix, body,
+header va business assertion van nam trong `run-config.yaml` de giu cau truc ro
+rang. Khong ghi token/password/cookie/API key that vao `.env`; dung placeholder
+nhu `${TOKEN}` trong YAML va inject bien that tu process environment ngay truoc
+run da duoc phe duyet
 
 Sau `prepare`, doc lai:
 

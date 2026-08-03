@@ -1,8 +1,28 @@
 # Common performance run config
 
-The common YAML is the only user-facing configuration. Validate it with
-`scripts/performance_orchestrator.py`; never maintain separate JMeter and k6
-workload contracts.
+The common YAML is the only user-facing configuration and the canonical run
+configuration. An optional dotenv file is only an input layer for the wizard.
+Validate the generated YAML with `scripts/performance_orchestrator.py`; never
+maintain separate JMeter and k6 workload contracts.
+
+## Optional `.env` input
+
+Copy [assets/performance.env.example](../assets/performance.env.example) to the
+ignored local file `.env`, fill the `PERF_*` values, then run either:
+
+```bash
+python3 scripts/performance_orchestrator.py wizard --env-file .env --output run-config.yaml
+python3 scripts/performance_orchestrator.py wizard --env-file .env --non-interactive --output run-config.yaml
+```
+
+The first command shows each value so it can be reviewed or overridden. The
+second command fails closed when a required value is missing. The env loader
+parses `KEY=VALUE` without executing shell code and does not print values.
+`PERF_*` covers target, workload, duration, thresholds, safety, test-data,
+volume and scalability inputs. Keep request mix, headers, bodies and business
+assertions in YAML. Secrets must remain placeholders such as `${TOKEN}`;
+provide the real variable through the process environment immediately before an
+approved run.
 
 ## Engine and test type
 

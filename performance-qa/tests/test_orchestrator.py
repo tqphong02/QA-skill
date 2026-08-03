@@ -171,6 +171,102 @@ class PerformanceOrchestratorTest(unittest.TestCase):
             self.assertIn("sourceDefault(data)", adapted_text)
             self.assertNotIn("--vus", plan["enginePlan"]["smokeCommand"])
 
+    def test_env_file_populates_wizard_config_without_prompting(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env_file = root / ".env"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "PERF_ENGINE=k6",
+                        "PERF_TEST_TYPE=load",
+                        "PERF_WORKLOAD_MODEL=concurrent-users",
+                        "PERF_TARGET_BASE_URL=https://qa.example.com",
+                        "PERF_TARGET_ENVIRONMENT=qa",
+                        "PERF_TARGET_OWNER=qa-team",
+                        "PERF_AUTHORIZATION_REFERENCE=PERF-ENV-001",
+                        "PERF_USERS=7",
+                        "PERF_RAMP_UP=5s",
+                        "PERF_HOLD_DURATION=20s",
+                        "PERF_RAMP_DOWN=5s",
+                        "PERF_THINK_TIME=2s",
+                        "PERF_P95_MS=900",
+                        "PERF_P99_MS=1500",
+                        "PERF_MAX_ERROR_RATE=0.02",
+                        "PERF_MIN_REQUESTS_PER_SECOND=2",
+                        "PERF_ABORT_ON_FAILURE=true",
+                        "PERF_MAX_USERS=20",
+                        "PERF_ABORT_CONDITIONS=health check fails,error budget exceeded",
+                        'PERF_CLEANUP="no mutated test data"',
+                        "PERF_MONITORING=qa-dashboard",
+                        "PERF_TEST_DATA_FILE=data/users.csv",
+                        "PERF_TEST_DATA_VARIABLES=email,password",
+                        "PERF_TEST_DATA_UNIQUE_PER_USER=yes",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            generated = self.run_cli(
+                "wizard",
+                "--env-file",
+                str(env_file),
+                "--non-interactive",
+                "--output",
+                str(root / "run-config.yaml"),
+            )
+            self.assertEqual(generated.returncode, 0, generated.stderr)
+            config = yaml.safe_load((root / "run-config.yaml").read_text(encoding="utf-8"))
+            self.assertEqual(config["workload"]["users"], 7)
+            self.assertEqual(config["workload"]["holdDuration"], "20s")
+            self.assertEqual(config["thresholds"]["p95Ms"], 900.0)
+            self.assertTrue(config["thresholds"]["abortOnFailure"])
+            self.assertEqual(config["safety"]["maxUsers"], 20)
+            self.assertEqual(config["safety"]["abortConditions"], ["health check fails", "error budget exceeded"])
+            self.assertEqual(config["testData"]["file"], "data/users.csv")
+            self.assertTrue(config["testData"]["uniquePerUser"])
+
+    def test_env_file_rejects_malformed_line(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env_file = root / ".env"
+            env_file.write_text("PERF_ENGINE=k6\nnot-an-assignment\n", encoding="utf-8")
+            generated = self.run_cli(
+                "wizard",
+                "--env-file",
+                str(env_file),
+                "--non-interactive",
+                "--output",
+                str(root / "run-config.yaml"),
+            )
+            self.assertEqual(generated.returncode, 2)
+            self.assertIn("malformed env file line 2", generated.stderr)
+
+    def test_non_interactive_env_file_requires_target_inputs(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            env_file = root / ".env"
+            env_file.write_text(
+                "\n".join(
+                    [
+                        "PERF_TARGET_BASE_URL=",
+                        "PERF_TARGET_ENVIRONMENT=qa",
+                        "PERF_TARGET_OWNER=qa-team",
+                        "PERF_AUTHORIZATION_REFERENCE=PERF-ENV-002",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            generated = self.run_cli(
+                "wizard",
+                "--env-file",
+                str(env_file),
+                "--non-interactive",
+                "--output",
+                str(root / "run-config.yaml"),
+            )
+            self.assertEqual(generated.returncode, 2)
+            self.assertIn("PERF_TARGET_BASE_URL is required", generated.stderr)
+
     def test_hardcoded_secret_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

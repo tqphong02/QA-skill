@@ -41,7 +41,7 @@ Bundle tiếng Việt ngày `30-07-2026` theo `plannotator/effective-html/html-d
 - [QA-skill — kiến trúc, danh mục và luồng định tuyến trong một file](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html)
 - [Dữ liệu JSON chuẩn](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill-du-lieu.json)
 
-File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `23 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Bản catalog hiện lập chỉ mục `207` nhánh công khai, `23` nhánh phụ trợ, tổng cộng `230` mục cấu trúc, `29` relationship và `32` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
+File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `23 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Bản catalog hiện lập chỉ mục `211` nhánh công khai, `23` nhánh phụ trợ, tổng cộng `234` mục cấu trúc, `29` relationship và `32` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
 
 Format tương tác hiện tại:
 

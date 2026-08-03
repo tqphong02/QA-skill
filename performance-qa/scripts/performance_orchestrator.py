@@ -44,6 +44,35 @@ def utc_stamp() -> str:
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
+ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def load_env_file(env_file: Path) -> dict[str, str]:
+    """Load a small dotenv file without executing shell syntax."""
+
+    if not env_file.is_file():
+        raise ValueError(f"env file not found: {env_file}")
+
+    values: dict[str, str] = {}
+    for line_number, raw_line in enumerate(env_file.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        if "=" not in line:
+            raise ValueError(f"malformed env file line {line_number}: expected KEY=VALUE")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not ENV_KEY_RE.fullmatch(key):
+            raise ValueError(f"invalid env key on line {line_number}: {key}")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        values[key] = value
+    return values
+
+
 def doctor() -> dict[str, Any]:
     java = shutil.which("java")
     jmeter = shutil.which("jmeter")
@@ -226,33 +255,86 @@ def run_prepared(
     }
 
 
-def wizard(output: Path) -> None:
+def wizard(output: Path, env_file: Path | None = None, non_interactive: bool = False) -> None:
+    env_values = {key: value for key, value in os.environ.items() if key.startswith("PERF_")}
+    if env_file:
+        env_values.update(load_env_file(env_file))
+
+    def ask(key: str, label: str, default: str | None = None, required: bool = False) -> str:
+        configured = env_values[key] if key in env_values else default
+        suffix = f" [{configured}]" if configured not in (None, "") else ""
+        if non_interactive:
+            value = "" if configured is None else str(configured).strip()
+        else:
+            value = input(f"{label}{suffix}: ").strip()
+            if not value and configured is not None:
+                value = str(configured).strip()
+        if required and not value:
+            raise ValueError(f"{key} is required; set it in the env file or enter it interactively")
+        return value
+
+    def number(
+        key: str,
+        label: str,
+        default: str | None,
+        kind: type[int] | type[float],
+        required: bool = False,
+    ) -> int | float:
+        value = ask(key, label, default, required=required)
+        try:
+            return kind(value)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{key} must be a valid {kind.__name__}") from exc
+
+    def boolean(key: str, label: str, default: str = "false") -> bool:
+        value = ask(key, label, default).lower()
+        if value in {"1", "true", "yes", "y", "on"}:
+            return True
+        if value in {"0", "false", "no", "n", "off"}:
+            return False
+        raise ValueError(f"{key} must be true/false or yes/no")
+
+    def csv_values(key: str, label: str, default: str = "") -> list[str]:
+        return [item.strip() for item in ask(key, label, default).split(",") if item.strip()]
+
     print("Performance QA common configuration wizard")
-    engine = input("Engine [auto|jmeter|k6]: ").strip().lower() or "auto"
-    test_type = input("Test type [smoke|load|stress|spike|soak|volume|scalability|custom]: ").strip().lower() or "smoke"
-    model = input("Workload model [concurrent-users|request-rate|total-iterations]: ").strip().lower()
-    model = model or "concurrent-users"
-    base_url = input("Target base URL: ").strip()
-    environment = input("Environment [dev|qa|staging|production]: ").strip() or "qa"
+    engine = ask("PERF_ENGINE", "Engine (auto|jmeter|k6)", "auto").lower()
+    test_type = ask(
+        "PERF_TEST_TYPE",
+        "Test type (smoke|load|stress|spike|soak|volume|scalability|custom)",
+        "smoke",
+    ).lower()
+    model = ask(
+        "PERF_WORKLOAD_MODEL",
+        "Workload model (concurrent-users|request-rate|total-iterations)",
+        "concurrent-users",
+    ).lower()
+    base_url = ask("PERF_TARGET_BASE_URL", "Target base URL", required=True)
+    environment = ask(
+        "PERF_TARGET_ENVIRONMENT",
+        "Environment (dev|qa|staging|production)",
+        "qa",
+        required=True,
+    )
     workload: dict[str, Any] = {"model": model}
     if model == "concurrent-users":
         workload.update(
             {
-                "users": int(input("Virtual users: ").strip() or "1"),
-                "rampUp": input("Ramp-up [30s]: ").strip() or "30s",
-                "holdDuration": input("Hold duration [2m]: ").strip() or "2m",
-                "rampDown": input("Ramp-down [30s]: ").strip() or "30s",
-                "thinkTime": input("Think time [1s]: ").strip() or "1s",
+                "users": number("PERF_USERS", "Virtual users", "1", int),
+                "rampUp": ask("PERF_RAMP_UP", "Ramp-up", "30s"),
+                "holdDuration": ask("PERF_HOLD_DURATION", "Hold duration", "2m"),
+                "rampDown": ask("PERF_RAMP_DOWN", "Ramp-down", "30s"),
+                "thinkTime": ask("PERF_THINK_TIME", "Think time", "1s"),
             }
         )
     elif model == "request-rate":
         workload.update(
             {
-                "targetRate": float(input("Target requests per time unit: ").strip()),
-                "timeUnit": input("Time unit [1s]: ").strip() or "1s",
-                "preAllocatedVUs": int(input("Pre-allocated VUs: ").strip()),
-                "maxVUs": int(input("Maximum VUs: ").strip()),
-                "holdDuration": input("Duration [10m]: ").strip() or "10m",
+                "targetRate": number("PERF_TARGET_RATE", "Target requests per time unit", "10", float),
+                "timeUnit": ask("PERF_TIME_UNIT", "Time unit", "1s"),
+                "preAllocatedVUs": number("PERF_PRE_ALLOCATED_VUS", "Pre-allocated VUs", "2", int),
+                "maxVUs": number("PERF_MAX_VUS", "Maximum VUs", "10", int),
+                "holdDuration": ask("PERF_HOLD_DURATION", "Duration", "10m"),
                 "rampUp": "0s",
                 "rampDown": "0s",
                 "thinkTime": "0s",
@@ -261,63 +343,82 @@ def wizard(output: Path) -> None:
     else:
         workload.update(
             {
-                "iterations": int(input("Total iterations: ").strip()),
-                "users": int(input("Virtual users [1]: ").strip() or "1"),
-                "holdDuration": input("Maximum duration [10m]: ").strip() or "10m",
+                "iterations": number("PERF_ITERATIONS", "Total iterations", "100", int),
+                "users": number("PERF_USERS", "Virtual users", "1", int),
+                "holdDuration": ask("PERF_HOLD_DURATION", "Maximum duration", "10m"),
                 "rampUp": "0s",
                 "rampDown": "0s",
-                "thinkTime": input("Think time [1s]: ").strip() or "1s",
+                "thinkTime": ask("PERF_THINK_TIME", "Think time", "1s"),
             }
         )
+    test_data_file = ask("PERF_TEST_DATA_FILE", "Test data file", "")
     config = {
         "engine": engine,
         "testType": test_type,
         "target": {
             "environment": environment,
             "baseUrl": base_url,
-            "owner": input("System owner: ").strip(),
-            "authorizationReference": input("Authorization reference: ").strip(),
+            "owner": ask("PERF_TARGET_OWNER", "System owner", required=True),
+            "authorizationReference": ask(
+                "PERF_AUTHORIZATION_REFERENCE",
+                "Authorization reference",
+                required=True,
+            ),
             "production": environment.lower() in {"prod", "production"},
         },
         "workload": workload,
         "thresholds": {
-            "p95Ms": float(input("Maximum P95 ms [1000]: ").strip() or "1000"),
-            "p99Ms": float(input("Maximum P99 ms [2000]: ").strip() or "2000"),
-            "maxErrorRate": float(input("Maximum error rate [0.01]: ").strip() or "0.01"),
-            "minRequestsPerSecond": float(input("Minimum requests/second [0]: ").strip() or "0"),
-            "abortOnFailure": (input("Abort on failure [yes|no]: ").strip().lower() == "yes"),
+            "p95Ms": number("PERF_P95_MS", "Maximum P95 ms", "1000", float),
+            "p99Ms": number("PERF_P99_MS", "Maximum P99 ms", "2000", float),
+            "maxErrorRate": number("PERF_MAX_ERROR_RATE", "Maximum error rate", "0.01", float),
+            "minRequestsPerSecond": number(
+                "PERF_MIN_REQUESTS_PER_SECOND", "Minimum requests/second", "0", float
+            ),
+            "abortOnFailure": boolean("PERF_ABORT_ON_FAILURE", "Abort on failure"),
         },
-        "script": {"path": input("Existing .jmx/.js/.ts path, or blank to generate: ").strip() or None},
+        "script": {
+            "path": ask("PERF_SCRIPT_PATH", "Existing .jmx/.js/.ts path, or blank to generate", "") or None
+        },
         "requests": [],
         "safety": {
-            "maxUsers": 100,
-            "abortConditions": [
-                item.strip()
-                for item in input("Abort conditions, comma-separated: ").split(",")
-                if item.strip()
-            ],
-            "cleanup": input("Cleanup: ").strip(),
-            "monitoring": input("Monitoring reference: ").strip(),
+            "maxUsers": number("PERF_MAX_USERS", "Safety maximum users", "100", int),
+            "abortConditions": csv_values(
+                "PERF_ABORT_CONDITIONS",
+                "Abort conditions, comma-separated",
+                "error rate exceeds agreed limit, service health check fails",
+            ),
+            "cleanup": ask("PERF_CLEANUP", "Cleanup", "no mutated test data"),
+            "monitoring": ask("PERF_MONITORING", "Monitoring reference", "service dashboard"),
         },
         "report": {"html": True, "markdown": True, "json": True, "keepRawResult": True},
     }
+    if test_data_file:
+        config["testData"] = {
+            "file": test_data_file,
+            "variables": ask("PERF_TEST_DATA_VARIABLES", "Test data variables", ""),
+            "uniquePerUser": boolean("PERF_TEST_DATA_UNIQUE_PER_USER", "Unique data per user", "false"),
+        }
     if test_type == "volume":
         config["dataProfile"] = {
-            "datasetReference": input("Dataset reference: ").strip(),
-            "records": int(input("Record count [100000]: ").strip() or "100000"),
-            "payloadSizeBytes": int(input("Payload size bytes [1024]: ").strip() or "1024"),
-            "cleanup": input("Volume cleanup: ").strip(),
-            "integrityCheck": input("Data integrity check: ").strip(),
+            "datasetReference": ask("PERF_DATASET_REFERENCE", "Dataset reference", required=True),
+            "records": number("PERF_RECORDS", "Record count", "100000", int),
+            "payloadSizeBytes": number("PERF_PAYLOAD_SIZE_BYTES", "Payload size bytes", "1024", int),
+            "cleanup": ask("PERF_VOLUME_CLEANUP", "Volume cleanup", "remove the isolated tenant"),
+            "integrityCheck": ask(
+                "PERF_INTEGRITY_CHECK",
+                "Data integrity check",
+                "compare record count and checksum",
+            ),
         }
     elif test_type == "scalability":
         config["scalability"] = {
-            "comparisonGroup": input("Scalability comparison group: ").strip(),
-            "profile": input("Resource profile name: ").strip(),
-            "resourceReference": input("Resource reference: ").strip(),
+            "comparisonGroup": ask("PERF_COMPARISON_GROUP", "Scalability comparison group", required=True),
+            "profile": ask("PERF_RESOURCE_PROFILE", "Resource profile name", required=True),
+            "resourceReference": ask("PERF_RESOURCE_REFERENCE", "Resource reference", required=True),
             "expectedCapacity": {
-                "minUsers": int(input("Minimum supported users [100]: ").strip() or "100"),
-                "minRequestsPerSecond": float(
-                    input("Minimum requests/second [1]: ").strip() or "1"
+                "minUsers": number("PERF_MIN_CAPACITY_USERS", "Minimum supported users", "100", int),
+                "minRequestsPerSecond": number(
+                    "PERF_MIN_CAPACITY_RPS", "Minimum requests/second", "1", float
                 ),
             },
         }
@@ -336,6 +437,15 @@ def main() -> int:
 
     wizard_parser = subparsers.add_parser("wizard")
     wizard_parser.add_argument("--output", default="run-config.yaml")
+    wizard_parser.add_argument(
+        "--env-file",
+        help="dotenv file containing PERF_* defaults; values are never printed or executed as shell code",
+    )
+    wizard_parser.add_argument(
+        "--non-interactive",
+        action="store_true",
+        help="generate the config from env values and fail when a required value is missing",
+    )
 
     validate_parser = subparsers.add_parser("validate")
     validate_parser.add_argument("--config", required=True)
@@ -369,7 +479,11 @@ def main() -> int:
         elif args.command == "discover":
             emit(discover(Path(args.root).resolve()))
         elif args.command == "wizard":
-            wizard(Path(args.output))
+            wizard(
+                Path(args.output),
+                Path(args.env_file) if args.env_file else None,
+                args.non_interactive,
+            )
         elif args.command == "validate":
             config, warnings = load_validated(Path(args.config))
             engine, script, found = resolve_engine(config, Path(args.config).resolve().parent)
