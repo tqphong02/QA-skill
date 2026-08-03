@@ -24,18 +24,23 @@
 
 ## 2. Locator strategy (priority order)
 
-Prefer resilient locators that survive styling/structure churn:
+Prefer locators selected from observed FE/live DOM evidence. Use this exact order:
 
-1. `getByRole(role, { name })` — best, mirrors accessibility (e.g. `getByRole('button', { name: /sign in/i })`).
-2. `getByLabel(text)` — form fields (`getByLabel('Password')`).
-3. `getByPlaceholder(text)`.
-4. `getByTestId('login-submit')` — stable, agreed with frontend team. Use when no good role/label.
-5. `getByText(text)` — for non-interactive content assertions.
-6. CSS / XPath — **last resort**. Brittle; only when nothing else works.
+1. `getByTestId('login-submit')` — first only when an existing FE-owned test-id is present in the FE source/contract or live DOM and is runtime-verified
+2. Stable `id` — only after runtime uniqueness verification
+3. Stable CSS attributes/classes — for example `[name="email"]` or `[type="password"]`; never use generated classes
+4. `getByRole(role, { name })`, `getByLabel(text)`, `getByPlaceholder(text)` and `getByText(text)` — semantic alternatives when the first three are unavailable or ambiguous
+5. Short anchored XPath — last resort, with a recorded reason and live verification
 
-**`data-testid` convention:** `<component>-<element>` (e.g. `login-email`, `cart-total`). Coordinate with frontend so test IDs are stable and meaningful (not auto-generated).
+If no FE repository or contract is available, do not invent or inject `data-testid`; record that the test-id candidate is unavailable and continue with `id → CSS → semantic → XPath`. If the live DOM already exposes a test-id, it still must pass the same verification gate
 
-**Avoid:** `:nth-child()`, auto-generated classes (`css-1abc2d`), full XPath trees.
+**`data-testid` convention:** an existing FE-owned `<component>-<element>` value (e.g. `login-email`, `cart-total`). Adding a new test-id is a separate FE change, not an automation fallback
+
+**Verification gate:** Before committing a selector, prove `count=1`, visibility and actionability for the requested operation in the same route/role/state. Do not use `.first()` or `.last()` to hide multiple matches
+
+**Avoid:** `:nth-child()`, auto-generated classes (`css-1abc2d`), full XPath trees, selectors copied from screenshots without DOM evidence and guessed test-ids
+
+See [selector-discovery.md](selector-discovery.md) for candidate generation, XPath policy and the evidence manifest
 
 ## 3. BasePage contract
 
@@ -117,7 +122,8 @@ use: {
 | Anti-pattern | Fix |
 |---|---|
 | `expect()` inside page object | Move assertion to spec; page returns data |
-| Raw CSS / `:nth-child` locators | Use `getByRole` / `getByTestId` |
+| Raw CSS / `:nth-child` locators | Apply `testid → id → CSS → semantic → XPath`; reject generated CSS and positional selectors |
+| Guessed XPath or selector copied from testcase prose | Inspect live DOM, verify uniqueness/actionability and record selector evidence |
 | `page.waitForTimeout(3000)` | Wait for a signal: `waitForResponse`, `expect(locator).toBeVisible()` |
 | Login inside every test | Use `storageState` fixture |
 | One mega-test doing 5 things | Split into focused tests |

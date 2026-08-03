@@ -13,6 +13,7 @@
     "test:regression": "playwright test --grep-invert @perf",
     "quality-gate": "node scripts/quality-gate.mjs --config quality-gates.json --report reports/playwright.json",
     "quality-gate:config": "node -e \"const c=require('./quality-gates.json'); if(!c.version||!c.thresholds) process.exit(1); console.log('quality-gates.json PASS')\"",
+    "traceability": "node scripts/verify-testcase-traceability.mjs",
 
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",

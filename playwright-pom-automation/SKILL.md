@@ -20,6 +20,8 @@ Covers **UI · API · component · contract · visual · accessibility · perfor
 3. Keep assertions in specs, tag each executable test, and isolate data by worker and retry
 4. Do not run against production or create external state without an explicit target and cleanup contract
 5. Run placeholder, TypeScript and relevant test checks before handing the suite to CI
+6. Resolve every UI target from the shared testcase `execution` contract and verify its locator in the live target DOM before committing selector code
+7. Run `scripts/verify-testcase-traceability.mjs` and hand off its JSON only when testcase mapping and selector evidence are `PASS`
 
 ## The trap this skill exists to prevent
 
@@ -34,7 +36,7 @@ Read the **Decision tree** below → pick the right reference → copy the templ
 
 | What the user wants | Read reference | Copy template |
 |---|---|---|
-| UI test, page object, locator, click/fill flow | `references/ui-testing.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |
+| UI test, page object, locator, click/fill flow | `references/ui-testing.md` + `references/selector-discovery.md` | `pages/base.page.ts`, `pages/example.page.ts`, `tests/ui/example.ui.spec.ts` |
 | API test, HTTP request, auth/token, schema | `references/api-testing.md` | `fixtures/api-client.ts`, `tests/api/example.api.spec.ts` |
 | Functional/E2E, business flow spanning UI+API | `references/ui-testing.md` + `references/api-testing.md` | `tests/functional/example.functional.spec.ts` |
 | Data-driven/parameterized test, dataset, parallel data isolation | `references/data-driven-testing.md` | `fixtures/data-driven.ts`, `test-data/cases/login.cases.ts`, `tests/ui/example.data-driven.ui.spec.ts` |
@@ -52,6 +54,7 @@ project-root/
 │   └── performance/   # *.perf.spec.ts (Tier 1) + k6/*.js (Tier 2)
 ├── pages/             # Page Object classes (POM) — one class per page
 ├── selectors/         # Centralized selector repo (NEW) ← single source of truth
+├── selector-evidence/ # Runtime verification manifest per feature
 ├── fixtures/          # Auth, isolated runtime data, API request context
 ├── test-data/         # Versioned typed datasets/cases (read-only inputs)
 ├── testdata/          # Runtime-generated data (gitignored)
@@ -79,14 +82,18 @@ selectors/
 ```
 
 Each `<feature>.selectors.ts` exports:
-1. **Raw selector strings** - `id`, `xpath`, `css` (when user specifies explicitly)
-2. **Locator factory** - `getByRole/getByLabel/getByTestId` (preferred)
+1. **Runtime-verified locator factories** - candidates are ordered as `getByTestId` → stable `id` → stable CSS → semantic locators → XPath
+2. **Raw selector strings** - `id`, `xpath`, `css` only when selector discovery records why they are necessary
 
 **Strategy priority** (most stable → most brittle):
-1. `getByRole` / `getByLabel` / `getByTestId` (⭐⭐⭐⭐⭐) - ALWAYS FIRST PRIORITY
-2. `id` (`#email`) - ⭐⭐⭐⭐
-3. `xpath` - ⭐⭐
-4. `css class` (`.btn-primary`) - ⭐ - AVOID, usually auto-generated
+1. `getByTestId(test_id)` (⭐⭐⭐⭐⭐) - only when an existing FE-owned test-id is present in the FE source/contract or the observed live DOM
+2. stable `id` (`#email`) (⭐⭐⭐⭐) - only after uniqueness verification
+3. stable CSS (`[name="email"]`, `[type="password"]`, an agreed stable class) (⭐⭐⭐) - never generated classes
+4. `getByRole` / `getByLabel` / `getByPlaceholder` / `getByText` (⭐⭐⭐) - use observed semantic evidence when the first three are unavailable or ambiguous
+5. short anchored XPath (⭐⭐) - last resort with a recorded reason and runtime evidence
+6. generated CSS classes, full XPath and positional selectors - forbidden
+
+`data-testid` is not a value the automation agent may invent or inject into the application. If an FE repository or FE contract is available, inspect it first and use the existing stable test-id only after live verification. If no FE repository is available, record `testid.available=false` and continue with `id → CSS → semantic → XPath`; a test-id may be selected only when the live DOM already exposes and verifies one
 
 **Pattern for Page Object** (self-healing when UI changes):
 ```typescript
@@ -97,16 +104,33 @@ protected heal(primary, fallbacks, description) {
 
 protected get loginBtn() {
   return this.heal(
-    this.page.getByRole('button', { name: /login|đăng nhập/i }),
+    this.page.getByTestId('login-submit'),
     [
-      this.page.getByTestId('login-submit'),
       this.page.locator('#login-btn'),
+      this.page.locator('[name="login"]'),
+      this.page.getByRole('button', { name: /login|đăng nhập/i }),
       this.page.getByText('Đăng nhập', { exact: true }),
     ],
     'login button'
   );
 }
 ```
+
+The `heal` example is illustrative only for a controlled discovery layer. Do not use unverified `.or()` fallbacks in CI tests: two matching fallbacks can cause strict-mode failures or hide a selector regression. Normal POM code must select one runtime-verified locator and fail clearly when it becomes ambiguous
+
+### 4a. Runtime selector discovery gate
+
+Before writing a selector for a target key such as `login_submit`, read [references/selector-discovery.md](references/selector-discovery.md) and complete the following loop:
+
+1. Resolve the testcase entry route, role, locale and data
+2. Inspect the same browser session's accessibility tree and DOM
+3. Build ordered candidates from the observed FE/live DOM: existing test-id, stable ID, stable CSS, semantic locators, then short anchored XPath
+4. If no FE source/contract exists, do not invent a test-id; continue at the next available candidate
+5. Verify count, visibility and actionability; do not use `.first()` to hide ambiguity
+6. Record the ordered candidates, selected strategy, locator, route/state, verification result and timestamp in `selector-evidence/<feature>.json`
+7. Commit only the verified locator to `selectors/<feature>.selectors.ts`
+
+If no candidate is unique and actionable, stop with a selector blocker and request a stable test-id, id, CSS attribute or semantic scope. Do not guess an XPath
 
 ### 4b. TypeScript `readonly` pattern (mandatory cho mọi POM)
 
@@ -154,7 +178,21 @@ protected get loginBtn() {
 | Locators in `selectors/` | Page objects import from `../selectors`. DO NOT hardcode locator in page |
 | Action methods NO `expect()` | Page object = click/fill/read + return. **Assertions in spec file**. |
 | `BasePage` | Shared helpers: `waitForLoad`, navigation, `waitForResponse`, text extraction |
-| `data-testid` | Name as `<component>-<element>`, consistent with FE team |
+| `data-testid` | Use only an existing FE-owned `<component>-<element>` contract; never invent it in automation |
+
+### 5a. Testcase-to-code traceability
+
+Read the shared contract in [../testcase-template/references/execution-contract.md](../testcase-template/references/execution-contract.md) before generating code
+
+- One testcase ID maps to one `test()` block unless the user explicitly requests a different grouping
+- `execution.entry` maps to fixture/setup and route navigation
+- Each `[S##]` maps to one ordered action or Page Object method
+- Step assertions map to intermediate `expect()` calls; `outcome.assertions` map to final business assertions
+- `target.key` maps to exactly one selector entry and one Page Object getter/action surface
+- `cleanup` maps to `finally` or fixture teardown for mutating cases
+- A legacy text-only testcase must be normalized or marked not automatable before code generation
+
+After generation, run [references/automation-audit.md](references/automation-audit.md). The audit records the testcase source hash, testcase ID → spec mapping, target key → selector evidence mapping and token measurement. A green TypeScript compile alone does not prove that the correct testcase or locator was used
 
 ### 6. Add API layer (API testing conventions)
 - Default to using Playwright `request` fixture (`APIRequestContext`).
@@ -262,13 +300,16 @@ Filter:
 
 ### 12. Self-check before delivering
 - [ ] **`selectors/` repo created** for every page — NO hardcoded locators
+- [ ] Every selector has runtime evidence: target key, ordered candidates, selected strategy, count=1, visible and actionable when required
+- [ ] `npm run traceability -- --testcases <generated-markdown>` passes and `reports/testcase-automation-traceability.json` is archived
+- [ ] XPath/CSS appears only with a recorded fallback reason; no full XPath, generated class or positional selector
 - [ ] Page Object has NO `expect()` in action methods
 - [ ] CRUD tests clean exact created IDs in `finally`/fixture teardown; `afterAll` is limited to worker-owned serial lifecycles
 - [ ] DDT rows are typed, read-only, have unique stable IDs, and generate one test per row
 - [ ] Mutating parallel tests use `testData` namespace or a non-shared account from `TEST_ACCOUNTS_JSON`
 - [ ] Runtime stores/files are isolated by worker/test; no shared JSON read-modify-write
 - [ ] Retry/repeat data keys include `retry` and `repeatEachIndex`
-- [ ] `data-testid` named by convention `<component>-<element>`
+- [ ] `data-testid` is used only when an existing FE-owned `<component>-<element>` value was found and verified
 - [ ] CI/CD has 2 platform templates: Jenkins + GitHub Actions
 - [ ] Secrets via env vars/credentials, NOT hardcoded
 - [ ] Allure annotations (step, attachment) for UI/API/perf
@@ -286,7 +327,9 @@ Filter:
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, use `getByRole`/`getByTestId` |
+| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, apply `testid → id → CSS → semantic → XPath` |
+| Selector was copied or guessed from testcase prose | Prose does not prove DOM identity; wrong element may still be clickable | Inspect the live DOM, verify count/visibility/actionability and record selector evidence |
+| XPath matches more than one element | `.first()` hides an ambiguous target and can click the wrong control | Narrow by `testid → id → CSS → semantic` or block and request a stable target contract |
 | Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |
 | Test creates data but no cleanup | DB pollution, subsequent tests fail due to old data | Delete exact owned IDs in `finally`/fixture teardown |
 | DDT loop reuses one mutable payload object | Rows/workers overwrite each other | Keep case rows `readonly`; build a fresh runtime payload inside each test |
@@ -299,7 +342,9 @@ Filter:
 
 ## Common mistakes
 
-- **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts.
+- **Project-agnostic**: sample code must NOT contain specific domain/URL/business logic. Each project adapts. The skill repository stores reusable templates only; copy `assets/templates/` into the target automation project before adding real project data
+
+- **Project files in the skill**: do not add a project's `.env`, credentials, auth state, live selector evidence, testcase rows or runtime data here. Use the copied project's `.env`, `fixtures/`, `test-data/`, `testdata/` and `selector-evidence/` directories
 
 - **New scripts must be idempotent**: running multiple times must not create stale data. Use `withRevert()`, fixture teardown, or exact-ID cleanup in `finally`.
 
@@ -316,13 +361,17 @@ Filter:
 ## References
 
 ### Templates (copy from `assets/templates/`)
+- `assets/templates/.env.example` — safe variable contract; copy to the target project as `.env`, never fill secrets here
 - `assets/templates/Jenkinsfile`
 - `assets/templates/github-actions-ci.yml`
 - `assets/templates/playwright.config.ts`
 - `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders
 - `assets/templates/fixtures/api-client.ts`
+- `assets/templates/fixtures/auth.ts`, `env.ts`, `session.ts` — auth/session/config boundaries
 - `assets/templates/fixtures/data-driven.ts`
+- `assets/templates/fixtures/test-data.ts`, `global-setup.ts`, `global-teardown.ts`
 - `assets/templates/test-data/cases/login.cases.ts`
+- `assets/templates/testdata/README.md` — runtime-generated data boundary (gitignored)
 - `assets/templates/pages/base.page.ts`, `pages/example.page.ts`
 - `assets/templates/selectors/index.ts`, `selectors/login.selectors.ts`
 - `assets/templates/tests/api/example.api.spec.ts`
@@ -333,6 +382,8 @@ Filter:
 
 ### Reference docs (`references/`)
 - [references/ui-testing.md](references/ui-testing.md) — UI test patterns, page object examples
+- [references/selector-discovery.md](references/selector-discovery.md) — runtime locator discovery, XPath policy and evidence
+- [references/automation-audit.md](references/automation-audit.md) — testcase/spec/selector traceability, priority gate and token measurement
 - [references/api-testing.md](references/api-testing.md) — API tests with zod schema, auth fixtures
 - [references/data-driven-testing.md](references/data-driven-testing.md) — typed datasets, worker/test namespaces, account pools, cleanup
 - [references/performance-testing.md](references/performance-testing.md) — Playwright perf + k6, escalation matrix

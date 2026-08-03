@@ -228,6 +228,91 @@ function readSheetTestcases(source, sheetName) {
   return runPythonJson(commandArgs);
 }
 
+const STRUCTURED_STEP_MARKER = /\[(S\d{2,})\]/i;
+const OUTCOME_MARKER = /\[OUTCOME\]/i;
+const CLEANUP_MARKER = /\[CLEANUP\]/i;
+const TARGET_MARKER = /\s*\|\s*Đối tượng:\s*(.*?)\s*\[([^\]]+)\]/i;
+
+function stripLineNumber(value) {
+  return String(value || '').trim().replace(/^\d+\.\s*/, '').trim();
+}
+
+/**
+ * Parse the stable markers emitted by testcase-template into a worker-facing
+ * contract. Legacy prose remains available under procedure/expected but is
+ * explicitly marked so a worker cannot mistake it for a verified flow
+ */
+export function parseStructuredExecutionContract(procedure, expected) {
+  const procedureLines = String(procedure || '')
+    .split(/\r?\n/)
+    .map(stripLineNumber)
+    .filter(Boolean);
+  const expectedLines = String(expected || '')
+    .split(/\r?\n/)
+    .map(stripLineNumber)
+    .filter(Boolean);
+  const cleanup = procedureLines
+    .filter((line) => CLEANUP_MARKER.test(line))
+    .map((line) => line.replace(CLEANUP_MARKER, '').trim())
+    .filter(Boolean);
+  const stepLines = procedureLines.filter(
+    (line) => STRUCTURED_STEP_MARKER.test(line) && !CLEANUP_MARKER.test(line),
+  );
+  if (!stepLines.length) {
+    return {
+      schema_version: null,
+      status: 'legacy',
+      steps: [],
+      outcome_assertions: [],
+      cleanup,
+    };
+  }
+
+  const steps = stepLines.map((line) => {
+    const marker = line.match(STRUCTURED_STEP_MARKER);
+    const id = marker[1].toUpperCase();
+    const content = line.replace(STRUCTURED_STEP_MARKER, '').trim();
+    const targetMarker = content.match(TARGET_MARKER);
+    const withoutTarget = targetMarker
+      ? content.replace(TARGET_MARKER, '').trim()
+      : content;
+    const waitMarker = withoutTarget.match(/\s+\|\s*Điều kiện tiếp tục:\s*(.*)$/i);
+    return {
+      id,
+      instruction: (waitMarker ? withoutTarget.slice(0, waitMarker.index) : withoutTarget).trim(),
+      target_name: targetMarker ? targetMarker[1].trim() : '',
+      target_key: targetMarker ? targetMarker[2].trim() : '',
+      wait_for: waitMarker ? waitMarker[1].trim() : '',
+      assertions: [],
+    };
+  });
+  const stepById = new Map(steps.map((step) => [step.id, step]));
+  const outcomeAssertions = [];
+  for (const line of expectedLines) {
+    if (OUTCOME_MARKER.test(line)) {
+      outcomeAssertions.push(line.replace(OUTCOME_MARKER, '').trim());
+      continue;
+    }
+    if (CLEANUP_MARKER.test(line)) {
+      cleanup.push(line.replace(CLEANUP_MARKER, '').trim());
+      continue;
+    }
+    const marker = line.match(STRUCTURED_STEP_MARKER);
+    if (!marker) continue;
+    const id = marker[1].toUpperCase();
+    const assertion = line.replace(STRUCTURED_STEP_MARKER, '').trim();
+    if (stepById.has(id) && assertion) stepById.get(id).assertions.push(assertion);
+  }
+
+  return {
+    schema_version: 1,
+    status: 'structured',
+    steps,
+    outcome_assertions: outcomeAssertions,
+    cleanup,
+  };
+}
+
 function getExportedKeysFile() {
   return path.join(SHEET_EVIDENCE_DIR, '_state', '.exported-keys.json');
 }
@@ -862,7 +947,14 @@ async function main() {
   const runDate = normalizeRunDate(getArg('--run-date', ''));
 
   const sheetData = readSheetTestcases(source, sheetName);
-  const allCases = Array.isArray(sheetData.testcases) ? sheetData.testcases : [];
+  const allCases = (Array.isArray(sheetData.testcases) ? sheetData.testcases : [])
+    .map((testcase) => ({
+      ...testcase,
+      execution_contract: parseStructuredExecutionContract(
+        testcase.procedure,
+        testcase.expected,
+      ),
+    }));
   if (!allCases.length) throw new Error(`Không tìm thấy testcase trong tab ${sheetData.sheet_name || sheetName}`);
 
   const allGroups = partitionByFunctionalGroup(allCases);

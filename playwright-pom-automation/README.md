@@ -55,6 +55,7 @@ assets/templates/
 │   ├── index.ts                      barrel export
 │   ├── login.selectors.ts            LoginLocators mẫu
 │   └── dashboard.selectors.ts        DashboardLocators mẫu
+├── selector-evidence/              ← Runtime DOM verification per target.key
 ├── fixtures/                      ← auth, test-data, session, env, global setup/teardown
 ├── test-data/                     ← typed, versioned, read-only DDT case rows
 ├── tests/
@@ -69,12 +70,15 @@ assets/templates/
 └── testcases/                     ← manual test case Excel template
 ```
 
+`assets/templates/` là phần reusable của skill và được copy sang project automation thật. Không đặt `.env` thật, credential, auth/storage state, live selector evidence, testcase hay runtime data của bất kỳ project nào vào repository skill; các file đó thuộc project đích. Template đã có sẵn `.env.example`, `fixtures/`, `test-data/` và `testdata/` để project đích tiếp tục dùng
+
 ## ➕ Thêm page mới (4 bước)
 
-1. Tạo `selectors/<feature>.selectors.ts` — gồm raw `as const` + factory `build<Feature>Locators(page)` + type alias
-2. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
-3. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
-4. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
+1. Read the testcase `execution` contract, then run selector discovery for every `target.key`
+2. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
+3. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
+4. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
+5. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
 
 Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing.md)**.
 
@@ -96,9 +100,12 @@ npm run lint                     # tsc --noEmit + eslint
 npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
+npm run traceability -- --testcases testcases/<feature>.md
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.
+
+`traceability` tạo `reports/testcase-automation-traceability.json`: file này ghi testcase Markdown đã đọc (kèm SHA-256), mapping TestCase ID → spec, target key → selector evidence và token measurement. Xem **[references/automation-audit.md](references/automation-audit.md)** để phân biệt provider-reported token với estimate
 
 ## 🔄 CI/CD
 

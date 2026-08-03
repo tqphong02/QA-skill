@@ -48,7 +48,7 @@ TEST_INTELLIGENCE =
 |---|---|---|
 | Exploratory, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
+| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md), and [testcase-template/references/execution-contract.md](../testcase-template/references/execution-contract.md) |
 | Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md), [references/PIPELINE.md](references/PIPELINE.md), and [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md) |
@@ -135,6 +135,10 @@ Apply the following exact order for all models, especially fast or small-context
      I=Result  J=Priority  K=Date  L=Tester  M=Notes
      ```
      Columns I-M (idx 8-12) are **write columns**; columns B-H (idx 1-7) are **read-only design**.
+   - If G/H contain `[S01]`, `[S02]` markers, treat the row as a structured execution contract: execute each step in order, verify its matching H assertion before continuing, then verify `[OUTCOME]`. Do not collapse the row into one blind click sequence
+   - Read [the shared execution contract](../testcase-template/references/execution-contract.md) when the testcase Markdown or JSON is available. `entry` is the required starting route/role/state/data, `target.key` identifies the semantic UI object, and `cleanup` is part of the contract for mutating flows
+   - For a legacy text-only row, normalize the missing step IDs, target, wait signal or final oracle during scoped discovery. If the missing field cannot be resolved from requirements, knowledge or the live page, mark the case `Untest` or `BLOCKED`; never invent an expected result or selector
+   - A semantic target is not a locator. Resolve the target against the same browser session's DOM and use the locator only after uniqueness, visibility and actionability are verified
    - Generate the functional-group worker plan first:
      ```bash
      node scripts/helpers/execute-sheet.mjs \
@@ -302,5 +306,6 @@ These must be observed at all times, even before reading any reference file:
 
 - [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — write deterministic test-as-code (DIFFERENT from this live exploratory)
 - [testcase-template](../testcase-template/SKILL.md) — document Excel test cases (DIFFERENT from this bug hunting)
+- [testcase-template execution contract](../testcase-template/references/execution-contract.md) — structured steps shared by Sheet execution and POM automation
 - [doc-to-md](../doc-to-md/SKILL.md) — convert PDF/DOCX to MD for AI to read spec
 - [mobile-qa](../mobile-qa/SKILL.md) — native Android/iOS Appium execution and authorized proxy interception

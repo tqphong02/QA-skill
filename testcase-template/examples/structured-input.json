@@ -1,0 +1,132 @@
+{
+  "project": {
+    "name": "Demo Web",
+    "code": "DEMO",
+    "device": "Web",
+    "version": "v1.0",
+    "priority": "High",
+    "test_date": "2026-08-03",
+    "author": "QA Team",
+    "reviewer": "Lead QA",
+    "description": "Structured testcase example",
+    "objective": "Verify a business flow can be executed manually and automated deterministically"
+  },
+  "source_document": "spec/login.md",
+  "requirements": [
+    { "id": "AC1", "text": "User đăng nhập thành công với tài khoản hợp lệ" }
+  ],
+  "sections": [
+    {
+      "title": "1.2. FUNCTION",
+      "kind": "function",
+      "groups": [
+        {
+          "name": "LOGIN",
+          "scenarios": [
+            {
+              "scenario_id": "SCN-LOG-001",
+              "requirement": "AC1",
+              "scenario_name": "Đăng nhập thành công",
+              "cases": [
+                {
+                  "type": "happy",
+                  "req": "AC1",
+                  "description": "Xác minh rằng người dùng có thể đăng nhập thành công với tài khoản hợp lệ",
+                  "priority": "High",
+                  "execution": {
+                    "version": 1,
+                    "mutates": false,
+                    "entry": {
+                      "route": "/login",
+                      "role": "Guest",
+                      "state": "Chưa đăng nhập",
+                      "data": {
+                        "email": "<valid_email>",
+                        "password": "<valid_password>"
+                      }
+                    },
+                    "steps": [
+                      {
+                        "id": "S01",
+                        "action": "navigate",
+                        "instruction": "Mở trình duyệt và truy cập trang đăng nhập: <BASE_URL>/login",
+                        "target": {
+                          "key": "login_page",
+                          "kind": "page",
+                          "name": "Trang đăng nhập",
+                          "route": "/login"
+                        },
+                        "wait_for": { "kind": "url", "value": "/login" },
+                        "assertions": [
+                          { "kind": "visible", "target": "login_form", "text": "Biểu mẫu đăng nhập hiển thị" }
+                        ]
+                      },
+                      {
+                        "id": "S02",
+                        "action": "fill",
+                        "instruction": "Tại ô Email, nhập <valid_email>",
+                        "target": {
+                          "key": "email_input",
+                          "kind": "field",
+                          "name": "Email",
+                          "role": "textbox",
+                          "label": "Email"
+                        },
+                        "value": "<valid_email>",
+                        "wait_for": { "kind": "value", "value": "<valid_email>" },
+                        "assertions": [
+                          { "kind": "value", "target": "email_input", "value": "<valid_email>", "text": "Ô Email hiển thị đúng giá trị đã nhập" }
+                        ]
+                      },
+                      {
+                        "id": "S03",
+                        "action": "fill",
+                        "instruction": "Tại ô Mật khẩu, nhập <valid_password>",
+                        "target": {
+                          "key": "password_input",
+                          "kind": "field",
+                          "name": "Mật khẩu",
+                          "role": "textbox",
+                          "label": "Mật khẩu"
+                        },
+                        "value": "<valid_password>",
+                        "wait_for": { "kind": "value", "value": "<valid_password>" },
+                        "assertions": [
+                          { "kind": "value", "target": "password_input", "value": "<valid_password>", "text": "Ô Mật khẩu đã nhận giá trị kiểm thử" }
+                        ]
+                      },
+                      {
+                        "id": "S04",
+                        "action": "click",
+                        "instruction": "Nhấp nút Đăng nhập",
+                        "target": {
+                          "key": "login_submit",
+                          "kind": "button",
+                          "name": "Đăng nhập",
+                          "role": "button"
+                        },
+                        "wait_for": { "kind": "url", "value": "/dashboard" },
+                        "assertions": [
+                          { "kind": "state", "target": "session", "value": "authenticated", "text": "Phiên đăng nhập được tạo" }
+                        ]
+                      }
+                    ],
+                    "outcome": {
+                      "state": "Đã đăng nhập",
+                      "route": "/dashboard",
+                      "assertions": [
+                        { "kind": "url", "value": "/dashboard", "text": "Trang chuyển đến Dashboard" },
+                        { "kind": "visible", "target": "dashboard_heading", "text": "Tiêu đề Dashboard hiển thị" }
+                      ]
+                    },
+                    "cleanup": "Đăng xuất và đóng phiên kiểm thử nếu môi trường yêu cầu"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

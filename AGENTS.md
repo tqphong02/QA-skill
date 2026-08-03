@@ -181,6 +181,9 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 ## Automation quality gates
 
 - Đọc `playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md` và `FLAKY-TEST-MANAGEMENT.md` trước khi tạo CI automation
+- Sau khi generate POM, chạy `scripts/verify-testcase-traceability.mjs` từ project automation; phải archive `reports/testcase-automation-traceability.json` với testcase source hash, TestCase ID mapping, selector evidence và token measurement
+- POM locator priority cố định là `data-testid → id → CSS ổn định → role/label/placeholder/text → XPath`; chỉ dùng `data-testid` có sẵn từ FE source/contract hoặc live DOM đã verify, không tự chèn test-id vào app
+- Skill repo chỉ giữ template reusable (`.env.example`, `fixtures/`, `test-data/`); `.env`, credential, auth state, live evidence và testcase/runtime data của project phải nằm ở automation project được scaffold
 - Retry-pass phải được phân loại `flaky`, giữ first-attempt và retry evidence, không tự biến thành PASS sạch
 - CI phải kiểm tra compile/lint, placeholder/secret, failed test, flaky rate, evidence, duration, declared coverage và supported browser matrix
 - Dùng component/contract/API ở lower test level; UI chỉ giữ critical business journeys; service virtualization phải có ít nhất một real-dependency check

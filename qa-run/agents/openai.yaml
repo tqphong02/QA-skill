@@ -1,4 +1,4 @@
 interface:
   display_name: "QA Run"
   short_description: "Risk-driven QA từ source, knowledge và runtime"
-  default_prompt: "Use $qa-run to recover business logic from source and saved knowledge, rank evidence-linked risks, and execute focused browser QA charters."
+  default_prompt: "Use $qa-run to recover business logic from source and saved knowledge, rank evidence-linked risks, and execute focused browser QA charters. For testcase rows, follow the shared S## execution contract step by step and block unresolved targets or oracles instead of guessing."

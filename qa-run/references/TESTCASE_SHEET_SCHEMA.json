@@ -37,6 +37,18 @@
   "read_only_columns": ["scenario_id", "scenario_name", "testcase_id", "description", "precondition", "procedure", "expected"],
   "write_columns":     ["result", "priority", "date", "tester", "note"],
 
+  "execution_contract": {
+    "source": "../testcase-template/references/execution-contract.md",
+    "structured_markers": {
+      "step": "[S##]",
+      "outcome": "[OUTCOME]",
+      "cleanup": "[CLEANUP]"
+    },
+    "execution_rule": "Run structured steps in order and verify the matching expected assertion before continuing",
+    "legacy_rule": "Text-only rows require scoped normalization; unresolved route, role, data, target, transition or expected result is Untest or BLOCKED",
+    "selector_rule": "Semantic target hints are candidates only; locator must be verified in the same runtime browser session with count=1, visible=true and actionable=true when applicable"
+  },
+
   "section_markers": {
     "ui":         "1.1. USER INTERFACE",
     "functional": "1.2. FUNCTION"

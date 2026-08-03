@@ -22,10 +22,13 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 
 1. **Tag mỗi test** (`test('happy path @ui', ...)`) → CI filter chính xác.
 2. **KHÔNG raw `page.locator(...)` trong spec** — instantiate Page Object trong `beforeEach`, gọi method.
-3. **`expect()` chỉ ở spec** — không assert trong Page Object method.
-4. **Một intent / test** — split flow dài thành nhiều test nhỏ (login → create → delete = 3 test riêng).
-5. **Cleanup data tạo ra** — exact ID trong `finally`/fixture teardown; chỉ dùng `afterAll` cho serial worker-owned lifecycle.
-6. **Parallel data isolation** — import `test` từ `fixtures/data-driven`, không dùng chung account/record/file mutable.
+3. Mỗi UI target phải map từ `execution.steps[].target.key` và có runtime selector evidence trước khi code được xem là sẵn sàng
+4. **`expect()` chỉ ở spec** — không assert trong Page Object method.
+5. **Một intent / test** — split flow dài thành nhiều test nhỏ (login → create → delete = 3 test riêng).
+6. **Cleanup data tạo ra** — exact ID trong `finally`/fixture teardown; chỉ dùng `afterAll` cho serial worker-owned lifecycle.
+7. **Parallel data isolation** — import `test` từ `fixtures/data-driven`, không dùng chung account/record/file mutable.
+
+Sau khi generate code, chạy `npm run traceability -- --testcases <generated-markdown>` để archive source hash, TestCase ID mapping và selector evidence
 
 ## 📂 Example files hiện có
 
@@ -42,3 +45,4 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 - **[references/api-testing.md](../../../references/api-testing.md)** — request-level + zod schema + auth fixture
 - **[references/data-driven-testing.md](../../../references/data-driven-testing.md)** — typed datasets + parallel worker/test isolation
 - **[references/performance-testing.md](../../../references/performance-testing.md)** — Tier 1 Playwright + Tier 2 k6 escalation
+- **[references/automation-audit.md](../../../references/automation-audit.md)** — testcase → spec → selector và token measurement

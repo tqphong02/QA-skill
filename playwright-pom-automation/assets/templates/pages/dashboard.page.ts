@@ -42,7 +42,7 @@ export class DashboardPage extends BasePage {
     await this.waitForLoad();
   }
 
-  /** Đếm số row hiện tại (data-testid ưu tiên; spec dùng cho assertion). */
+  /** Đếm số row hiện tại; template dùng test-id khi selector evidence đã xác nhận nó. */
   async getRowCount(): Promise<number> {
     return this.locs.rowByTestId.count();
   }

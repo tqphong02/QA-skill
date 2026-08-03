@@ -60,6 +60,11 @@ SENSITIVE_PAYLOAD_KEYS = {
     'password', 'token', 'access_token', 'refresh_token', 'api_key', 'apikey',
     'client_secret', 'secret'
 }
+EXECUTION_ACTIONS = {
+    'navigate', 'fill', 'clear', 'select', 'check', 'uncheck', 'click',
+    'press', 'upload', 'wait', 'observe', 'assert'
+}
+EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
 
 
 def dated_artifact_path(output_path):
@@ -125,6 +130,299 @@ def validate_api_secrets(value, path):
     elif isinstance(value, list):
         for index, item in enumerate(value):
             validate_api_secrets(item, f'{path}[{index}]')
+
+
+def _execution_target_name(target, field='execution.target'):
+    """Return the human-facing target name from a structured step target."""
+    if isinstance(target, dict):
+        value = target.get('name') or target.get('key') or target.get('route')
+    else:
+        value = target
+    value = human_text(value, field)
+    if not value:
+        raise ValueError(f'{field} must include a human-facing name or key')
+    return value
+
+
+def _execution_target_key(target):
+    if isinstance(target, dict):
+        return str(target.get('key') or target.get('name') or '').strip()
+    return str(target or '').strip()
+
+
+def _validate_selector_evidence(target, field):
+    """Reject unverified or incomplete selector evidence in testcase input."""
+    if not isinstance(target, dict):
+        return
+    evidence = target.get('selector_evidence')
+    if evidence is None:
+        return
+    if not isinstance(evidence, dict):
+        raise ValueError(f'{field}.selector_evidence must be an object')
+    status = str(evidence.get('status') or 'unresolved').strip().lower()
+    if status not in EXECUTION_SELECTOR_STATUSES:
+        raise ValueError(
+            f'{field}.selector_evidence.status must be one of '
+            f'{sorted(EXECUTION_SELECTOR_STATUSES)}'
+        )
+    if status != 'runtime_verified':
+        return
+    strategy = str(evidence.get('strategy') or '').strip().lower()
+    locator = str(evidence.get('locator') or '').strip()
+    verification = evidence.get('verification') or {}
+    if not strategy or not locator:
+        raise ValueError(
+            f'{field}.selector_evidence needs strategy and locator when runtime_verified'
+        )
+    if not isinstance(verification, dict):
+        raise ValueError(f'{field}.selector_evidence.verification must be an object')
+    if verification.get('count') != 1 or verification.get('visible') is not True:
+        raise ValueError(
+            f'{field}.selector_evidence must prove count=1 and visible=true'
+        )
+    if strategy == 'xpath' and not evidence.get('reason'):
+        raise ValueError(
+            f'{field}.selector_evidence.reason is required when strategy=xpath'
+        )
+
+
+def validate_execution_contract(case):
+    """Validate the optional structured contract used by qa-run and POM.
+
+    Legacy cases with only pre_condition/procedure/expected remain readable for
+    backward compatibility. New cases should provide `execution` so the same
+    source can drive manual execution and deterministic automation.
+    """
+    execution = case.get('execution')
+    if execution is None:
+        return None
+    if not isinstance(execution, dict):
+        raise ValueError('case.execution must be an object')
+    if case.get('api') is not None:
+        raise ValueError('case.execution cannot be combined with case.api')
+
+    version = execution.get('version', 1)
+    if version != 1:
+        raise ValueError('case.execution.version must be 1')
+
+    entry = execution.get('entry') or {}
+    if not isinstance(entry, dict):
+        raise ValueError('case.execution.entry must be an object')
+    if 'data' in entry:
+        validate_api_secrets(entry.get('data'), 'execution.entry.data')
+
+    steps = execution.get('steps')
+    if not isinstance(steps, list) or not steps:
+        raise ValueError('case.execution.steps must be a non-empty array')
+    step_ids = set()
+    normalized_steps = []
+    for index, step in enumerate(steps, 1):
+        if not isinstance(step, dict):
+            raise ValueError(f'execution.steps[{index}] must be an object')
+        step_id = str(step.get('id') or '').strip()
+        if not step_id:
+            raise ValueError(f'execution.steps[{index}].id is required')
+        if not re.fullmatch(r'S\d{2,}', step_id, re.IGNORECASE):
+            raise ValueError(
+                f'execution.steps[{index}].id must use the stable format S01, S02, ...'
+            )
+        if step_id in step_ids:
+            raise ValueError(f'execution.steps contains duplicate id: {step_id}')
+        step_ids.add(step_id)
+
+        action = str(step.get('action') or '').strip().lower()
+        if action not in EXECUTION_ACTIONS:
+            raise ValueError(
+                f'execution.steps[{index}].action must be one of '
+                f'{sorted(EXECUTION_ACTIONS)}'
+            )
+        instruction = human_text(step.get('instruction') or '', f'execution step {step_id}')
+        if not instruction:
+            raise ValueError(f'execution.steps[{index}].instruction is required')
+
+        target = step.get('target')
+        if action not in {'wait', 'observe', 'assert'} and target is None:
+            raise ValueError(
+                f'execution.steps[{index}].target is required for action={action}'
+            )
+        if target is not None:
+            if not isinstance(target, dict):
+                raise ValueError(
+                    f'execution.steps[{index}].target must include key, kind and name'
+                )
+            for target_field in ('key', 'kind', 'name'):
+                if not str(target.get(target_field) or '').strip():
+                    raise ValueError(
+                        f'execution.steps[{index}].target.{target_field} is required'
+                    )
+            _execution_target_name(target, f'execution.steps[{index}].target')
+            _validate_selector_evidence(target, f'execution.steps[{index}].target')
+
+        wait_for = step.get('wait_for')
+        if wait_for is not None and not isinstance(wait_for, (str, dict)):
+            raise ValueError(f'execution.steps[{index}].wait_for must be a string or object')
+
+        assertions = step.get('assertions') or []
+        if not isinstance(assertions, list):
+            raise ValueError(f'execution.steps[{index}].assertions must be an array')
+        if not assertions and wait_for is None:
+            raise ValueError(
+                f'execution.steps[{index}] needs assertions or wait_for so the step is verifiable'
+            )
+        for assertion_index, assertion in enumerate(assertions, 1):
+            if not isinstance(assertion, dict):
+                raise ValueError(
+                    f'execution.steps[{index}].assertions[{assertion_index}] must be an object'
+                )
+            if not assertion.get('text') and not assertion.get('kind'):
+                raise ValueError(
+                    f'execution.steps[{index}].assertions[{assertion_index}] needs text or kind'
+                )
+
+        normalized_steps.append({**step, 'id': step_id, 'action': action})
+
+    outcome = execution.get('outcome') or {}
+    if not isinstance(outcome, dict):
+        raise ValueError('case.execution.outcome must be an object')
+    outcome_assertions = outcome.get('assertions') or []
+    if not isinstance(outcome_assertions, list) or not outcome_assertions:
+        raise ValueError('case.execution.outcome.assertions must be a non-empty array')
+    for assertion_index, assertion in enumerate(outcome_assertions, 1):
+        if not isinstance(assertion, dict):
+            raise ValueError(f'execution.outcome.assertions[{assertion_index}] must be an object')
+        if not assertion.get('text') and not assertion.get('kind'):
+            raise ValueError(
+                f'execution.outcome.assertions[{assertion_index}] needs text or kind'
+            )
+
+    cleanup = execution.get('cleanup')
+    mutates = bool(execution.get('mutates', False))
+    if mutates and cleanup is None:
+        raise ValueError('case.execution.cleanup is required when execution.mutates=true')
+    if cleanup is not None and not isinstance(cleanup, (str, dict, list)):
+        raise ValueError('case.execution.cleanup must be a string, object or array')
+
+    return {**execution, 'entry': entry, 'steps': normalized_steps, 'outcome': outcome}
+
+
+def _render_execution_value(value):
+    if value is None:
+        return ''
+    if isinstance(value, (dict, list)):
+        return compact_json(value)
+    return human_text(value, 'execution value')
+
+
+def _render_wait_for(wait_for):
+    if wait_for is None:
+        return ''
+    if isinstance(wait_for, str):
+        return human_text(wait_for, 'wait_for')
+    kind = str(wait_for.get('kind') or '').strip().lower()
+    value = _render_execution_value(wait_for.get('value'))
+    if kind == 'url':
+        return f'URL chứa {value}' if value else 'URL tải xong'
+    if kind in {'visible', 'enabled', 'text', 'state'}:
+        return f'{kind}: {value}' if value else kind
+    if kind == 'response':
+        return f'Hoàn tất xử lý {value}'.strip()
+    return ' '.join(part for part in (kind, value) if part).strip()
+
+
+def _render_assertion(assertion):
+    text = human_text(assertion.get('text') or '', 'assertion.text')
+    if text:
+        return text
+    kind = str(assertion.get('kind') or '').strip().lower()
+    target = assertion.get('target_name') or assertion.get('target') or ''
+    target = human_text(target, 'assertion.target')
+    value = _render_execution_value(assertion.get('value') or assertion.get('expected'))
+    if kind == 'visible':
+        return f'{target} hiển thị' if target else 'Đối tượng hiển thị'
+    if kind == 'hidden':
+        return f'{target} không hiển thị' if target else 'Đối tượng không hiển thị'
+    if kind == 'url':
+        return f'URL chứa {value}' if value else 'URL chuyển đúng trang'
+    if kind == 'text':
+        return f'{target} hiển thị nội dung "{value}"'.strip()
+    if kind == 'count':
+        return f'{target} có số lượng {value}'.strip()
+    if kind in {'value', 'state', 'enabled', 'disabled'}:
+        return f'{target} có trạng thái/giá trị {value}'.strip()
+    return ' '.join(part for part in (target, kind, value) if part).strip() or 'Kết quả đúng theo yêu cầu'
+
+
+def _render_execution_case(case, execution):
+    entry = execution.get('entry') or {}
+    precondition_parts = []
+    if entry.get('role'):
+        precondition_parts.append(f'Vai trò: {entry["role"]}')
+    if entry.get('route'):
+        precondition_parts.append(f'Trang bắt đầu: {entry["route"]}')
+    if entry.get('state'):
+        precondition_parts.append(f'Trạng thái ban đầu: {entry["state"]}')
+    if entry.get('permissions'):
+        precondition_parts.append(f'Quyền cần có: {_render_execution_value(entry["permissions"])}')
+    if entry.get('data'):
+        precondition_parts.append(f'Dữ liệu chuẩn bị: {_render_execution_value(entry["data"])}')
+    precondition = '\n'.join(precondition_parts) or human_text(
+        case.get('pre_condition', ''), 'pre_condition'
+    )
+
+    procedure_lines = []
+    for index, step in enumerate(execution['steps'], 1):
+        instruction = human_text(step.get('instruction'), f'execution step {step["id"]}')
+        target = step.get('target')
+        target_suffix = ''
+        if target is not None:
+            target_name = _execution_target_name(target)
+            target_key = _execution_target_key(target)
+            target_suffix = f' | Đối tượng: {target_name} [{target_key}]'
+        wait_for = _render_wait_for(step.get('wait_for'))
+        suffix = f' | Điều kiện tiếp tục: {wait_for}' if wait_for else ''
+        procedure_lines.append(f'{index}. [{step["id"]}] {instruction}{target_suffix}{suffix}')
+    cleanup = execution.get('cleanup')
+    if cleanup is not None:
+        cleanup_items = cleanup if isinstance(cleanup, list) else [cleanup]
+        for item in cleanup_items:
+            if isinstance(item, dict):
+                instruction = item.get('instruction') or item.get('text') or ''
+            else:
+                instruction = item
+            if instruction:
+                procedure_lines.append(
+                    f'{len(procedure_lines) + 1}. [CLEANUP] {human_text(instruction, "cleanup")}'
+                )
+
+    expected_lines = []
+    for step in execution['steps']:
+        for assertion in step.get('assertions') or []:
+            expected_lines.append(f'[{step["id"]}] {_render_assertion(assertion)}')
+    for assertion in execution['outcome'].get('assertions') or []:
+        expected_lines.append(f'[OUTCOME] {_render_assertion(assertion)}')
+
+    return (
+        human_text(precondition, 'pre_condition'),
+        human_text('\n'.join(procedure_lines), 'procedure'),
+        human_text('\n'.join(f'{index}. {value}' for index, value in enumerate(expected_lines, 1)), 'expected'),
+    )
+
+
+def render_case(case):
+    """Render API, structured execution, or legacy text into F/G/H."""
+    if case.get('api') is not None:
+        if case.get('execution') is not None:
+            raise ValueError('case.api cannot be combined with case.execution')
+        return (*render_api_case(case), None)
+    execution = validate_execution_contract(case)
+    if execution is not None:
+        return (*_render_execution_case(case, execution), execution)
+    return (
+        human_text(case.get('pre_condition', ''), 'pre_condition'),
+        human_text(case.get('procedure', ''), 'procedure'),
+        human_text(case.get('expected', ''), 'expected'),
+        None,
+    )
 
 
 def render_api_case(case):
@@ -201,6 +499,95 @@ def append_markdown_block(lines, label, value):
         lines.append(f'  {line}')
 
 
+def _markdown_cell(value):
+    if value is None:
+        return ''
+    rendered = compact_json(value) if isinstance(value, (dict, list)) else str(value)
+    return rendered.replace('|', '\\|').replace('\n', '<br>')
+
+
+def _execution_target_hints(target):
+    if not isinstance(target, dict):
+        return ''
+    labels = (
+        ('kind', 'kind'),
+        ('role', 'role'),
+        ('label', 'label'),
+        ('placeholder', 'placeholder'),
+        ('test_id', 'test_id'),
+        ('id', 'id'),
+    )
+    return '; '.join(
+        f'{label}={_markdown_cell(target.get(key))}'
+        for key, label in labels
+        if target.get(key) not in (None, '')
+    )
+
+
+def append_execution_contract_markdown(lines, execution):
+    """Render the machine-facing contract without adding Excel columns."""
+    entry = execution.get('entry') or {}
+    lines.extend(['', '- **Execution contract:** `v1`', ''])
+    lines.append(
+        '- **Entry:** '
+        + '; '.join(
+            item for item in (
+                f'role={_markdown_cell(entry.get("role"))}' if entry.get('role') else '',
+                f'route={_markdown_cell(entry.get("route"))}' if entry.get('route') else '',
+                f'state={_markdown_cell(entry.get("state"))}' if entry.get('state') else '',
+                f'data={_markdown_cell(entry.get("data"))}' if entry.get('data') else '',
+            ) if item
+        )
+        or 'N/A'
+    )
+    lines.extend([
+        '',
+        '| Step | Action | Target key | Target | Semantic hints | Wait for | Step assertions |',
+        '|---|---|---|---|---|---|---|',
+    ])
+    selector_statuses = []
+    for step in execution.get('steps') or []:
+        target = step.get('target')
+        evidence = target.get('selector_evidence') if isinstance(target, dict) else None
+        selector_statuses.append(
+            'not_applicable'
+            if target is None
+            else str((evidence or {}).get('status') or 'unresolved').strip().lower()
+        )
+        assertions = '<br>'.join(
+            _markdown_cell(assertion.get('text') or _render_assertion(assertion))
+            for assertion in step.get('assertions') or []
+        ) or 'N/A'
+        lines.append(
+            '| ' + ' | '.join((
+                _markdown_cell(step.get('id')),
+                _markdown_cell(step.get('action')),
+                _markdown_cell(_execution_target_key(target)),
+                _markdown_cell(_execution_target_name(target) if target is not None else 'N/A'),
+                _execution_target_hints(target) or 'N/A',
+                _markdown_cell(_render_wait_for(step.get('wait_for'))) or 'N/A',
+                assertions,
+            )) + ' |'
+        )
+
+    lines.extend(['', '- **Outcome assertions:**'])
+    for assertion in execution.get('outcome', {}).get('assertions') or []:
+        lines.append(f'  - {_markdown_cell(assertion.get("text") or _render_assertion(assertion))}')
+    cleanup = execution.get('cleanup')
+    if cleanup is not None:
+        lines.append(f'- **Cleanup:** {_markdown_cell(cleanup)}')
+
+    if selector_statuses and all(status == 'not_applicable' for status in selector_statuses):
+        selector_summary = 'not_applicable for this non-UI step set'
+    elif selector_statuses and all(status == 'runtime_verified' for status in selector_statuses):
+        selector_summary = 'runtime_verified for every target'
+    elif any(status == 'runtime_verified' for status in selector_statuses):
+        selector_summary = 'partially runtime_verified; unresolved targets must be inspected'
+    else:
+        selector_summary = 'unresolved; POM must inspect the target DOM in the real environment'
+    lines.append(f'- **Selector status:** `{selector_summary}`')
+
+
 def write_testcase_markdown(data, output_path):
     """Write the complete AI-readable testcase design before Excel generation."""
     project = data.get('project') or {}
@@ -262,7 +649,7 @@ def write_testcase_markdown(data, output_path):
                     requirement = case.get('req') or scenario.get('requirement') or (
                         '(out-of-spec)' if case.get('type') == 'additional' else 'UNRESOLVED'
                     )
-                    pre_condition, procedure, expected = render_api_case(case)
+                    pre_condition, procedure, expected, execution = render_case(case)
                     lines.extend([f'##### `{test_id}` — {description}', ''])
                     lines.append(f'- **Type:** {type_label(case.get("type"))}')
                     lines.append(f'- **Requirement:** `{requirement}`')
@@ -270,6 +657,12 @@ def write_testcase_markdown(data, output_path):
                     append_markdown_block(lines, 'Pre-condition', pre_condition)
                     append_markdown_block(lines, 'Procedure', procedure)
                     append_markdown_block(lines, 'Expected Results', expected)
+                    if execution is not None:
+                        append_execution_contract_markdown(lines, execution)
+                    else:
+                        lines.append(
+                            '- **Automation readiness:** Legacy text-only case; add an `execution` contract before deterministic POM generation'
+                        )
                     lines.append('')
 
     with open(output_path, 'w', encoding='utf-8') as markdown_file:
@@ -572,7 +965,7 @@ def main():
                     ctype = case.get('type', 'happy')
                     # Description: KHÔNG prefix [STT N][TYPE] - ghi dạng manual "Xác minh rằng..."
                     desc = human_text(case.get('description', ''), 'description')
-                    pre_condition, procedure, expected_result = render_api_case(case)
+                    pre_condition, procedure, expected_result, _execution = render_case(case)
                     req = case.get('req') or sc.get('requirement', '')
                     note = f"Ref: {req}" if req else ("Ref: (out-of-spec)" if ctype == 'additional' else "")
                     vals = {

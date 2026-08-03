@@ -11,6 +11,7 @@ import {
   isVisualEvidenceReference,
   parseWorkerSelection,
   partitionByFunctionalGroup,
+  parseStructuredExecutionContract,
   resolveFunctionalGroupNames,
   resolveModuleConfirmation,
   resolveWorkerCount,
@@ -34,6 +35,27 @@ function testcase(row, group, overrides = {}) {
 
 test('Sheet workers: functional group is preferred over scenario and section module', () => {
   assert.equal(functionalGroupOf(testcase(1, 'LOGIN')), 'LOGIN');
+});
+
+test('Sheet workers: structured testcase markers become ordered execution steps', () => {
+  const contract = parseStructuredExecutionContract(
+    '1. [S01] Mở trang đăng nhập | Đối tượng: Trang đăng nhập [login_page] | Điều kiện tiếp tục: URL chứa /login\n2. [S02] Nhấp nút Đăng nhập | Đối tượng: Đăng nhập [login_submit]\n3. [CLEANUP] Đăng xuất',
+    '1. [S01] Biểu mẫu hiển thị\n2. [S02] URL chuyển đến Dashboard\n3. [OUTCOME] Người dùng đã đăng nhập',
+  );
+  assert.equal(contract.status, 'structured');
+  assert.deepEqual(contract.steps.map(({ id }) => id), ['S01', 'S02']);
+  assert.equal(contract.steps[1].target_key, 'login_submit');
+  assert.equal(contract.steps[0].wait_for, 'URL chứa /login');
+  assert.deepEqual(contract.steps[1].assertions, ['URL chuyển đến Dashboard']);
+  assert.deepEqual(contract.outcome_assertions, ['Người dùng đã đăng nhập']);
+  assert.deepEqual(contract.cleanup, ['Đăng xuất']);
+});
+
+test('Sheet workers: text-only testcase is explicitly legacy', () => {
+  assert.equal(
+    parseStructuredExecutionContract('1. Mở trang đăng nhập', '1. Trang hiển thị').status,
+    'legacy',
+  );
 });
 
 test('Sheet workers: evidence path is grouped by function, date, run, and worker', () => {

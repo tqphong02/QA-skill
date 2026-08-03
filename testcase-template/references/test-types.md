@@ -42,6 +42,8 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 | **Procedure (G)** | One action per line; field/button name + exact input value; written in Vietnamese | Combining actions on one line; `POST`, `null`, `assert` |
 | **Expected (H)** | Describe what the Tester sees or can verify visually; written in Vietnamese | JSON body, HTTP status code, vague phrases |
 
+For new executable UI/FUNCTION cases, these two columns are generated from the shared `execution` contract. Read [execution-contract.md](execution-contract.md) for `entry`, `[S##]` steps, semantic targets, wait signals, step assertions, outcome and cleanup
+
 **Procedure — WRONG vs CORRECT:**
 
 ```

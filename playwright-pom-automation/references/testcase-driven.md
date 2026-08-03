@@ -142,6 +142,7 @@ Mỗi testcase nên có format thống nhất (theo `testcase-template`). Lưu t
 | **Test data** | ✅ | Input cụ thể (email, password,...) |
 | **Steps** | ✅ | Đánh số, mỗi step 1 hành động |
 | **Expected** | ✅ | Kết quả mong đợi, đo được |
+| **Execution contract** | ✅ cho case mới | Entry route/role/state/data, `[S##]` steps, semantic target, wait signal, step assertions, outcome and cleanup |
 | **Priority** | ✅ | High / Medium / Low |
 
 ### Ví dụ testcase cho Login (cover cả 8 loại)
@@ -162,22 +163,32 @@ Mỗi testcase nên có format thống nhất (theo `testcase-template`). Lưu t
 ## 4. Workflow 4 bước
 
 ### Bước 1 — Thu thập testcase
-- Đọc manual testcase từ `testcases/` (markdown/csv/Excel export từ `testcase-template` skill).
+- Đọc **Markdown companion do `testcase-template` sinh trước Excel** từ `testcases/`; Markdown là source AI-readable chứa `execution` contract, còn Excel là artifact cho manual execution/write-back
+- Nếu chỉ có Excel, dừng ở bước normalize/export sang Markdown; không tự đoán `target.key`, route hoặc locator từ cell F/G/H thiếu contract
 - **Đảm bảo đủ 8 loại** — nếu thiếu, bổ sung hoặc ghi rõ "không áp dụng cho feature này".
 - Mục tiêu: biết **bao nhiêu testcase, bao nhiêu page, bao nhiêu flow, bao nhiêu error path**.
 
-### Bước 2 — Derive Selectors từ testcase
-Từ mỗi testcase, identify element cần tương tác (từ Steps):
+### Bước 2 — Resolve Selectors từ testcase + runtime DOM
+Từ mỗi `execution.steps[].target.key`, identify semantic target cần tương tác từ Steps, sau đó inspect **live DOM trong đúng environment/role/route**. Testcase không cung cấp bằng chứng đủ để tự suy ra XPath
 
 ```typescript
-// selectors/login.selectors.ts — derived từ TC_LOGIN_01..08
+// selectors/login.selectors.ts — locators sau khi runtime verification
 export const loginSelectors = {
-  emailInputId: '#email',           // TC_LOGIN_01..08.step2
-  passwordInputId: '#password',     // TC_LOGIN_01..08.step3
-  submitButtonId: '#login-submit',  // TC_LOGIN_01.step4
-  errorMessageId: '#login-error',   // TC_LOGIN_05,06.expected
+  emailInput: (page: Page) => page.getByLabel('Email'),
+  passwordInput: (page: Page) => page.getByLabel('Mật khẩu'),
+  submitButton: (page: Page) => page.getByRole('button', { name: 'Đăng nhập' }),
 } as const;
 ```
+
+Selector selection is a verification task, not a text-generation task:
+
+1. Inspect existing FE-owned test-id, stable ID, stable CSS attributes/classes, role/name, label, placeholder, text and DOM scope
+2. Verify the candidate has `count=1`, is visible and is actionable for the requested action
+3. Select by `data-testid → id → CSS → role/label/placeholder/text → XPath`; if no FE source/contract exists, do not create a test-id and continue at the next candidate
+4. Record `target_key`, ordered candidates, selected strategy, locator, route/state and verification in `selector-evidence/<feature>.json`
+5. If the target is ambiguous, block and request a stable test-id/id/CSS/semantic scope; never add `.first()` or a full XPath to make the test compile
+
+Read [selector-discovery.md](selector-discovery.md) for the complete gate and evidence format
 
 ### Bước 3 — Derive Page Object từ testcase
 - 1 page → 1 class, **properties readonly**.
@@ -305,6 +316,9 @@ grep -c "test('TC_LOGIN_" tests/ui/login.ui.spec.ts
 # Verify đủ 8 loại
 grep -E "\[(happy|alternative|validation|edge|negative|error|ui|additional)\]" tests/ui/login.ui.spec.ts | wc -l
 # → 8 (đủ cả 8 loại)
+
+# Audit machine-readable: source hash + ID mapping + target key + selector evidence
+npm run traceability -- --testcases testcases/login.md
 ```
 
 ---
@@ -364,6 +378,8 @@ test('TC_LOGIN_01 [happy] — Login thành công @smoke', async ({ page }) => {
 - [ ] Allure labels đầy đủ (epic/feature/story/severity)
 - [ ] Mỗi page có 1 Page Object với readonly properties
 - [ ] Mỗi feature có file `selectors/<feature>.selectors.ts`
+- [ ] Mỗi `target.key` có selector evidence runtime với `count=1`, visible và actionable khi cần
+- [ ] Không có XPath/CSS đoán từ prose, full XPath, generated class hoặc positional selector
 - [ ] `tsconfig.json` strict mode (template trong SKILL.md)
 - [ ] `error` tests có mock `page.route()`, không phụ thuộc backend
 - [ ] `additional` tests có ghi chú rõ trong Allure

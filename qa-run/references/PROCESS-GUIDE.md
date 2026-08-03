@@ -80,6 +80,19 @@ For every Sheet testcase with verdict `Pass` or `Fail`:
 5. Do not reuse a pre-action screenshot as final-state evidence and do not mark `Pass`/`Fail` if the visual artifact is missing
 6. The executor rejects local media outside the testcase's assigned function/date directory
 
+### Structured testcase execution
+
+When a testcase row contains `[S01]`, `[S02]` markers, use the shared contract in `../testcase-template/references/execution-contract.md`
+
+1. Confirm the `entry` route, role, starting state and data before `S01`
+2. Execute one step at a time in the declared order; do not merge two marked steps into one action
+3. After each step, verify the matching `[S##]` assertion in H and the declared `wait_for` signal
+4. After the last action, verify every `[OUTCOME]` assertion and then perform `[CLEANUP]` in the same session when present
+5. If the semantic target is not uniquely identifiable in the live DOM, pause the testcase as `Untest` or `BLOCKED` with the missing target; do not invent an XPath or silently click a nearby element
+6. Correlate every critical transition with the same-session network, console and page-error observer required by the run
+
+Rows without markers are legacy text-only cases. They may be executed only after scoped discovery resolves their missing target, wait signal and oracle; otherwise they are not evidence for PASS
+
 ## Step 3 — Speed & Intelligence Optimization
 
 See [MCP-CHEATSHEET.md](MCP-CHEATSHEET.md) for the complete speed pattern table and intelligence checklist.

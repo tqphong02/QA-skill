@@ -26,6 +26,7 @@ Apply this exact order for all models:
 7. Create JSON with correct schema, preserve Scenario ID, Testcase ID and requirement reference
 8. Run `scripts/gen-testcases.py`; script must create `<output>.md` before `<output>.xlsx` with the same `Asia/Ho_Chi_Minh` date
 9. Read Markdown first then compare with Excel: number of cases, Scenario/Testcase ID and design content must match; columns I-M exist only in Excel and are left blank
+10. For every new UI/FUNCTION testcase that will be executed or automated, create the structured `execution` contract from [references/execution-contract.md](references/execution-contract.md); F/G/H are the human-readable projection of that contract, not a second source of truth
 
 If expected is not in requirements, pause that case in a clarification state; do not fabricate business rules.
 
@@ -96,10 +97,21 @@ WRONG vs CORRECT examples for login page:
     "cases": [{
       "type": "happy", "req": "AC1",
       "description": "Xác minh rằng người dùng có thể đăng nhập với email + password đúng",
-      "pre_condition": "Có account test",
-      "procedure": "1. Mở /login\n2. Nhập email + password\n3. Click nút Login",
-      "expected": "1. Đăng nhập thành công",
-      "priority": "High"
+      "priority": "High",
+      "execution": {
+        "version": 1,
+        "entry": {"route": "/login", "role": "Guest", "state": "Chưa đăng nhập", "data": {"email": "<valid_email>", "password": "<valid_password>"}},
+        "steps": [{
+          "id": "S01",
+          "action": "navigate",
+          "instruction": "Mở trình duyệt và truy cập trang đăng nhập: <BASE_URL>/login",
+          "target": {"key": "login_page", "kind": "page", "name": "Trang đăng nhập", "route": "/login"},
+          "wait_for": {"kind": "url", "value": "/login"},
+          "assertions": [{"kind": "visible", "target": "login_form", "text": "Biểu mẫu đăng nhập hiển thị"}]
+        }],
+        "outcome": {"assertions": [{"kind": "url", "value": "/dashboard", "text": "Trang chuyển đến Dashboard"}]},
+        "cleanup": "Đăng xuất nếu phiên kiểm thử được tạo"
+      }
     }]
   }]
 }
@@ -107,6 +119,8 @@ WRONG vs CORRECT examples for login page:
 - `scenario_name` (string) — functional group name, **SHARED** for multiple cases in same scenario
 - `scenario_id` (string) — scenario code, e.g. `SCN-LOG-001`
 - Each case has `type` (1 of 8) + `req` (trace to AC) - MANDATORY
+- New executable UI/FUNCTION cases have `execution` (version 1) with `entry`, ordered `steps`, `outcome.assertions` and `cleanup` when the flow mutates data
+- Each `execution.steps[]` has a stable ID, one atomic action, Vietnamese `instruction`, semantic `target`, `wait_for` or assertions; target locators are not guessed in this skill
 - In API mode specifically, each case adds `api` object; see [examples/sample-api-input.json](examples/sample-api-input.json). Without `api` object, generator uses `pre_condition`, `procedure`, `expected` as is
 
 ### 5. Run gen script
@@ -157,8 +171,8 @@ Original template `assets/Template.xlsx` intentionally keeps **many sample group
 | D | **Test case ID** (hardcoded) | `[CODE-NN]` (Functional) or `[CODE-UI-NN]` (UI). Sequential. |
 | E | **Description** (manual) | Start with "Verify that...", NO technical prefix |
 | F | Pre-condition | State/data required before step 1 |
-| G | Procedure | Numbered steps `1. ...\n2. ...` — manual language, detailed enough to execute without interpretation |
-| H | Expected Results | Observable, measurable outcome |
+| G | Procedure | Generated from `execution.steps[]`: numbered atomic steps with `[S##]`, exact action/target/value and wait condition |
+| H | Expected Results | Generated from step assertions plus `execution.outcome.assertions`; each check is observable and measurable |
 | I-M | **LEAVE BLANK** | Tester fills during execution |
 
 **Important**: Columns I-M are left empty by the generator. Script applies style only — no value fill. Testers fill these when running actual tests.
@@ -212,6 +226,20 @@ Describe exactly what the Tester sees or can verify after performing the steps. 
 | `null`, `undefined`, `NaN` | Để trống, không nhập gì |
 | `assert status == 200` | Kiểm tra trang chuyển hướng về Dashboard |
 
+### Execution contract for qa-run and POM
+
+The structured contract is mandatory for new executable UI/FUNCTION cases and is documented in [references/execution-contract.md](references/execution-contract.md)
+
+- `entry` must state the route, role, starting state, permissions and test data needed before `S01`
+- Every step must have one atomic action and a stable ID such as `S01`, `S02`; do not write “nhập dữ liệu rồi bấm nút” as one step
+- `target` describes the semantic UI object with a stable `key`, `kind`, human-facing `name` and known accessibility hints such as `role`, `label` or `test_id`
+- `wait_for` states the signal that allows the executor to continue; a fixed sleep is not an expected result
+- Step assertions verify each transition; `outcome.assertions` verifies the final business state, route, message, record or side effect
+- `cleanup` is required for flows that create or change data
+- Do not invent XPath or CSS from the requirement. Selector evidence is captured by POM only after runtime DOM verification
+
+Existing text-only cases remain backward-compatible, but the generator marks them `Legacy text-only`; convert them before deterministic automation
+
 ### Human-readable format
 
 - No trailing `.` at the end of Scenario Name, Description, Pre-condition, Procedure, or Expected Results
@@ -259,6 +287,8 @@ Xem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.m
 | Columns I-M pre-filled with data | Script applied value fill instead of style only | Verify `gen-testcases.py` branch applies style only, no value fill |
 | Description starts with `[STT]` or `[Type]` | Manual format violated | AI must reformat before writing to JSON |
 | Procedure is a single line combining multiple actions | Tester cannot identify where to act | Split each action into its own numbered step; include field/button name and input value |
+| New executable case has no `execution` object | qa-run and POM must infer state, target and assertions from prose | Add `entry`, `[S##]` steps, target keys, wait signals, step assertions, outcome and cleanup |
+| Target includes a guessed XPath | Locator may match the wrong element after a UI change | Keep semantic target hints in testcase; verify selector in the real DOM and record evidence in POM |
 | Procedure or Expected uses technical terms (`POST`, `HTTP 400`, `null`, `assert`) | Not manual-tester language | Replace with UI descriptions the tester sees (button names, displayed messages) |
 | Expected result is vague ("system works correctly", "error handled") | Not measurable; tester does not know what to check | State the exact message shown, the page redirected to, or data displayed |
 | Expected result contains JSON body or HTTP status code | Written as an API test; tester cannot verify visually | Replace with what the user sees on the UI |
@@ -293,6 +323,7 @@ Xem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.m
 
 - [assets/Template.xlsx](assets/Template.xlsx) — master template (239 KB), shared across all projects
 - [examples/sample-input.json](examples/sample-input.json) — complete JSON input example
+- [examples/structured-input.json](examples/structured-input.json) — execution contract example for qa-run and POM
 - [examples/sample-api-input.json](examples/sample-api-input.json) — optional, used only when user requests API testcases
 - [scripts/gen-testcases.py](scripts/gen-testcases.py) — generator script (openpyxl)
 - [scripts/import-api-spec.py](scripts/import-api-spec.py) — importer for OpenAPI/Swagger/Postman/JSON/curl/source endpoints
@@ -302,6 +333,8 @@ Xem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.m
 - [references/ui-testcases.md](references/ui-testcases.md) — UI testing checklist (8 categories)
 - [references/api-testcases.md](references/api-testcases.md) — mapping and coverage for API mode only
 - [references/markdown-testcases.md](references/markdown-testcases.md) — contract: Markdown created before Excel, AI read order
+- [references/execution-contract.md](references/execution-contract.md) — shared testcase → qa-run → POM contract
+- [references/execution-contract.schema.json](references/execution-contract.schema.json) — machine-readable execution schema
 - [references/plane-integration.md](references/plane-integration.md) — fetch AC from Plane API
 - Related skill: [playwright-pom-automation](../playwright-pom-automation/SKILL.md) (code automation, output `.spec.ts`)
 - Related skill: [qa-run](../qa-run/SKILL.md) (live exploratory)

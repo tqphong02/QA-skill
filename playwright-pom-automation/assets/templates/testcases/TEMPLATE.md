@@ -13,6 +13,17 @@
 2. Điền các field có `<placeholder>` theo resource của project.
 3. AI (đọc skill `playwright-pom-automation`) sẽ map từng row testcase → 1 `test()` block.
 
+## UI/functional execution contract
+
+When the testcase is a browser flow, use the shared `execution` contract from `testcase-template/references/execution-contract.md` in the source JSON or Markdown companion
+
+- `entry`: route, role, starting state and test data
+- `steps`: ordered atomic `[S01]`, `[S02]` actions with `target.key`, semantic target hints, wait signal and step assertions
+- `outcome.assertions`: final business oracle
+- `cleanup`: required when the flow mutates data
+
+The `target.key` is not an XPath. The POM agent must inspect the live DOM, verify the selected locator and record `selector-evidence/<feature>.json` before generating selector code
+
 ---
 
 ## Resource Info
@@ -99,6 +110,9 @@ grep -c "^| \`TC_" <resource>.md
 # Đếm test() trong spec file (sau khi AI generate)
 grep -c "test('TC_<RESOURCE>_" tests/api/<resource>.api.spec.ts
 # → phải khớp N+M+K+P+Q+R
+
+# UI/functional suite: verify the exact Markdown source and selector evidence
+npm run traceability -- --testcases testcases/<resource>.md
 ```
 
 ---

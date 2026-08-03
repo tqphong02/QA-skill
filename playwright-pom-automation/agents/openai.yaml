@@ -1,4 +1,4 @@
 interface:
   display_name: "Playwright POM Automation"
   short_description: "Tạo automation Playwright theo Page Object Model"
-  default_prompt: "Use $playwright-pom-automation to build maintainable Playwright tests with Page Object Model."
+  default_prompt: "Use $playwright-pom-automation to build maintainable Playwright tests with Page Object Model. Read the testcase execution contract first, verify each target locator in the runtime DOM, keep selector evidence separate from specs, and run the testcase traceability audit before handoff."

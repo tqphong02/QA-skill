@@ -4,6 +4,8 @@
 
 Mỗi workbook được generate cùng một file Markdown cùng basename. Markdown chứa toàn bộ testcase design và được tạo trước Excel; 4 sheet dưới đây vẫn là cấu trúc riêng của artifact Excel
 
+The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/G/H; it never adds a selector or automation column to Excel
+
 ## Sheet `Cover` — metadata project
 
 | Cell | Ý nghĩa | Fill từ |
