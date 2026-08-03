@@ -7,7 +7,7 @@ workload contracts.
 ## Engine and test type
 
 - `engine`: `auto`, `jmeter`, or `k6`
-- `testType`: `smoke`, `load`, `stress`, `spike`, `soak`, or `custom`
+- `testType`: `smoke`, `load`, `stress`, `spike`, `soak`, `volume`, `scalability`, or `custom`
 - `script.path`: optional `.jmx`, `.js`, `.ts`, or `.mjs`
 - When no script exists, choose `jmeter` or `k6` and define `requests`
 
@@ -36,6 +36,36 @@ explicitly contains `prod` activates the production approval gate.
 
 Do not put credentials in YAML. Parameterize request values as `${TOKEN}`,
 `${PASSWORD}`, or another environment variable placeholder.
+
+## Volume profile
+
+For `testType: volume`, add a `dataProfile` with a non-secret dataset reference,
+at least one positive size dimension, cleanup instructions and a data-integrity
+check
+
+```yaml
+dataProfile:
+  datasetReference: PERF-DATA-100K
+  records: 100000
+  payloadSizeBytes: 2048
+  cleanup: remove the isolated tenant after the run
+  integrityCheck: compare record count and checksum with the seed manifest
+```
+
+## Scalability profile
+
+For `testType: scalability`, prepare one config per resource profile and keep
+`comparisonGroup` unchanged across the runs
+
+```yaml
+scalability:
+  comparisonGroup: checkout-capacity-v1
+  profile: baseline-2-replicas
+  resourceReference: 2 application replicas and 4 vCPU
+  expectedCapacity:
+    minUsers: 100
+    minRequestsPerSecond: 50
+```
 
 The canonical structure is
 [assets/run-config.example.yaml](../assets/run-config.example.yaml); validation

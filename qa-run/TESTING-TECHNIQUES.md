@@ -240,8 +240,10 @@ check('Negative: thiếu title → block submit', !net.some(c => c.url.includes(
 npx playwright install firefox webkit
 # Chạy matrix engine × device:
 node <skill-root>/scripts/compat.mjs /dashboard chromium,firefox,webkit iphone-12,ipad-11
+# Chạy release matrix v2 với browser vendor/version, OS và viewport đã khai báo:
+node <skill-root>/scripts/compat.mjs /dashboard --matrix compatibility-v2.json
 ```
-→ In matrix (nav status / load time / errors mỗi combo) + screenshot `evidence/compat-*.png`. **So sánh screenshot bằng mắt** để bắt layout/render diff giữa browser.
+→ In matrix (case, vendor/version, viewport, nav status và errors) + screenshot `evidence/compat-*.png`. Với matrix v2, `os` là target metadata; runner không ảo hoá OS nên phải chạy trên host/device service tương ứng trước khi claim OS coverage. **So sánh screenshot bằng mắt** để bắt layout/render diff giữa browser.
 
 **MCP Playwright limitation:** MCP chỉ chạy **chromium**. Cross-browser thật (Firefox/Safari) → phải dùng `compat.mjs` (npm playwright). Đừng claim "test cross-browser" nếu chỉ chạy chromium qua MCP.
 
@@ -331,7 +333,7 @@ Mục tiêu phiên test là gì?
 - [ ] Thao tác GHI đã `withRevert()`; không còn data rác / không gửi ra ngoài thật.
 - [ ] Screenshot đúng bước kết luận; report Actual **xuống dòng từng ý**.
 - [ ] Probe tái dùng helper, không copy-paste; tên `probe-<ticket>-<aspect>.mjs`.
-- [ ] **Nếu test cross-browser**: đã chạy `compat.mjs` (đừng claim "cross-browser" nếu chỉ chromium qua MCP).
+- [ ] **Nếu test cross-browser**: đã chạy `compat.mjs`; nếu release yêu cầu vendor/version/OS/resolution thì dùng matrix v2 (đừng claim "cross-browser" nếu chỉ chromium qua MCP).
 - [ ] **Bug security** (SQL/XSS/path traversal ở §6): tag `[SECURITY]` + severity H, KHÔNG chỉ là "validation bug" thường.
 
 ---
@@ -418,4 +420,3 @@ Bước 5: Sau test → merge checklist vào business guide update
 ```
 
 > **Lý do quan trọng:** Sinh checklist từ UI TRƯỚC khi click giúp AI có "bản đồ" để test có chủ đích thay vì click bừa. Đây là cách áp dụng Static Testing vào workflow không có doc.
-

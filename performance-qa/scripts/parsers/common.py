@@ -74,6 +74,10 @@ def build_result(
             "holdDurationSeconds": numbers["holdSeconds"],
             "rampDownSeconds": numbers["rampDownSeconds"],
         },
+        "testProfile": {
+            "dataProfile": config.get("dataProfile"),
+            "scalability": config.get("scalability"),
+        },
         "summary": {
             "requests": int(metrics.get("requests", 0)),
             "successful": int(metrics.get("successful", 0)),

@@ -11,18 +11,57 @@ from typing import Any
 METRICS = ("p95Ms", "p99Ms", "errorRate", "requestsPerSecond")
 
 
+def _profile(result: dict[str, Any], name: str) -> Any:
+    return result.get("testProfile", {}).get(name)
+
+
+def _same_scalability_group(baseline: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    before = _profile(baseline, "scalability") or {}
+    after = _profile(candidate, "scalability") or {}
+    return (
+        baseline.get("testType") == candidate.get("testType") == "scalability"
+        and bool(before.get("comparisonGroup"))
+        and before.get("comparisonGroup") == after.get("comparisonGroup")
+    )
+
+
 def compare_results(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
     disclosed_differences = []
+    expected_differences = []
+    scalability_comparison = _same_scalability_group(baseline, candidate)
     for field in ("environment", "testType"):
         if baseline.get(field) != candidate.get(field):
             disclosed_differences.append(
                 {"field": field, "baseline": baseline.get(field), "candidate": candidate.get(field)}
             )
-    for field in ("model", "users", "targetRate"):
+    for field in ("model",):
         before = baseline.get("workload", {}).get(field)
         after = candidate.get("workload", {}).get(field)
         if before != after:
             disclosed_differences.append({"field": f"workload.{field}", "baseline": before, "candidate": after})
+    for field in ("users", "targetRate"):
+        before = baseline.get("workload", {}).get(field)
+        after = candidate.get("workload", {}).get(field)
+        if before != after:
+            difference = {"field": f"workload.{field}", "baseline": before, "candidate": after}
+            (expected_differences if scalability_comparison else disclosed_differences).append(difference)
+
+    before_data = _profile(baseline, "dataProfile")
+    after_data = _profile(candidate, "dataProfile")
+    if before_data != after_data:
+        disclosed_differences.append(
+            {"field": "testProfile.dataProfile", "baseline": before_data, "candidate": after_data}
+        )
+
+    before_scale = _profile(baseline, "scalability")
+    after_scale = _profile(candidate, "scalability")
+    if before_scale != after_scale:
+        difference = {
+            "field": "testProfile.scalability",
+            "baseline": before_scale,
+            "candidate": after_scale,
+        }
+        (expected_differences if scalability_comparison else disclosed_differences).append(difference)
 
     deltas = []
     regressions = 0
@@ -66,6 +105,7 @@ def compare_results(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict
         "baselineStatus": baseline.get("status"),
         "candidateStatus": candidate.get("status"),
         "disclosedDifferences": disclosed_differences,
+        "expectedDifferences": expected_differences,
         "metrics": deltas,
     }
 
@@ -94,6 +134,14 @@ def write_comparison(comparison: dict[str, Any], output_dir: Path) -> dict[str, 
     lines.extend(["", "## Disclosed differences", ""])
     if comparison["disclosedDifferences"]:
         for difference in comparison["disclosedDifferences"]:
+            lines.append(
+                f"- {difference['field']}: baseline={difference['baseline']} candidate={difference['candidate']}"
+            )
+    else:
+        lines.append("- None")
+    lines.extend(["", "## Expected scalability differences", ""])
+    if comparison.get("expectedDifferences"):
+        for difference in comparison["expectedDifferences"]:
             lines.append(
                 f"- {difference['field']}: baseline={difference['baseline']} candidate={difference['candidate']}"
             )

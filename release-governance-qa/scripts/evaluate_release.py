@@ -65,6 +65,55 @@ def evaluate(packet: dict[str, Any], base_dir: Path) -> dict[str, Any]:
         except (TypeError, ValueError):
             fail("quality_metrics", "metric values must be numeric")
 
+    required_nfr = packet.get("required_non_functional")
+    if required_nfr is None:
+        if "non_functional" in packet or "nonFunctional" in packet:
+            warnings.append({"check": "non_functional", "message": "non-functional statuses are present without required_non_functional; evidence gate was not activated"})
+        else:
+            warnings.append({"check": "non_functional", "message": "declare required_non_functional when the release has non-functional scope"})
+    elif not isinstance(required_nfr, list) or not required_nfr or any(not isinstance(item, str) or not item.strip() for item in required_nfr):
+        fail("non_functional", "required_non_functional must be a non-empty list of category names", "BLOCKED")
+    else:
+        nfr = packet.get("non_functional", packet.get("nonFunctional"))
+        if not isinstance(nfr, dict):
+            fail("non_functional", "non_functional evidence packet is required for declared categories", "BLOCKED")
+        else:
+            for category in dict.fromkeys(required_nfr):
+                gate_name = f"nfr_{category}"
+                item = nfr.get(category)
+                if not isinstance(item, dict):
+                    fail(gate_name, f"missing non-functional evidence object for {category}", "BLOCKED")
+                    continue
+                status = str(item.get("status", "")).upper()
+                if status == "FAIL":
+                    fail(gate_name, f"non-functional gate failed for {category}")
+                    continue
+                if status != "PASS":
+                    fail(gate_name, f"{category} status must be PASS; received {status or 'missing'}", "BLOCKED")
+                    continue
+                run_ids = item.get("runIds", item.get("run_ids", []))
+                category_evidence = item.get("evidence", [])
+                if not isinstance(run_ids, list) or not run_ids or any(not str(value).strip() for value in run_ids):
+                    fail(gate_name, f"{category} requires one or more source run IDs", "BLOCKED")
+                    continue
+                if not isinstance(category_evidence, list) or not category_evidence:
+                    fail(gate_name, f"{category} requires evidence paths", "BLOCKED")
+                    continue
+                missing = []
+                for evidence_item in category_evidence:
+                    raw_path = evidence_item.get("path") if isinstance(evidence_item, dict) else evidence_item
+                    if not raw_path:
+                        missing.append("<empty>")
+                        continue
+                    candidate = Path(str(raw_path))
+                    resolved = candidate if candidate.is_absolute() else base_dir / candidate
+                    if not resolved.is_file():
+                        missing.append(str(candidate))
+                if missing:
+                    fail(gate_name, f"missing {category} evidence: {', '.join(missing)}", "BLOCKED")
+                else:
+                    pass_gate(gate_name, f"{category} PASS with source run IDs and local evidence")
+
     post_release = packet.get("post_release", {})
     if not isinstance(post_release, dict) or not post_release.get("owner") or post_release.get("smoke_required") is not True or post_release.get("rollback_ready") is not True:
         fail("post_release", "post-release owner, smoke_required=true and rollback_ready=true are required", "BLOCKED")

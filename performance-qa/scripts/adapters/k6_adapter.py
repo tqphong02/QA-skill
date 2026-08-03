@@ -79,9 +79,12 @@ def _options(config: dict[str, Any]) -> dict[str, Any]:
 def generate_script(config: dict[str, Any], output: Path) -> None:
     public = {
         "baseUrl": config["target"]["baseUrl"],
+        "testType": config["testType"],
         "requests": config.get("requests", []),
         "headers": config.get("headers", {}),
         "thinkTimeSeconds": workload_numbers(config)["thinkTimeSeconds"],
+        "dataProfile": config.get("dataProfile"),
+        "scalability": config.get("scalability"),
     }
     options = _options(config)
     script = f"""import http from 'k6/http';

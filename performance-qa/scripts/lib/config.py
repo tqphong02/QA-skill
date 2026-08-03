@@ -16,7 +16,7 @@ except ImportError as exc:  # pragma: no cover - setup installs PyYAML
 
 
 ENGINES = {"auto", "jmeter", "k6"}
-TEST_TYPES = {"smoke", "load", "stress", "spike", "soak", "custom"}
+TEST_TYPES = {"smoke", "load", "stress", "spike", "soak", "volume", "scalability", "custom"}
 WORKLOAD_MODELS = {"concurrent-users", "request-rate", "total-iterations"}
 METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 SENSITIVE_KEYS = {
@@ -99,6 +99,61 @@ def _scan_secrets(value: Any, location: str = "config") -> list[str]:
     return errors
 
 
+def _positive_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def _validate_test_profile(config: dict[str, Any]) -> list[str]:
+    """Validate the data/capacity contract required by volume-oriented runs."""
+
+    errors: list[str] = []
+    test_type = str(config.get("testType", "")).lower()
+
+    if test_type == "volume":
+        profile = config.get("dataProfile")
+        if not isinstance(profile, dict):
+            return ["dataProfile is required for volume testing"]
+        if not str(profile.get("datasetReference", "")).strip():
+            errors.append("dataProfile.datasetReference is required for volume testing")
+        if not _positive_number(profile.get("records")) and not _positive_number(profile.get("payloadSizeBytes")):
+            errors.append(
+                "dataProfile.records or dataProfile.payloadSizeBytes must be a positive number for volume testing"
+            )
+        for field in ("records", "payloadSizeBytes"):
+            if field in profile and profile[field] is not None and not _positive_number(profile[field]):
+                errors.append(f"dataProfile.{field} must be a positive number when provided")
+        if not str(profile.get("cleanup", "")).strip():
+            errors.append("dataProfile.cleanup is required for volume testing")
+        if not str(profile.get("integrityCheck", "")).strip():
+            errors.append("dataProfile.integrityCheck is required for volume testing")
+
+    if test_type == "scalability":
+        profile = config.get("scalability")
+        if not isinstance(profile, dict):
+            return ["scalability is required for scalability testing"]
+        for field in ("comparisonGroup", "profile", "resourceReference"):
+            if not str(profile.get(field, "")).strip():
+                errors.append(f"scalability.{field} is required for scalability testing")
+        capacity = profile.get("expectedCapacity")
+        if not isinstance(capacity, dict):
+            errors.append("scalability.expectedCapacity is required for scalability testing")
+        else:
+            min_users = capacity.get("minUsers")
+            min_rps = capacity.get("minRequestsPerSecond")
+            if not _positive_number(min_users) and not _positive_number(min_rps):
+                errors.append(
+                    "scalability.expectedCapacity.minUsers or minRequestsPerSecond must be a positive number"
+                )
+            if min_users is not None and not _positive_number(min_users):
+                errors.append("scalability.expectedCapacity.minUsers must be a positive number when provided")
+            if min_rps is not None and not _positive_number(min_rps):
+                errors.append(
+                    "scalability.expectedCapacity.minRequestsPerSecond must be a positive number when provided"
+                )
+
+    return errors
+
+
 def load_run_config(config_path: Path, skill_root: Path) -> dict[str, Any]:
     raw = load_document(config_path)
     defaults = load_document(skill_root / "config" / "defaults.yaml")
@@ -113,6 +168,7 @@ def load_run_config(config_path: Path, skill_root: Path) -> dict[str, Any]:
     if environment_path.is_file():
         merged = deep_merge(merged, load_document(environment_path))
     merged = deep_merge(merged, raw)
+    merged["testType"] = test_type
     merged["_meta"] = {
         "configPath": str(config_path.resolve()),
         "skillRoot": str(skill_root.resolve()),
@@ -149,7 +205,7 @@ def is_production(config: dict[str, Any]) -> bool:
 
 def requires_load_approval(config: dict[str, Any]) -> bool:
     numbers = workload_numbers(config)
-    if config.get("testType") in {"stress", "spike", "soak"}:
+    if str(config.get("testType", "")).lower() in {"stress", "spike", "soak", "volume", "scalability"}:
         return True
     if numbers["model"] == "request-rate":
         return numbers["targetRate"] > 1
@@ -261,6 +317,7 @@ def validate_run_config(config: dict[str, Any]) -> tuple[list[str], list[str]]:
     if is_production(config):
         warnings.append("target is production; runtime requires explicit --approve-production")
 
+    errors.extend(_validate_test_profile(config))
     errors.extend(_scan_secrets(config))
     return sorted(set(errors)), sorted(set(warnings))
 

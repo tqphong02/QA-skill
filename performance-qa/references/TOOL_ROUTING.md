@@ -16,6 +16,7 @@
 - Stress: increase until a limit appears
 - Spike: sudden traffic transition
 - Soak: sustained target load for leak or degradation detection
+- Volume: fixed or growing dataset/payload size while measuring latency, errors and data integrity
 - Scalability: compare capacity across resource configurations
 
-Stress, spike, soak, and scalability runs need explicit approval immediately before execution.
+Stress, spike, soak, volume, and scalability runs need explicit approval immediately before execution.

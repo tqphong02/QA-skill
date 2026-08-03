@@ -9,6 +9,7 @@ Use the matrix to separate design intent from implementation observation.
 | State | Are loading, validation, error, empty and success states understandable | state-specific media |
 | Responsive | Does content reflow without clipping or hidden actions | desktop and mobile captures |
 | Interaction | Is feedback, disabled state and focus order predictable | interaction recording or same-session trace |
+| Usability | Can representative users find, understand and complete the task within the declared limits | pseudonymous task observations and metric report |
 | Accessibility handoff | Are contrast, semantics, keyboard and focus checked by the a11y skill | a11y report ID |
 
 Classify a mismatch as `design`, `requirement`, `implementation`, `runtime`, or `unknown` before filing it

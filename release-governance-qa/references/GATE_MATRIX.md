@@ -4,6 +4,7 @@
 |---|---|---|
 | Scope | release, build and impacted areas are named | unknown artifact or scope |
 | Functional | required suites pass with a known run ID | failed critical path or missing result |
+| Non-functional | every declared category has PASS status, source run ID, and local evidence | category FAIL, missing evidence, or incomplete proof |
 | Quality metrics | counts are valid, no failed/flaky/blocked result, evidence is complete and risk coverage is 100% | missing denominator, flaky result, incomplete evidence or uncovered required risk |
 | Risk | no open critical/high defect without approved exception | open defect or unapproved exception |
 | Evidence | referenced files exist and are attributable | missing, stale or claim-only evidence |

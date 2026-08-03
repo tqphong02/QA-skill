@@ -22,7 +22,13 @@ def plan() -> dict:
         "failure_injection": {"type": "dependency_timeout", "duration_seconds": 5},
         "steady_state": {"slo": "error rate < 1%", "window_minutes": 5},
         "stop_conditions": {"abort_on": "error rate > 5%", "owner_contact": "qa-owner"},
-        "recovery": {"rollback": "remove fault rule", "rto_target": "60s", "rpo_target": "0"},
+        "recovery": {
+            "rollback": "remove fault rule",
+            "rto_target": "60s",
+            "rpo_target": "0",
+            "backup_restore_in_scope": False,
+            "backup_restore_reason": "dependency timeout does not mutate persistent data",
+        },
         "observability": {"signals": ["http_errors", "latency", "trace_id"]},
         "cleanup": {"steps": ["remove rule", "verify steady state"]},
         "approval": False,
@@ -42,6 +48,33 @@ class ResiliencePlanTests(unittest.TestCase):
         self.assertFalse(report["passed"])
         self.assertEqual(report["status"], "BLOCKED")
         self.assertTrue(any(item["gate"] == "execution_authorization" for item in report["errors"]))
+
+    def test_backup_restore_in_scope_requires_restore_proof(self) -> None:
+        candidate = plan()
+        candidate["recovery"] = {
+            "rollback": "remove fault rule",
+            "rto_target": "60s",
+            "rpo_target": "0",
+            "backup_restore_in_scope": True,
+        }
+        report = MODULE.validate(candidate)
+        self.assertFalse(report["passed"])
+        self.assertTrue(any(item["gate"] == "backup_restore" for item in report["errors"]))
+
+    def test_backup_restore_in_scope_can_be_ready(self) -> None:
+        candidate = plan()
+        candidate["recovery"] = {
+            "rollback": "remove fault rule",
+            "rto_target": "60s",
+            "rpo_target": "0",
+            "backup_restore_in_scope": True,
+            "backup_reference": "backup-run-42",
+            "restore_steps": ["restore snapshot", "replay validation query"],
+            "data_integrity_check": "compare checkout records and checksums",
+        }
+        report = MODULE.validate(candidate)
+        self.assertTrue(report["passed"], report)
+        self.assertTrue(any(item["name"] == "backup_restore" and item["status"] == "PASS" for item in report["gates"]))
 
 
 if __name__ == "__main__":

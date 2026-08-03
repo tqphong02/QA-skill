@@ -54,6 +54,32 @@ def validate(plan: dict[str, Any]) -> dict[str, Any]:
     else:
         passed("recovery", "rollback and RTO/RPO targets are declared")
 
+    backup_scope = recovery.get("backup_restore_in_scope") if isinstance(recovery, dict) else None
+    if not isinstance(backup_scope, bool):
+        block("backup_restore", "recovery.backup_restore_in_scope must be explicitly true or false")
+    elif backup_scope:
+        if not isinstance(recovery.get("backup_reference"), str) or not recovery.get("backup_reference").strip():
+            block("backup_restore", "backup_reference is required when backup/restore is in scope")
+        restore_steps = recovery.get("restore_steps")
+        if not isinstance(restore_steps, list) or not restore_steps or any(not isinstance(step, str) or not step.strip() for step in restore_steps):
+            block("backup_restore", "restore_steps must be a non-empty list of ordered actions when backup/restore is in scope")
+        if not isinstance(recovery.get("data_integrity_check"), str) or not recovery.get("data_integrity_check").strip():
+            block("backup_restore", "data_integrity_check is required when backup/restore is in scope")
+        if (
+            isinstance(recovery.get("backup_reference"), str)
+            and recovery.get("backup_reference").strip()
+            and isinstance(restore_steps, list)
+            and restore_steps
+            and all(isinstance(step, str) and step.strip() for step in restore_steps)
+            and isinstance(recovery.get("data_integrity_check"), str)
+            and recovery.get("data_integrity_check").strip()
+        ):
+            passed("backup_restore", "backup reference, restore steps and data-integrity check are declared")
+    elif not recovery.get("backup_restore_reason"):
+        block("backup_restore", "backup_restore_reason is required when backup/restore is out of scope")
+    else:
+        passed("backup_restore", "backup/restore scope decision and rationale are declared")
+
     if plan.get("steady_state", {}).get("slo") if isinstance(plan.get("steady_state"), dict) else False:
         passed("steady_state", "baseline SLO is declared")
     else:

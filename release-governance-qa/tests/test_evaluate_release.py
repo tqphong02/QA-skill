@@ -49,6 +49,33 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertEqual(report["decision"], "FAIL")
         self.assertTrue(any(item["gate"] == "defect_risk" for item in report["errors"]))
 
+    def test_declared_non_functional_scope_requires_local_evidence(self) -> None:
+        packet = release_packet()
+        packet["required_non_functional"] = ["performance", "security"]
+        packet["non_functional"] = {
+            "performance": {"status": "PASS", "runIds": ["perf-run-1"], "evidence": ["performance.json"]},
+            "security": {"status": "PASS", "runIds": ["security-run-1"], "evidence": ["security.json"]},
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            for name in ("summary.md", "performance.json", "security.json"):
+                (base / name).write_text("local evidence\n", encoding="utf-8")
+            report = MODULE.evaluate(packet, base)
+        self.assertTrue(report["passed"], report)
+        self.assertTrue(any(item["name"] == "nfr_performance" for item in report["gates"]))
+
+    def test_declared_non_functional_scope_without_evidence_is_blocked(self) -> None:
+        packet = release_packet()
+        packet["required_non_functional"] = ["usability"]
+        packet["non_functional"] = {"usability": {"status": "PASS", "runIds": [], "evidence": []}}
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            (base / "summary.md").write_text("local evidence\n", encoding="utf-8")
+            report = MODULE.evaluate(packet, base)
+        self.assertFalse(report["passed"])
+        self.assertEqual(report["decision"], "BLOCKED")
+        self.assertTrue(any(item["gate"] == "nfr_usability" for item in report["errors"]))
+
 
 if __name__ == "__main__":
     unittest.main()

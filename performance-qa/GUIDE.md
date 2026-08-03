@@ -73,13 +73,18 @@ cp assets/run-config.example.yaml run-config.yaml
 Truong quan trong:
 
 - `engine`: `auto`, `jmeter`, hoac `k6`
-- `testType`: `smoke`, `load`, `stress`, `spike`, `soak`
+- `testType`: `smoke`, `load`, `stress`, `spike`, `soak`, `volume`, `scalability`
 - `target.baseUrl`: URL can test
 - `target.owner`: nguoi/team owner
 - `target.authorizationReference`: ticket/email/approval cho phep test
 - `workload.model`: `concurrent-users`, `request-rate`, hoac `total-iterations`
 - `thresholds`: p95, p99, error rate, throughput
 - `safety.abortConditions`: dieu kien dung test
+
+Neu `testType: volume`, them `dataProfile` voi dataset reference, so record
+hoac payload size, cleanup va integrity check. Neu `testType: scalability`, tao
+mot config cho moi resource profile, giu cung `comparisonGroup`, roi compare
+baseline/candidate sau khi ca hai run da co result
 
 Khong hardcode token, password, cookie, API key trong YAML, JMX, k6 script, command, log hoac report. Dung placeholder kieu `${TOKEN}`.
 
@@ -195,4 +200,3 @@ python3 scripts/performance_orchestrator.py compare --base artifacts/base/result
 ```
 
 Neu environment, dataset, cache state hoac workload khac nhau, compare phai ghi `NOT_COMPARABLE`.
-

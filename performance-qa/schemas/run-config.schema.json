@@ -8,7 +8,7 @@
       "enum": ["auto", "jmeter", "k6"]
     },
     "testType": {
-      "enum": ["smoke", "load", "stress", "spike", "soak", "custom"]
+      "enum": ["smoke", "load", "stress", "spike", "soak", "volume", "scalability", "custom"]
     },
     "target": {
       "type": "object",
@@ -49,6 +49,32 @@
         "maxErrorRate": { "type": "number", "minimum": 0, "maximum": 1 },
         "minRequestsPerSecond": { "type": "number", "minimum": 0 },
         "abortOnFailure": { "type": "boolean" }
+      }
+    },
+    "dataProfile": {
+      "type": "object",
+      "properties": {
+        "datasetReference": { "type": "string", "minLength": 1 },
+        "records": { "type": "number", "exclusiveMinimum": 0 },
+        "payloadSizeBytes": { "type": "number", "exclusiveMinimum": 0 },
+        "cleanup": { "type": "string", "minLength": 1 },
+        "integrityCheck": { "type": "string", "minLength": 1 }
+      }
+    },
+    "scalability": {
+      "type": "object",
+      "required": ["comparisonGroup", "profile", "resourceReference", "expectedCapacity"],
+      "properties": {
+        "comparisonGroup": { "type": "string", "minLength": 1 },
+        "profile": { "type": "string", "minLength": 1 },
+        "resourceReference": { "type": "string", "minLength": 1 },
+        "expectedCapacity": {
+          "type": "object",
+          "properties": {
+            "minUsers": { "type": "number", "exclusiveMinimum": 0 },
+            "minRequestsPerSecond": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
       }
     },
     "requests": {

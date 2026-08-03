@@ -1,6 +1,6 @@
 ---
 name: performance-qa
-description: Orchestrate safe performance testing with JMeter or k6 from one common run config, including engine auto-discovery, workload design, smoke gating, load/stress/spike/soak execution, JMX or k6 generation, JTL/k6 result normalization, shared PASS/FAIL thresholds, HTML/Markdown/JSON reports, frontend traces, and bottleneck analysis. Trigger on performance, latency, throughput, concurrency, virtual users, request rate, load, stress, spike, soak, scalability, performance regression, JMeter, `.jmx`, Thread Group, JTL, k6, k6 script, Chrome DevTools MCP, k6 MCP, or bottleneck; do not require the skill name. A bare `.jmx` or k6 `.js`/`.ts` file is a safe inspect/validate request, not authorization to run load.
+description: Orchestrate safe performance testing with JMeter or k6 from one common run config, including engine auto-discovery, workload design, smoke gating, load/stress/spike/soak/volume/scalability execution, dataset-volume and capacity-profile comparison, JMX or k6 generation, JTL/k6 result normalization, shared PASS/FAIL thresholds, HTML/Markdown/JSON reports, frontend traces, and bottleneck analysis. Trigger on performance, latency, throughput, concurrency, virtual users, request rate, load, stress, spike, soak, volume testing, scalability, capacity testing, performance regression, JMeter, `.jmx`, Thread Group, JTL, k6, k6 script, Chrome DevTools MCP, k6 MCP, or bottleneck; do not require the skill name. A bare `.jmx` or k6 `.js`/`.ts` file is a safe inspect/validate request, not authorization to run load.
 ---
 
 # Performance QA
@@ -28,6 +28,8 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
    - `request-rate`: target rate, time unit, pre-allocated VUs, max VUs, duration
    - `total-iterations`: iterations, users, max duration, think time
 6. Resolve p95, p99, maximum error rate, minimum throughput and abort behavior
+   - Volume → validate `dataProfile` with dataset reference, target records or payload size, cleanup and integrity check
+   - Scalability → validate `scalability` with comparison group, resource profile, expected capacity and a separate run per profile
 7. Validate, display, and prepare without executing:
    ```bash
    python3 scripts/performance_orchestrator.py validate --config run-config.yaml
@@ -59,7 +61,7 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
 2. A bare `.jmx`, JTL, k6 script or result file authorizes safe inspection only
 3. Never run production without written authorization naming target and workload
    plus explicit approval immediately before execution
-4. Any workload above one user, any request-rate load, and stress/spike/soak
+4. Any workload above one user, any request-rate load, and stress/spike/soak/volume/scalability
    require `--approve-load` immediately before the main run
 5. More than `safety.maxUsers` (default 100) also requires
    `--approve-high-load`; production also requires `--approve-production`
@@ -74,6 +76,14 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
     differs without disclosing the difference
 11. JMeter GUI is for import/debug only; evidence-bearing runs use non-GUI mode
 12. MCP/runtime availability never grants load authorization
+
+## Volume and scalability contracts
+
+- Volume testing measures behavior against an explicit dataset or payload size; do not use a large user count as a substitute for data volume
+- `dataProfile.datasetReference`, `records` or `payloadSizeBytes`, `cleanup`, and `integrityCheck` are required for `testType: volume`
+- Scalability testing runs the same business workload against separate resource profiles; keep `scalability.comparisonGroup` constant and change only the approved profile/resource inputs
+- `scalability.expectedCapacity` must declare `minUsers` or `minRequestsPerSecond`; compare normalized results only when environment, business flow and comparison group are compatible
+- A scalability result without a baseline or candidate profile is `PARTIAL`, not proof of horizontal or vertical scaling
 
 ## Engine resources
 
@@ -94,6 +104,7 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
 
 - One common config and exact engine are recorded
 - Authorization, workload and abort conditions are complete
+- Volume data profile or scalability capacity profile is complete when in scope
 - Generated JMX parses or generated k6 script passes static preparation
 - One-user smoke passed before main load
 - Raw and native engine outputs are retained when requested
@@ -102,3 +113,5 @@ For first-time human setup and usage, see [GUIDE.md](GUIDE.md).
 - Slow endpoints and top errors are reported when native data provides them
 - Cleanup and recovery health are verified
 - Bottleneck claims have correlated evidence and limitations
+- Volume cleanup and data-integrity evidence are retained when volume testing is in scope
+- Scalability comparisons disclose expected profile/resource differences and retain baseline/candidate run IDs

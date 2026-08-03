@@ -8,9 +8,9 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = process.env.WIKI_ENV_FILE || path.join(scriptDir, '.env');
 const outputDir = path.resolve(
-  process.argv[2]
+    process.argv[2]
     || process.env.SJK_OUTPUT_DIR
-    || '/Users/user/Documents/QA-MDS/SJK',
+    || path.join(scriptDir, 'SJK'),
 );
 
 function loadEnv(filePath) {

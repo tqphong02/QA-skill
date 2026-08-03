@@ -8,6 +8,13 @@
     "engine": { "enum": ["jmeter", "k6"] },
     "testType": { "type": "string" },
     "environment": { "type": "string" },
+    "testProfile": {
+      "type": "object",
+      "properties": {
+        "dataProfile": { "type": ["object", "null"] },
+        "scalability": { "type": ["object", "null"] }
+      }
+    },
     "summary": {
       "type": "object",
       "required": [

@@ -229,7 +229,7 @@ def run_prepared(
 def wizard(output: Path) -> None:
     print("Performance QA common configuration wizard")
     engine = input("Engine [auto|jmeter|k6]: ").strip().lower() or "auto"
-    test_type = input("Test type [smoke|load|stress|spike|soak|custom]: ").strip().lower() or "smoke"
+    test_type = input("Test type [smoke|load|stress|spike|soak|volume|scalability|custom]: ").strip().lower() or "smoke"
     model = input("Workload model [concurrent-users|request-rate|total-iterations]: ").strip().lower()
     model = model or "concurrent-users"
     base_url = input("Target base URL: ").strip()
@@ -301,6 +301,26 @@ def wizard(output: Path) -> None:
         },
         "report": {"html": True, "markdown": True, "json": True, "keepRawResult": True},
     }
+    if test_type == "volume":
+        config["dataProfile"] = {
+            "datasetReference": input("Dataset reference: ").strip(),
+            "records": int(input("Record count [100000]: ").strip() or "100000"),
+            "payloadSizeBytes": int(input("Payload size bytes [1024]: ").strip() or "1024"),
+            "cleanup": input("Volume cleanup: ").strip(),
+            "integrityCheck": input("Data integrity check: ").strip(),
+        }
+    elif test_type == "scalability":
+        config["scalability"] = {
+            "comparisonGroup": input("Scalability comparison group: ").strip(),
+            "profile": input("Resource profile name: ").strip(),
+            "resourceReference": input("Resource reference: ").strip(),
+            "expectedCapacity": {
+                "minUsers": int(input("Minimum supported users [100]: ").strip() or "100"),
+                "minRequestsPerSecond": float(
+                    input("Minimum requests/second [1]: ").strip() or "1"
+                ),
+            },
+        }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(yaml.safe_dump(config, sort_keys=False, allow_unicode=True), encoding="utf-8")
     emit({"written": str(output.resolve()), "next": "Add requests when no script is supplied, then validate"})

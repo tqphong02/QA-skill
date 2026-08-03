@@ -120,6 +120,8 @@ def translate(config: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         "headers": config.get("headers", {}),
         "requests": [_request(request) for request in config.get("requests", [])],
         "abort_on_failure": bool(config["thresholds"].get("abortOnFailure", False)),
+        "data_profile": config.get("dataProfile"),
+        "scalability": config.get("scalability"),
     }
     if csv_config:
         mapped["csv"] = csv_config

@@ -311,7 +311,7 @@ const FLOWS = [
     nodes: ['qa-run'],
     sourceRefs: [
       { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 3, quote: 'same page/session used for UI actions' },
-      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `playwright-mcp` when Playwright MCP drives the UI' },
+      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `playwright-mcp` when it is the fallback driver' },
       { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 61, quote: 'list_network_requests' },
     ],
   },

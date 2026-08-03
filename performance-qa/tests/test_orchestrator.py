@@ -15,7 +15,7 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 CLI = SKILL_ROOT / "scripts" / "performance_orchestrator.py"
 
 
-def base_config(engine: str, model: str = "concurrent-users") -> dict:
+def base_config(engine: str, model: str = "concurrent-users", test_type: str = "load") -> dict:
     workload = {
         "model": model,
         "users": 2,
@@ -38,7 +38,7 @@ def base_config(engine: str, model: str = "concurrent-users") -> dict:
         }
     return {
         "engine": engine,
-        "testType": "load",
+        "testType": test_type,
         "target": {
             "environment": "qa",
             "baseUrl": "https://qa.example.com",
@@ -180,6 +180,93 @@ class PerformanceOrchestratorTest(unittest.TestCase):
             validated = self.run_cli("validate", "--config", str(config_path))
             self.assertEqual(validated.returncode, 2)
             self.assertIn("hardcoded secret", validated.stderr)
+
+    def test_volume_requires_data_profile_and_accepts_complete_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = base_config("k6", test_type="volume")
+            config_path = self.write_config(root, config)
+            blocked = self.run_cli("validate", "--config", str(config_path))
+            self.assertEqual(blocked.returncode, 2)
+            self.assertIn("dataProfile is required", blocked.stderr)
+
+            config["dataProfile"] = {
+                "datasetReference": "PERF-DATA-100K",
+                "records": 100000,
+                "payloadSizeBytes": 2048,
+                "cleanup": "remove isolated tenant",
+                "integrityCheck": "compare record count and checksum",
+            }
+            config_path = self.write_config(root, config)
+            validated = self.run_cli("validate", "--config", str(config_path))
+            self.assertEqual(validated.returncode, 0, validated.stderr)
+
+    def test_scalability_prepare_records_profile_and_requires_approval(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            config = base_config("k6", test_type="scalability")
+            config["scalability"] = {
+                "comparisonGroup": "checkout-capacity-v1",
+                "profile": "baseline-2-replicas",
+                "resourceReference": "2 replicas and 4 vCPU",
+                "expectedCapacity": {"minUsers": 100, "minRequestsPerSecond": 50},
+            }
+            config_path = self.write_config(root, config)
+            prepared = self.run_cli(
+                "prepare",
+                "--config",
+                str(config_path),
+                "--project-root",
+                str(root),
+                "--output-root",
+                str(root / "artifacts"),
+            )
+            self.assertEqual(prepared.returncode, 0, prepared.stderr)
+            payload = json.loads(prepared.stdout)
+            self.assertTrue(payload["plan"]["safety"]["requiresLoadApproval"])
+            script = Path(payload["plan"]["enginePlan"]["script"]).read_text(encoding="utf-8")
+            self.assertIn("checkout-capacity-v1", script)
+
+    def test_scalability_comparison_allows_expected_profile_differences(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            baseline = {
+                "status": "PASS",
+                "environment": "qa",
+                "testType": "scalability",
+                "workload": {"model": "concurrent-users", "users": 10, "targetRate": 0},
+                "testProfile": {"scalability": {
+                    "comparisonGroup": "capacity-v1",
+                    "profile": "baseline",
+                    "resourceReference": "2 replicas",
+                }},
+                "summary": {"p95Ms": 800, "p99Ms": 1200, "errorRate": 0.01, "requestsPerSecond": 20},
+            }
+            candidate = json.loads(json.dumps(baseline))
+            candidate["workload"]["users"] = 20
+            candidate["testProfile"]["scalability"] = {
+                "comparisonGroup": "capacity-v1",
+                "profile": "scaled",
+                "resourceReference": "4 replicas",
+            }
+            candidate["summary"]["p95Ms"] = 900
+            baseline_path = root / "baseline.json"
+            candidate_path = root / "candidate.json"
+            baseline_path.write_text(json.dumps(baseline), encoding="utf-8")
+            candidate_path.write_text(json.dumps(candidate), encoding="utf-8")
+            compared = self.run_cli(
+                "compare",
+                "--baseline",
+                str(baseline_path),
+                "--candidate",
+                str(candidate_path),
+                "--output-dir",
+                str(root / "comparison"),
+            )
+            self.assertEqual(compared.returncode, 0, compared.stderr)
+            comparison = json.loads((root / "comparison" / "comparison.json").read_text(encoding="utf-8"))
+            self.assertNotEqual(comparison["verdict"], "NOT_COMPARABLE")
+            self.assertTrue(comparison["expectedDifferences"])
 
     def test_jtl_normalization_writes_three_common_reports(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

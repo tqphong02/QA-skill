@@ -1,4 +1,4 @@
 interface:
   display_name: "UI/UX Design QA"
-  short_description: "Review visual UX and design-to-UI fidelity"
-  default_prompt: "Use $ui-ux-design-qa to audit this UI against its design intent, responsive states, visual evidence, and UX acceptance criteria."
+  short_description: "Review UI/UX and measurable usability"
+  default_prompt: "Use $ui-ux-design-qa to audit design intent, responsive states, visual evidence, and structured usability tasks with success, time, error and comprehension metrics."

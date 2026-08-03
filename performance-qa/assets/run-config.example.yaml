@@ -1,5 +1,19 @@
 engine: auto
 testType: load
+# For a volume run, change testType to volume and add dataProfile below
+# dataProfile:
+#   datasetReference: PERF-DATA-100K
+#   records: 100000
+#   cleanup: remove the isolated tenant after the run
+#   integrityCheck: compare count and checksum with the seed manifest
+# For a scalability run, change testType to scalability and add one profile
+# per approved capacity comparison group
+# scalability:
+#   comparisonGroup: checkout-capacity-v1
+#   profile: baseline-2-replicas
+#   resourceReference: 2 application replicas and 4 vCPU
+#   expectedCapacity:
+#     minUsers: 100
 
 target:
   environment: qa

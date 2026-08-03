@@ -56,8 +56,10 @@ node <skill-root>/scripts/ux-health.mjs /dashboard "button#save,a.delete"
 # Spam test: click N lần, đếm API call (phải = 1, >1 = bug thiếu guard)
 node <skill-root>/scripts/ux-health.mjs /dashboard --spam "button:has-text('Sync')" "/api/sync" 5
 
-# Cross-browser/device
+# Cross-browser/device nhanh
 node <skill-root>/scripts/compat.mjs /login chromium,firefox,webkit iphone-12,ipad-11
+# Release matrix v2: browser profile, OS pair, tablet/mobile viewport, locale/timezone
+node <skill-root>/scripts/compat.mjs /login --matrix compatibility-v2.json
 ```
 
 10 category bug UI trong `references/UI-BUG-CATALOG.md`.
@@ -95,7 +97,7 @@ AI tự xử lý: **(a)** hỏi user khi cần data thật/không tạo được
 | `explore.mjs` | `node explore.mjs /path` | soi nhanh 1 trang |
 | `api-health.mjs` | `node api-health.mjs` | probe endpoint tìm 4xx/5xx |
 | `ux-health.mjs` | `node ux-health.mjs /path [sels] [--spam ...]` | UX metric + spam test |
-| `compat.mjs` | `node compat.mjs /path engines devices` | cross-browser/device |
+| `compat.mjs` | `node compat.mjs /path engines devices` hoặc `node compat.mjs /path --matrix matrix-v2.json` | cross-browser/device, versioned browser/OS/viewport matrix |
 | `log-bug.mjs` | `node log-bug.mjs ...` | log bug Plane (3 mode) |
 
 **Lib** (`lib/`): `driver.mjs` (browser/snap/shot) · `ui.mjs` (recordNet/waitForText/waitForStable/clickText/withRevert) · `wait.mjs` (same-session adaptive readiness) · `assert.mjs` (check/eq/summary).
