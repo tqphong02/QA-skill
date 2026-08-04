@@ -16,10 +16,11 @@ function run(command, args, cwd = ROOT) {
 
 try {
   run('python3', ['scripts/validate_cross_model.py']);
-  for (const catalog of [
-    'skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html',
-    'skill-catalog/QA-skill-effective-html/QA-skill.html',
-  ]) run(process.execPath, ['scripts/build-skill-catalog.mjs', '--check', catalog]);
+  run(process.execPath, [
+    'qa-run/scripts/writers/render-intelligence-html.mjs',
+    '--check',
+    'skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill.html',
+  ]);
 
   run(process.execPath, ['scripts/skill-readiness-suite.mjs']);
   console.log('[test-suite] PASS; all deterministic local contracts passed');

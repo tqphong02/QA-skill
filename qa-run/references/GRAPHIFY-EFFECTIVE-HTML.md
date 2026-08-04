@@ -96,6 +96,8 @@ For Graphify input, the renderer embeds the complete retained node/relation inde
 
 The renderer must remain self-contained, use no external scripts or stylesheets, include dark mode, keyboard-operable nodes, a dismissible detail panel, full-project search, reduced-motion handling and pan/zoom controls
 
+For `qa-skill-catalog`, the public HTML presentation must redact source filenames, source paths, source links and `sourceRef` values from cards, the detail drawer, sections and full-index search. The drawer may show scope, parent, branch coverage, flow facts, advantages, limitations and resource counts only. Canonical JSON may retain provenance for validation, but the companion HTML must not expose or link to Markdown source files
+
 Do not expose hidden `source_ref`, secret, credential, personal data or internal diagnostics in a business-analysis HTML companion. Run `accessibility-qa` when the HTML itself is a release deliverable
 
 ## Failure handling

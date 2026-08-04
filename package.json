@@ -20,7 +20,8 @@
     "security:login": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs",
     "security:login:claude": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs claude",
     "security:login:gemini": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs gemini",
-    "security:login:status": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs status"
+    "security:login:status": "node pentest-run/skills/pentest-security/scripts/engine-login.mjs status",
+    "catalog:effective-html": "node scripts/build-effective-skill-html.mjs"
   },
   "repository": {
     "type": "git",

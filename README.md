@@ -2,7 +2,7 @@
 
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
-## 23 skill
+## 23 skill public + nested/bundled skill trong scope
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
@@ -36,12 +36,14 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 Sơ đồ luồng & mapping chi tiết giữa các skill: [SKILL_FLOW_MAPPING.md](./SKILL_FLOW_MAPPING.md)
 
-Bundle tiếng Việt ngày `30-07-2026` theo `plannotator/effective-html/html-diagram`:
+Bundle đầy đủ ngày `04-08-2026` theo `plannotator/effective-html`, render bằng `catalog-v2`:
 
-- [QA-skill — kiến trúc, danh mục và luồng định tuyến trong một file](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html)
-- [Dữ liệu JSON chuẩn](./skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill-du-lieu.json)
+- [QA-skill — full skill flow và branch index trong một file](./skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill.html)
+- [Dữ liệu JSON chuẩn (provenance nội bộ)](./skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill-du-lieu.json)
 
-File HTML duy nhất có ba tab nội bộ: `Kiến trúc`, `Tất cả skill` và `Luồng định tuyến`. Sơ đồ phân biệt rõ `23 skill công khai` với `5 capability nội bộ/phụ trợ`: JMeter, k6, Graphify, effective-html và bề mặt `jmeter-qa` đã ngừng dùng. Bản catalog hiện lập chỉ mục `211` nhánh công khai, `23` nhánh phụ trợ, tổng cộng `234` mục cấu trúc, `29` relationship và `32` nhánh thực thi. Mỗi mũi tên phải có `sourceRefs` trỏ đến file, dòng và đoạn nguồn khớp chính xác; generator cũng từ chối edge đi xuyên node không liên quan.
+File HTML có canvas skill-level, route chips, detail drawer và full index tìm kiếm. Catalog hiện bao phủ `37 skill trong scope`: `23 public-root` + nested `pentest-security` + `13` bundled Codex Security skill, `5 capability nội bộ/phụ trợ`, `389` mục branch H2–H4/phụ trợ, `238` nhánh vận hành, `29` relationship và `15` bề mặt vendor được ghi nhận nhưng không nạp theo scope contract.
+
+HTML public không hiển thị đường dẫn, link hoặc nội dung file nguồn; provenance chi tiết chỉ giữ trong JSON canonical nội bộ để validate
 
 Format tương tác hiện tại:
 
@@ -56,16 +58,17 @@ Format tương tác hiện tại:
 - `BROWSER_TASK_FAST` là nhãn của profile FAST bên trong `EXPLORATORY_BROWSER_QA` cho task đơn giản chạy ngay; native path có `quick-start`, structured `extract`, read-only `batch` tối đa 5 action và `quick-finish`; khi có bug/business rule/expected/PASS-FAILED thì chuyển sang profile exploratory đầy đủ trong cùng skill; verdict user-facing chỉ gồm PASS, FAILED, N/A, UNTEST
 - `Browser MCP: Network & Console` tách riêng Playwright MCP, Chrome DevTools MCP và runtime observer theo hard gate cùng session
 - `Mobile: Appium & Network` tách Appium MCP thực thi UI khỏi proxy capture bằng Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit; evidence phải được làm sạch và đối chiếu với bước UI
-- Panel chi tiết hiển thị `Làm được gì`, `Ưu điểm`, `Hạn chế`, `Nhánh thực thi` và `Cấu trúc hướng dẫn`; không hiển thị nội dung thô `SKILL.md`
+- Detail drawer hiển thị `Làm được gì`, thông tin flow, toàn bộ branch/child branch, ưu điểm, hạn chế và resource counts; không hiển thị đường dẫn, link hoặc nội dung file nguồn
+- Full index tìm kiếm cả public/nested/bundled skill, branch, child branch và handoff; canvas là overview dễ đọc, không được dùng để tuyên bố coverage của vendor surfaces
 
-Tạo lại catalog từ toàn bộ `SKILL.md` và kiểm tra artifact:
+Tạo lại catalog đệ quy và render Effective HTML chuẩn:
 
 ```bash
-node scripts/build-skill-catalog.mjs \
-  --bundle skill-catalog/QA-skill-effective-html-30-07-2026
+node scripts/build-effective-skill-html.mjs \
+  --bundle skill-catalog/QA-skill-effective-html-04-08-2026
 
-node scripts/build-skill-catalog.mjs \
-  --check skill-catalog/QA-skill-effective-html-30-07-2026/QA-skill.html
+node qa-run/scripts/writers/render-intelligence-html.mjs \
+  --check skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill.html
 ```
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)

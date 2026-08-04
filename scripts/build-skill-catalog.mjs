@@ -2,7 +2,7 @@
 
 /**
  * Build a canonical JSON index and a self-contained Effective HTML companion
- * for every public skill in this repository.
+ * for every in-scope skill in this repository.
  * Visual conventions are adapted from plannotator/effective-html revision
  * 63b1bf04d3e48b426a31fdb82b1319c33663fde4 (MIT).
  *
@@ -11,7 +11,7 @@
  * Usage:
  *   node scripts/build-skill-catalog.mjs
  *   node scripts/build-skill-catalog.mjs --root . --json skill-catalog/qa-skill-catalog.json --html skill-catalog/QA-skill.html
- *   node scripts/build-skill-catalog.mjs --bundle skill-catalog/QA-skill-effective-html-30-07-2026
+ *   node scripts/build-skill-catalog.mjs --bundle skill-catalog/QA-skill-effective-html-04-08-2026
  *   node scripts/build-skill-catalog.mjs --check skill-catalog/QA-skill.html
  */
 
@@ -63,6 +63,7 @@ const GROUPS = [
       'mobile-qa',
       'performance-qa',
       'pentest-run',
+      'pentest-security',
       'appsec-supply-chain-qa',
       'reliability-resilience-qa',
       'compatibility-localization-qa',
@@ -87,6 +88,13 @@ const GROUPS = [
     skills: ['engine-jmeter', 'engine-k6', 'provider-graphify', 'provider-effective-html', 'retired-jmeter-qa'],
   },
 ];
+
+const SKILL_INVENTORY_POLICY = {
+  included: 'Root public skills plus authored and non-vendor bundled nested skills inside the repository',
+  excluded: [
+    { pattern: 'vendor/**/SKILL.md', reason: 'qa-run scope contract excludes vendored development dependencies' },
+  ],
+};
 
 const RELATIONSHIPS = [
   {
@@ -296,8 +304,8 @@ const FLOWS = [
     nodes: ['qa-run'],
     sourceRefs: [
       { path: 'qa-run/SKILL.md', line: 20, quote: 'DISCOVERY_CORE =' },
-      { path: 'qa-run/SKILL.md', line: 41, quote: 'Exploratory, ad-hoc, bug hunting' },
-      { path: 'qa-run/SKILL.md', line: 52, quote: 'For every live browser route' },
+      { path: 'qa-run/SKILL.md', line: 41, quote: 'UI Flow Discovery + Exploratory + Ad-hoc + UI/UX' },
+      { path: 'qa-run/SKILL.md', line: 52, quote: 'Applied to every live browser stack without changing DISCOVERY_CORE' },
     ],
   },
   {
@@ -311,7 +319,7 @@ const FLOWS = [
     nodes: ['qa-run'],
     sourceRefs: [
       { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 3, quote: 'same page/session used for UI actions' },
-      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `playwright-mcp` when it is the fallback driver' },
+      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `chrome-devtools-mcp` when Chrome DevTools is explicitly selected' },
       { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 61, quote: 'list_network_requests' },
     ],
   },
@@ -851,38 +859,211 @@ function extractHeadings(body) {
     .map((match) => ({ level: match[1].length, title: plainText(match[2]) }));
 }
 
-function collectSkills(root) {
-  const skillFiles = fs
-    .readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(root, entry.name, 'SKILL.md'))
-    .filter((file) => fs.existsSync(file))
-    .sort();
+function scanSkillFiles(root) {
+  const included = [];
+  const excluded = [];
 
-  return skillFiles.map((file) => {
+  function recordKnownVendorSkills(skillsDirectory) {
+    if (!fs.existsSync(skillsDirectory)) return;
+    for (const entry of fs.readdirSync(skillsDirectory, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const skillFile = path.join(skillsDirectory, entry.name, 'SKILL.md');
+      if (fs.existsSync(skillFile)) {
+        excluded.push({
+          path: path.relative(root, skillFile).split(path.sep).join('/'),
+          reason: SKILL_INVENTORY_POLICY.excluded[0].reason,
+        });
+      }
+    }
+  }
+
+  function visit(directory) {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'vendor') continue;
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(target);
+        continue;
+      }
+      if (!entry.isFile() || entry.name !== 'SKILL.md') continue;
+      const relativePath = path.relative(root, target).split(path.sep).join('/');
+      const segments = relativePath.split('/');
+      if (segments.includes('vendor')) {
+        excluded.push({ path: relativePath, reason: SKILL_INVENTORY_POLICY.excluded[0].reason });
+      } else {
+        included.push({ file: target, relativePath });
+      }
+    }
+  }
+
+  visit(root);
+  recordKnownVendorSkills(path.join(root, 'vendor', 'chrome-devtools-mcp', 'skills'));
+  recordKnownVendorSkills(path.join(root, 'qa-run', 'vendor', 'Understand-Anything', 'understand-anything-plugin', 'skills'));
+  included.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+  excluded.sort((left, right) => left.path.localeCompare(right.path));
+  return { included, excluded };
+}
+
+function findParentSkill(relativePath, directoryToSkill) {
+  let directory = path.posix.dirname(path.posix.dirname(relativePath));
+  while (directory && directory !== '.') {
+    const parent = directoryToSkill.get(directory);
+    if (parent) return parent;
+    directory = path.posix.dirname(directory);
+  }
+  return null;
+}
+
+function sectionSummary(body, heading) {
+  const lines = body.split('\n');
+  const headingIndex = lines.findIndex((line) => {
+    const match = line.match(/^(#{2,4})\s+(.+)$/);
+    return match && match[1].length === heading.level && plainText(match[2]) === heading.title;
+  });
+  if (headingIndex < 0) return `Chi tiết theo mục ${heading.title}`;
+  const paragraphs = [];
+  for (let index = headingIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextHeading = line.match(/^(#{2,4})\s+(.+)$/);
+    if (nextHeading && nextHeading[1].length <= heading.level) break;
+    const cleaned = plainText(line.replace(/^[-*]\s+/, ''));
+    if (!cleaned || cleaned.startsWith('|') || cleaned.startsWith('```')) continue;
+    paragraphs.push(cleaned);
+    if (paragraphs.join(' ').length >= 220) break;
+  }
+  return paragraphs.join(' ').slice(0, 260) || `Chi tiết theo mục ${heading.title}`;
+}
+
+function sectionChildren(body, heading) {
+  const lines = body.split('\n');
+  const headingIndex = lines.findIndex((line) => {
+    const match = line.match(/^(#{2,4})\s+(.+)$/);
+    return match && match[1].length === heading.level && plainText(match[2]) === heading.title;
+  });
+  if (headingIndex < 0) return [];
+  const children = [];
+  const prose = [];
+  let tableHeaders = null;
+  let inFence = false;
+  for (let index = headingIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    const nextHeading = line.match(/^(#{2,4})\s+(.+)$/);
+    if (nextHeading && nextHeading[1].length <= heading.level) break;
+    if (line.trim().startsWith('```')) {
+      inFence = !inFence;
+      continue;
+    }
+    const match = line.match(/^\s*(?:[-*]|\d+[.)])\s+(.+)$/);
+    if (match) {
+      const child = plainText(match[1]);
+      if (child && !children.includes(child)) children.push(child);
+      if (children.length >= 20) break;
+      continue;
+    }
+    if (inFence) continue;
+    if (line.trim().startsWith('|')) {
+      const cells = line
+        .trim()
+        .replace(/^\||\|$/g, '')
+        .split('|')
+        .map((cell) => plainText(cell.trim()))
+        .filter(Boolean);
+      if (!cells.length || cells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
+      if (!tableHeaders) {
+        tableHeaders = cells;
+        continue;
+      }
+      const row = cells
+        .map((cell, cellIndex) => `${tableHeaders[cellIndex] || `Column ${cellIndex + 1}`}: ${cell}`)
+        .join(' · ')
+        .trim();
+      if (row && !children.includes(row)) children.push(row);
+      if (children.length >= 20) break;
+      continue;
+    }
+    const paragraph = plainText(line.trim());
+    if (paragraph && paragraph.length >= 12 && !prose.includes(paragraph)) {
+      prose.push(paragraph.slice(0, 280));
+    }
+    if (prose.length >= 12) break;
+  }
+  return children.length ? children : prose;
+}
+
+function deriveOperationalBranches(name, body, headings) {
+  const configured = OPERATIONAL_BRANCHES[name];
+  if (configured?.length) return configured;
+  return headings
+    .filter((heading) => heading.level === 2)
+    .map((heading, index) => {
+      const children = [];
+      let active = false;
+      for (const candidate of headings) {
+        if (candidate === heading) {
+          active = true;
+          continue;
+        }
+        if (!active) continue;
+        if (candidate.level <= heading.level) break;
+        if (candidate.level > heading.level) children.push(candidate.title);
+      }
+      return {
+        id: `${name.replace(/[^a-z0-9]+/gi, '_').toUpperCase()}_${String(index + 1).padStart(2, '0')}`,
+        titleVi: heading.title,
+        summaryVi: sectionSummary(body, heading),
+        childrenVi: children.length ? children : sectionChildren(body, heading).slice(0, 20),
+        derived: true,
+      };
+    })
+    .map((branch) => ({
+      ...branch,
+      childrenVi: branch.childrenVi.length ? branch.childrenVi : ['Chi tiết theo SKILL.md'],
+    }));
+}
+
+function collectSkills(root) {
+  const inventory = scanSkillFiles(root);
+  const parsed = inventory.included.map(({ file, relativePath }) => {
     const markdown = readText(file);
-    const { frontmatter, body } = parseFrontmatter(markdown, file);
+    const { frontmatter, body } = parseFrontmatter(markdown, relativePath);
     const folder = path.basename(path.dirname(file));
-    const group = GROUPS.find((candidate) => candidate.skills.includes(frontmatter.name));
-    if (!group) throw new Error(`Skill is not assigned to a catalog group: ${frontmatter.name}`);
     if (folder !== frontmatter.name) {
       throw new Error(`Skill folder/name mismatch: ${folder} != ${frontmatter.name}`);
     }
+    return { file, relativePath, markdown, body, frontmatter, folder };
+  });
+  const directoryToSkill = new Map(
+    parsed.map((item) => [path.posix.dirname(item.relativePath), item]),
+  );
+
+  const skills = parsed.map(({ file, relativePath, markdown, body, frontmatter, folder }) => {
+    const parent = findParentSkill(relativePath, directoryToSkill);
+    const group = GROUPS.find((candidate) => candidate.skills.includes(frontmatter.name))
+      || (parent && GROUPS.find((candidate) => candidate.id === parent.group))
+      || GROUPS.find((candidate) => candidate.id === 'assurance');
+    if (!group) throw new Error(`Skill is not assigned to a catalog group: ${frontmatter.name}`);
+    const headings = extractHeadings(body);
     const title = body.match(/^#\s+(.+)$/m)?.[1]?.trim() || frontmatter.name;
     return {
       name: frontmatter.name,
       title,
       folder,
       group: group.id,
+      scope: relativePath.includes('/_bundled_plugin/') ? 'bundled' : parent ? 'nested' : 'public-root',
+      parent: parent?.frontmatter?.name || null,
       description: frontmatter.description,
       principle: firstPrinciple(body),
       vi: {
         summary: VI_SKILL_TEXT[frontmatter.name] || frontmatter.description,
-        advantages: VI_SKILL_INSIGHTS[frontmatter.name]?.advantages || [],
-        limitations: VI_SKILL_INSIGHTS[frontmatter.name]?.limitations || [],
+        advantages: VI_SKILL_INSIGHTS[frontmatter.name]?.advantages || [
+          'Có hard gate, boundary và output có thể kiểm tra từ SKILL.md',
+        ],
+        limitations: VI_SKILL_INSIGHTS[frontmatter.name]?.limitations || [
+          'Kết luận cuối cùng vẫn phụ thuộc target, input và evidence của run thực tế',
+        ],
       },
-      operationalBranches: OPERATIONAL_BRANCHES[frontmatter.name] || [],
-      headings: extractHeadings(body),
+      operationalBranches: deriveOperationalBranches(frontmatter.name, body, headings),
+      headings,
       interface: parseInterface(path.dirname(file)),
       resources: {
         scripts: countFiles(path.join(path.dirname(file), 'scripts')),
@@ -893,11 +1074,13 @@ function collectSkills(root) {
         lines: markdown.split('\n').length,
         words: plainText(markdown).split(/\s+/).filter(Boolean).length,
       },
-      sourcePath: `${folder}/SKILL.md`,
+      sourcePath: relativePath,
       source: markdown,
       sourceHash: crypto.createHash('sha256').update(markdown).digest('hex'),
     };
   });
+
+  return { skills, excludedSkillFiles: inventory.excluded };
 }
 
 function validateSourceRef(root, relation, sourceRef) {
@@ -943,6 +1126,12 @@ function validateCatalog(catalog, root = defaultRoot) {
     ) {
       throw new Error(`Incomplete skill entry: ${skill.name}`);
     }
+    if (!['public-root', 'nested', 'bundled'].includes(skill.scope)) {
+      throw new Error(`Unknown skill scope: ${skill.name}/${skill.scope || 'missing'}`);
+    }
+    if (['nested', 'bundled'].includes(skill.scope) && !skill.parent) {
+      throw new Error(`Nested/bundled skill has no parent: ${skill.name}`);
+    }
     const currentHeadings = extractHeadings(parseFrontmatter(skill.source, skill.sourcePath).body);
     if (JSON.stringify(skill.headings) !== JSON.stringify(currentHeadings)) {
       throw new Error(`Incomplete or stale branch index: ${skill.name}`);
@@ -970,11 +1159,16 @@ function validateCatalog(catalog, root = defaultRoot) {
       throw new Error(`Incomplete auxiliary entry: ${item.name}`);
     }
   }
-  const assigned = GROUPS.flatMap((group) => group.skills).filter((name) => publicNames.has(name));
+  const assigned = (catalog.groups || GROUPS).flatMap((group) => group.skills).filter((name) => publicNames.has(name));
   if (assigned.length !== catalog.skills.length || assigned.some((name) => !names.has(name))) {
-    throw new Error('Catalog group assignment does not match the discovered public skills');
+    throw new Error('Catalog group assignment does not match the discovered skills');
   }
-  const assignedAuxiliary = GROUPS.flatMap((group) => group.skills).filter((name) => auxiliaryNames.has(name));
+  for (const skill of catalog.skills.filter((item) => item.parent)) {
+    if (!publicNames.has(skill.parent)) {
+      throw new Error(`Nested skill parent is missing: ${skill.name} -> ${skill.parent}`);
+    }
+  }
+  const assignedAuxiliary = (catalog.groups || GROUPS).flatMap((group) => group.skills).filter((name) => auxiliaryNames.has(name));
   if (assignedAuxiliary.length !== catalog.auxiliary.length) {
     throw new Error('Catalog group assignment does not match auxiliary capabilities');
   }
@@ -994,8 +1188,25 @@ function validateCatalog(catalog, root = defaultRoot) {
     for (const sourceRef of flow.sourceRefs || []) validateSourceRef(root, { from: flow.id, to: flow.id }, sourceRef);
   }
   if (catalog.summary.skillCount !== catalog.skills.length) throw new Error('summary.skillCount mismatch');
+  const publicSkillCount = catalog.skills.filter((skill) => skill.scope === 'public-root').length;
+  const nestedSkillCount = catalog.skills.filter((skill) => skill.scope === 'nested').length;
+  const bundledSkillCount = catalog.skills.filter((skill) => skill.scope === 'bundled').length;
+  if (catalog.summary.publicSkillCount !== publicSkillCount) throw new Error('summary.publicSkillCount mismatch');
+  if (catalog.summary.nestedSkillCount !== nestedSkillCount) throw new Error('summary.nestedSkillCount mismatch');
+  if (catalog.summary.bundledSkillCount !== bundledSkillCount) throw new Error('summary.bundledSkillCount mismatch');
+  if (catalog.summary.excludedSkillFileCount !== (catalog.inventory?.excludedSkillFiles?.length || 0)) {
+    throw new Error('summary.excludedSkillFileCount mismatch');
+  }
   if (catalog.summary.auxiliaryCount !== catalog.auxiliary.length) throw new Error('summary.auxiliaryCount mismatch');
-  const publicBranchCount = catalog.skills.reduce((sum, skill) => sum + skill.headings.length, 0);
+  const publicBranchCount = catalog.skills
+    .filter((skill) => skill.scope === 'public-root')
+    .reduce((sum, skill) => sum + skill.headings.length, 0);
+  const nestedBranchCount = catalog.skills
+    .filter((skill) => skill.scope === 'nested')
+    .reduce((sum, skill) => sum + skill.headings.length, 0);
+  const bundledBranchCount = catalog.skills
+    .filter((skill) => skill.scope === 'bundled')
+    .reduce((sum, skill) => sum + skill.headings.length, 0);
   const auxiliaryBranchCount = catalog.auxiliary.reduce((sum, item) => sum + item.headings.length, 0);
   if (catalog.summary.publicBranchCount !== publicBranchCount) {
     throw new Error('summary.publicBranchCount mismatch');
@@ -1003,13 +1214,19 @@ function validateCatalog(catalog, root = defaultRoot) {
   if (catalog.summary.auxiliaryBranchCount !== auxiliaryBranchCount) {
     throw new Error('summary.auxiliaryBranchCount mismatch');
   }
-  if (catalog.summary.branchCount !== publicBranchCount + auxiliaryBranchCount) {
+  if (catalog.summary.nestedBranchCount !== nestedBranchCount) {
+    throw new Error('summary.nestedBranchCount mismatch');
+  }
+  if (catalog.summary.bundledBranchCount !== bundledBranchCount) {
+    throw new Error('summary.bundledBranchCount mismatch');
+  }
+  if (catalog.summary.branchCount !== publicBranchCount + nestedBranchCount + bundledBranchCount + auxiliaryBranchCount) {
     throw new Error('summary.branchCount mismatch');
   }
 }
 
 function buildCatalog(root) {
-  const skills = collectSkills(root);
+  const { skills, excludedSkillFiles } = collectSkills(root);
   const flows = resolveEvidenceLines(FLOWS, root);
   const relationships = resolveEvidenceLines(RELATIONSHIPS, root);
   const sourceDigest = crypto
@@ -1026,10 +1243,27 @@ function buildCatalog(root) {
       license: 'MIT',
     },
     sourceDigest,
+    inventory: {
+      policy: SKILL_INVENTORY_POLICY,
+      includedSkillFiles: skills.map((skill) => skill.sourcePath),
+      excludedSkillFiles,
+    },
     summary: {
       skillCount: skills.length,
+      publicSkillCount: skills.filter((skill) => skill.scope === 'public-root').length,
+      nestedSkillCount: skills.filter((skill) => skill.scope === 'nested').length,
+      bundledSkillCount: skills.filter((skill) => skill.scope === 'bundled').length,
+      excludedSkillFileCount: excludedSkillFiles.length,
       auxiliaryCount: AUXILIARY.length,
-      publicBranchCount: skills.reduce((sum, skill) => sum + skill.headings.length, 0),
+      publicBranchCount: skills
+        .filter((skill) => skill.scope === 'public-root')
+        .reduce((sum, skill) => sum + skill.headings.length, 0),
+      nestedBranchCount: skills
+        .filter((skill) => skill.scope === 'nested')
+        .reduce((sum, skill) => sum + skill.headings.length, 0),
+      bundledBranchCount: skills
+        .filter((skill) => skill.scope === 'bundled')
+        .reduce((sum, skill) => sum + skill.headings.length, 0),
       auxiliaryBranchCount: AUXILIARY.reduce((sum, item) => sum + item.headings.length, 0),
       branchCount: [...skills, ...AUXILIARY].reduce((sum, item) => sum + item.headings.length, 0),
       operationalBranchCount: skills.reduce((sum, skill) => sum + skill.operationalBranches.length, 0),
@@ -1039,7 +1273,13 @@ function buildCatalog(root) {
       referenceCount: skills.reduce((sum, skill) => sum + skill.resources.references, 0),
       assetCount: skills.reduce((sum, skill) => sum + skill.resources.assets, 0),
     },
-    groups: GROUPS,
+    groups: GROUPS.map((group) => ({
+      ...group,
+      skills: [...new Set([
+        ...group.skills,
+        ...skills.filter((skill) => skill.group === group.id).map((skill) => skill.name),
+      ])],
+    })),
     flows,
     relationships,
     auxiliary: AUXILIARY,
@@ -1355,10 +1595,10 @@ button{color:inherit}
       <div class="intro-copy">
         <p class="eyebrow">Một repository · ${catalog.summary.groupCount} nhóm năng lực</p>
         <h2>Mỗi luồng QA đều có skill chịu trách nhiệm và handoff rõ ràng</h2>
-        <p>Một file duy nhất để xem kiến trúc, tra cứu ${catalog.summary.skillCount} skill công khai, ${catalog.summary.branchCount} mục cấu trúc và ${catalog.summary.operationalBranchCount} nhánh thực thi đã mô hình hóa.</p>
+        <p>Một file duy nhất để xem kiến trúc, tra cứu ${catalog.summary.skillCount} skill trong scope (${catalog.summary.publicSkillCount} public + ${catalog.summary.nestedSkillCount} nested), ${catalog.summary.branchCount} mục cấu trúc và ${catalog.summary.operationalBranchCount} nhánh thực thi đã mô hình hóa.</p>
       </div>
       <div class="stats-panel" aria-label="Repository statistics">
-        <div class="stat"><strong>${catalog.summary.skillCount}</strong><span>skill công khai</span></div>
+        <div class="stat"><strong>${catalog.summary.skillCount}</strong><span>skill trong scope</span></div>
         <div class="stat"><strong>${catalog.summary.relationshipCount}</strong><span>handoff rõ ràng</span></div>
         <div class="stat"><strong>${catalog.summary.scriptCount}</strong><span>script đi kèm</span></div>
         <div class="stat"><strong>${catalog.summary.branchCount}</strong><span>mục H2–H4/phụ trợ</span></div>
@@ -1781,7 +2021,7 @@ button{color:inherit}
 <header class="bar">
   <div class="brand">
     <h1>QA-skill — kiến trúc tổng thể</h1>
-    <p>${catalog.summary.skillCount} skill công khai · ${catalog.summary.auxiliaryCount} capability nội bộ/phụ trợ · mapping có nguồn</p>
+    <p>${catalog.summary.skillCount} skill trong scope · ${catalog.summary.auxiliaryCount} capability nội bộ/phụ trợ · mapping có nguồn</p>
   </div>
   <div class="spacer"></div>
   <div class="chips" aria-label="Làm nổi bật luồng QA">
@@ -1811,7 +2051,7 @@ button{color:inherit}
     <button class="close" id="detailClose" type="button" aria-label="Đóng chi tiết skill">×</button>
     <p class="eyebrow" id="detailGroup">Chi tiết skill</p>
     <h2 id="detailTitle">Bấm vào một skill</h2>
-    <div class="meta" id="detailMeta">${catalog.summary.skillCount} skill công khai · ${catalog.summary.auxiliaryCount} capability phụ trợ</div>
+    <div class="meta" id="detailMeta">${catalog.summary.skillCount} skill trong scope · ${catalog.summary.auxiliaryCount} capability phụ trợ</div>
     <p id="detailBody">Mỗi mũi tên đều có provenance từ SKILL.md, reference hoặc setup metadata. Rê chuột lên đường nối để xem file và dòng nguồn.</p>
     <a id="detailLink" href="${sourcePrefix}/AGENTS.md">Mở router chuẩn ↗</a>
   </aside>
@@ -2091,7 +2331,7 @@ function validateArchitectureHtml(file, root = defaultRoot) {
   if ((html.match(/class="chip(?: on)?"/g) || []).length !== catalog.flows.length + 1) {
     throw new Error('Architecture HTML validation failed; workflow chip count mismatch');
   }
-  console.log(`PASS ${file}: full-screen Effective HTML diagram with ${catalog.skills.length} public skills, ${catalog.auxiliary.length} auxiliary capabilities and ${catalog.flows.length} routed flows`);
+  console.log(`PASS ${file}: full-screen Effective HTML diagram with ${catalog.skills.length} in-scope skills, ${catalog.auxiliary.length} auxiliary capabilities and ${catalog.flows.length} routed flows`);
 }
 
 function writeFile(target, content) {

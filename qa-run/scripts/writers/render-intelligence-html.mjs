@@ -24,12 +24,13 @@ function usage() {
   node render-intelligence-html.mjs --input <validated.json> --output <report.html> [--kind auto]
   node render-intelligence-html.mjs --check <report.html>
 
-Supported inputs:
+  Supported inputs:
   business-execution-brief  qa-run Business Execution Brief
   graphify-discovery       normalized graphify-adapter artifact
   architecture-map         qa-run static repository architecture map
   business-analysis        business-analysis hidden JSON source
-  whitebox-call-graph      whitebox-qa bounded call graph or NestJS graph`);
+  whitebox-call-graph      whitebox-qa bounded call graph or NestJS graph
+  qa-skill-catalog         recursive QA-skill catalog with skill branches`);
 }
 
 function fail(message, code = 2) {
@@ -46,6 +47,7 @@ function checkHtml(filePath) {
   const fullEdgeCount = Number(
     html.match(/<meta name="qa-full-edge-count" content="(\d+)">/)?.[1] || 0,
   );
+  const isSkillCatalog = /<meta name="qa-kind" content="qa-skill-catalog">/.test(html);
   const checks = {
     doctype: /^<!doctype html>/i.test(html),
     selfContained: !/<script[^>]+\bsrc=|<link[^>]+\bhref=/i.test(html),
@@ -70,6 +72,13 @@ function checkHtml(filePath) {
       && /const FULL_INDEX=/.test(html)
       && fullEdgeCount >= 0
     ),
+    skillCatalogDetails: !isSkillCatalog || (
+      /id="detailBranches"/.test(html)
+      && /id="detailInsights"/.test(html)
+      && /id="detailResourceInfo"/.test(html)
+      && /Full skill and branch index/.test(html)
+    ),
+    skillCatalogSourceRedaction: !isSkillCatalog || !/SKILL\.md/i.test(html),
   };
   const failed = Object.entries(checks).filter(([, passed]) => !passed).map(([name]) => name);
   console.log(JSON.stringify({ file: path.resolve(filePath), checks, status: failed.length ? 'FAILED' : 'PASS' }, null, 2));
@@ -110,6 +119,9 @@ function detectKind(value) {
   if (value.tool === 'architecture-discovery.mjs' && Array.isArray(value.modules)) {
     return 'architecture-map';
   }
+  if (value.kind === 'qa-skill-catalog' && Array.isArray(value.skills)) {
+    return 'qa-skill-catalog';
+  }
   if (Array.isArray(value.risk_inventory) && value.business_context) {
     return 'business-execution-brief';
   }
@@ -132,12 +144,17 @@ if (![
   'business-execution-brief',
   'business-analysis',
   'whitebox-call-graph',
+  'qa-skill-catalog',
 ].includes(kind)) {
   fail(`unsupported input schema: ${kind}`);
 }
 
 function clean(value) {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function publicCatalogText(value) {
+  return clean(value).replace(/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+\.md\b/gi, 'source document');
 }
 
 function unique(values) {
@@ -558,6 +575,260 @@ function buildBusinessAnalysisModel(value) {
   };
 }
 
+function buildSkillCatalogModel(value) {
+  const groups = new Map((value.groups || []).map(group => [clean(group.id), group]));
+  const skills = [...(value.skills || []), ...(value.auxiliary || [])];
+  const nodeIds = new Map();
+  const nodes = skills.map((skill, index) => {
+    const id = safeId(`skill:${skill.name}`, index);
+    nodeIds.set(clean(skill.name), id);
+    const group = groups.get(clean(skill.group));
+    const scope = skill.scope || `auxiliary:${skill.status || 'internal'}`;
+    const branchCount = (skill.headings || []).length + (skill.operationalBranches || []).length + (skill.branches || []).length;
+    const parentText = skill.parent ? `parent ${skill.parent}` : 'repository root';
+    return {
+      id,
+      sourceId: clean(skill.name),
+      label: clean(skill.name),
+      meta: [group?.labelVi || skill.group || 'skill', scope, parentText].filter(Boolean).join(' · '),
+      detail: [`${branchCount} indexed branch items`, publicCatalogText(skill.description)].filter(Boolean).join(' · '),
+      capability: publicCatalogText(skill.vi?.summary || skill.description),
+      actor: scope === 'public-root' ? 'Public skill' : scope === 'nested' ? `Nested skill under ${skill.parent}` : scope === 'bundled' ? `Bundled skill under ${skill.parent}` : clean(skill.status || 'auxiliary capability'),
+      entryState: skill.parent ? `Entry via ${skill.parent}` : 'Entry at repository router',
+      exitState: 'Returns to the configured skill flow',
+      status: clean(skill.status || scope),
+      scope,
+      parent: clean(skill.parent),
+      group: clean(skill.group),
+      branchItems: [],
+      advantages: (skill.vi?.advantages || []).map(publicCatalogText),
+      limitations: (skill.vi?.limitations || []).map(publicCatalogText),
+      resources: skill.resources || {},
+      tone: scope === 'public-root' ? 'entry' : scope === 'nested' ? 'flow' : 'dependency',
+    };
+  });
+
+  const skillByName = new Map(skills.map(skill => [clean(skill.name), skill]));
+  const edgeRecords = [];
+  const fullRelations = [];
+  const addFullRelation = (source, target, relation, confidence = 'EXTRACTED', sourceRef = '') => {
+    fullRelations.push({ source: clean(source), target: clean(target), relation: publicCatalogText(relation), confidence, sourceRef: '' });
+  };
+
+  (value.relationships || []).forEach((relation, index) => {
+    const source = nodeIds.get(clean(relation.from));
+    const target = nodeIds.get(clean(relation.to));
+    if (!source || !target) return;
+    const label = publicCatalogText(relation.labelVi || relation.label || relation.kind || 'handoff');
+    edgeRecords.push({
+      id: `relation-${index + 1}`,
+      source,
+      target,
+      sourceName: clean(relation.from),
+      targetName: clean(relation.to),
+      label,
+      flow: clean(relation.flow),
+      confidence: 'EXTRACTED',
+      detail: '',
+    });
+    addFullRelation(relation.from, relation.to, label, 'EXTRACTED');
+  });
+
+  for (const skill of skills) {
+    if (!skill.parent || !nodeIds.has(clean(skill.parent))) continue;
+    const parentEdgeId = `parent-${safeId(skill.name, 0)}`;
+    edgeRecords.push({
+      id: parentEdgeId,
+      source: nodeIds.get(clean(skill.parent)),
+      target: nodeIds.get(clean(skill.name)),
+      sourceName: clean(skill.parent),
+      targetName: clean(skill.name),
+      label: 'contains nested skill',
+      flow: 'skill-tree',
+      confidence: 'EXTRACTED',
+      detail: '',
+    });
+    addFullRelation(skill.parent, skill.name, 'contains nested skill', 'EXTRACTED');
+  }
+
+  const branchNodes = [];
+  let branchIndex = 0;
+  for (const skill of skills) {
+    const sourceSkill = skillByName.get(clean(skill.name));
+    const node = nodes.find(item => item.sourceId === clean(skill.name));
+    if (!sourceSkill || !node) continue;
+    const branchItems = [
+      ...(sourceSkill.headings || []).map((heading, index) => ({
+        key: `heading-${index + 1}`,
+        kind: 'structure',
+        level: heading.level,
+        title: publicCatalogText(heading.title),
+        summary: `Mục H${heading.level} trong skill ${sourceSkill.name}`,
+        children: [],
+      })),
+      ...(sourceSkill.operationalBranches || []).map(branch => ({
+        key: `operation-${branch.id}`,
+        kind: 'operational',
+        level: 2,
+        title: publicCatalogText(branch.titleVi),
+        summary: publicCatalogText(branch.summaryVi),
+        children: (branch.childrenVi || []).map(publicCatalogText),
+      })),
+      ...(sourceSkill.headings?.length ? [] : (sourceSkill.branches || [])).map((title, index) => ({
+        key: `auxiliary-${index + 1}`,
+        kind: 'auxiliary',
+        level: 2,
+        title: publicCatalogText(title),
+        summary: `Capability phụ trợ của ${sourceSkill.name}`,
+        children: [],
+      })),
+    ];
+    node.branchItems = branchItems;
+    for (const item of branchItems) {
+      branchIndex += 1;
+      const branchId = safeId(`branch:${sourceSkill.name}:${item.key}`, branchIndex);
+      const branchLabel = `${sourceSkill.name} · ${item.title}`;
+      branchNodes.push({
+        id: branchId,
+        sourceId: branchId,
+        label: branchLabel,
+        meta: `${item.kind} · H${item.level} · ${sourceSkill.name}`,
+        detail: [item.summary, ...(item.children || [])].filter(Boolean).join(' · '),
+        capability: item.summary,
+        actor: sourceSkill.name,
+        entryState: `Branch of ${sourceSkill.name}`,
+        exitState: `Returns to ${sourceSkill.name} flow`,
+        status: item.kind,
+        scope: 'branch',
+        parent: sourceSkill.name,
+        group: sourceSkill.group,
+        branchItems: [],
+        advantages: [],
+        limitations: [],
+        resources: {},
+        tone: 'flow',
+      });
+      addFullRelation(sourceSkill.name, branchLabel, item.kind === 'operational' ? 'operational branch' : 'structure branch', 'EXTRACTED');
+      for (const [childIndex, child] of (item.children || []).entries()) {
+        const childId = safeId(`branch:${sourceSkill.name}:${item.key}:child:${childIndex + 1}`, branchIndex + childIndex + 1);
+        const childLabel = `${sourceSkill.name} · ${item.title} · ${child}`;
+        branchNodes.push({
+          id: childId,
+          sourceId: childId,
+          label: childLabel,
+          meta: `child branch · ${sourceSkill.name}`,
+          detail: `Child of ${branchLabel}`,
+          capability: `Nhánh con của ${item.title}`,
+          actor: sourceSkill.name,
+          entryState: branchLabel,
+          exitState: `Returns to ${sourceSkill.name} flow`,
+          status: 'child',
+          scope: 'branch-child',
+          parent: branchLabel,
+          group: sourceSkill.group,
+          branchItems: [],
+          advantages: [],
+          limitations: [],
+          resources: {},
+          tone: 'dependency',
+        });
+        addFullRelation(branchLabel, childLabel, 'contains child branch', 'EXTRACTED');
+      }
+    }
+  }
+
+  const skillRoutes = nodes
+    .filter(node => ['public-root', 'nested', 'bundled'].includes(node.scope))
+    .map((node, index) => {
+      const related = edgeRecords.filter(edge => edge.source === node.id || edge.target === node.id);
+      const relatedNodes = new Set([node.id]);
+      for (const edge of related) {
+        relatedNodes.add(edge.source);
+        relatedNodes.add(edge.target);
+      }
+      return {
+        id: `skill-route-${index + 1}`,
+        label: node.label,
+        description: node.capability,
+        nodes: [...relatedNodes],
+        edges: related.map(edge => edge.id),
+      };
+    });
+  const workflowRoutes = (value.flows || []).map(flow => {
+    const related = edgeRecords.filter(edge => edge.flow === clean(flow.id));
+    const relatedNodes = new Set((flow.nodes || []).map(name => nodeIds.get(clean(name))).filter(Boolean));
+    for (const edge of related) {
+      relatedNodes.add(edge.source);
+      relatedNodes.add(edge.target);
+    }
+    return {
+      id: `flow-${clean(flow.id)}`,
+      label: clean(flow.labelVi || flow.label || flow.id),
+      description: clean(flow.summaryVi || flow.summary),
+      nodes: [...relatedNodes],
+      edges: related.map(edge => edge.id),
+    };
+  });
+
+  const fullSkillNodes = nodes.map(node => ({
+    label: node.label,
+    meta: node.meta,
+    detail: node.detail,
+  }));
+  const fullBranchNodes = branchNodes.map(node => ({
+    label: node.label,
+    meta: node.meta,
+    detail: node.detail,
+  }));
+  const excluded = value.inventory?.excludedSkillFiles || [];
+  const scopeItems = [
+    `${value.summary?.publicSkillCount ?? nodes.filter(node => node.scope === 'public-root').length} public-root skill`,
+    `${value.summary?.nestedSkillCount ?? nodes.filter(node => node.scope === 'nested').length} nested skill`,
+    `${value.summary?.bundledSkillCount ?? nodes.filter(node => node.scope === 'bundled').length} bundled skill`,
+    `${value.summary?.auxiliaryCount ?? (value.auxiliary || []).length} auxiliary capability`,
+    `${excluded.length} excluded vendor skill surfaces`,
+  ];
+
+  return {
+    title: 'QA-skill — full skill flow',
+    subtitle: 'Recursive in-scope catalog · branch structure and handoff relationships are source-derived; public card details redact source filenames and links',
+    kind,
+    metrics: [
+      metric('In-scope skills', value.summary?.skillCount ?? nodes.length, 'good'),
+      metric('Branches', value.summary?.branchCount ?? branchNodes.length, 'warn'),
+      metric('Operations', value.summary?.operationalBranchCount ?? 0),
+      metric('Handoffs', value.summary?.relationshipCount ?? edgeRecords.length),
+      metric('Excluded surfaces', excluded.length, excluded.length ? 'risk' : 'good'),
+    ],
+    nodes,
+    edges: edgeRecords,
+    routes: [...workflowRoutes, ...skillRoutes],
+    sections: [
+      { title: 'Inventory scope', items: scopeItems },
+      {
+        title: 'Skill tree',
+        items: skills.map(skill => `${skill.parent ? `${skill.parent} → ` : ''}${skill.name}`),
+      },
+      {
+        title: 'Branch coverage',
+        items: skills.map(skill => `${skill.name}: ${(skill.headings || []).length} H2–H4 · ${(skill.operationalBranches || []).length + (skill.branches || []).length} operational/auxiliary`),
+      },
+      {
+        title: 'Exclusion boundary',
+        items: excluded.length
+          ? [`${excluded.length} vendor development dependency skill surfaces hidden by scope contract`]
+          : ['Không có vendor skill surface bị loại khỏi inventory'],
+      },
+    ],
+    fullIndex: {
+      title: 'Full skill and branch index',
+      description: 'Search every retained skill, nested branch, child branch and handoff relation. Source filenames and links are intentionally omitted from this public view.',
+      nodes: [...fullSkillNodes, ...fullBranchNodes],
+      relations: fullRelations,
+    },
+  };
+}
+
 function buildWhiteboxModel(value) {
   if (value.framework === 'nestjs') {
     const nodes = (value.components || []).map((component, index) => ({
@@ -661,11 +932,13 @@ const model = kind === 'graphify-discovery'
   ? buildGraphifyModel(data)
   : kind === 'architecture-map'
     ? buildArchitectureModel(data)
-  : kind === 'business-execution-brief'
-    ? buildBriefModel(data)
-    : kind === 'business-analysis'
-      ? buildBusinessAnalysisModel(data)
-      : buildWhiteboxModel(data);
+    : kind === 'business-execution-brief'
+      ? buildBriefModel(data)
+      : kind === 'business-analysis'
+        ? buildBusinessAnalysisModel(data)
+        : kind === 'qa-skill-catalog'
+          ? buildSkillCatalogModel(data)
+        : buildWhiteboxModel(data);
 
 model.edges = (model.edges || []).map((edge, index) => ({
   ...edge,
@@ -769,12 +1042,12 @@ const sectionsHtml = model.sections.map(section => `<section class="report-secti
 const fullIndexHtml = model.fullIndex ? `<section class="full-index" aria-labelledby="fullIndexTitle">
   <div class="full-index-heading">
     <div>
-      <h2 id="fullIndexTitle">Full project index</h2>
-      <p>Search every retained node and relation. The canvas above is only a readable overview.</p>
+      <h2 id="fullIndexTitle">${escapeHtml(model.fullIndex.title || 'Full project index')}</h2>
+      <p>${escapeHtml(model.fullIndex.description || 'Search every retained node and relation. The canvas above is only a readable overview.')}</p>
     </div>
     <div class="full-index-counts">${model.fullIndex.nodes.length} nodes · ${model.fullIndex.relations.length} relations</div>
   </div>
-  <label for="fullSearch">Search node, path, relation or confidence</label>
+  <label for="fullSearch">Search skill, branch, relation or confidence</label>
   <input id="fullSearch" type="search" autocomplete="off" placeholder="Type at least 2 characters">
   <output id="fullIndexStatus" class="full-index-status" aria-live="polite"></output>
   <div id="fullIndexResults" class="full-index-results"></div>
@@ -791,6 +1064,13 @@ const scriptModel = JSON.stringify({
     entryState: node.entryState || '',
     exitState: node.exitState || '',
     status: node.status || '',
+    scope: node.scope || '',
+    parent: node.parent || '',
+    group: node.group || '',
+    branchItems: node.branchItems || [],
+    advantages: node.advantages || [],
+    limitations: node.limitations || [],
+    resources: node.resources || {},
   })),
   edges: model.edges.map(edge => ({
     id: edge.id,
@@ -816,6 +1096,7 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="QA-skill render-intelligence-html">
 <meta name="qa-effective-html-layout" content="catalog-v2">
+<meta name="qa-kind" content="${escapeHtml(kind)}">
 <meta name="qa-diagram-node-count" content="${positionedNodes.length}">
 ${fullIndexMeta}
 <title>${escapeHtml(model.title)}</title>
@@ -877,7 +1158,7 @@ ${fullIndexMeta}
   .index-result{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--bg);min-width:0}
   .index-result strong{display:block;color:var(--ink);overflow-wrap:anywhere}
   .index-result span{display:block;color:var(--muted);font:11px var(--mono);overflow-wrap:anywhere;margin-top:3px}
-  .drawer{position:fixed;z-index:40;top:0;right:0;width:min(620px,100vw);height:100vh;padding:22px;background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);overflow:auto;transform:translateX(102%);transition:transform .22s ease}.drawer.open{transform:translateX(0)}.backdrop{position:fixed;z-index:35;inset:0;background:rgba(20,20,19,.32);opacity:0;pointer-events:none;transition:opacity .2s}.backdrop.open{opacity:1;pointer-events:auto}.drawer-close{position:sticky;top:0;float:right;z-index:2;background:var(--surface)}.drawer h2{margin:20px 45px 8px 0;color:var(--ink);font:500 32px var(--serif)}.drawer .meta{color:var(--clay);font:11px var(--mono)}.detail-block,.flow-facts,.detail-routes{margin-top:14px;padding:16px;border:1px solid var(--line-soft);border-radius:12px;background:var(--bg)}.detail-block h3,.flow-facts h3,.detail-routes h3{margin:0 0 10px;color:var(--ink);font:600 12px var(--sans)}.detail-block p{margin:0;line-height:1.65}.flow-facts dl{margin:0}.fact-row{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft)}.fact-row:first-of-type{border-top:0}.fact-row[hidden]{display:none}.fact-row dt{color:var(--muted);font:10px var(--mono);text-transform:uppercase}.fact-row dd{margin:0;font-size:12.5px;line-height:1.5}.route-step{display:grid;grid-template-columns:54px 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line-soft);font-size:12px;line-height:1.45}.route-step:first-child{border-top:0}.route-direction{color:var(--clay);font:10px var(--mono);text-transform:uppercase}.drawer[aria-hidden="true"]{visibility:hidden}
+  .drawer{position:fixed;z-index:40;top:0;right:0;width:min(680px,100vw);height:100vh;padding:22px;background:var(--surface);border-left:1px solid var(--line);box-shadow:var(--shadow);overflow:auto;transform:translateX(102%);transition:transform .22s ease}.drawer.open{transform:translateX(0)}.backdrop{position:fixed;z-index:35;inset:0;background:rgba(20,20,19,.32);opacity:0;pointer-events:none;transition:opacity .2s}.backdrop.open{opacity:1;pointer-events:auto}.drawer-close{position:sticky;top:0;float:right;z-index:2;background:var(--surface)}.drawer h2{margin:20px 45px 8px 0;color:var(--ink);font:500 32px var(--serif)}.drawer .meta{color:var(--clay);font:11px var(--mono)}.detail-block,.flow-facts,.detail-routes,.detail-branches,.detail-insights{margin-top:14px;padding:16px;border:1px solid var(--line-soft);border-radius:12px;background:var(--bg)}.detail-block h3,.flow-facts h3,.detail-routes h3,.detail-branches h3,.detail-insights h3{margin:0 0 10px;color:var(--ink);font:600 12px var(--sans)}.detail-block p{margin:0;line-height:1.65}.flow-facts dl{margin:0}.fact-row{display:grid;grid-template-columns:92px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line-soft)}.fact-row:first-of-type{border-top:0}.fact-row[hidden]{display:none}.fact-row dt{color:var(--muted);font:10px var(--mono);text-transform:uppercase}.fact-row dd{margin:0;font-size:12.5px;line-height:1.5}.route-step{display:grid;grid-template-columns:54px 1fr;gap:8px;padding:8px 0;border-top:1px solid var(--line-soft);font-size:12px;line-height:1.45}.route-step:first-child{border-top:0}.route-direction{color:var(--clay);font:10px var(--mono);text-transform:uppercase}.branch-row{padding:9px 0;border-top:1px solid var(--line-soft)}.branch-row:first-child{border-top:0}.branch-row strong{display:block;color:var(--ink);font-size:12px}.branch-row small{display:block;margin-top:3px;color:var(--muted);font:10px var(--mono)}.branch-row p{margin:5px 0 0;font-size:12px;line-height:1.5}.branch-children{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0 0;padding:0;list-style:none}.branch-children li{padding:4px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font:9.5px var(--mono)}.insight-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}.insight-columns h4{margin:0 0 6px;color:var(--ink);font-size:11px}.insight-columns ul{margin:0;padding-left:17px}.insight-columns li{padding:3px 0;font-size:12px;line-height:1.45}.drawer[aria-hidden="true"]{visibility:hidden}
   @media(max-width:900px){.topbar{align-items:flex-start;flex-wrap:wrap}.brand{flex:1}.tabs{order:3;width:100%;overflow:auto}.search-wrap{min-width:220px}.page{padding:13px}.intro{grid-template-columns:1fr}.stage{height:70vh}.stage-tools .zoom-status{display:none}}
   @media(max-width:560px){.search-wrap{order:4;width:100%}.intro-copy{padding:20px}.stats-panel{grid-template-columns:1fr}.metric{border-right:0;border-bottom:1px solid var(--line-soft)}.stage{min-height:480px}.legend{max-width:210px}}
   @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
@@ -942,6 +1223,9 @@ ${fullIndexMeta}
     <div class="fact-row" id="factExit"><dt>Kết quả ra</dt><dd></dd></div>
     <div class="fact-row" id="factStatus"><dt>Trạng thái</dt><dd></dd></div>
   </dl></section>
+  <section class="detail-branches"><h3>Nhánh đầy đủ</h3><div id="detailBranches"></div></section>
+  <section class="detail-insights"><h3>Ưu điểm và hạn chế</h3><div id="detailInsights"></div></section>
+  <section class="detail-block"><h3>Tài nguyên</h3><p id="detailResourceInfo"></p></section>
   <section class="detail-routes"><h3>Đường đi liên quan</h3><div id="detailRoutes"></div></section>
 </aside>
 <script>
@@ -981,7 +1265,10 @@ ${fullIndexMeta}
   function renderRelatedRoutes(id){const container=document.getElementById('detailRoutes');container.replaceChildren();const related=MODEL.edges.filter(edge=>edge.source===id||edge.target===id);if(!related.length){container.textContent='Node này chưa có liên kết vào hoặc ra';return}for(const edge of related){const incoming=edge.target===id;const other=nodeById.get(incoming?edge.source:edge.target);const row=document.createElement('div');row.className='route-step';const direction=document.createElement('span');direction.className='route-direction';direction.textContent=incoming?'Đi từ':'Đi tới';const text=document.createElement('span');text.textContent=(other?.label||'Unknown')+' · '+edge.label;row.append(direction,text);container.append(row)}}
   function setFact(rowId,value){const row=document.getElementById(rowId);const available=Boolean(value);row.hidden=!available;if(available)row.querySelector('dd').textContent=value;return available}
   function renderFlowFacts(node){const visible=[setFact('factActor',node.actor),setFact('factEntry',node.entryState),setFact('factExit',node.exitState),setFact('factStatus',node.status)].some(Boolean);document.getElementById('detailFacts').hidden=!visible}
-  function showDetail(id,trigger){const node=nodeById.get(id);if(!node)return;detailTrigger=trigger||document.activeElement;focusNodeRoutes(id);document.querySelectorAll('.node').forEach(item=>item.classList.toggle('selected',item.dataset.nodeId===id));document.getElementById('detailTitle').textContent=node.label;document.getElementById('detailMeta').textContent=node.meta;document.getElementById('detailCapability').textContent=node.capability||node.detail||'Không có mô tả capability';renderFlowFacts(node);renderRelatedRoutes(id);detail.classList.add('open');backdrop.classList.add('open');detail.setAttribute('aria-hidden','false');document.getElementById('detailClose').focus()}
+  function renderBranches(node){const container=document.getElementById('detailBranches');container.replaceChildren();const items=node.branchItems||[];if(!items.length){container.textContent='Node này không có nhánh cấu trúc riêng';return}for(const item of items){const row=document.createElement('div');row.className='branch-row';const title=document.createElement('strong');title.textContent='H'+(item.level||2)+' · '+(item.kind||'branch')+' · '+item.title;row.append(title);if(item.summary){const summary=document.createElement('p');summary.textContent=item.summary;row.append(summary)}if((item.children||[]).length){const children=document.createElement('ul');children.className='branch-children';for(const child of item.children){const childItem=document.createElement('li');childItem.textContent=child;children.append(childItem)}row.append(children)}container.append(row)}}
+  function renderInsights(node){const container=document.getElementById('detailInsights');container.replaceChildren();const columns=document.createElement('div');columns.className='insight-columns';for(const [title,key] of [['Ưu điểm','advantages'],['Hạn chế','limitations']]){const section=document.createElement('section');const heading=document.createElement('h4');heading.textContent=title;section.append(heading);const list=document.createElement('ul');const values=node[key]||[];if(!values.length){const empty=document.createElement('li');empty.textContent='Không có dữ liệu riêng cho node này';list.append(empty)}else for(const value of values){const item=document.createElement('li');item.textContent=value;list.append(item)}section.append(list);columns.append(section)}container.append(columns)}
+  function renderResources(node){const info=document.getElementById('detailResourceInfo');const resources=node.resources||{};info.textContent=[node.scope,node.parent?'parent '+node.parent:'',resources.scripts!==undefined?'scripts '+resources.scripts:'',resources.references!==undefined?'references '+resources.references:'',resources.assets!==undefined?'assets '+resources.assets:''].filter(Boolean).join(' · ')||'Không có metadata tài nguyên'}
+  function showDetail(id,trigger){const node=nodeById.get(id);if(!node)return;detailTrigger=trigger||document.activeElement;focusNodeRoutes(id);document.querySelectorAll('.node').forEach(item=>item.classList.toggle('selected',item.dataset.nodeId===id));document.getElementById('detailTitle').textContent=node.label;document.getElementById('detailMeta').textContent=node.meta;document.getElementById('detailCapability').textContent=node.capability||node.detail||'Không có mô tả capability';renderFlowFacts(node);renderBranches(node);renderInsights(node);renderResources(node);renderRelatedRoutes(id);detail.classList.add('open');backdrop.classList.add('open');detail.setAttribute('aria-hidden','false');document.getElementById('detailClose').focus()}
   function closeDetail(){detail.classList.remove('open');backdrop.classList.remove('open');detail.setAttribute('aria-hidden','true');document.querySelectorAll('.node').forEach(item=>item.classList.remove('selected'));if(detailTrigger&&detailTrigger.isConnected)detailTrigger.focus()}
   document.querySelectorAll('.node').forEach(element=>{element.addEventListener('click',()=>showDetail(element.dataset.nodeId,element));element.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showDetail(element.dataset.nodeId,element)}})});
   document.querySelectorAll('.route-chip').forEach(chip=>chip.addEventListener('click',()=>{if(chip.dataset.routeId==='all'){showAllRoutes();return}const route=MODEL.routes.find(item=>item.id===chip.dataset.routeId);if(route)applyRouteFocus(route.nodes,route.edges,route.id)}));
