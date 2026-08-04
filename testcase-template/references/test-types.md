@@ -39,7 +39,7 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 | Field | Required | Forbidden |
 |---|---|---|
 | **Description (E)** | Start with "Xác minh rằng..." (Vietnamese) + end-user language | Technical prefix, endpoint path, HTTP code |
-| **Procedure (G)** | One action per line; field/button name + exact input value; written in Vietnamese | Combining actions on one line; `POST`, `null`, `assert` |
+| **Procedure (G)** | One action per line; current screen/route + exact field/button target + exact input value; written in Vietnamese | Combining actions on one line; shorthand such as `Nhập email`; `POST`, `null`, `assert` |
 | **Expected (H)** | Describe what the Tester sees or can verify visually; written in Vietnamese | JSON body, HTTP status code, vague phrases |
 
 For new executable UI/FUNCTION cases, these two columns are generated from the shared `execution` contract. Read [execution-contract.md](execution-contract.md) for `entry`, `[S##]` steps, semantic targets, wait signals, step assertions, outcome and cleanup
@@ -49,11 +49,13 @@ For new executable UI/FUNCTION cases, these two columns are generated from the s
 ```
 ❌ WRONG (technical): Send POST /api/login with empty password → expect 400
 ✅ CORRECT (Vietnamese manual):
-  1. Mở trình duyệt và truy cập: [URL]/login
-  2. Tại ô "Email", nhập: test@example.com
-  3. Tại ô "Mật khẩu", để trống (không nhập gì)
-  4. Nhấp nút "Đăng nhập"
-  5. Quan sát thông báo xuất hiện dưới ô Mật khẩu
+  1. Mở trình duyệt và truy cập màn hình Đăng nhập: [URL]/login
+  2. Nhấp vào ô "Email"
+  3. Nhập giá trị: test@example.com
+  4. Nhấp vào ô "Mật khẩu"
+  5. Để trống, không nhập giá trị
+  6. Nhấp nút "Đăng nhập"
+  7. Quan sát thông báo xuất hiện dưới ô "Mật khẩu"
 ```
 
 **Expected Results — WRONG vs CORRECT:**
@@ -74,7 +76,7 @@ For new executable UI/FUNCTION cases, these two columns are generated from the s
   "req": "AC1",
   "description": "Xác minh rằng người dùng có thể đăng nhập với email + password đúng",
   "pre_condition": "Có account test",
-  "procedure": "1. Mở /login\n2. Nhập email + password\n3. Click nút Login",
+  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập: [URL]/login\n2. Nhấp vào ô Email\n3. Nhập email: test@example.com\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu: Test@1234\n6. Nhấp nút Đăng nhập\n7. Quan sát kết quả hiển thị trên màn hình",
   "expected": "1. Đăng nhập thành công",
   "priority": "High"
 }
@@ -102,7 +104,7 @@ For new executable UI/FUNCTION cases, these two columns are generated from the s
   "req": "AC7",
   "description": "Xác minh rằng hệ thống xử lý đúng khi mạng chậm/timeout",
   "pre_condition": "Có account hợp lệ, mạng chậm",
-  "procedure": "1. Mở /login\n2. Nhập email + password\n3. DevTools throttle Slow 3G\n4. Click Login",
+  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập: [URL]/login\n2. Nhấp vào ô Email\n3. Nhập email: test@example.com\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu: Test@1234\n6. Mở công cụ giả lập mạng và chọn Slow 3G\n7. Nhấp nút Đăng nhập\n8. Quan sát trạng thái tải và thông báo lỗi",
   "expected": "1. Loading state\n2. Sau timeout: error message network",
   "priority": "Medium"
 }

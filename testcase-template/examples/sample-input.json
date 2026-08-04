@@ -47,7 +47,7 @@
                   "req": "AC1",
                   "description": "Xác minh rằng người dùng có thể đăng nhập thành công với email và password đúng",
                   "pre_condition": "Có account test bao.nguyen@bcp.global với password Bcp@12345",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email bao.nguyen@bcp.global\n3. Nhập password Bcp@12345\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu: Bcp@12345\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Đăng nhập thành công, chuyển sang trang chính",
                   "priority": "High"
                 },
@@ -56,7 +56,7 @@
                   "req": "AC1",
                   "description": "Xác minh rằng người dùng có thể đăng nhập bằng phím Enter thay vì click nút Login",
                   "pre_condition": "Có account test hợp lệ",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng\n3. Nhập password đúng\n4. Bấm phím Enter (không click nút)",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email hợp lệ: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu hợp lệ: Bcp@12345\n6. Nhấn phím Enter khi đang ở ô Mật khẩu",
                   "expected": "1. Đăng nhập thành công",
                   "priority": "Medium"
                 }
@@ -72,7 +72,7 @@
                   "req": "AC3",
                   "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống email",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Để trống ô Email\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Để trống, không nhập giá trị\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu bất kỳ: Test@1234\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Không submit form\n2. Hiển thị thông báo yêu cầu nhập Email",
                   "priority": "High"
                 },
@@ -81,7 +81,7 @@
                   "req": "AC3",
                   "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống password",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng format\n3. Để trống ô Password\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email đúng định dạng: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Để trống, không nhập giá trị\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Không submit form\n2. Hiển thị thông báo yêu cầu nhập Password",
                   "priority": "High"
                 },
@@ -90,7 +90,7 @@
                   "req": "AC3",
                   "description": "Xác minh rằng hệ thống không cho phép submit khi bỏ trống cả email và password",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Để trống cả 2 ô\n3. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Để trống, không nhập giá trị\n4. Nhấp vào ô Mật khẩu\n5. Để trống, không nhập giá trị\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Không submit form\n2. Hiển thị thông báo lỗi cho cả 2 field",
                   "priority": "High"
                 },
@@ -99,7 +99,7 @@
                   "req": "AC4",
                   "description": "Xác minh rằng người dùng validate email thiếu ký tự @",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email hieugmail.com (thiếu @)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email sai định dạng: hieugmail.com (thiếu @)\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu bất kỳ: Test@1234\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Hiển thị thông báo lỗi Invalid email format",
                   "priority": "High"
                 },
@@ -108,7 +108,7 @@
                   "req": "AC4",
                   "description": "Xác minh rằng người dùng validate email thiếu domain",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email hieugmailcom (thiếu domain)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email sai định dạng: hieugmailcom (thiếu domain)\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu bất kỳ: Test@1234\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Hiển thị thông báo lỗi Invalid email format",
                   "priority": "High"
                 }
@@ -124,7 +124,7 @@
                   "req": "AC2",
                   "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập sai mật khẩu",
                   "pre_condition": "Có account bao.nguyen@bcp.global",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email đúng bao.nguyen@bcp.global\n3. Nhập password sai (ví dụ: WrongPass123)\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu sai: WrongPass123\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi Wrong password hoặc tương tự",
                   "priority": "High"
                 },
@@ -133,7 +133,7 @@
                   "req": "AC2",
                   "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập email không tồn tại",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email không tồn tại (ví dụ: nonexistent@bcp.global)\n3. Nhập password bất kỳ\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email không tồn tại: nonexistent@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu bất kỳ: Test@1234\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi authentication error chung",
                   "priority": "High"
                 },
@@ -142,7 +142,7 @@
                   "req": "AC2",
                   "description": "Xác minh rằng hệ thống báo lỗi khi người dùng nhập sai cả email và mật khẩu",
                   "pre_condition": "User ở trang đăng nhập",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email sai nonexistent@bcp.global\n3. Nhập password sai TestWrong\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email sai: nonexistent@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu sai: TestWrong\n6. Nhấp nút Đăng nhập",
                   "expected": "1. Đăng nhập thất bại\n2. Hiển thị thông báo lỗi chung",
                   "priority": "High"
                 }
@@ -158,7 +158,7 @@
                   "req": "AC7",
                   "description": "Xác minh rằng hệ thống xử lý đúng khi mạng chậm hoặc timeout",
                   "pre_condition": "Có account hợp lệ, mạng chậm hoặc giả lập timeout",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email và password đúng\n3. Giả lập mạng timeout (DevTools throttle Slow 3G)\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email hợp lệ: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu hợp lệ: Bcp@12345\n6. Mở công cụ giả lập mạng và chọn Slow 3G\n7. Nhấp nút Đăng nhập",
                   "expected": "1. Hiển thị loading state\n2. Sau timeout, hiển thị error message network error",
                   "priority": "Medium"
                 },
@@ -167,7 +167,7 @@
                   "req": "AC7",
                   "description": "Xác minh rằng hệ thống xử lý đúng khi server trả về lỗi 500",
                   "pre_condition": "Có account hợp lệ, server đang lỗi",
-                  "procedure": "1. Mở trang đăng nhập\n2. Nhập email và password đúng\n3. Giả lập server trả 500 (DevTools block request)\n4. Click nút Login",
+                  "procedure": "1. Mở trình duyệt và truy cập màn hình Đăng nhập\n2. Nhấp vào ô Email\n3. Nhập email hợp lệ: bao.nguyen@bcp.global\n4. Nhấp vào ô Mật khẩu\n5. Nhập mật khẩu hợp lệ: Bcp@12345\n6. Mở công cụ trình duyệt và chặn request đăng nhập để giả lập server trả lỗi 500\n7. Nhấp nút Đăng nhập",
                   "expected": "1. Hiển thị error message Internal server error hoặc tương tự\n2. Không crash app\n3. User có thể retry",
                   "priority": "Medium"
                 }

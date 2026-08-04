@@ -63,6 +63,22 @@
                       },
                       {
                         "id": "S02",
+                        "action": "click",
+                        "instruction": "Nhấp vào ô Email",
+                        "target": {
+                          "key": "email_input",
+                          "kind": "field",
+                          "name": "Email",
+                          "role": "textbox",
+                          "label": "Email"
+                        },
+                        "wait_for": { "kind": "visible", "target": "email_input" },
+                        "assertions": [
+                          { "kind": "state", "target": "email_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Email" }
+                        ]
+                      },
+                      {
+                        "id": "S03",
                         "action": "fill",
                         "instruction": "Tại ô Email, nhập <valid_email>",
                         "target": {
@@ -79,7 +95,23 @@
                         ]
                       },
                       {
-                        "id": "S03",
+                        "id": "S04",
+                        "action": "click",
+                        "instruction": "Nhấp vào ô Mật khẩu",
+                        "target": {
+                          "key": "password_input",
+                          "kind": "field",
+                          "name": "Mật khẩu",
+                          "role": "textbox",
+                          "label": "Mật khẩu"
+                        },
+                        "wait_for": { "kind": "visible", "target": "password_input" },
+                        "assertions": [
+                          { "kind": "state", "target": "password_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Mật khẩu" }
+                        ]
+                      },
+                      {
+                        "id": "S05",
                         "action": "fill",
                         "instruction": "Tại ô Mật khẩu, nhập <valid_password>",
                         "target": {
@@ -96,7 +128,7 @@
                         ]
                       },
                       {
-                        "id": "S04",
+                        "id": "S06",
                         "action": "click",
                         "instruction": "Nhấp nút Đăng nhập",
                         "target": {

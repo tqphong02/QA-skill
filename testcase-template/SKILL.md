@@ -33,6 +33,7 @@ Apply this exact order for all models:
 8. Run `scripts/gen-testcases.py`; script must create `<output>.md` before `<output>.xlsx` with the same `Asia/Ho_Chi_Minh` date
 9. Read Markdown first then compare with Excel: number of cases, Scenario/Testcase ID and design content must match; columns I-M exist only in Excel and are left blank
 10. For every new UI/FUNCTION testcase that will be executed or automated, create the structured `execution` contract from [references/execution-contract.md](references/execution-contract.md); F/G/H are the human-readable projection of that contract, not a second source of truth
+11. Write every Procedure as a complete manual reproduce script: screen/route → target control → one action → exact value → immediate observation/wait. Never collapse multiple interactions into a summary such as `Nhập email và password rồi click Login`
 
 If expected is not in requirements, pause that case in a clarification state; do not fabricate business rules.
 
@@ -194,6 +195,30 @@ Original template `assets/Template.xlsx` intentionally keeps **many sample group
 - ❌ WRONG: *Verify POST /auth/login returns 400 when password=null*
 - ❌ WRONG: *[TC-03][negative] Empty password validation*
 
+**Manual reproduce gate — MANDATORY for every Procedure (G):**
+
+The testcase must be executable by a manual tester who has only the testcase row and the test data. Write each interaction as a separate numbered step. A step must identify:
+
+1. the current screen or route when the tester enters or changes context
+2. the exact visible target, such as `ô Email`, `ô Mật khẩu`, `nút Đăng nhập`
+3. one action only, such as mở, nhấp, chọn, nhập, xóa, nhấn phím, or quan sát
+4. the exact value/content to use, or explicitly state `để trống` when no value is entered
+5. the immediate observation or wait condition when the next action depends on it
+
+For every form field, keep focus/click and data entry as separate steps. Do not let a `fill` action hide the click/focus step when the manual tester needs to reproduce the interaction:
+
+```
+1. Mở trình duyệt và truy cập màn hình Đăng nhập: [URL]/login
+2. Nhấp vào ô "Email"
+3. Nhập giá trị: qa@example.com
+4. Nhấp vào ô "Mật khẩu"
+5. Nhập giá trị: Test@1234
+6. Nhấp nút "Đăng nhập"
+7. Quan sát kết quả hiển thị trên màn hình
+```
+
+Do not write `Nhập email`, `Điền form`, `Thực hiện đăng nhập`, or `Nhập email và password rồi click Login` without the target, exact value, and separate action steps. If a field is intentionally empty, say `Nhấp vào ô ...` followed by `Để trống, không nhập giá trị`.
+
 **2. Procedure / Steps — Detailed enough for anyone to follow without interpretation:**
 
 Each step must specify: **What to do** + **Where** + **Exact value/content** (if applicable). Never combine multiple actions into one line.
@@ -293,6 +318,7 @@ Xem hướng dẫn đầy đủ + JSON mẫu: [`references/blackbox-techniques.m
 | Columns I-M pre-filled with data | Script applied value fill instead of style only | Verify `gen-testcases.py` branch applies style only, no value fill |
 | Description starts with `[STT]` or `[Type]` | Manual format violated | AI must reformat before writing to JSON |
 | Procedure is a single line combining multiple actions | Tester cannot identify where to act | Split each action into its own numbered step; include field/button name and input value |
+| Procedure uses shorthand such as `Nhập email`, `Điền form`, or `Nhập email và password rồi click Login` | Manual tester cannot reproduce the exact interaction or data | Write screen, target, one action, exact value, and observation as separate numbered steps |
 | New executable case has no `execution` object | qa-run and POM must infer state, target and assertions from prose | Add `entry`, `[S##]` steps, target keys, wait signals, step assertions, outcome and cleanup |
 | Target includes a guessed XPath | Locator may match the wrong element after a UI change | Keep semantic target hints in testcase; verify selector in the real DOM and record evidence in POM |
 | Procedure or Expected uses technical terms (`POST`, `HTTP 400`, `null`, `assert`) | Not manual-tester language | Replace with UI descriptions the tester sees (button names, displayed messages) |

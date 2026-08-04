@@ -12,7 +12,7 @@ The Excel template stays unchanged. `execution` is a structured field in the JSO
 Every new UI or functional testcase intended for execution or automation should contain:
 
 1. `execution.entry`: route, role, starting state, permissions and test data
-2. `execution.steps`: ordered atomic actions, each with a stable step ID such as `S01`
+2. `execution.steps`: ordered atomic actions, each with a stable step ID such as `S01`; for form fields, keep the focus/click step separate from the data-entry step
 3. A semantic `target` for every UI action: `key`, `kind`, and human-facing `name`; add `role`, `label`, `placeholder` or `test_id` only when known from requirements or a real UI observation
 4. `instruction`: the Vietnamese manual instruction for the step
 5. `wait_for` or at least one step assertion so the executor knows when the transition is complete
@@ -59,6 +59,22 @@ Do not put a guessed XPath into a testcase. A testcase describes the target sema
       },
       {
         "id": "S02",
+        "action": "click",
+        "instruction": "Nhấp vào ô Email",
+        "target": {
+          "key": "email_input",
+          "kind": "field",
+          "name": "Email",
+          "role": "textbox",
+          "label": "Email"
+        },
+        "wait_for": { "kind": "visible", "target": "email_input" },
+        "assertions": [
+          { "kind": "state", "target": "email_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Email" }
+        ]
+      },
+      {
+        "id": "S03",
         "action": "fill",
         "instruction": "Tại ô Email, nhập <valid_email>",
         "target": {
@@ -75,7 +91,23 @@ Do not put a guessed XPath into a testcase. A testcase describes the target sema
         ]
       },
       {
-        "id": "S03",
+        "id": "S04",
+        "action": "click",
+        "instruction": "Nhấp vào ô Mật khẩu",
+        "target": {
+          "key": "password_input",
+          "kind": "field",
+          "name": "Mật khẩu",
+          "role": "textbox",
+          "label": "Mật khẩu"
+        },
+        "wait_for": { "kind": "visible", "target": "password_input" },
+        "assertions": [
+          { "kind": "state", "target": "password_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Mật khẩu" }
+        ]
+      },
+      {
+        "id": "S05",
         "action": "fill",
         "instruction": "Tại ô Mật khẩu, nhập <valid_password>",
         "target": {
@@ -92,7 +124,7 @@ Do not put a guessed XPath into a testcase. A testcase describes the target sema
         ]
       },
       {
-        "id": "S04",
+        "id": "S06",
         "action": "click",
         "instruction": "Nhấp nút Đăng nhập",
         "target": {
