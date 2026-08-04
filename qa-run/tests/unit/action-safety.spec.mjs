@@ -45,3 +45,13 @@ test('Action Safety: External side-effect action is classified as EXTERNAL_EFFEC
   const res = evaluateActionSafety({ actionText: 'Send email blast to all', httpMethod: 'POST' });
   assert.equal(res.safety, 'EXTERNAL_EFFECT');
 });
+
+test('Action Safety: Login email field fill is not mistaken for an external effect', () => {
+  const res = evaluateActionSafety({
+    actionText: 'Fill authorized login fields',
+    selector: 'textbox Email and textbox Mật khẩu',
+    httpMethod: 'GET',
+    targetUrl: 'https://uat.example.test/login',
+  });
+  assert.equal(res.safety, 'READ_ONLY');
+});

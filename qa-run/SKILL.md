@@ -78,6 +78,14 @@ AGENTIC_TASK_EXECUTION =
 
 Create a ledger row for every expanded layer. Every user-facing exploratory result must be exactly `PASS`, `FAILED`, `N/A`, or `UNTEST`. Technical safety and coverage records may retain internal blocker/partial classifications, but they are normalized to `UNTEST` at the run/charter result boundary.
 
+### Human-facing role naming contract
+
+Before the first browser action, resolve each test identity to its confirmed business-role display name from the permission matrix, saved knowledge or the authenticated UI. Human-facing reports, summaries, ledger tables, comments, coverage labels and verdicts must use the concrete role name, for example `Nhân viên kinh doanh / Rep`, `Trưởng nhóm / Lead`, `Admin tổng kiểm` or `Giám đốc kinh doanh / Người ký` when those are the confirmed roles
+
+Do not expose opaque account aliases such as `U1`, `U2`, `U3` or `U4` as the role label in human-facing output. If a machine runner needs an internal identity or comparison key, keep it only in redacted machine-readable evidence and add the resolved `role_display_name` to the record. Never persist credentials, raw email addresses or secrets
+
+Every human-facing QA report must start with a `Role/Data mapping` table containing `Vai trò nghiệp vụ`, `Tài khoản tham chiếu đã che`, `Phạm vi hoặc quyền` and `Kết quả`. If the role cannot be confirmed, write `Vai trò chưa xác định`, preserve the exact missing signal and return `UNTEST`; do not infer a role from an alias
+
 Use the four values consistently: `PASS` means the scoped UI behavior was executed and supported by same-session evidence; `FAILED` means it was executed and contradicted the visible or supplied oracle; `N/A` means the scope or check does not apply; `UNTEST` means it should be tested but execution or conclusion was not possible because of a missing target, session, authority, data, oracle, observer, evidence or budget
 
 For every live browser route, also create one `BROWSER_OBSERVABILITY` ledger row and read [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md). Use the observer attached to the same page/session as the UI driver. Route native Android/iOS traffic to `mobile-qa`.
@@ -228,6 +236,7 @@ Write runtime artifacts only under the tested project (`cwd` or `QA_DATA_DIR`). 
 ## Output format
 
 - Plane comments and testcase prose must have no `.` at end of sentence and no emojis/icons
+- Human-facing report/comment role labels must use confirmed business-role names, never opaque test-account aliases; keep aliases only in redacted machine evidence when traceability requires them
 - Preserve ID, URL, filename, formula, code, decimal number and machine-readable values
 - PASS comment: Result + Conclusion + inline image only
 - FAILED comment: adds Actual + Expected

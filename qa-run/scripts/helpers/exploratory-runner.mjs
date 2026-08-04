@@ -281,6 +281,11 @@ function uiFirstCharter(scope) {
     ],
     source_refs: ['runtime:ui-first'],
     required: true,
+    status: 'PENDING',
+    verdict: null,
+    reason: null,
+    evidence_refs: [],
+    quality: 'CLEAN',
   };
 }
 

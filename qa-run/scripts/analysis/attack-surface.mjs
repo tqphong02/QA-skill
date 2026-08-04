@@ -75,7 +75,15 @@ export function evaluateActionSafety({ actionText, selector = '', httpMethod = '
   }
 
   // 4. External Effect Category
-  if (/email|send|notify|webhook|sms|blast|broadcast|export-all/i.test(text)) {
+  // A login form's Email field is input data, not an outbound side effect.
+  // Require an effect verb/object combination so semantic locator text such as
+  // "textbox Email" does not block an otherwise read-only authentication step.
+  const hasExternalEffect = [
+    /\bsend(?:\s+\w+){0,3}\s+(?:email|mail|sms|notification|message)\b/i,
+    /\b(?:email|mail)\s+(?:blast|campaign|all|customer|user|notification)\b/i,
+    /\b(?:notify|webhook|sms|blast|broadcast|export[- ]all)\b/i,
+  ].some(pattern => pattern.test(text));
+  if (hasExternalEffect) {
     return { safety: 'EXTERNAL_EFFECT', reason: 'External side-effects require mock mode' };
   }
 

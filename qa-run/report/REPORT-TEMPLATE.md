@@ -9,7 +9,12 @@ Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, khô
 
 **Requirement source:** <Plane URL>
 **Business flow:** <1-2 câu mô tả flow đã xác nhận>
-**Environment:** Web <browser> — <URL> — <account>
+**Environment:** Web <browser> — <URL> — <tài khoản tham chiếu đã che>
+
+**Role/Data mapping**
+| Vai trò nghiệp vụ | Tài khoản tham chiếu đã che | Phạm vi hoặc quyền | Kết quả |
+|---|---|---|---|
+| <tên vai trò cụ thể> | <đã che> | <quyền/phạm vi> | <PASS/FAILED/N/A/UNTEST> |
 
 **Test contract**
 - <role/data/setup 1>
@@ -54,6 +59,7 @@ Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, khô
 4. `Technical notes` chỉ ghi khi có API/log/network đủ để hỗ trợ root cause.
 5. `Evidence` luôn là danh sách path ảnh riêng, không nhét vào dòng `Verdict`.
 6. Không đặt dấu `.` cuối câu nếu nội dung dùng cho Plane comment hoặc report human-facing.
+7. Không dùng mã account/role rút gọn kiểu `U1`, `U2`, `U3`, `U4` trong report human-facing; nếu cần trace machine thì giữ alias ở evidence JSON đã che và hiển thị tên vai trò nghiệp vụ trong report.
 
 ## Plane comment HTML
 

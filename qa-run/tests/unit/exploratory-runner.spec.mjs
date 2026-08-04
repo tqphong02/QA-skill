@@ -43,6 +43,8 @@ test('UI-first exploratory run starts without documents or business context', ()
     assert.equal(started.run.business_context.status, 'UI_DISCOVERY');
     assert.equal(started.run.charters.length, 1);
     assert.match(started.run.charters[0].mission, /visible UI flow/i);
+    assert.equal(started.run.charters[0].status, 'PENDING');
+    assert.equal(started.run.charters[0].verdict, null);
 
     const finished = finishExploratoryRun({
       dataDir,
