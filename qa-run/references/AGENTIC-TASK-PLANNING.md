@@ -11,6 +11,7 @@ Use this reference when `EXPLORATORY_BROWSER_QA` or its legacy `EXPLORATORY_ADHO
 - [Decision contract](#decision-contract)
 - [Compact memory and reasoning privacy](#compact-memory-and-reasoning-privacy)
 - [Progress and loop detection](#progress-and-loop-detection)
+- [Independent completion judge](#independent-completion-judge)
 - [Completion and QA verdict](#completion-and-qa-verdict)
 
 ## Design provenance
@@ -110,9 +111,9 @@ node <skill-root>/scripts/helpers/exploratory-runner.mjs task-plan \
   <RUN_ID> --task-plan-file task-plan.json
 ```
 
-Require an objective, at least one observable success signal, a stop condition, a concise rationale and one to twelve steps. Each step needs a stable ID, a goal, an observable success signal and a safety boundary
+Require an objective, at least one observable success signal, a stop condition, a concise rationale and one to twenty steps. Each step needs a stable ID, a goal, an observable success signal and a safety boundary
 
-For a replan, submit a replacement plan with the latest observation and `replan_reason`. Preserve the old plan in history. The runner allows at most two replans by default
+For a replan, submit a replacement plan with the latest observation and `replan_reason`. Preserve the old plan in history. The runner allows at most three replans by default
 
 ## Decision contract
 
@@ -181,15 +182,41 @@ Do not store hidden chain-of-thought, raw model analysis or unrestricted page co
 
 ## Progress and loop detection
 
-Classify progress from observable state changes, not from model confidence. Compare URL, title, visible state, selected object, dialog/tab state, expected signal, network event and persistent read-back as applicable
+Classify progress from observable state changes, not from model confidence. The native runtime returns a deterministic `state_delta` with URL/title/content/control changes, new headings/alerts, runtime failure count, a bounded progress score and `STRONG_PROGRESS|PROGRESS|NO_PROGRESS|CONTRADICTED`. Use this signal together with the expected oracle; it is navigation evidence, not a business verdict
 
 Two repeated `NO_PROGRESS` decisions for the same page, task step, next goal, action type and semantic target set `requires_replan`. Do not issue a third equivalent action. Re-observe and replace the task plan with a different strategy or stop as `UNTEST`
 
 Do not blindly retry writes. Inspect whether the request or side effect already happened before any recovery. Keep the original evidence and let the existing retry-quality rules apply
 
+## Independent completion judge
+
+After the agent records `COMPLETE`, judge the trajectory against the original success signals rather than agent confidence
+
+```json
+{
+  "judgement": "SATISFIED",
+  "reason": "The final detail view independently satisfies every declared task signal",
+  "success_signal_results": [
+    {
+      "signal": "The selected order identifier and detail heading are visible",
+      "status": "OBSERVED",
+      "actual": "ORD-101 and the order detail heading are visible",
+      "evidence_refs": ["evidence/runs/run-001/order-detail.png"]
+    }
+  ]
+}
+```
+
+```bash
+node <skill-root>/scripts/helpers/exploratory-runner.mjs task-judge \
+  <RUN_ID> --judge-file task-judge.json
+```
+
+Use only `SATISFIED`, `UNSATISFIED` or `INCONCLUSIVE`. Every declared success signal must have exactly one `OBSERVED`, `MISSING` or `CONTRADICTED` result. `OBSERVED` requires evidence. `SATISFIED` requires every signal to be `OBSERVED`; a full QA `PASS` is rejected when the judge is missing or not satisfied
+
 ## Completion and QA verdict
 
-Record `COMPLETE` only when all planned task steps are completed and attach evidence references proving the observable task success signals. Then continue the QA gates:
+Record `COMPLETE` only when all planned task steps are completed and attach evidence references proving the observable task success signals. Record the independent `task-judge`, then continue the QA gates:
 
 - compare actual behavior with the visible or supplied oracle
 - reconcile network, console and page-error evidence from the same session

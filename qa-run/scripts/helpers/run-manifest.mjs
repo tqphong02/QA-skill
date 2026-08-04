@@ -291,7 +291,14 @@ if (command === 'start') {
     && !explicitDriver;
 
   fs.mkdirSync(EVID, { recursive: true });
-  const runId = `run-${Date.now()}`;
+  const requestedRunId = String(getArg('--run-id', '') || '').trim();
+  const runId = requestedRunId
+    ? requestedRunId.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 90)
+    : `run-${Date.now()}`;
+  if (!runId) {
+    console.error('[run-manifest] BLOCKED: --run-id resolves to an empty identifier');
+    process.exit(2);
+  }
   const manifest = {
     run_id: runId,
     status: 'RUNNING',
@@ -396,6 +403,10 @@ if (command === 'start') {
 
   const manifestPath = path.join(EVID, `manifest-${runId}.json`);
   const latestLink    = path.join(EVID, 'manifest-latest.json');
+  if (fs.existsSync(manifestPath)) {
+    console.error(`[run-manifest] BLOCKED: manifest already exists for runId ${runId}`);
+    process.exit(2);
+  }
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
   fs.writeFileSync(latestLink, JSON.stringify(manifest, null, 2), 'utf8');
 

@@ -26,6 +26,43 @@ Never infer a missing target URL, account, secret, role or destructive authoriza
 
 Recovery is limited to two safe attempts and never repeats a mutation. A timeout, empty page or browser health response is not success
 
+## One-command native start
+
+When `playwright-runtime` is selected, start the FAST task with one command
+
+```bash
+node <skill-root>/scripts/helpers/native-browser-runtime.mjs quick-start \
+  [RUN_ID] \
+  --url <EXACT_URL> \
+  --objective "<ONE_SENTENCE_TASK>" \
+  --allowed-domain <ORIGIN>
+```
+
+This command validates the URL/domain, creates the FAST manifest and task contract, starts or reuses the native daemon, navigates to the exact URL and returns the first visible-content/AX observation packet. Omit `RUN_ID` to generate one. The daemon enforces the allowed origin for explicit and resulting navigation
+
+The returned observation contains compact visible text, headings, links, tables, interactive refs and AX nodes. Use `extract` when the task needs machine-readable visible content
+
+```json
+{
+  "type": "extract",
+  "format": "structured",
+  "max_items": 50,
+  "max_chars": 8000,
+  "capture_media": false
+}
+```
+
+Use `batch` for at most five read-only actions such as navigate, back, reload, wait, page scroll, switch page/tab, screenshot and extract. The runtime observes after every action in the batch and stops early on a runtime failure. Never batch click, fill, type, check, select, download or another write-like interaction; perform those one at a time after a fresh observation. Use the single `download` action for a visible semantic download target; the runtime saves the attachment under the worker evidence directory and returns its path
+
+Finish and close the FAST session with one command
+
+```bash
+node <skill-root>/scripts/helpers/native-browser-runtime.mjs quick-finish \
+  <RUN_ID> --verdict <PASS|FAILED|N/A|UNTEST> [--reason "<WHY>"]
+```
+
+`PASS` here means the bounded task objective completed. It is not a release-quality QA PASS and does not replace full exploratory charters, hidden-rule probes, coverage or the independent task judge
+
 ## Upgrade rules
 
 Upgrade the run to `EXPLORATORY_BROWSER_QA` when any of these appears:

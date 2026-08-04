@@ -2,8 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LOCATOR_PRIORITY,
+  MAX_ACTIONS_PER_AGENT_STEP,
   MAX_NATIVE_WORKERS,
+  computeNativeStateDelta,
   normalizeNativeBrowserLaunchError,
+  validateReadOnlyActionBatch,
   validateNativeBrowserOptions,
   validatePoolConfig,
   sortLocatorCandidates,
@@ -110,4 +113,42 @@ test('native browser options use tested-project data paths and explicit auth mod
   assert.equal(options.cdpUrl, 'http://127.0.0.1:9222');
   assert.equal(options.headless, false);
   assert.equal(options.profileDir, '');
+});
+
+test('native runtime batches only bounded read-only actions', () => {
+  assert.equal(MAX_ACTIONS_PER_AGENT_STEP, 5);
+  assert.deepEqual(
+    validateReadOnlyActionBatch([{ type: 'navigate' }, { type: 'extract' }, { type: 'screenshot' }])
+      .map(action => action.type),
+    ['navigate', 'extract', 'screenshot'],
+  );
+  assert.throws(
+    () => validateReadOnlyActionBatch([{ type: 'click' }]),
+    error => error.code === 'ACTION_BATCH_WRITE_BLOCKED',
+  );
+  assert.throws(
+    () => validateReadOnlyActionBatch(Array.from({ length: 6 }, () => ({ type: 'wait' }))),
+    error => error.code === 'ACTION_BATCH_LIMIT',
+  );
+});
+
+test('native state delta exposes deterministic progress signals without model confidence', () => {
+  const delta = computeNativeStateDelta(
+    { url: 'https://app.test/orders', title: 'Orders', headings: ['Orders'], content_fingerprint: 'a', interactive_count: 2 },
+    { url: 'https://app.test/orders/1', title: 'Order details', headings: ['Order details'], content_fingerprint: 'b', interactive_count: 4 },
+    { failures: [] },
+  );
+  assert.equal(delta.url_changed, true);
+  assert.equal(delta.content_changed, true);
+  assert.equal(delta.progress_classification, 'STRONG_PROGRESS');
+  assert.ok(delta.progress_score >= 0.5);
+});
+
+test('native browser options normalize an explicit allowed-origin boundary', () => {
+  const options = validateNativeBrowserOptions({
+    dataDir: '/tmp/qa-project',
+    runId: 'bounded-task',
+    allowedOrigins: ['https://app.test/path', 'app.test'],
+  });
+  assert.deepEqual(options.allowedOrigins, ['https://app.test']);
 });

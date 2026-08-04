@@ -6,7 +6,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
-| [qa-run](./qa-run/SKILL.md) | Risk-driven browser QA từ source + knowledge + runtime, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
+| [qa-run](./qa-run/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
 | [testcase-template](./testcase-template/SKILL.md) | Sinh test case Excel theo template Nina Studio (4 sheet, formulas, dropdowns) | `Template.xlsx` |
 | [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Scaffold & viết Playwright + TS + POM (UI / API / Performance / CI-CD) | `.spec.ts` + `pages/` + `selectors/` + pipeline |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
@@ -52,8 +52,8 @@ Format tương tác hiện tại:
 - Nhãn mũi tên dùng pill có nền riêng và lane tách biệt để không bị đường nối che hoặc chồng lên nhau
 - Click/tap skill card được xử lý trực tiếp ở `pointerup` khi dịch chuyển dưới 5 px; drag thật chỉ di chuyển canvas và không mở panel
 - Card hiển thị số nhánh thực thi nếu skill có workflow nội bộ; tìm kiếm bao phủ cả tên workflow và tên mục
-- `Exploratory Browser QA & Ad-hoc` là một flow riêng: qa-run tự quan sát browser live, suy luận task plan từ UI, chọn và kiểm tra từng next action, replan khi không tiến triển, rồi chạy Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
-- `BROWSER_TASK_FAST` là nhãn của profile FAST bên trong `EXPLORATORY_BROWSER_QA` cho task đơn giản chạy ngay; khi có bug/business rule/expected/PASS-FAILED thì chuyển sang profile exploratory đầy đủ trong cùng skill; verdict user-facing chỉ gồm PASS, FAILED, N/A, UNTEST
+- `Exploratory Browser QA & Ad-hoc` là một flow riêng: qa-run tự quan sát visible content + AX browser live, suy luận task plan từ UI, chọn next action theo deterministic state delta, replan khi không tiến triển, independent-judge success signal, rồi chạy Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
+- `BROWSER_TASK_FAST` là nhãn của profile FAST bên trong `EXPLORATORY_BROWSER_QA` cho task đơn giản chạy ngay; native path có `quick-start`, structured `extract`, read-only `batch` tối đa 5 action và `quick-finish`; khi có bug/business rule/expected/PASS-FAILED thì chuyển sang profile exploratory đầy đủ trong cùng skill; verdict user-facing chỉ gồm PASS, FAILED, N/A, UNTEST
 - `Browser MCP: Network & Console` tách riêng Playwright MCP, Chrome DevTools MCP và runtime observer theo hard gate cùng session
 - `Mobile: Appium & Network` tách Appium MCP thực thi UI khỏi proxy capture bằng Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit; evidence phải được làm sạch và đối chiếu với bước UI
 - Panel chi tiết hiển thị `Làm được gì`, `Ưu điểm`, `Hạn chế`, `Nhánh thực thi` và `Cấu trúc hướng dẫn`; không hiển thị nội dung thô `SKILL.md`

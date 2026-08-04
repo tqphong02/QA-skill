@@ -10,6 +10,7 @@ import {
   recordExploratoryAction,
   recordExploratoryRuleProbe,
   recordExploratoryTaskDecision,
+  recordExploratoryTaskJudge,
   registerPage,
   setExploratoryCharterVerdict,
   setExploratoryCoverage,
@@ -660,6 +661,29 @@ test('agentic task planning links a concise UI-derived decision to the executed 
     });
     assert.equal(completed.run.agentic_task.status, 'COMPLETED');
     assert.equal(completed.run.agentic_task.steps[0].status, 'COMPLETED');
+
+    decidePass(ctx.dataDir, ctx.runId, [ctx.media]);
+    assert.throws(
+      () => finishExploratoryRun({ dataDir: ctx.dataDir, runId: ctx.runId, verdict: 'PASS' }),
+      /SATISFIED task judge/,
+    );
+    const judged = recordExploratoryTaskJudge({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      judge: {
+        judgement: 'SATISFIED',
+        reason: 'The final UI state independently satisfies the declared task signal',
+        success_signal_results: [{
+          signal: 'The selected order detail heading and identifier are visible',
+          status: 'OBSERVED',
+          actual: 'Order detail heading and selected identifier are visible',
+          evidence_refs: [ctx.media],
+        }],
+      },
+    });
+    assert.equal(judged.judge.judgement, 'SATISFIED');
+    const finished = finishExploratoryRun({ dataDir: ctx.dataDir, runId: ctx.runId, verdict: 'PASS' });
+    assert.equal(finished.run.status, 'PASS');
   } finally {
     fs.rmSync(ctx.dataDir, { recursive: true, force: true });
   }

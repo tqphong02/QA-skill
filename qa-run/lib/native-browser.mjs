@@ -19,6 +19,7 @@ import { waitForUiReady } from './wait.mjs';
 
 export const MAX_NATIVE_WORKERS = 4;
 export const MAX_RECOVERY_ATTEMPTS = 2;
+export const MAX_ACTIONS_PER_AGENT_STEP = 5;
 export const LOCATOR_PRIORITY = Object.freeze([
   'DATA_TEST_ID',
   'ID',
@@ -43,6 +44,20 @@ const ACTION_TYPES = new Set([
   'reload',
   'wait',
   'screenshot',
+  'extract',
+  'switch_page',
+  'download',
+]);
+
+const READ_ONLY_BATCH_ACTION_TYPES = new Set([
+  'navigate',
+  'back',
+  'reload',
+  'wait',
+  'scroll',
+  'screenshot',
+  'extract',
+  'switch_page',
 ]);
 
 const INTERACTIVE_SELECTOR = [
@@ -186,12 +201,85 @@ export function validatePoolConfig({ workers = 1, cdpUrl = '', profileDir = '' }
   return { workers: count, isolated: count > 1 };
 }
 
+export function validateReadOnlyActionBatch(actions, { maxActions = MAX_ACTIONS_PER_AGENT_STEP } = {}) {
+  if (!Array.isArray(actions) || !actions.length) {
+    const error = new Error('read-only action batch requires a non-empty actions array');
+    error.code = 'INVALID_ACTION_BATCH';
+    throw error;
+  }
+  const limit = positiveInt(maxActions, MAX_ACTIONS_PER_AGENT_STEP, { min: 1, max: MAX_ACTIONS_PER_AGENT_STEP });
+  if (actions.length > limit) {
+    const error = new Error(`read-only action batch supports at most ${limit} actions`);
+    error.code = 'ACTION_BATCH_LIMIT';
+    throw error;
+  }
+  return actions.map((action, index) => {
+    if (!action || typeof action !== 'object') {
+      const error = new Error(`action batch item ${index + 1} must be an object`);
+      error.code = 'INVALID_ACTION_BATCH';
+      throw error;
+    }
+    const type = String(action.type || action.action_type || '').trim().toLowerCase();
+    if (!READ_ONLY_BATCH_ACTION_TYPES.has(type)) {
+      const error = new Error(`action batch item ${index + 1} is not read-only: ${type || 'missing'}`);
+      error.code = 'ACTION_BATCH_WRITE_BLOCKED';
+      throw error;
+    }
+    return { ...action, type };
+  });
+}
+
+export function computeNativeStateDelta(before = {}, after = {}, runtime = {}) {
+  const beforeHeadings = new Set((before.headings || []).map(value => text(value, 300)));
+  const beforeAlerts = new Set((before.alerts || []).map(value => text(value, 300)));
+  const newHeadings = (after.headings || []).map(value => text(value, 300)).filter(value => value && !beforeHeadings.has(value));
+  const newAlerts = (after.alerts || []).map(value => text(value, 300)).filter(value => value && !beforeAlerts.has(value));
+  const urlChanged = Boolean(before.url && after.url && before.url !== after.url);
+  const titleChanged = Boolean(before.title !== undefined && after.title !== undefined && before.title !== after.title);
+  const contentChanged = Boolean(
+    before.content_fingerprint
+    && after.content_fingerprint
+    && before.content_fingerprint !== after.content_fingerprint,
+  );
+  const controlCountChanged = Number(before.interactive_count || 0) !== Number(after.interactive_count || 0);
+  const failureCount = Array.isArray(runtime.failures) ? runtime.failures.length : 0;
+  const rawScore = (urlChanged ? 0.35 : 0)
+    + (titleChanged ? 0.1 : 0)
+    + (newHeadings.length ? 0.2 : 0)
+    + (contentChanged ? 0.2 : 0)
+    + (controlCountChanged ? 0.15 : 0)
+    - (failureCount ? 0.25 : 0);
+  const progressScore = Math.max(0, Math.min(1, Number(rawScore.toFixed(2))));
+  return {
+    url_changed: urlChanged,
+    title_changed: titleChanged,
+    content_changed: contentChanged,
+    control_count_changed: controlCountChanged,
+    new_headings: newHeadings.slice(0, 12),
+    new_alerts: newAlerts.slice(0, 12),
+    runtime_failure_count: failureCount,
+    progress_score: progressScore,
+    progress_classification: progressScore >= 0.5 ? 'STRONG_PROGRESS'
+      : progressScore > 0 ? 'PROGRESS'
+        : failureCount ? 'CONTRADICTED' : 'NO_PROGRESS',
+  };
+}
+
 export function validateNativeBrowserOptions(options = {}) {
   const runId = slug(options.runId || options.sessionId, 'native-run');
   const workerId = positiveInt(options.workerId, 1, { min: 1, max: MAX_NATIVE_WORKERS });
   const dataDir = path.resolve(options.dataDir || process.env.QA_DATA_DIR || process.cwd());
   const cdpUrl = text(options.cdpUrl || process.env.QA_CDP_URL, 500);
   const profileDir = text(options.profileDir || process.env.QA_BROWSER_PROFILE_DIR, 1000);
+  const allowedOrigins = [...new Set((Array.isArray(options.allowedOrigins)
+    ? options.allowedOrigins
+    : String(options.allowedOrigins || process.env.QA_BROWSER_ALLOWED_ORIGINS || '').split(','))
+    .map(value => String(value || '').trim())
+    .filter(Boolean)
+    .map(value => {
+      try { return new URL(value.includes('://') ? value : `https://${value}`).origin; } catch { return ''; }
+    })
+    .filter(Boolean))];
   if (cdpUrl && profileDir) {
     const error = new Error('QA_CDP_URL and QA_BROWSER_PROFILE_DIR are mutually exclusive');
     error.code = 'AUTH_MODE_CONFLICT';
@@ -209,6 +297,7 @@ export function validateNativeBrowserOptions(options = {}) {
     maxRecoveries: positiveInt(options.maxRecoveries, MAX_RECOVERY_ATTEMPTS, { min: 0, max: MAX_RECOVERY_ATTEMPTS }),
     actionTimeout: positiveInt(options.actionTimeout, 8000, { min: 250, max: 60000 }),
     navigationTimeout: positiveInt(options.navigationTimeout, 20000, { min: 500, max: 120000 }),
+    allowedOrigins,
   };
 }
 
@@ -562,6 +651,32 @@ export class NativeBrowserSession {
     }).catch(error => ({ error: text(error?.message || error, 240), items: [] }));
     const domItems = Array.isArray(dom) ? dom : [];
     const ax = await collectAxTree(page);
+    const content = await page.evaluate(({ maxContentItems, maxChars }) => {
+      const visible = element => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      };
+      const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const visibleText = clean(document.body?.innerText || '').slice(0, maxChars);
+      return {
+        text: visibleText,
+        headings: [...document.querySelectorAll('h1,h2,h3,[role="heading"]')]
+          .filter(visible).map(element => clean(element.innerText)).filter(Boolean).slice(0, maxContentItems),
+        links: [...document.querySelectorAll('a[href]')]
+          .filter(visible).map(element => ({ text: clean(element.innerText || element.getAttribute('aria-label')), href: element.href }))
+          .filter(item => item.text || item.href).slice(0, maxContentItems),
+        tables: [...document.querySelectorAll('table')].filter(visible).slice(0, 6).map(table => ({
+          headers: [...table.querySelectorAll('thead th')].map(cell => clean(cell.innerText)).filter(Boolean).slice(0, 24),
+          rows: [...table.querySelectorAll('tbody tr')].slice(0, maxContentItems).map(row => (
+            [...row.querySelectorAll('th,td')].map(cell => clean(cell.innerText)).slice(0, 24)
+          )),
+        })),
+      };
+    }, {
+      maxContentItems: positiveInt(maxItems, 80, { min: 1, max: 200 }),
+      maxChars: 8000,
+    }).catch(error => ({ error: text(error?.message || error, 240), text: '', headings: [], links: [], tables: [] }));
     const refs = new Map();
     const interactive = domItems.map((item, index) => {
       const ref = `e${index + 1}`;
@@ -599,6 +714,16 @@ export class NativeBrowserSession {
       active: id === this.activePageId,
       locator_priority: LOCATOR_PRIORITY,
       interactive,
+      content: {
+        text: text(content.text, 8000),
+        headings: (content.headings || []).map(value => text(value, 400)),
+        links: (content.links || []).map(item => ({ text: text(item.text, 400), href: text(item.href, 800) })),
+        tables: (content.tables || []).map(table => ({
+          headers: (table.headers || []).map(value => text(value, 300)),
+          rows: (table.rows || []).map(row => row.map(value => text(value, 500))),
+        })),
+        error: content.error || null,
+      },
       ax_tree: {
         available: ax.available,
         node_count: ax.nodes.length,
@@ -772,6 +897,22 @@ export class NativeBrowserSession {
     return safety;
   }
 
+  assertAllowedUrl(value, label = 'navigation') {
+    if (!this.options.allowedOrigins.length || !value || value === 'about:blank') return;
+    let origin;
+    try { origin = new URL(value).origin; } catch {
+      const error = new Error(`${label} URL is invalid: ${text(value, 500)}`);
+      error.code = 'INVALID_TARGET_URL';
+      throw error;
+    }
+    if (!this.options.allowedOrigins.includes(origin)) {
+      const error = new Error(`${label} crossed the allowed domain boundary: ${origin}`);
+      error.code = 'DOMAIN_BOUNDARY_VIOLATION';
+      error.allowed_origins = this.options.allowedOrigins;
+      throw error;
+    }
+  }
+
   async captureScreenshot(page, actionId, label = 'after') {
     const filePath = path.join(this.stateDir, `${actionId}-${label}.png`);
     await page.screenshot({
@@ -792,11 +933,21 @@ export class NativeBrowserSession {
       };
       const clean = value => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 500);
       const textOf = element => clean(element.innerText || element.getAttribute('aria-label') || element.getAttribute('placeholder'));
+      const bodyText = clean(document.body?.innerText || '').slice(0, 20000);
+      let bodyHash = 2166136261;
+      for (let index = 0; index < bodyText.length; index += 1) {
+        bodyHash ^= bodyText.charCodeAt(index);
+        bodyHash = Math.imul(bodyHash, 16777619);
+      }
       return {
         url: location.href,
         title: document.title,
         headings: [...document.querySelectorAll('h1,h2,h3,[role="heading"]')].filter(visible).map(textOf).filter(Boolean).slice(0, 20),
         alerts: [...document.querySelectorAll('[role="alert"], [aria-live="assertive"], [class*="toast" i], [class*="error" i]')].filter(visible).map(textOf).filter(Boolean).slice(0, 20),
+        content_fingerprint: `fnv1a-${(bodyHash >>> 0).toString(16)}`,
+        interactive_count: [...document.querySelectorAll('button,a[href],input,textarea,select,summary,[role],[contenteditable="true"]')].filter(visible).length,
+        dialog_count: [...document.querySelectorAll('dialog,[role="dialog"],[role="alertdialog"]')].filter(visible).length,
+        table_count: [...document.querySelectorAll('table')].filter(visible).length,
       };
     }).catch(error => ({ error: text(error?.message || error, 240) }));
   }
@@ -816,6 +967,8 @@ export class NativeBrowserSession {
     const actionId = `NATIVE-ACT-${String(++this.actionNumber).padStart(4, '0')}`;
     const before = await this.visibleState(page);
     let locatorEvidence = null;
+    let extractedContent = null;
+    let attachments = [];
     let popupPage = null;
     const pagesBefore = new Set(this.context.pages?.() || []);
     const popupPromise = ['click', 'navigate'].includes(type) && this.context.waitForEvent
@@ -825,6 +978,7 @@ export class NativeBrowserSession {
       if (type === 'navigate') {
         const url = text(action.url || action.target_url, 1000);
         if (!url) throw new Error('navigate requires url');
+        this.assertAllowedUrl(url, 'navigation');
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: this.options.navigationTimeout });
       } else if (type === 'back') {
         await page.goBack({ waitUntil: 'domcontentloaded', timeout: this.options.navigationTimeout }).catch(error => {
@@ -843,6 +997,75 @@ export class NativeBrowserSession {
         }
       } else if (type === 'screenshot') {
         // Screenshot is still evidence, not an arbitrary page script.
+      } else if (type === 'switch_page') {
+        const targetPageId = normalizePageId(action.target_page_id || action.target || '');
+        const targetPage = this.getPage(targetPageId);
+        this.activePageId = targetPage.pageId;
+        pageId = targetPage.pageId;
+        page = targetPage.page;
+        state = targetPage.state;
+        await page.bringToFront?.();
+      } else if (type === 'scroll' && !action.target && !action.target_ref && !action.semantic_target && !action.selector) {
+        const direction = text(action.direction, 20).toLowerCase() || 'down';
+        const distance = positiveInt(action.distance, 700, { min: 50, max: 4000 });
+        await page.mouse.wheel(0, direction === 'up' ? -distance : distance);
+      } else if (type === 'extract') {
+        const target = action.target || action.target_ref || action.semantic_target || (action.selector ? {
+          selector: action.selector,
+          strategy: action.strategy || 'STABLE_CSS',
+          reason: action.fallback_reason || 'explicit read-only extraction selector',
+        } : null);
+        let root = null;
+        if (target) {
+          const resolved = await this.resolveTarget({ pageId, target, allowXPath: Boolean(action.allow_xpath) });
+          locatorEvidence = resolved.evidence;
+          root = resolved.locator;
+        }
+        const extractionOptions = {
+          format: text(action.format || action.output_format, 40).toLowerCase() || 'structured',
+          max_items: positiveInt(action.max_items, 50, { min: 1, max: 200 }),
+          max_chars: positiveInt(action.max_chars, 8000, { min: 200, max: 30000 }),
+        };
+        const extractor = (scope, options) => {
+          const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+          const visible = element => {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+          };
+          const rootElement = scope || document.body;
+          const query = selector => [...rootElement.querySelectorAll(selector)].filter(visible);
+          return {
+            format: options.format,
+            text: clean(rootElement.innerText || rootElement.textContent).slice(0, options.max_chars),
+            links: query('a[href]').slice(0, options.max_items).map(element => ({
+              text: clean(element.innerText || element.getAttribute('aria-label')),
+              href: element.href,
+            })),
+            lists: query('ul,ol').slice(0, 12).map(list => (
+              [...list.querySelectorAll(':scope > li')].slice(0, options.max_items).map(item => clean(item.innerText))
+            )),
+            tables: query('table').slice(0, 8).map(table => ({
+              headers: [...table.querySelectorAll('thead th')].map(cell => clean(cell.innerText)).slice(0, 24),
+              rows: [...table.querySelectorAll('tbody tr')].slice(0, options.max_items).map(row => (
+                [...row.querySelectorAll('th,td')].map(cell => clean(cell.innerText)).slice(0, 24)
+              )),
+            })),
+          };
+        };
+        const raw = root
+          ? await root.evaluate(extractor, extractionOptions)
+          : await page.locator('body').evaluate(extractor, extractionOptions);
+        extractedContent = {
+          format: raw.format,
+          text: text(raw.text, extractionOptions.max_chars),
+          links: (raw.links || []).map(item => ({ text: text(item.text, 400), href: text(item.href, 800) })),
+          lists: (raw.lists || []).map(list => list.map(item => text(item, 500))),
+          tables: (raw.tables || []).map(table => ({
+            headers: (table.headers || []).map(value => text(value, 300)),
+            rows: (table.rows || []).map(row => row.map(value => text(value, 500))),
+          })),
+        };
       } else {
         const target = action.target
           || action.target_ref
@@ -860,6 +1083,17 @@ export class NativeBrowserSession {
         });
         locatorEvidence = resolved.evidence;
         if (type === 'click') await resolved.locator.click({ timeout: this.options.actionTimeout });
+        if (type === 'download') {
+          const downloadPromise = page.waitForEvent('download', { timeout: this.options.navigationTimeout });
+          await resolved.locator.click({ timeout: this.options.actionTimeout });
+          const download = await downloadPromise;
+          const suggested = slug(download.suggestedFilename?.() || `download-${Date.now()}`, 'download');
+          const downloadDir = path.join(this.stateDir, 'downloads');
+          fs.mkdirSync(downloadDir, { recursive: true });
+          const downloadPath = path.join(downloadDir, suggested);
+          await download.saveAs(downloadPath);
+          attachments = [downloadPath];
+        }
         if (type === 'fill') {
           if (action.value === undefined || action.value === null) throw new Error('fill requires value');
           await resolved.locator.fill(String(action.value));
@@ -887,6 +1121,7 @@ export class NativeBrowserSession {
         quietMs: positiveInt(action.quiet_ms, 120, { min: 20, max: 1000 }),
       });
       const after = await this.visibleState(page);
+      this.assertAllowedUrl(after.url, 'resulting page');
       const mediaRefs = action.capture_media === false ? [] : [await this.captureScreenshot(page, actionId)];
       const events = fs.existsSync(this.eventsFile)
         ? (() => { try { return JSON.parse(fs.readFileSync(this.eventsFile, 'utf8')); } catch { return []; } })()
@@ -902,6 +1137,7 @@ export class NativeBrowserSession {
           payload: safeJson(event.payload, 600),
         })).slice(0, 32),
       };
+      const stateDelta = computeNativeStateDelta(before, after, runtime);
       state.stale = true;
       const result = {
         action_id: actionId,
@@ -914,7 +1150,7 @@ export class NativeBrowserSession {
           strategy: 'NATIVE_NAVIGATION',
           selector: null,
           source: 'native_runtime',
-          verified: type === 'navigate' || type === 'back' || type === 'reload' || type === 'wait' || type === 'screenshot',
+          verified: ['navigate', 'back', 'reload', 'wait', 'screenshot', 'scroll', 'extract', 'switch_page'].includes(type),
           fallback_reason: null,
         },
         charter_id: text(action.charter_id, 120) || null,
@@ -930,6 +1166,9 @@ export class NativeBrowserSession {
         after,
         readiness,
         runtime,
+        state_delta: stateDelta,
+        extracted_content: extractedContent,
+        attachments,
         media_refs: mediaRefs,
         test_data_namespace: this.dataNamespace,
         next_observation_required: true,
@@ -948,6 +1187,29 @@ export class NativeBrowserSession {
       wrapped.locator_evidence = locatorEvidence || null;
       throw wrapped;
     }
+  }
+
+  async performReadOnlyBatch(actions = []) {
+    const normalized = validateReadOnlyActionBatch(actions);
+    const results = [];
+    for (let index = 0; index < normalized.length; index += 1) {
+      const action = normalized[index];
+      const result = await this.performAction({
+        ...action,
+        capture_media: action.capture_media ?? index === normalized.length - 1,
+      });
+      const observation = await this.observe({ pageId: result.next_page_id, maxItems: action.max_items || 80 });
+      results.push({ action: result, observation });
+      if (result.runtime?.failures?.length && action.continue_on_runtime_failure !== true) break;
+    }
+    return {
+      session_id: this.sessionId,
+      worker_id: this.options.workerId,
+      requested_action_count: normalized.length,
+      executed_action_count: results.length,
+      stopped_early: results.length < normalized.length,
+      results,
+    };
   }
 
   async recover({ pageId = this.activePageId, reason = 'unspecified', strategy = 'bounded' } = {}) {
@@ -1000,6 +1262,7 @@ export class NativeBrowserSession {
         url: text(page.url?.() || '', 500),
       })),
       evidence_dir: path.relative(this.options.dataDir, this.stateDir),
+      allowed_origins: this.options.allowedOrigins,
       started_at: this.startedAt,
     };
   }
@@ -1107,6 +1370,7 @@ export class NativeBrowserPool {
       for (const action of actions) {
         if (String(action?.type || '').toLowerCase() === 'observe') output.push(await session.observe(action));
         else if (String(action?.type || '').toLowerCase() === 'recover') output.push(await session.recover(action));
+        else if (String(action?.type || '').toLowerCase() === 'batch') output.push(await session.performReadOnlyBatch(action.actions));
         else output.push(await session.performAction(action));
       }
       return { worker_id: assignment.worker_id, results: output };

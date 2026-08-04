@@ -11,7 +11,7 @@ Skill `EXPLORATORY_BROWSER_QA` bằng AI lái UI qua MCP hoặc native Playwrigh
 ## ✨ Tính năng chính
 - **AI lái UI tương tác** qua MCP Playwright (click/type/snapshot/probe API)
 - **Generic browser agent**: profile `FAST` (`BROWSER_TASK_FAST`) nhận URL + task và chạy ngay với safe action budget, không cần business brief
-- **Native browser runtime** khi MCP không khả dụng: AX/CDP snapshot, priority selector, session daemon, bounded recovery và worker isolation; không phụ thuộc Browser Use
+- **Native browser runtime** khi MCP không khả dụng: one-command FAST start/finish, visible-content + AX/CDP snapshot, structured extraction, deterministic state delta, read-only batch tối đa 5 action, priority selector, bounded recovery và worker isolation; không phụ thuộc Browser Use
 - **Hiểu flow trực tiếp trên UI** — quan sát entry point, navigation, control, state và feedback rồi mới test; spec/ticket/source chỉ là context bổ sung nếu có
 - **Verdict rõ ràng** — `PASS` đã test và có evidence, `FAILED` test ra sai, `N/A` không áp dụng, `UNTEST` cần test nhưng chưa thể kết luận; không phát ra `BLOCKED` hoặc `PARTIAL` ở kết quả cuối
 - **Sanity retest từ 1 link ticket** (WebFetch → AC → verify → PASS/FAILED/N/A/UNTEST)

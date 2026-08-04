@@ -152,6 +152,7 @@ async function main() {
     cdpUrl: getArg(args, '--cdp-url', process.env.QA_CDP_URL || ''),
     profileDir: getArg(args, '--profile-dir', process.env.QA_BROWSER_PROFILE_DIR || ''),
     recordVideo: hasArg(args, '--record-video'),
+    allowedOrigins: getArg(args, '--allowed-origin', ''),
   });
 
   server = http.createServer(async (request, response) => {
@@ -178,6 +179,8 @@ async function main() {
         result = await worker.observe({ pageId: payload.page_id, maxItems: payload.max_items });
       } else if (requestUrl.pathname === '/action') {
         result = await worker.performAction({ ...payload.action, page_id: payload.page_id || payload.action?.page_id });
+      } else if (requestUrl.pathname === '/batch') {
+        result = await worker.performReadOnlyBatch(payload.actions || []);
       } else if (requestUrl.pathname === '/recover') {
         result = await worker.recover({ pageId: payload.page_id, reason: payload.reason, strategy: payload.strategy });
       } else if (requestUrl.pathname === '/execute') {
@@ -240,4 +243,3 @@ main().catch(error => {
   console.error(`[native-browser-daemon] ${safeError(error)}`);
   process.exitCode = 1;
 });
-

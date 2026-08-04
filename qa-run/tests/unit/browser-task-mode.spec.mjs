@@ -16,6 +16,7 @@ test('BROWSER_TASK_FAST defaults to the bundled Playwright runtime without a bus
     const result = spawnSync(process.execPath, [
       manifest,
       'start',
+      '--run-id', 'fast-task-explicit-id',
       '--mode', 'BROWSER_TASK_FAST',
       '--workers', '1',
     ], {
@@ -29,6 +30,8 @@ test('BROWSER_TASK_FAST defaults to the bundled Playwright runtime without a bus
       'utf8',
     ));
     assert.equal(payload.requested_mode, 'BROWSER_TASK_FAST');
+    assert.equal(payload.run_id, 'fast-task-explicit-id');
+    assert.equal(fs.existsSync(path.join(dataDir, 'evidence', 'manifest-fast-task-explicit-id.json')), true);
     assert.equal(payload.test_mode, 'EXPLORATORY_BROWSER_QA');
     assert.equal(payload.execution_profile, 'FAST');
     assert.equal(payload.fast_task, true);

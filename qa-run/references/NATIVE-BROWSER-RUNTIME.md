@@ -11,6 +11,7 @@ For headless runs, the launch helper leaves browser selection to Playwright so i
 - [Capability target](#capability-target)
 - [Quick start](#quick-start)
 - [Observe before action](#observe-before-action)
+- [Structured extraction and read-only batches](#structured-extraction-and-read-only-batches)
 - [Selector resolution contract](#selector-resolution-contract)
 - [Action contract](#action-contract)
 - [Session and authentication lifecycle](#session-and-authentication-lifecycle)
@@ -90,6 +91,17 @@ node <skill-root>/scripts/helpers/native-browser-runtime.mjs close run-orders-00
 
 The `start` command is idempotent while a matching loopback daemon is healthy. A stale state file is not reused as a live session
 
+For a generic FAST task, prefer the combined entrypoint
+
+```bash
+node <skill-root>/scripts/helpers/native-browser-runtime.mjs quick-start \
+  run-read-001 --url https://app.example/page \
+  --objective "Read the visible status and links" \
+  --allowed-domain https://app.example
+```
+
+It creates the FAST manifest/task contract, launches, navigates and observes in one command. Finish and close with `quick-finish <RUN_ID> --verdict PASS|FAILED|N/A|UNTEST`. The runtime rejects navigation outside the declared origin
+
 ## Observe before action
 
 `observe` performs a bounded readiness check and returns a compact state packet containing
@@ -102,8 +114,17 @@ The `start` command is idempotent while a matching loopback daemon is healthy. A
 - candidate locator order for each interactive reference
 - open tabs/pages and the active page
 - runtime observer cursor
+- compact visible page content: text, headings, links and tables
 
 The reference is intentionally ephemeral. Every successful action marks the page state stale. Reusing `e1` without a new observation fails with `STALE_TARGET`, so the agent cannot silently click an element that moved or changed meaning
+
+Every action result also contains `state_delta`: deterministic URL/title/content/control changes, new headings/alerts, runtime failures and a bounded progress classification. Use it to evaluate the previous goal and decide whether to continue or replan; do not treat the score as a QA oracle
+
+## Structured extraction and read-only batches
+
+`extract` reads visible text, links, lists and tables from the page or one resolved semantic target. It does not execute arbitrary page JavaScript supplied by the caller. Bound extraction with `max_items` and `max_chars`; extracted content is task context and does not replace screenshot/video evidence for QA verdicts
+
+`batch` executes up to five actions without another model round-trip. Only `navigate`, `back`, `reload`, `wait`, page-level `scroll`, `switch_page`, `screenshot` and `extract` are accepted. The runtime re-observes after every action and stops early on a runtime failure. Clicks, form input, selection, download and other write-like interactions are rejected from batches and stay one-action-per-observation
 
 ## Selector resolution contract
 
@@ -125,7 +146,7 @@ Coordinates are not a normal selector strategy. If a future driver needs coordin
 
 ## Action contract
 
-Supported action types are `navigate`, `click`, `fill`, `type`, `press`, `check`, `uncheck`, `select`, `scroll`, `back`, `reload`, `wait` and `screenshot`
+Supported action types are `navigate`, `click`, `fill`, `type`, `press`, `check`, `uncheck`, `select`, `scroll`, `back`, `reload`, `wait`, `screenshot`, `switch_page`, read-only `extract` and single-step `download`. Download resolves a semantic target, waits for the browser download event, saves the file under the worker evidence directory and returns `attachments`; it is never batchable
 
 Every action is checked by `attack-surface.mjs` before browser execution
 
@@ -136,7 +157,7 @@ Every action is checked by `attack-surface.mjs` before browser execution
 - writes carry the run/worker test-data namespace in the result
 - sensitive values are never copied into the action result or ledger
 
-The result contains the action ID, same-session identifiers, safety decision, locator evidence, before/after visible state, readiness result, runtime failure summary, screenshot reference and the `next_observation_required` marker
+The result contains the action ID, same-session identifiers, safety decision, locator evidence, before/after visible state, deterministic state delta, optional structured extraction, readiness result, runtime failure summary, screenshot reference and the `next_observation_required` marker
 
 The result is the source for the ledger adapter
 

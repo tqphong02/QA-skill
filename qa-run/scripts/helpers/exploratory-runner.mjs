@@ -13,6 +13,7 @@
  *   page <run-id> --page-file <json>
  *   task-plan <run-id> --task-plan-file <json>
  *   decision <run-id> --decision-file <json>
+ *   task-judge <run-id> --judge-file <json>
  *   action <run-id> --action-file <json>
  *   rule-probe <run-id> --probe-file <json>
  *   coverage <run-id> --coverage-file <json>
@@ -36,7 +37,7 @@ const DEFAULT_MAX_ACTIONS = 40;
 const DEFAULT_MAX_MS = 300_000;
 const DEFAULT_MAX_ACTIONS_PER_CHARTER = 16;
 const DEFAULT_MAX_RETRIES_PER_ACTION = 1;
-const DEFAULT_MAX_AGENT_REPLANS = 2;
+const DEFAULT_MAX_AGENT_REPLANS = 3;
 
 const EXPLORATORY_BROWSER_QA = 'EXPLORATORY_BROWSER_QA';
 const LEGACY_EXPLORATORY_ADHOC = 'EXPLORATORY_ADHOC';
@@ -95,6 +96,8 @@ const ALLOWED_GOAL_EVALUATIONS = new Set([
   'BLOCKED',
 ]);
 const ALLOWED_AGENT_DECISIONS = new Set(['ACT', 'REPLAN', 'COMPLETE', 'STOP']);
+const ALLOWED_TASK_JUDGEMENTS = new Set(['SATISFIED', 'UNSATISFIED', 'INCONCLUSIVE']);
+const ALLOWED_SIGNAL_RESULTS = new Set(['OBSERVED', 'MISSING', 'CONTRADICTED']);
 const FORBIDDEN_REASONING_FIELDS = new Set([
   'analysis',
   'chain_of_thought',
@@ -477,7 +480,7 @@ function rejectRawReasoning(input, label) {
 
 function normalizeTaskSteps(value) {
   if (!Array.isArray(value) || !value.length) fail('agentic task plan requires a non-empty steps array');
-  if (value.length > 12) fail('agentic task plan supports at most 12 bounded steps');
+  if (value.length > 20) fail('agentic task plan supports at most 20 bounded steps');
   const ids = new Set();
   return value.map((item, index) => {
     const taskStepId = text(item?.task_step_id || item?.step_id || item?.id, 120);
@@ -563,6 +566,7 @@ export function setExploratoryTaskPlan({ dataDir = DATA_DIR, runId, plan }) {
     requires_replan: false,
     replan_count: Number(previous.replan_count || 0) + (isReplan ? 1 : 0),
     max_replans: Number(previous.max_replans || DEFAULT_MAX_AGENT_REPLANS),
+    judge: null,
     source_observation: {
       session_id: sessionId,
       page_id: page.page_id,
@@ -676,6 +680,59 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   task.updated_at = nowIso();
   saveRun(filePath, run);
   return { run, decision: record, filePath };
+}
+
+export function recordExploratoryTaskJudge({ dataDir = DATA_DIR, runId, judge: input }) {
+  const { run, filePath } = loadRun(path.resolve(dataDir), runId);
+  if (run.status !== 'RUNNING') fail(`run is already finished: ${run.status}`);
+  if (!input || typeof input !== 'object') fail('agentic task judge payload is required');
+  rejectRawReasoning(input, 'agentic task judge');
+  const task = run.agentic_task;
+  if (!task || task.status !== 'COMPLETED') fail('task judge requires a COMPLETED agentic task');
+  const judgement = text(input.judgement || input.verdict, 80).toUpperCase();
+  if (!ALLOWED_TASK_JUDGEMENTS.has(judgement)) {
+    fail(`task judgement must be SATISFIED, UNSATISFIED or INCONCLUSIVE: ${judgement || 'missing'}`);
+  }
+  const reason = text(input.reason, 800);
+  if (!reason) fail('task judge requires a concise reason');
+  const supplied = Array.isArray(input.success_signal_results) ? input.success_signal_results : [];
+  const bySignal = new Map(supplied.map(item => [text(item?.signal, 700).toLowerCase(), item]));
+  const signalResults = task.success_signals.map(signal => {
+    const item = bySignal.get(text(signal, 700).toLowerCase());
+    if (!item) fail(`task judge is missing success signal: ${signal}`);
+    const status = text(item.status, 80).toUpperCase();
+    if (!ALLOWED_SIGNAL_RESULTS.has(status)) fail(`unsupported success signal result: ${status || 'missing'}`);
+    const evidenceRefs = safeArray(item.evidence_refs, 16);
+    if (status === 'OBSERVED' && !evidenceRefs.length) {
+      fail(`observed success signal requires evidence_refs: ${signal}`);
+    }
+    return {
+      signal,
+      status,
+      actual: text(item.actual, 800) || null,
+      evidence_refs: evidenceRefs,
+    };
+  });
+  if (judgement === 'SATISFIED' && signalResults.some(item => item.status !== 'OBSERVED')) {
+    fail('SATISFIED task judgement requires every success signal to be OBSERVED');
+  }
+  if (judgement === 'UNSATISFIED' && signalResults.every(item => item.status === 'OBSERVED')) {
+    fail('UNSATISFIED task judgement requires a missing or contradicted success signal');
+  }
+  const record = {
+    judgement,
+    reason,
+    success_signal_results: signalResults,
+    evidence_refs: safeArray([
+      ...safeArray(input.evidence_refs, 20),
+      ...signalResults.flatMap(item => item.evidence_refs),
+    ], 32),
+    judged_at: nowIso(),
+  };
+  task.judge = record;
+  task.updated_at = nowIso();
+  saveRun(filePath, run);
+  return { run, judge: record, filePath };
 }
 
 function validateLocatorEvidence(input, actionVerdict, dataDir = DATA_DIR) {
@@ -856,6 +913,7 @@ export function startExploratoryRun({
       requires_replan: false,
       replan_count: 0,
       max_replans: DEFAULT_MAX_AGENT_REPLANS,
+      judge: null,
       source_observation: null,
       updated_at: nowIso(),
     },
@@ -1291,6 +1349,17 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
     retry_classification: retryOf ? text(input.retry_classification, 80).toLowerCase() || 'flaky' : null,
     next_decision: text(input.next_decision, 500),
     decision_id: decisionId || null,
+    state_delta: input.state_delta && typeof input.state_delta === 'object' ? {
+      url_changed: Boolean(input.state_delta.url_changed),
+      title_changed: Boolean(input.state_delta.title_changed),
+      content_changed: Boolean(input.state_delta.content_changed),
+      control_count_changed: Boolean(input.state_delta.control_count_changed),
+      new_headings: safeArray(input.state_delta.new_headings, 12),
+      new_alerts: safeArray(input.state_delta.new_alerts, 12),
+      runtime_failure_count: Number(input.state_delta.runtime_failure_count || 0),
+      progress_score: Math.max(0, Math.min(1, Number(input.state_delta.progress_score || 0))),
+      progress_classification: text(input.state_delta.progress_classification, 80).toUpperCase() || 'UNKNOWN',
+    } : null,
   };
   if (retryOf && !['recovered', 'flaky', 'failed'].includes(record.retry_classification)) {
     fail('retry_classification must be recovered, flaky or failed');
@@ -1298,6 +1367,7 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
   run.actions.push(record);
   if (agentDecision) {
     agentDecision.action_id = record.action_id;
+    agentDecision.observed_delta = record.state_delta;
     const taskStep = getTaskStep(run, agentDecision.task_step_id);
     taskStep.action_ids = safeArray([...taskStep.action_ids, record.action_id], 24);
   }
@@ -1388,6 +1458,7 @@ export function recordNativeBrowserAction({
       safety_decision: result.safety?.safety || '',
       verdict,
       next_decision: nextDecision,
+      state_delta: result.state_delta || null,
     },
   });
 }
@@ -1464,6 +1535,9 @@ function validateAgenticTaskForFinish(run, verdict) {
     }
     const completion = [...task.decisions].reverse().find(item => item.decision === 'COMPLETE');
     if (!completion?.evidence_refs?.length) fail('PASS requires an evidence-backed COMPLETE agentic decision');
+    if (task.judge?.judgement !== 'SATISFIED') {
+      fail(`PASS requires an independent SATISFIED task judge: ${task.judge?.judgement || 'missing'}`);
+    }
     const unlinked = task.decisions.filter(item => item.decision === 'ACT' && !item.action_id);
     if (unlinked.length) {
       fail(`PASS requires every ACT decision to link to an executed action: ${unlinked.map(item => item.decision_id).join(', ')}`);
@@ -1549,6 +1623,12 @@ function cliDecisionPayload(argv = args) {
   fail('--decision-file is required for decision');
 }
 
+function cliTaskJudgePayload(argv = args) {
+  const file = argFrom(argv, '--judge-file', '');
+  if (file) return readJson(file, 'agentic task judge');
+  fail('--judge-file is required for task-judge');
+}
+
 function cliCharterPayload(argv = args) {
   const file = argFrom(argv, '--charter-file', '');
   if (file) return readJson(file, 'charter payload');
@@ -1582,7 +1662,7 @@ function cliNativeResultPayload(argv = args) {
 export async function main(argv = process.argv.slice(2)) {
   const command = argv[0] || 'help';
   if (command === 'help') {
-    console.log('exploratory-runner: start | rule-plan | page | task-plan | decision | action | native-action | rule-probe | coverage | charter | finish');
+    console.log('exploratory-runner: start | rule-plan | page | task-plan | decision | task-judge | action | native-action | rule-probe | coverage | charter | finish');
     return 0;
   }
   const localGetArg = (flag, fallback = '') => {
@@ -1631,6 +1711,11 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (command === 'decision') {
     const result = recordExploratoryTaskDecision({ dataDir: DATA_DIR, runId, decision: cliDecisionPayload(argv) });
+    printResult(result);
+    return 0;
+  }
+  if (command === 'task-judge') {
+    const result = recordExploratoryTaskJudge({ dataDir: DATA_DIR, runId, judge: cliTaskJudgePayload(argv) });
     printResult(result);
     return 0;
   }

@@ -44,13 +44,14 @@ Use the runner commands as the ledger boundary:
 2. `page <RUN_ID> --page-file <JSON>` for the initial page and every new tab/page, reusing the same `session_id`
 3. `task-plan <RUN_ID> --task-plan-file <JSON>` after the first live observation for a natural-language/non-deterministic objective; decompose the objective into observable bounded goals
 4. `decision <RUN_ID> --decision-file <JSON>` before each autonomous action; evaluate the previous goal, update compact memory, choose one next goal/action and record a concise rationale
-5. `action <RUN_ID> --action-file <JSON>` after each meaningful action and its verification; link `decision_id` when agentic planning is active and include intent, semantic target, locator evidence, expected/actual signal, safety, observability, evidence and next decision
-6. `rule-probe <RUN_ID> --probe-file <JSON>` after a uniqueness, authorization, side-effect, oracle or coverage hypothesis has enough same-session evidence; keep unproven claims as `CANDIDATE`, `INCONCLUSIVE` or `BLOCKED` internally
-7. `coverage <RUN_ID> --coverage-file <JSON>` after traversing the declared scope; record modules, routes, roles, states, transitions, data classes and dependencies, including explicit gaps/exclusions
-8. `charter <RUN_ID> --charter-file <JSON>` after deciding each charter
-9. `finish <RUN_ID> --verdict PASS|FAILED|N/A|UNTEST --reason <text when needed>` before `run-manifest.mjs finish`
+5. `action <RUN_ID> --action-file <JSON>` after each meaningful action and its verification; link `decision_id` when agentic planning is active and include intent, semantic target, locator evidence, expected/actual signal, deterministic state delta, safety, observability, evidence and next decision
+6. `task-judge <RUN_ID> --judge-file <JSON>` after agentic `COMPLETE`; independently reconcile every declared success signal with evidence
+7. `rule-probe <RUN_ID> --probe-file <JSON>` after a uniqueness, authorization, side-effect, oracle or coverage hypothesis has enough same-session evidence; keep unproven claims as `CANDIDATE`, `INCONCLUSIVE` or `BLOCKED` internally
+8. `coverage <RUN_ID> --coverage-file <JSON>` after traversing the declared scope; record modules, routes, roles, states, transitions, data classes and dependencies, including explicit gaps/exclusions
+9. `charter <RUN_ID> --charter-file <JSON>` after deciding each charter
+10. `finish <RUN_ID> --verdict PASS|FAILED|N/A|UNTEST --reason <text when needed>` before `run-manifest.mjs finish`
 
-The runner rejects browser actions before a rule plan, cross-session pages, unverified selectors, XPath without a reason, coordinate actions without bounding-box plus media evidence, destructive actions that are not internally marked `BLOCKED`, mutation retries, missing high-priority charter verdicts and `PASS` without screenshot/video evidence. `PASS` also requires runtime-verified coverage that is `COMPLETE_FOR_SCOPE`, type-specific evidence for applicable hidden-rule probes, an explicit session ID, resolved driver/observer/network tracks and no retry-derived `RECOVERED`/`FLAKY` quality flag. A technical blocker or incomplete scope is exposed as `UNTEST` at the final result boundary
+The runner rejects browser actions before a rule plan, cross-session pages, unverified selectors, XPath without a reason, coordinate actions without bounding-box plus media evidence, destructive actions that are not internally marked `BLOCKED`, mutation retries, missing high-priority charter verdicts and `PASS` without screenshot/video evidence. Agentic `PASS` additionally requires an independent `SATISFIED` task judge with evidence for every success signal. `PASS` also requires runtime-verified coverage that is `COMPLETE_FOR_SCOPE`, type-specific evidence for applicable hidden-rule probes, an explicit session ID, resolved driver/observer/network tracks and no retry-derived `RECOVERED`/`FLAKY` quality flag. A technical blocker or incomplete scope is exposed as `UNTEST` at the final result boundary
 
 The run JSON keeps only redacted summaries and evidence pointers. Provider-reported token usage is read from `QA_TOKEN_USAGE_FILE`; the card's deterministic context estimate and the provider measurement remain separate
 
@@ -83,7 +84,7 @@ Do not copy raw DOM, credentials, cookies, tokens or unrestricted response bodie
 
 Repeat the following loop until the charter is decided or a stop condition is reached
 
-For agentic tasks, persist the task plan and per-step decision through [AGENTIC-TASK-PLANNING.md](AGENTIC-TASK-PLANNING.md). The runner stores compact rationale and memory only; never persist raw chain-of-thought
+For agentic tasks, persist the task plan, per-step decision, deterministic state delta and independent completion judge through [AGENTIC-TASK-PLANNING.md](AGENTIC-TASK-PLANNING.md). The runner stores compact rationale and memory only; never persist raw chain-of-thought
 
 ### 1. Observe
 
