@@ -114,6 +114,7 @@ function compactEvent(event) {
 
 export function summarizeRuntimeEvents(events, { actionId = null, maxPerType = 8 } = {}) {
   const grouped = {
+    HTTP_RESPONSE: [],
     HTTP_FAILURE: [],
     REQUEST_FAILED: [],
     GRAPHQL_ERROR: [],
@@ -133,6 +134,7 @@ export function summarizeRuntimeEvents(events, { actionId = null, maxPerType = 8
     counts: Object.fromEntries(Object.entries(grouped).map(([type, items]) => [type, items.length])),
     failures: grouped.HTTP_FAILURE,
     request_failures: grouped.REQUEST_FAILED,
+    responses: grouped.HTTP_RESPONSE,
     graphql_errors: grouped.GRAPHQL_ERROR,
     console_errors: grouped.CONSOLE_ERROR,
     page_errors: grouped.PAGE_CRASH_ERROR,
@@ -140,7 +142,10 @@ export function summarizeRuntimeEvents(events, { actionId = null, maxPerType = 8
   };
 }
 
-export function createRuntimeObserver(page, { eventsFile = EVENTS_FILE } = {}) {
+export function createRuntimeObserver(page, {
+  eventsFile = EVENTS_FILE,
+  captureSuccessfulResponses = false,
+} = {}) {
   const events = [];
 
   function logEvent(type, payload) {
@@ -179,8 +184,21 @@ export function createRuntimeObserver(page, { eventsFile = EVENTS_FILE } = {}) {
       const status = resp.status();
       const url = resp.url();
       const isGraphql = /graphql/i.test(url);
+      const resourceType = resp.request?.().resourceType?.() || 'UNKNOWN';
       const shouldInspect = status >= 400 || isGraphql;
       const bodyPreview = shouldInspect ? await responseBodyPreview(resp) : '';
+
+      if (captureSuccessfulResponses && status < 400
+        && (['document', 'xhr', 'fetch', 'preflight', 'eventsource', 'websocket'].includes(resourceType) || isGraphql)) {
+        logEvent('HTTP_RESPONSE', {
+          method: resp.request?.().method?.() || 'UNKNOWN',
+          url: sanitizeUrl(url),
+          status,
+          statusText: resp.statusText(),
+          resourceType,
+          graphql: isGraphql,
+        });
+      }
 
       if (status >= 400) {
         logEvent('HTTP_FAILURE', {

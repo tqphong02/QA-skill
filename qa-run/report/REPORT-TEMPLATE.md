@@ -5,7 +5,7 @@ Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, khô
 ## Ticket Retest Template
 
 ```markdown
-## <PASS/FAILED/BLOCKED> — #<id> — <tên ngắn>
+## <PASS/FAILED/N/A/UNTEST> — #<id> — <tên ngắn>
 
 **Requirement source:** <Plane URL>
 **Business flow:** <1-2 câu mô tả flow đã xác nhận>
@@ -16,12 +16,12 @@ Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, khô
 - <role/data/setup 2>
 
 **AC results**
-1. <AC1 mô tả> — <PASS/FAILED> — <evidence hoặc quan sát 1 dòng>
-2. <AC2 mô tả> — <PASS/FAILED> — <evidence hoặc quan sát 1 dòng>
+1. <AC1 mô tả> — <PASS/FAILED/N/A/UNTEST> — <evidence hoặc quan sát 1 dòng>
+2. <AC2 mô tả> — <PASS/FAILED/N/A/UNTEST> — <evidence hoặc quan sát 1 dòng>
 
 **Adjacent checks**
-- <impact area 1> — <PASS/FAILED/BLOCKED> — <note ngắn>
-- <impact area 2> — <PASS/FAILED/BLOCKED> — <note ngắn>
+- <impact area 1> — <PASS/FAILED/N/A/UNTEST> — <note ngắn>
+- <impact area 2> — <PASS/FAILED/N/A/UNTEST> — <note ngắn>
 
 **Steps**
 1. <bước 1>
@@ -40,7 +40,7 @@ Mục tiêu: report retest và comment Plane phải ngắn, rõ, dễ scan, khô
 **Technical notes**
 - <endpoint/log/network only when needed>
 
-**Verdict:** <PASS/FAILED/BLOCKED> — <1 câu kết luận>
+**Verdict:** <PASS/FAILED/N/A/UNTEST> — <1 câu kết luận>
 **Evidence:**
 - <path/to/evidence-1.png>
 - <path/to/evidence-2.png>

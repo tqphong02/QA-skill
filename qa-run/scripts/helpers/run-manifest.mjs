@@ -31,6 +31,10 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { resolveModelUsage } from '../../lib/model-telemetry.mjs';
+import {
+  QA_RESULT_VERDICT_SET,
+  normalizeQaResultVerdict,
+} from '../../lib/verdicts.mjs';
 
 const DATA = process.env.QA_DATA_DIR || process.cwd();
 try { process.loadEnvFile(path.join(DATA, '.env')); } catch { /* optional */ }
@@ -70,8 +74,44 @@ function deriveContextCardPath(briefPath) {
 }
 
 if (command === 'start') {
-  const testMode = getArg('--mode', 'EXPLORATORY_ADHOC').toUpperCase();
+  const requestedMode = getArg('--mode', 'EXPLORATORY_BROWSER_QA').toUpperCase();
+  const requestedProfile = String(
+    getArg('--profile', getArg('--task-profile', '')),
+  ).trim().toUpperCase();
+  const fastProfile = requestedMode === 'BROWSER_TASK_FAST' || requestedProfile === 'FAST';
+  const testMode = ['BROWSER_TASK_FAST', 'EXPLORATORY_ADHOC'].includes(requestedMode)
+    ? 'EXPLORATORY_BROWSER_QA'
+    : requestedMode;
+  const executionProfile = fastProfile
+    ? 'FAST'
+    : requestedProfile === 'FULL' ? 'FULL' : 'EXPLORATORY';
+  if (requestedProfile && !['FAST', 'EXPLORATORY', 'FULL'].includes(requestedProfile)) {
+    console.error(`[run-manifest] BLOCKED: unsupported --profile value: ${requestedProfile}`);
+    console.error('  Allowed: FAST, EXPLORATORY, FULL');
+    process.exit(2);
+  }
+  if (requestedMode === 'BROWSER_TASK_FAST' && requestedProfile && requestedProfile !== 'FAST') {
+    console.error('[run-manifest] BLOCKED: BROWSER_TASK_FAST can only use --profile FAST');
+    console.error('  Use --mode EXPLORATORY_BROWSER_QA --profile EXPLORATORY for the full exploratory profile');
+    process.exit(2);
+  }
+  // Generic and exploratory browser routes use the first-party Playwright
+  // runtime by default. This avoids accidentally launching/attaching to the
+  // user's system Chrome through a Chrome DevTools MCP auto-resolution path.
+  // An explicit CLI flag or QA_* environment variable still opts into another
+  // driver, including the legacy `auto` fallback policy.
+  const nativeDefaultModes = new Set([
+    'EXPLORATORY_BROWSER_QA',
+    'APP_BASELINE_DISCOVERY',
+  ]);
+  const nativeDefault = nativeDefaultModes.has(testMode);
+  const trackValue = (flag, envName, fallback) => {
+    if (args.includes(flag)) return getArg(flag, fallback);
+    const configured = String(process.env[envName] || '').trim();
+    return configured || fallback;
+  };
   const discoveryModes = new Set([
+    'EXPLORATORY_BROWSER_QA',
     'APP_BASELINE_DISCOVERY',
     'REPO_BUSINESS_DISCOVERY',
     'UI_BUSINESS_RECONCILIATION',
@@ -127,9 +167,9 @@ if (command === 'start') {
     } else {
       console.error(`[run-manifest] BLOCKED: unknown legacy --browser-observer value: ${legacyObserverRaw}`);
       console.error('  --browser-observer has been replaced by 3 separate flags:');
-      console.error('    --browser-driver <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable>');
-      console.error('    --browser-observer <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|unavailable>');
-      console.error('    --network-observer <auto|chrome-devtools-mcp|playwright-mcp|ego-browser|unavailable>');
+      console.error('    --browser-driver <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable>');
+      console.error('    --browser-observer <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|unavailable>');
+      console.error('    --network-observer <auto|chrome-devtools-mcp|playwright-mcp|playwright-runtime|ego-browser|unavailable>');
       console.error('  See qa-run/references/BROWSER-DRIVER-RESOLUTION.md');
       process.exit(2);
     }
@@ -138,15 +178,15 @@ if (command === 'start') {
   // Resolve the 3 tracks
   const browserDriver = legacyObserverRaw 
     ? COMPAT_ALIAS[legacyObserverRaw] 
-    : getArg('--browser-driver', process.env.QA_BROWSER_DRIVER || 'auto');
+    : trackValue('--browser-driver', 'QA_BROWSER_DRIVER', nativeDefault ? 'playwright-runtime' : 'auto');
 
   const browserObserver = legacyObserverRaw 
     ? COMPAT_ALIAS[legacyObserverRaw] 
-    : getArg('--browser-observer', process.env.QA_BROWSER_OBSERVER || 'auto');
+    : trackValue('--browser-observer', 'QA_BROWSER_OBSERVER', nativeDefault ? 'playwright-runtime' : 'auto');
 
   const networkObserver = legacyObserverRaw 
     ? 'auto' 
-    : getArg('--network-observer', process.env.QA_NETWORK_OBSERVER || 'auto');
+    : trackValue('--network-observer', 'QA_NETWORK_OBSERVER', nativeDefault ? 'playwright-runtime' : 'auto');
 
   if (!ALLOWED_DRIVER.has(browserDriver)) {
     console.error(`[run-manifest] BLOCKED: unsupported --browser-driver value: ${browserDriver}`);
@@ -172,9 +212,9 @@ if (command === 'start') {
   }
 
   // Compute network capability flags
-  const networkBodyAvailable = networkObserver === 'chrome-devtools-mcp' || networkObserver === 'playwright-mcp';
+  const networkBodyAvailable = ['chrome-devtools-mcp', 'playwright-mcp', 'playwright-runtime'].includes(networkObserver);
   const networkConfidence = (() => {
-    if (['chrome-devtools-mcp', 'playwright-mcp'].includes(networkObserver)) return 'high';
+    if (['chrome-devtools-mcp', 'playwright-mcp', 'playwright-runtime'].includes(networkObserver)) return 'high';
     if (networkObserver === 'ego-browser') return 'medium';
     return 'low';
   })();
@@ -242,6 +282,14 @@ if (command === 'start') {
     }
   }
 
+  const explicitDriver = args.includes('--browser-driver') || Boolean(String(process.env.QA_BROWSER_DRIVER || '').trim());
+  const explicitObserver = args.includes('--browser-observer') || Boolean(String(process.env.QA_BROWSER_OBSERVER || '').trim());
+  const explicitNetworkObserver = args.includes('--network-observer') || Boolean(String(process.env.QA_NETWORK_OBSERVER || '').trim());
+  const nativeDefaultApplied = nativeDefault
+    && !legacyObserverRaw
+    && browserDriver === 'playwright-runtime'
+    && !explicitDriver;
+
   fs.mkdirSync(EVID, { recursive: true });
   const runId = `run-${Date.now()}`;
   const manifest = {
@@ -253,6 +301,13 @@ if (command === 'start') {
     git_branch: getGitBranch(),
     app_version: process.env.QA_APP_VERSION || '1.0.0',
     browser: `${browserDriver === 'ego-browser' ? 'chromium-ego-lite' : 'chromium-headless'}`,
+    browser_resolution: {
+      policy: nativeDefaultApplied ? 'playwright-runtime-default' : 'explicit-or-auto',
+      explicit_driver: explicitDriver,
+      explicit_observer: explicitObserver,
+      explicit_network_observer: explicitNetworkObserver,
+      system_chrome_auto_attach_possible: browserDriver === 'chrome-devtools-mcp' || browserDriver === 'auto',
+    },
     browser_driver: browserDriver,
     browser_observer: browserObserver,
     network_observer: networkObserver,
@@ -262,6 +317,9 @@ if (command === 'start') {
       network_observer: networkObserver,
       same_session_required: true,
       network_body_available: networkBodyAvailable,
+      network_body_scope: networkObserver === 'playwright-runtime'
+        ? 'redacted response preview for HTTP failures/GraphQL errors; request bodies are not persisted'
+        : null,
       network_confidence: networkConfidence,
       enabled: observabilityEnabled,
       scope: ['document', 'xhr', 'fetch', 'websocket', 'console', 'pageerror'],
@@ -269,12 +327,18 @@ if (command === 'start') {
       ego_browser_notes: browserDriver === 'ego-browser'
         ? 'drainEvents() provides basic events only; no request/response body; use chrome-devtools-mcp as network_observer for full detail'
         : null,
+      native_runtime_notes: browserDriver === 'playwright-runtime' || networkObserver === 'playwright-runtime'
+        ? 'Native Playwright/CDP runtime attaches AX tree and the redacted runtime observer to the same page; session daemon and worker evidence live under evidence/native-browser/'
+        : null,
     },
     viewport: '1440x900',
     account_roles: [process.env.QA_EMAIL || 'default_user'],
     test_data_namespace: `ns-${Date.now().toString(36)}`,
     worker_count: parseInt(getArg('--workers', '1'), 10),
+    requested_mode: requestedMode,
     test_mode: testMode,
+    execution_profile: executionProfile,
+    fast_task: fastProfile,
     knowledge_version: businessContext?.source_files?.map(source => source.sha256_12).join(',') || 'discovery',
     business_context: businessContext ? {
       path: path.relative(DATA, businessContextPath),
@@ -358,7 +422,23 @@ if (command === 'start') {
   const finishedTime = new Date();
   const startTime = new Date(manifest.started_time);
 
-  manifest.status = getArg('--verdict', 'COMPLETED');
+  const requestedVerdict = String(getArg('--verdict', '') || '').trim().toUpperCase();
+  const exploratoryManifest = [
+    'EXPLORATORY_BROWSER_QA',
+    'APP_BASELINE_DISCOVERY',
+  ].includes(manifest.test_mode);
+  const normalizedVerdict = exploratoryManifest
+    ? normalizeQaResultVerdict(requestedVerdict)
+    : requestedVerdict;
+  if (exploratoryManifest) {
+    if (!QA_RESULT_VERDICT_SET.has(normalizedVerdict)) {
+      console.error('[run-manifest] Invalid exploratory result: use PASS, FAILED, N/A or UNTEST');
+      process.exit(2);
+    }
+    manifest.status = normalizedVerdict;
+  } else {
+    manifest.status = normalizedVerdict || 'COMPLETED';
+  }
   manifest.finished_time = finishedTime.toISOString();
   manifest.duration_ms = finishedTime.getTime() - startTime.getTime();
   manifest.summary = {

@@ -8,6 +8,8 @@
 
 ### browser_driver priority
 
+Generic/exploratory routes default to the bundled `playwright-runtime` when no driver is specified. The priority below applies only to an explicit `--browser-driver auto` or an environment override
+
 ```
 Chrome DevTools MCP → Playwright MCP → ego-browser → Antigravity native → unavailable
 ```

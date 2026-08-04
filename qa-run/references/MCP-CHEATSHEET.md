@@ -53,7 +53,7 @@
 | ego-browser | ego-browser | `drainEvents()` — basic events, no body; mark `reduced_confidence` |
 | ego-browser | chrome-devtools-mcp | `list_network_requests`, `get_network_request` (attach CDP port ego lite) |
 | chrome-devtools-mcp | chrome-devtools-mcp | `list_network_requests`, `get_network_request`, `list_console_messages` |
-| script (playwright-runtime) | script | attach `scripts/helpers/runtime-observer.mjs` |
+| script (playwright-runtime) | script | native daemon attaches AX/CDP and `scripts/helpers/runtime-observer.mjs` to the same Playwright page |
 
 **Cross-session vi phạm (never):**
 - ❌ ego-browser driver + Chrome DevTools observer khi chưa verify CDP port match
@@ -71,10 +71,13 @@ Một 4xx/5xx là candidate cho đến khi có correlation với triggering acti
 
 ### browser_driver
 
+For `EXPLORATORY_BROWSER_QA` (including its `FAST` profile, labeled `BROWSER_TASK_FAST`, and its `EXPLORATORY_ADHOC` alias) plus `APP_BASELINE_DISCOVERY`, omitting driver flags selects `playwright-runtime` so the bundled Playwright browser is used. The table below is the explicit-driver and explicit-`auto` policy
+
 | Tình huống | Driver |
 |---|---|
-| Chrome functional/retest QA, network/performance evidence | chrome-devtools-mcp |
+| Explicit Chrome functional/retest QA or `--browser-driver auto` | chrome-devtools-mcp |
 | Chrome DevTools unavailable | playwright-mcp |
+| Chrome DevTools and Playwright MCP unavailable | playwright-runtime |
 | macOS + cần login state thật | ego-browser |
 | Playwright MCP unavailable, macOS | ego-browser |
 | Chrome DevTools and Playwright unavailable | antigravity-native |
@@ -85,8 +88,9 @@ Một 4xx/5xx là candidate cho đến khi có correlation với triggering acti
 |---|---|
 | Chrome DevTools đang làm driver cùng session | chrome-devtools-mcp |
 | Playwright đang làm fallback driver cùng session | playwright-mcp |
+| Native runtime đang điều khiển page | playwright-runtime |
 | Exploratory, không cần body | ego-browser (mark reduced_confidence) |
-| Không có observer nào available | unavailable — mark BLOCKED nếu network là part of contract |
+| Không có observer nào available | unavailable — technical track is unavailable; final exploratory result `UNTEST` nếu network là part of contract, otherwise `N/A` |
 
 ### Scripts
 

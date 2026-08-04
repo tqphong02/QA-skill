@@ -7,6 +7,12 @@ description: Analyze BRD, SRS, FRS, requirements, and system documents as a seni
 
 Convert first, reason once, render deterministically
 
+## Optional agentmemory context layer
+
+When available, recall prior project decisions, confirmed Q&A and unresolved business questions before analyzing new documents. Memory is historical context with provenance, not a replacement for the current BRD/SRS, source code or runtime evidence
+
+After the validated analysis JSON and matching XMind/Q&A outputs are read back, save only confirmed invariants, clarification decisions, conflict summaries and output/source paths. Do not save source documents, credentials, tokens, cookies or personal sensitive data. If agentmemory is unavailable, continue without it
+
 ## Hard gates
 
 0. **Before reading the BRD/SRS, check the knowledge base from REPO_BUSINESS_DISCOVERY:**

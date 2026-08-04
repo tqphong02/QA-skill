@@ -508,9 +508,9 @@ function renderMarkdown(synthesis, today) {
     unresolved,
     latest_run: {
       scope:   `APP_BASELINE_DISCOVERY — extract-flow.mjs scanned ${synthesis.pagesScanned} pages`,
-      verdict: 'PARTIAL',
+      verdict: 'UNTEST',
       notes: [
-        `Confidence: inferred — chưa có human verify`,
+        `Confidence: inferred — flow được suy ra từ UI và network, chưa có human verify`,
         `Pages scanned: ${synthesis.pagesScanned}`,
         `API contracts collected: ${api.length}`,
         `Re-run với --reauth nếu cần refresh session`,

@@ -35,7 +35,7 @@ flowchart TD
     %% 3. Execution & Automation Engine
     subgraph S3["3. Execution Engine & Automation"]
         EX_SHEET["qa-run: SHEET_EXECUTION\n(Chạy testcase tự động từ Google Sheet URL)"]
-        EX_EXPLORATORY["qa-run: EXPLORATORY_ADHOC\n(Săn bug ad-hoc, safe mutation, visual audit)"]
+        EX_EXPLORATORY["qa-run: EXPLORATORY_ADHOC\n(UI-derived task plan, next-action reasoning, ad-hoc, visual audit)"]
         EX_RETEST["qa-run: RETEST_PLUS\n(Retest + Sanity + Regression + UI/UX Audit)"]
         POM_GEN["playwright-pom-automation\n(Sinh code Playwright POM selectors/ & pages/)"]
         POM_EXEC["Playwright Automation Execution\n(Chạy E2E / API Playwright Test)"]
@@ -129,7 +129,7 @@ flowchart TD
 |:---|:---|:---|
 | **Plane URL, Ticket ID, log bug, comment PASS/FAILED/BLOCKED** | `plane-qa` | Parse URL → Chạy `scripts/doctor.sh` → `post-result.py` |
 | **Retest, re-test, verify bug/ticket** | `plane-qa` + `qa-run` | Plane doctor/read → Kích hoạt **RETEST_PLUS** (Retest flow gốc + Sanity + Impacted Regression + Exploratory + UI/UX Audit) |
-| **"Test thử trang này, chưa có testcase..." / Săn bug ad-hoc** | `qa-run: EXPLORATORY_ADHOC` | Đọc knowledge có sẵn → Sinh dynamic checklist → Safe mutation → Visual audit → Log bug |
+| **"Test thử trang này, chưa có testcase..." / Săn bug ad-hoc** | `qa-run: EXPLORATORY_ADHOC` | Mở browser, hiểu flow trực tiếp trên UI → dùng knowledge nếu có → Safe mutation → Visual audit → Log bug; verdict PASS/FAILED/N/A/UNTEST |
 | **"Học toàn bộ web app này..." / Bootstrap app baseline** | `qa-run: APP_BASELINE_DISCOVERY` | Quét menu, route, API → Lưu `app-flow-map.json` & `app-business-guide.md` với `coverage_map` |
 | **Chạy execution testcase từ Google Sheet URL** | `qa-run: SHEET_EXECUTION` | Tạo plan → Hiển thị requested/resolved module → Hỏi xác nhận module + số worker 1-4 + all/worker ID/cancel → Chỉ ghi Pass/Fail có screenshot/video |
 | **Phân tích repo, học business flow từ source code** | `qa-run: REPO_BUSINESS_DISCOVERY` | Chạy `repo-business-discovery.mjs --repo <path> --mode full` → Merge vào `system-business-guide.md` & `system-qna.json` |

@@ -1,0 +1,113 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  LOCATOR_PRIORITY,
+  MAX_NATIVE_WORKERS,
+  normalizeNativeBrowserLaunchError,
+  validateNativeBrowserOptions,
+  validatePoolConfig,
+  sortLocatorCandidates,
+} from '../../lib/native-browser.mjs';
+import { chromiumLaunchOptions } from '../../scripts/helpers/browser-launch.mjs';
+
+test('native runtime lets Playwright select the headless-shell browser by default', () => {
+  const previous = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+  try {
+    delete process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+    const options = chromiumLaunchOptions({ platform: 'darwin' });
+    assert.equal('executablePath' in options, false);
+    assert.equal(options.headless, true);
+    assert.deepEqual(options.args, []);
+  } finally {
+    if (previous === undefined) delete process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+    else process.env.PLAYWRIGHT_EXECUTABLE_PATH = previous;
+  }
+});
+
+test('native runtime applies no-sandbox flags only on Linux', () => {
+  const options = chromiumLaunchOptions({ env: {}, platform: 'linux' });
+  assert.deepEqual(options.args, ['--no-sandbox', '--disable-setuid-sandbox']);
+});
+
+test('native runtime classifies a macOS sandbox launch denial as non-retryable', () => {
+  const failure = normalizeNativeBrowserLaunchError({
+    message: 'Target page, context or browser has been closed',
+    log: ['bootstrap_check_in org.chromium.Chromium.MachPortRendezvousServer: Permission denied (1100)'],
+  });
+  assert.equal(failure.code, 'BROWSER_RUNTIME_PERMISSION_DENIED');
+  assert.equal(failure.retryable, false);
+  assert.match(failure.message, /do not retry/i);
+});
+
+test('native runtime keeps custom executable selection explicit', () => {
+  const previous = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+  try {
+    process.env.PLAYWRIGHT_EXECUTABLE_PATH = '/tmp/intentional-browser-binary';
+    assert.equal(chromiumLaunchOptions({ platform: 'darwin' }).executablePath, '/tmp/intentional-browser-binary');
+  } finally {
+    if (previous === undefined) delete process.env.PLAYWRIGHT_EXECUTABLE_PATH;
+    else process.env.PLAYWRIGHT_EXECUTABLE_PATH = previous;
+  }
+});
+
+test('native locator resolution keeps the requested priority and deduplicates candidates', () => {
+  const candidates = sortLocatorCandidates([
+    { strategy: 'XPATH', value: '/html/body/button[1]', reason: 'higher priority selectors failed' },
+    { strategy: 'ROLE_LABEL_TEXT', value: 'Save' },
+    { strategy: 'CSS', value: 'button[name="save"]' },
+    { strategy: 'ID', value: 'save-button' },
+    { strategy: 'DATA_TEST_ID', value: 'save-button' },
+    { strategy: 'DATA_TEST_ID', value: 'save-button' },
+  ]);
+  assert.deepEqual(candidates.map(item => item.strategy), [
+    'DATA_TEST_ID',
+    'ID',
+    'STABLE_CSS',
+    'ROLE_LABEL_TEXT',
+    'XPATH',
+  ]);
+  assert.deepEqual(LOCATOR_PRIORITY.slice(0, 3), ['DATA_TEST_ID', 'ID', 'STABLE_CSS']);
+});
+
+test('native worker pool rejects unsafe shared profile or CDP state', () => {
+  assert.deepEqual(validatePoolConfig({ workers: 1, cdpUrl: 'http://127.0.0.1:9222' }), {
+    workers: 1,
+    isolated: false,
+  });
+  assert.throws(
+    () => validatePoolConfig({ workers: 2, cdpUrl: 'http://127.0.0.1:9222' }),
+    error => error.code === 'SHARED_BROWSER_STATE_UNSAFE',
+  );
+  assert.throws(
+    () => validatePoolConfig({ workers: 2, profileDir: '/tmp/profile' }),
+    error => error.code === 'SHARED_BROWSER_STATE_UNSAFE',
+  );
+});
+
+test('native worker count is bounded to one through four without clamping invalid input', () => {
+  assert.equal(MAX_NATIVE_WORKERS, 4);
+  assert.throws(
+    () => validatePoolConfig({ workers: 0 }),
+    error => error.code === 'INVALID_NATIVE_WORKER_COUNT',
+  );
+  assert.throws(
+    () => validatePoolConfig({ workers: 5 }),
+    error => error.code === 'INVALID_NATIVE_WORKER_COUNT',
+  );
+});
+
+test('native browser options use tested-project data paths and explicit auth mode inputs', () => {
+  const options = validateNativeBrowserOptions({
+    dataDir: '/tmp/qa-project',
+    runId: 'orders/run 1',
+    workerId: 2,
+    cdpUrl: 'http://127.0.0.1:9222',
+    headless: false,
+  });
+  assert.equal(options.dataDir, '/tmp/qa-project');
+  assert.equal(options.runId, 'orders-run-1');
+  assert.equal(options.workerId, 2);
+  assert.equal(options.cdpUrl, 'http://127.0.0.1:9222');
+  assert.equal(options.headless, false);
+  assert.equal(options.profileDir, '');
+});

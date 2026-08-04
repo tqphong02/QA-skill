@@ -16,6 +16,27 @@ test('Runtime Observer: Captures live events in memory and streams to disk', () 
   fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
+test('Runtime Observer: Native mode records bounded successful API responses without request bodies', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-runtime-observer-'));
+  const eventsFile = path.join(tempDir, 'runtime-events.json');
+  const page = new EventEmitter();
+  const observer = createRuntimeObserver(page, { eventsFile, captureSuccessfulResponses: true });
+  page.emit('response', {
+    status: () => 200,
+    statusText: () => 'OK',
+    url: () => 'https://example.test/api/orders?account=123',
+    headers: () => ({ 'content-type': 'application/json' }),
+    request: () => ({ method: () => 'GET', resourceType: () => 'xhr' }),
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  const response = observer.getEvents().find(event => event.type === 'HTTP_RESPONSE');
+  assert.ok(response);
+  assert.equal(response.payload.status, 200);
+  assert.equal(response.payload.resourceType, 'xhr');
+  assert.doesNotMatch(JSON.stringify(response), /account=123/);
+  fs.rmSync(tempDir, { recursive: true, force: true });
+});
+
 test('Runtime Observer: Captures and redacts browser failures', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-runtime-observer-'));
   const eventsFile = path.join(tempDir, 'runtime-events.json');

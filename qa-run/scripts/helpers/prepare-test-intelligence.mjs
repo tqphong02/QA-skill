@@ -19,7 +19,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(scriptDir, '..', '..');
 const dataDir = path.resolve(process.env.QA_DATA_DIR || process.cwd());
 const scope = getArg('--scope', getArg('--module', '')).trim();
-const intent = getArg('--intent', 'EXPLORATORY_ADHOC').toUpperCase();
+const intent = getArg('--intent', 'EXPLORATORY_BROWSER_QA').toUpperCase();
 const repoArg = getArg('--repo', '').trim();
 const refreshSource = getArg('--refresh-source', 'auto').toLowerCase();
 const runMode = getArg('--run-mode', process.env.QA_RUN_MODE || 'auto').toLowerCase();
@@ -33,6 +33,13 @@ const output = path.resolve(getArg(
   '--output',
   path.join(dataDir, 'qa-knowledge', 'context', 'business-execution-brief.json'),
 ));
+const uiFirstIntent = ['EXPLORATORY_BROWSER_QA', 'EXPLORATORY_ADHOC'].includes(intent);
+const optionalContextCandidates = [
+  path.join(dataDir, 'qa-knowledge', 'knowledge-index.json'),
+  path.join(dataDir, 'qa-knowledge', 'app-flow-map.json'),
+  path.join(dataDir, 'qa-knowledge', 'app-business-guide.md'),
+  output,
+];
 
 if (!scope) {
   console.error('[test-intelligence] BLOCKED: --scope is required');
@@ -49,6 +56,11 @@ if (!['auto', 'fast', 'scoped', 'deep'].includes(runMode)) {
 if (!['auto', 'on', 'off'].includes(discoveryParallel)) {
   console.error('[test-intelligence] BLOCKED: --discovery-parallel must be auto, on, or off');
   process.exit(2);
+}
+
+if (uiFirstIntent && !repoArg && !optionalContextCandidates.some(candidate => fs.existsSync(candidate))) {
+  console.log('[test-intelligence] UI_FIRST: no optional source, requirement or saved knowledge; continue from live browser UI');
+  process.exit(0);
 }
 
 function gitCommit(repoPath) {

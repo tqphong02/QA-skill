@@ -31,7 +31,7 @@ const getArg = (flag, fallback = '') => {
 
 const DATA_DIR = path.resolve(process.env.QA_DATA_DIR || process.cwd());
 const KNOW_DIR = path.join(DATA_DIR, 'qa-knowledge');
-const INTENT = getArg('--intent', 'EXPLORATORY_ADHOC').toUpperCase();
+const INTENT = getArg('--intent', 'EXPLORATORY_BROWSER_QA').toUpperCase();
 const SCOPE = getArg('--scope', getArg('--module', '')).trim();
 const RUN_MODE = getArg('--run-mode', process.env.QA_RUN_MODE || 'auto').toLowerCase();
 const TARGET = getArg('--target', '').trim();

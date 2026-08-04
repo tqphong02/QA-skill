@@ -35,7 +35,7 @@ For each AC:
 2. Execute exact repro steps (DO NOT arbitrarily add weird steps)
 3. Snapshot after each step -> compare with "Expected" in AC
 4. Verify same-session network and console behavior for every critical transition; inspect response bodies for failures and persist/calculation contracts
-5. Mark PASS/FAILED for each AC — DO NOT lump into "overall OK"
+5. Mark PASS/FAILED/N/A/UNTEST for each AC — DO NOT lump into "overall OK"
 
 ## Step 4 — RETEST_PLUS coverage (MANDATORY)
 - Retest exact original flow
@@ -57,7 +57,7 @@ Adjacent area check in the above layers:
 ## Step 5 — Verdict + report
 
 ```
-## <✅/❌> #<id> — <tên ngắn> — <PASS/FAILED>
+## <✅/❌> #<id> — <tên ngắn> — <PASS/FAILED/N/A/UNTEST>
 **Requirement source:** <URL ticket fetched>
 **Business flow:** <1-2 sentence summary of confirmed flow>
 **AC1 (<mô tả>):** PASS  — <1 line evidence>

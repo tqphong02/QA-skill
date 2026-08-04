@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  QA_RESULT_VERDICT_SET,
+  normalizeQaResultVerdict,
+} from '../../lib/verdicts.mjs';
 
 const ICON_RE = /[\u{1F300}-\u{1FAFF}\u2600-\u27BF]/u;
 const REQUIRED_HEADINGS = [
@@ -113,9 +117,9 @@ function renderFlow(steps) {
 }
 
 function renderGuide(data) {
-  const verdict = String(data.latest_run?.verdict || '').toUpperCase();
-  if (!['PASS', 'FAILED', 'BLOCKED', 'PARTIAL'].includes(verdict)) {
-    fail('latest_run.verdict must be PASS, FAILED, BLOCKED or PARTIAL');
+  const verdict = normalizeQaResultVerdict(data.latest_run?.verdict);
+  if (!QA_RESULT_VERDICT_SET.has(verdict)) {
+    fail('latest_run.verdict must be PASS, FAILED, N/A or UNTEST');
   }
   if (!/^\d{4}-\d{2}-\d{2}/.test(String(data.last_verified || ''))) {
     fail('last_verified must start with YYYY-MM-DD');

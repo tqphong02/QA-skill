@@ -6,6 +6,12 @@
 
 `browser-driver` và `network-observer` được resolve **độc lập**. Một track không phụ thuộc vào track kia.
 
+## Default for generic and exploratory routes
+
+`EXPLORATORY_BROWSER_QA` (including its `FAST` profile, labeled `BROWSER_TASK_FAST`, and its `EXPLORATORY_ADHOC` alias) plus `APP_BASELINE_DISCOVERY` default all three tracks to `playwright-runtime`. This is the bundled, versioned Playwright browser and does not open or attach to the user's system Google Chrome
+
+Use an explicit `--browser-driver auto` (or `QA_BROWSER_DRIVER=auto`) only when the Chrome DevTools/Playwright MCP fallback policy is wanted. Explicit `--browser-driver`, `--browser-observer` and `--network-observer` values always win over the route default
+
 ```
 Track A: browser_driver
   → Điều khiển UI interaction và DOM observation
@@ -18,8 +24,9 @@ Có thể kết hợp bất kỳ combination hợp lệ:
 
 | browser_driver | network_observer | Khi nào |
 |---|---|---|
-| chrome-devtools-mcp | chrome-devtools-mcp | Default Chrome-first driver and deep observability |
+| chrome-devtools-mcp | chrome-devtools-mcp | Explicit Chrome DevTools driver and deep observability |
 | playwright-mcp | playwright-mcp | Fallback, cross-platform, rich DOM automation |
+| playwright-runtime | playwright-runtime | Bundled first-party Playwright/CDP runtime with AX tree, session daemon and isolated workers |
 | ego-browser | chrome-devtools-mcp | macOS + real login + full network |
 | ego-browser | ego-browser | macOS + real login + basic obs only |
 | ego-browser | playwright-mcp | Không nên — khác session |
@@ -30,7 +37,7 @@ Có thể kết hợp bất kỳ combination hợp lệ:
 ## browser_driver — Resolution flow
 
 ```
-Browser task requested
+Explicit auto fallback requested
         │
         ▼
 Chrome DevTools MCP available AND can start or attach to Chrome?
@@ -38,6 +45,9 @@ Chrome DevTools MCP available AND can start or attach to Chrome?
   NO  ▼
 Playwright MCP available?
   YES → Use playwright-mcp
+  NO  ▼
+Bundled playwright-runtime available and native session is allowed?
+  YES → Use playwright-runtime
   NO  ▼
 macOS AND ego-browser ready (detect.mjs exit 0)?
   YES → Use ego-browser
@@ -50,7 +60,8 @@ Mark browser_driver: unavailable
 
 **Lưu ý quan trọng:**
 - ego-browser là **browser driver riêng**, không phải chỉ là fallback của Playwright
-- Chrome DevTools MCP là driver mặc định khi có thể khởi động hoặc attach Chrome
+- Chrome DevTools MCP là driver đầu tiên **chỉ trong policy `auto` được truyền rõ ràng**
+- Route generic/exploratory không truyền driver sẽ dùng `playwright-runtime`; headless mode để Playwright chọn `chromium_headless_shell`, tránh mở app bundle Chrome trong Dock hoặc bật crash dialog và vẫn giữ browser binary cùng version với package Playwright
 - Trên Windows/Linux: ego-browser unavailable → resolve sang playwright-mcp hoặc chrome-devtools-mcp
 
 ## network_observer — Resolution flow
@@ -65,6 +76,9 @@ Resolved browser_driver is chrome-devtools-mcp?
 Resolved browser_driver is playwright-mcp?
   YES → Use playwright-mcp (same session)
   NO  ▼
+Resolved browser_driver is playwright-runtime?
+  YES → Use runtime-observer attached to the native Playwright page (same session)
+  NO  ▼
 ego-browser is the browser_driver?
   YES → Use ego-browser / drainEvents() [basic events only, no body]
         Mark network assertions: reduced_confidence
@@ -76,21 +90,25 @@ Continue functional testing only if network not in contract
 
 ## Capability so sánh
 
-| Capability | ego-browser | Playwright MCP | Chrome DevTools MCP |
-|---|---|---|---|
-| UI click / fill / navigate | ✅ | ✅ | ⚠️ |
-| DOM snapshot text | ✅ | ✅ | ⚠️ |
-| Screenshot | ✅ | ✅ | ⚠️ |
-| Network event list (basic) | ✅ drainEvents | ✅ | ✅ |
-| **Request body** | ❌ | ✅ | ✅ |
-| **Response body** | ❌ | ✅ | ✅ |
-| Response headers | ❌ | ✅ | ✅ |
-| Status code | ⚠️ from events | ✅ | ✅ |
-| WebSocket / SSE | ❌ | ⚠️ | ✅ |
-| Redirect chain | ❌ | ✅ | ✅ |
-| Performance timing | ❌ | ⚠️ | ✅ |
-| Real login state | ✅ native | ❌ auth.json | ❌ attach |
-| Cross-platform | macOS only | ✅ | ✅ |
+| Capability | Native runtime | ego-browser | Playwright MCP | Chrome DevTools MCP |
+|---|---|---|---|---|
+| UI click / fill / navigate | ✅ | ✅ | ✅ | ⚠️ |
+| DOM snapshot text | ✅ | ✅ | ✅ | ⚠️ |
+| CDP Accessibility Tree | ✅ | ⚠️ | ⚠️ | ✅ |
+| Stable target evidence | ✅ priority + uniqueness | ⚠️ | ✅ | ⚠️ |
+| Screenshot | ✅ masked | ✅ | ✅ | ⚠️ |
+| Network event list | ✅ same-session observer | ✅ drainEvents | ✅ | ✅ |
+| **Request body** | ⚠️ not persisted | ❌ | ✅ | ✅ |
+| **Response body** | ✅ redacted failure/GraphQL preview | ❌ | ✅ | ✅ |
+| Response headers | ⚠️ observer scope | ❌ | ✅ | ✅ |
+| Status code | ✅ | ⚠️ from events | ✅ | ✅ |
+| WebSocket / SSE | ⚠️ lifecycle/errors | ❌ | ⚠️ | ✅ |
+| Redirect chain | ⚠️ Playwright event scope | ❌ | ✅ | ✅ |
+| Bounded recovery | ✅ stale-ref + safe reload budget | ⚠️ | ⚠️ | ⚠️ |
+| Persistent session | ✅ daemon | ✅ native | tool-managed | attach-managed |
+| Isolated worker pool | ✅ 1–4 workers | external | host-managed | host-managed |
+| Real login state | ✅ storageState/profile/CDP | ✅ native | ❌ auth.json | ❌ attach |
+| Cross-platform | ✅ | macOS only | ✅ | ✅ |
 
 ## Combination rules
 
@@ -110,8 +128,9 @@ Network evidence phải từ **cùng browser session** với UI action:
 |---|---|---|
 | chrome-devtools-mcp + playwright-mcp (same session) | ✅ | high |
 | playwright-mcp (driver = playwright-mcp) | ✅ | high |
+| playwright-runtime (driver = playwright-runtime) | ✅ redacted failure/GraphQL preview | high |
 | ego-browser (drainEvents only) | ❌ | medium |
-| unavailable | N/A | low — mark BLOCKED |
+| unavailable | N/A | low — keep the technical track unavailable; final exploratory result is `UNTEST` when the observer is required, otherwise `N/A` |
 
 ### Rule 4 — ego-browser + Chrome DevTools combination
 Cấu hình tối ưu khi cần login state thật + full network:

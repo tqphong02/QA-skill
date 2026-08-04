@@ -1,20 +1,21 @@
-import fs from 'node:fs';
-
-const SYSTEM_CHROME_CANDIDATES = [
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/google-chrome-stable',
-  '/usr/bin/chromium',
-  '/usr/bin/chromium-browser',
-];
-
-export function chromiumLaunchOptions() {
-  const explicit = process.env.PLAYWRIGHT_EXECUTABLE_PATH;
-  const executablePath = explicit || SYSTEM_CHROME_CANDIDATES.find(candidate => fs.existsSync(candidate));
-  return {
+export function chromiumLaunchOptions({
+  env = process.env,
+  platform = process.platform,
+} = {}) {
+  // Do not set executablePath by default. Playwright then selects its matching
+  // chromium_headless_shell for headless runs instead of launching the full
+  // Google Chrome for Testing.app bundle. On macOS this prevents transient Dock
+  // icons and crash-report dialogs when a constrained runtime rejects a launch.
+  //
+  // PLAYWRIGHT_EXECUTABLE_PATH remains an explicit opt-in escape hatch for a
+  // caller that deliberately supplies a compatible custom browser binary.
+  const explicit = String(env.PLAYWRIGHT_EXECUTABLE_PATH || '').trim();
+  const options = {
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    ...(executablePath ? { executablePath } : {}),
+    args: platform === 'linux'
+      ? ['--no-sandbox', '--disable-setuid-sandbox']
+      : [],
   };
+  if (explicit) options.executablePath = explicit;
+  return options;
 }

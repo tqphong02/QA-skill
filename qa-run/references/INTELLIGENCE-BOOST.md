@@ -297,7 +297,7 @@ Step 2: Build the guide-update.json — minimum required fields:
   ],
   "latest_run": {
     "scope": "<retest|sanity|exploratory>",
-    "verdict": "<PASS|FAILED|PARTIAL>",
+    "verdict": "<PASS|FAILED|N/A|UNTEST>",
     "notes": ["<key finding 1>", "<key finding 2>"]
   }
 }

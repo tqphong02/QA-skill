@@ -1,4 +1,4 @@
 interface:
   display_name: "QA Run"
-  short_description: "Risk-driven QA từ source, knowledge và runtime"
-  default_prompt: "Use $qa-run to recover business logic from source and saved knowledge, rank evidence-linked risks, and execute focused browser QA charters. For testcase rows, follow the shared S## execution contract step by step and block unresolved targets or oracles instead of guessing."
+  short_description: "Agentic UI-first browser QA với evidence cùng session"
+  default_prompt: "Use $qa-run to open the target page, infer a bounded task plan from the live UI, choose and verify one next action at a time, replan after no progress, and execute exploratory/ad-hoc QA with same-session network, console, page-error and visual evidence. Optional source or saved knowledge may enrich the run. Keep concise rationale instead of raw chain-of-thought and return only PASS, FAILED, N/A or UNTEST."

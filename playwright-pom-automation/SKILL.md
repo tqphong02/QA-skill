@@ -13,6 +13,12 @@ Covers **UI · API · component · contract · visual · accessibility · perfor
 > **Different from** `qa-run` (live AI-driven exploratory) and `testcase-template` (testcase documents): this skill = **deterministic test-as-code running in CI**.
 > **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py).
 
+## Optional agentmemory context layer
+
+When available, recall prior testcase-to-code mappings, verified selector evidence and feature decisions before generating a POM. Treat memory as a candidate hint only: the current testcase Markdown, live DOM verification and traceability audit are authoritative
+
+After `traceability` passes, save only verified target keys, selector strategies, testcase source hash and report paths. Never save credentials, storage state, cookies, personal data or raw DOM/response payloads. If agentmemory is unavailable, continue with the normal POM workflow
+
 ## Hard gates
 
 1. Resolve the application, environment, test account and requested test type before scaffolding

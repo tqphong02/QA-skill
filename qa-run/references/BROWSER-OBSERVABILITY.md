@@ -25,7 +25,7 @@ unavailable
 not-applicable
 ```
 
-Use `chrome-devtools-mcp` when Chrome DevTools drives the UI. Use `playwright-mcp` when it is the fallback driver. A cross-tool observer is valid only when it is attached to the exact target page/session. Use `playwright-runtime` for bundled CLI scripts that attach `scripts/helpers/runtime-observer.mjs` to their Playwright `page`.
+For `EXPLORATORY_BROWSER_QA` (including its `FAST` profile, labeled `BROWSER_TASK_FAST`, and its `EXPLORATORY_ADHOC` alias) plus `APP_BASELINE_DISCOVERY`, the default UI driver and observer are `playwright-runtime`; its AX/CDP snapshot, runtime cursor and redacted event file remain in the same session. Use `chrome-devtools-mcp` when Chrome DevTools is explicitly selected, and `playwright-mcp` when it is explicitly selected or resolved by the fallback policy. A cross-tool observer is valid only when it is attached to the exact target page/session. CLI scripts attach `scripts/helpers/runtime-observer.mjs` to the native Playwright `page`
 
 Chrome DevTools MCP and Playwright MCP commonly launch separate isolated browsers. Never use network output from one to support UI actions executed in the other.
 
@@ -37,7 +37,7 @@ For Antigravity, install the `qa-run` skill through the repository setup or run 
 python3 scripts/helpers/configure-browser-mcp.py --agent antigravity
 ```
 
-This enables Playwright MCP in `~/.gemini/config/mcp_config.json` while preserving all other MCP servers. Restart Antigravity after configuration so it loads the fallback server. Chrome DevTools MCP is the primary driver when available; do not start it as a second browser and use its evidence for actions driven by another session.
+This enables Playwright MCP in `~/.gemini/config/mcp_config.json` while preserving all other MCP servers. Restart Antigravity after configuration so it loads the fallback server. Chrome DevTools MCP is the primary driver only under an explicit `auto`/Chrome policy; do not start it as a second browser and use its evidence for actions driven by another session.
 
 ## Tool routing
 
@@ -174,4 +174,4 @@ Sanitize before writing. Network or console evidence supplements but does not re
 - Expected negative responses were not mislabeled as bugs
 - Sensitive values were redacted
 - Late asynchronous failures were swept
-- Ledger row has `PASS`, `FAILED`, `BLOCKED`, `PARTIAL`, or justified `N/A`
+- User-facing exploratory result is `PASS`, `FAILED`, `N/A` or `UNTEST`; technical observer failures may remain in the internal ledger as blocker details

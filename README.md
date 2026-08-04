@@ -52,7 +52,8 @@ Format tương tác hiện tại:
 - Nhãn mũi tên dùng pill có nền riêng và lane tách biệt để không bị đường nối che hoặc chồng lên nhau
 - Click/tap skill card được xử lý trực tiếp ở `pointerup` khi dịch chuyển dưới 5 px; drag thật chỉ di chuyển canvas và không mở panel
 - Card hiển thị số nhánh thực thi nếu skill có workflow nội bộ; tìm kiếm bao phủ cả tên workflow và tên mục
-- `Khám phá & Ad-hoc browser` là một flow riêng: qa-run tự thao tác browser live, chạy Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
+- `Exploratory Browser QA & Ad-hoc` là một flow riêng: qa-run tự quan sát browser live, suy luận task plan từ UI, chọn và kiểm tra từng next action, replan khi không tiến triển, rồi chạy Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
+- `BROWSER_TASK_FAST` là nhãn của profile FAST bên trong `EXPLORATORY_BROWSER_QA` cho task đơn giản chạy ngay; khi có bug/business rule/expected/PASS-FAILED thì chuyển sang profile exploratory đầy đủ trong cùng skill; verdict user-facing chỉ gồm PASS, FAILED, N/A, UNTEST
 - `Browser MCP: Network & Console` tách riêng Playwright MCP, Chrome DevTools MCP và runtime observer theo hard gate cùng session
 - `Mobile: Appium & Network` tách Appium MCP thực thi UI khỏi proxy capture bằng Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit; evidence phải được làm sạch và đối chiếu với bước UI
 - Panel chi tiết hiển thị `Làm được gì`, `Ưu điểm`, `Hạn chế`, `Nhánh thực thi` và `Cấu trúc hướng dẫn`; không hiển thị nội dung thô `SKILL.md`
@@ -110,6 +111,12 @@ Bộ skill dùng thêm hai lớp vận hành để tránh chỉ có checklist m�
 - Flaky tests: [playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md](playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md) — retry evidence, quarantine, owner và stability window
 
 Playwright template có `quality-gates.json` và `scripts/quality-gate.mjs` để đánh giá failed tests, retry-derived flaky tests, evidence completeness, duration và coverage sau khi tạo `reports/playwright.json`
+
+## Optional persistent memory
+
+Repository `rohitg00/agentmemory` được dùng như lớp memory phụ trợ, không phải code project để copy vào từng skill. Các native skills tĩnh cần thiết đã được cài vào `~/.codex/skills`: recall, remember, recap, session-history, handoff, commit-context, forget cùng tài liệu MCP/config/hooks
+
+Memory chỉ hỗ trợ recall và handoff giữa phiên. Requirement, source code, `qa-knowledge`, testcase Markdown, selector evidence và runtime evidence vẫn là source of truth. Không lưu credential, token, cookie, auth state hoặc dữ liệu nhạy cảm vào memory. Agentmemory daemon, Codex MCP và plugin marketplace đã được bật ở chế độ core/zero-LLM; auto-compress và context injection vẫn tắt để không phát sinh chi phí token ngoài ý muốn. Sau khi cài hoặc nâng cấp cần mở thread Codex mới để nạp MCP và hooks
 
 Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-COMPATIBILITY.md).
 

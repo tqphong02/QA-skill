@@ -13,6 +13,12 @@ Original template: `assets/Template.xlsx` (1 shared file for ALL projects). All 
 > **DIFFERENT** from `qa-run` (live exploratory) and `playwright-pom-automation` (code automation `.spec.ts`): this skill = document Excel test cases (manual test design).
 > **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI. Members can run immediately with any project after git clone.
 
+## Optional agentmemory context layer
+
+When available, recall confirmed business decisions, Q&A answers and prior testcase design choices for the same project/feature before writing new cases. Use current requirements and the validated JSON source as the oracle; memory must not create a missing expected result or requirement
+
+After Markdown and Excel read-back passes, save only stable testcase IDs, design decisions, assumptions explicitly marked as assumptions and artifact paths. Never save passwords, tokens, cookies, personal data or full sensitive testcase datasets. If agentmemory is unavailable, continue normally
+
 ## Cross-model hard gates
 
 Apply this exact order for all models:

@@ -1,11 +1,17 @@
 # 📖 qa-run — Hướng dẫn sử dụng (cheat-sheet)
 
-> Skill QA **exploratory/ad-hoc** bằng AI lái UI (MCP Playwright) + script npm Playwright. Một skill, chạy mọi project. Đây là guide **human-facing**; AI đọc `SKILL.md` khi kích hoạt.
+> Skill `EXPLORATORY_BROWSER_QA` (**alias `EXPLORATORY_ADHOC`**) bằng AI lái UI qua MCP hoặc native Playwright/CDP runtime. Một skill, chạy mọi project. Exploratory/ad-hoc là UI-first, không bắt buộc tài liệu hoặc source code; agent có thể tự suy luận task plan và next action từ state UI hiện tại, rồi replan theo evidence. Đây là guide **human-facing**; AI đọc `SKILL.md` khi kích hoạt.
 >
 > **Phân biệt skill:**
 > - **qa-run** (this) → săn bug **live**, AI lái UI tương tác, exploratory/retest/sanity
 > - **playwright-pom-automation** → viết **test code** deterministic (regression suite, CI)
 > - **testcase-template** → sinh **test case Excel** theo template team
+
+Kết quả cuối của exploratory/ad-hoc chỉ có: `PASS` (đã test và đúng), `FAILED` (đã test và sai), `N/A` (không áp dụng) hoặc `UNTEST` (cần test nhưng chưa thể kết luận). `BLOCKED` và `PARTIAL` chỉ được giữ trong ledger kỹ thuật nội bộ
+
+### Fast generic browser task
+
+Với task đơn giản như mở URL, đọc nội dung, tìm kiếm, scroll, kiểm tra link hoặc tải file không nhạy cảm, dùng profile `FAST` trong `EXPLORATORY_BROWSER_QA` (nhãn `BROWSER_TASK_FAST`). Profile này chạy ngay bằng native Playwright/MCP, không cần source/docs/business brief, nhưng vẫn có domain boundary, same-session observer, screenshot và action budget. Nếu phát hiện bug hoặc cần expected/PASS/FAILED, chuyển sang profile exploratory đầy đủ trong cùng skill
 
 ---
 
@@ -29,14 +35,14 @@ Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong **th
 ## 🧭 Workflow chính — chọn theo mục đích
 
 ### 1️⃣ Khám phá / săn bug mới (Exploratory)
-**AI tự làm:** đọc spec → hiểu logic → map flow → lái UI tương tác qua **MCP Playwright** (`browser_navigate/click/type/snapshot/evaluate/network_requests`).
+**AI tự làm:** mở URL → quan sát UI → hiểu entry point, navigation, control, state, validation và feedback → map flow → lái UI qua **MCP Playwright** hoặc `playwright-runtime` (`observe/action/recover`) với AX/CDP, session reuse và same-session evidence. Tài liệu, ticket hoặc source chỉ là context bổ sung nếu có. Native runtime không dùng Browser Use
 
-Bạn chỉ cần nói: *"Khám phá feature X tìm bug"* hoặc *"Test đầy đủ feature filter"*.
+Bạn chỉ cần cung cấp URL/target và mục tiêu, ví dụ: *"Khám phá feature X tìm bug"* hoặc *"Test đầy đủ feature filter"*.
 
-AI áp dụng Nguyên tắc #1 (**HIỂU NGỮ CẢNH trước khi lái**) + 12 kỹ thuật testing (`TESTING-TECHNIQUES.md`).
+AI áp dụng Nguyên tắc #1 (**HIỂU FLOW TRÊN UI trước khi lái**) + 12 kỹ thuật testing (`TESTING-TECHNIQUES.md`).
 
 ### 2️⃣ Retest từ 1 link ticket (Sanity)
-Bạn paste URL ticket → AI tự `WebFetch` → trích AC → verify từng AC qua UI → poke adjacent areas → verdict PASS/FAIL.
+Bạn paste URL ticket → AI tự `WebFetch` → trích AC → verify từng AC qua UI → poke adjacent areas → verdict PASS/FAILED/N/A/UNTEST.
 
 *"Retest ticket https://plane.../issues/427"*
 
@@ -117,7 +123,7 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 - **Cross-verify** mỗi verdict: DOM + network + console (đừng chỉ tin snapshot)
 - **Heuristic checklists** theo loại feature (form/table/filter/auth/modal/concurrency)
 - **Pattern memory**: đọc `FINDINGS.md` cũ → nhận regression/root-cause lặp
-- **Execution card**: đọc `business-execution-card.json` trước, chỉ mở full brief khi có deferred/truncation hoặc conflict
+- **Execution card**: nếu có `business-execution-card.json` thì đọc trước, chỉ mở full brief khi có deferred/truncation hoặc conflict; không có card thì derive flow từ UI
 - **Fingerprint cache**: `prepare-test-intelligence.mjs` tự reuse context không đổi bằng stat-fast inventory rồi mới fallback content hash; dùng `--run-mode auto|fast|scoped|deep` và `--no-cache` khi cần rebuild
 - **Change-impact incremental**: `repo-business-discovery.mjs` gom delta commit/staged/unstaged/untracked, chọn scanner theo impact API/UI/DB/RBAC/state; dirty `HEAD` không còn được coi là source sạch
 - **Fail-closed discovery**: scanner exit lỗi hoặc canonical artifact thiếu sẽ block preparation, không giữ artifact cũ rồi báo thành công
