@@ -38,7 +38,9 @@ node <skill-root>/scripts/helpers/native-browser-runtime.mjs quick-start \
   --allowed-domain <ORIGIN>
 ```
 
-This command validates the URL/domain, creates the FAST manifest and task contract, starts or reuses the native daemon, navigates to the exact URL and returns the first visible-content/AX observation packet. Omit `RUN_ID` to generate one. The daemon enforces the allowed origin for explicit and resulting navigation
+This command validates the URL/domain, creates the FAST manifest and task contract, starts or reuses the native daemon, navigates to the exact URL and returns the first compact visible-content/AX observation packet. Omit `RUN_ID` to generate one. The daemon enforces the allowed origin for explicit and resulting navigation
+
+Keep `--detail compact` unless the packet's `truncation` says the required target or signal may be outside the returned slice. Escalate to `observe --detail standard`, then `full` only when needed. This preserves selector and oracle quality while avoiding full-page controls, tables and AX nodes on every model turn
 
 The returned observation contains compact visible text, headings, links, tables, interactive refs and AX nodes. Use `extract` when the task needs machine-readable visible content
 

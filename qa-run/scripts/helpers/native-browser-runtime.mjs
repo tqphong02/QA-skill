@@ -265,7 +265,12 @@ async function quickStart(args) {
         capture_media: false,
       },
     });
-    const observation = await request(state, '/observe', { worker_id: 1, max_items: 100 });
+    const observation = await request(state, '/observe', {
+      worker_id: 1,
+      detail: getArg(args, '--detail', 'compact'),
+      max_items: Number.parseInt(getArg(args, '--max-items', '32'), 10),
+      max_chars: Number.parseInt(getArg(args, '--max-chars', '2200'), 10),
+    });
     const contract = {
       schema_version: 1,
       artifact: 'fast-browser-agent-task',
@@ -364,7 +369,9 @@ async function command(args) {
     console.log(JSON.stringify(await request(state, '/observe', {
       worker_id: workerId,
       page_id: getArg(args, '--page-id', ''),
-      max_items: Number.parseInt(getArg(args, '--max-items', '80'), 10),
+      detail: getArg(args, '--detail', 'compact'),
+      max_items: Number.parseInt(getArg(args, '--max-items', '32'), 10),
+      max_chars: Number.parseInt(getArg(args, '--max-chars', '2200'), 10),
     }), null, 2));
     return;
   }

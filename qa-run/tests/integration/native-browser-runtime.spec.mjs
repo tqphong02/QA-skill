@@ -30,7 +30,7 @@ test('native runtime observes AX state, resolves data-testid first and invalidat
       '</main>',
     ].join(''));
 
-    const observation = await session.observe();
+    const observation = await session.observe({ detail: 'standard' });
     assert.equal(observation.ax_tree.available, true);
     assert.equal(observation.interactive[0].ref, 'e1');
     assert.equal(observation.interactive[0].candidates[0].strategy, 'DATA_TEST_ID');
@@ -161,6 +161,8 @@ test('quick-start and quick-finish execute a complete bounded FAST browser task 
     const runId = packet.run_id;
     assert.match(runId, /^fast-\d+$/);
     assert.equal(packet.allowed_origin, origin);
+    assert.equal(packet.observation.detail, 'compact');
+    assert.equal(packet.observation.context_budget.profile, 'compact');
     assert.match(packet.observation.content.text, /Quick task page/);
     assert.equal(fs.existsSync(packet.task_file), true);
     assert.equal(fs.existsSync(packet.manifest_file), true);
@@ -180,6 +182,39 @@ test('quick-start and quick-finish execute a complete bounded FAST browser task 
     assert.equal(task.status, 'PASS');
   } finally {
     await new Promise(resolve => server.close(resolve));
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('compact observation materially reduces dense-page model context and exposes lossless escalation', async () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-native-compact-'));
+  let session;
+  try {
+    session = await createNativeBrowserSession({ dataDir, runId: 'native-compact', headless: true });
+    const { page } = session.getPage();
+    const buttons = Array.from({ length: 120 }, (_, index) => (
+      `<button data-testid="action-${index}">Action ${index}</button>`
+    )).join('');
+    const rows = Array.from({ length: 100 }, (_, index) => (
+      `<tr><td>Order ${index}</td><td>Status ${index}</td><td>Owner ${index}</td></tr>`
+    )).join('');
+    await page.setContent(`<main><h1>Dense orders</h1>${buttons}<table><tbody>${rows}</tbody></table></main>`);
+
+    const compact = await session.observe();
+    const full = await session.observe({ detail: 'full' });
+    const compactBytes = Buffer.byteLength(JSON.stringify(compact));
+    const fullBytes = Buffer.byteLength(JSON.stringify(full));
+
+    assert.equal(compact.detail, 'compact');
+    assert.equal(compact.interactive.length, 32);
+    assert.equal('candidates' in compact.interactive[0], false);
+    assert.equal(compact.truncation.any, true);
+    assert.equal(compact.context_budget.escalation_available, true);
+    assert.equal(full.interactive.length, 120);
+    assert.equal(full.interactive[0].candidates[0].strategy, 'DATA_TEST_ID');
+    assert.ok(compactBytes < fullBytes * 0.5, `expected compact ${compactBytes} to be less than half of full ${fullBytes}`);
+  } finally {
+    await session?.close();
     fs.rmSync(dataDir, { recursive: true, force: true });
   }
 });

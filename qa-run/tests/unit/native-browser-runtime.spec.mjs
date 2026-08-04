@@ -4,8 +4,10 @@ import {
   LOCATOR_PRIORITY,
   MAX_ACTIONS_PER_AGENT_STEP,
   MAX_NATIVE_WORKERS,
+  NATIVE_OBSERVATION_PROFILES,
   computeNativeStateDelta,
   normalizeNativeBrowserLaunchError,
+  resolveNativeObservationProfile,
   validateReadOnlyActionBatch,
   validateNativeBrowserOptions,
   validatePoolConfig,
@@ -130,6 +132,18 @@ test('native runtime batches only bounded read-only actions', () => {
     () => validateReadOnlyActionBatch(Array.from({ length: 6 }, () => ({ type: 'wait' }))),
     error => error.code === 'ACTION_BATCH_LIMIT',
   );
+});
+
+test('native observations default to a compact token profile with explicit escalation', () => {
+  const compact = resolveNativeObservationProfile();
+  const full = resolveNativeObservationProfile('full');
+  assert.equal(compact.name, 'compact');
+  assert.equal(compact.maxItems, 32);
+  assert.equal(compact.maxChars, 2200);
+  assert.equal(compact.includeLocatorCandidates, false);
+  assert.equal(full.maxItems, 200);
+  assert.equal(full.includeLocatorCandidates, true);
+  assert.equal(NATIVE_OBSERVATION_PROFILES.standard.maxChars, 8000);
 });
 
 test('native state delta exposes deterministic progress signals without model confidence', () => {

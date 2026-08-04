@@ -1,4 +1,4 @@
 interface:
   display_name: "QA Run"
-  short_description: "Agentic browser QA và fast task với evidence cùng session"
-  default_prompt: "Use $qa-run to quick-start a generic browser task or run full UI-first exploratory QA with live-content and AX observation, deterministic state-delta planning, structured extraction, bounded read-only batches, same-session runtime evidence, independent completion judging, and only PASS, FAILED, N/A or UNTEST results."
+  short_description: "Token-efficient agentic browser QA với evidence cùng session"
+  default_prompt: "Use $qa-run to run token-efficient UI-first exploratory QA or a fast browser task with compact-first live observation, deterministic state-delta planning, scoped extraction, same-session runtime evidence, independent completion judging, and only PASS, FAILED, N/A or UNTEST results."

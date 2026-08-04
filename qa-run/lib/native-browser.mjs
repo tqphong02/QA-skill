@@ -20,6 +20,41 @@ import { waitForUiReady } from './wait.mjs';
 export const MAX_NATIVE_WORKERS = 4;
 export const MAX_RECOVERY_ATTEMPTS = 2;
 export const MAX_ACTIONS_PER_AGENT_STEP = 5;
+export const NATIVE_OBSERVATION_PROFILES = Object.freeze({
+  compact: Object.freeze({
+    maxItems: 32,
+    maxContentItems: 16,
+    maxChars: 2200,
+    maxLinks: 16,
+    maxTables: 2,
+    maxRowsPerTable: 10,
+    maxColumns: 12,
+    maxAxNodes: 20,
+    includeLocatorCandidates: false,
+  }),
+  standard: Object.freeze({
+    maxItems: 80,
+    maxContentItems: 50,
+    maxChars: 8000,
+    maxLinks: 50,
+    maxTables: 6,
+    maxRowsPerTable: 40,
+    maxColumns: 24,
+    maxAxNodes: 80,
+    includeLocatorCandidates: true,
+  }),
+  full: Object.freeze({
+    maxItems: 200,
+    maxContentItems: 120,
+    maxChars: 16000,
+    maxLinks: 120,
+    maxTables: 10,
+    maxRowsPerTable: 100,
+    maxColumns: 32,
+    maxAxNodes: 120,
+    includeLocatorCandidates: true,
+  }),
+});
 export const LOCATOR_PRIORITY = Object.freeze([
   'DATA_TEST_ID',
   'ID',
@@ -104,6 +139,23 @@ function positiveInt(value, fallback, { min = 0, max = Number.MAX_SAFE_INTEGER }
   const parsed = Number.parseInt(String(value ?? ''), 10);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
+}
+
+export function resolveNativeObservationProfile(detail = 'compact', overrides = {}) {
+  const name = String(detail || 'compact').trim().toLowerCase();
+  const base = NATIVE_OBSERVATION_PROFILES[name] || NATIVE_OBSERVATION_PROFILES.compact;
+  return {
+    name: NATIVE_OBSERVATION_PROFILES[name] ? name : 'compact',
+    maxItems: positiveInt(overrides.maxItems, base.maxItems, { min: 1, max: 200 }),
+    maxContentItems: positiveInt(overrides.maxContentItems, base.maxContentItems, { min: 1, max: 200 }),
+    maxChars: positiveInt(overrides.maxChars, base.maxChars, { min: 200, max: 30000 }),
+    maxLinks: positiveInt(overrides.maxLinks, base.maxLinks, { min: 1, max: 200 }),
+    maxTables: positiveInt(overrides.maxTables, base.maxTables, { min: 1, max: 20 }),
+    maxRowsPerTable: positiveInt(overrides.maxRowsPerTable, base.maxRowsPerTable, { min: 1, max: 200 }),
+    maxColumns: positiveInt(overrides.maxColumns, base.maxColumns, { min: 1, max: 50 }),
+    maxAxNodes: positiveInt(overrides.maxAxNodes, base.maxAxNodes, { min: 1, max: 200 }),
+    includeLocatorCandidates: overrides.includeLocatorCandidates ?? base.includeLocatorCandidates,
+  };
 }
 
 function slug(value, fallback = 'run') {
@@ -346,64 +398,66 @@ function interactiveDomScript(selector, maxItems) {
       }
       return `/${parts.join('/')}`;
     };
-    const elements = [...document.querySelectorAll(inputSelector)]
-      .filter(visible)
-      .slice(0, max);
-    return elements.map((element, index) => {
-      const tag = element.tagName.toLowerCase();
-      const type = String(element.getAttribute('type') || (tag === 'input' ? 'text' : '')).toLowerCase();
-      const ariaLabel = clean(element.getAttribute('aria-label'));
-      const labelledBy = clean(element.getAttribute('aria-labelledby'));
-      const textContent = clean(element.innerText || element.textContent);
-      const placeholder = clean(element.getAttribute('placeholder'));
-      const title = clean(element.getAttribute('title'));
-      const name = clean(element.getAttribute('name'));
-      const role = clean(element.getAttribute('role')) || (
-        tag === 'button' ? 'button'
-          : tag === 'a' ? 'link'
-            : tag === 'textarea' ? 'textbox'
-              : tag === 'select' ? 'combobox'
-                : tag === 'input' && type === 'checkbox' ? 'checkbox'
-                  : tag === 'input' && type === 'radio' ? 'radio'
-                    : tag === 'input' ? 'textbox' : ''
-      );
-      const nameForTarget = ariaLabel || textContent || placeholder || title || name || labelledBy;
-      const testId = clean(element.getAttribute('data-testid') || element.getAttribute('data-test-id'));
-      const id = clean(element.id);
-      const cssCandidates = [];
-      if (name) cssCandidates.push(`${tag}[name="${cssQuote(name)}"]`);
-      if (ariaLabel) cssCandidates.push(`${tag}[aria-label="${cssQuote(ariaLabel)}"]`);
-      if (placeholder) cssCandidates.push(`${tag}[placeholder="${cssQuote(placeholder)}"]`);
-      if (title) cssCandidates.push(`${tag}[title="${cssQuote(title)}"]`);
-      const classes = stableClasses(element);
-      if (classes.length) cssCandidates.push(`${tag}.${classes.map(cssQuote).join('.')}`);
-      const rect = element.getBoundingClientRect();
-      return {
-        dom_index: index,
-        tag,
-        type,
-        role,
-        name: nameForTarget,
-        aria_label: ariaLabel,
-        labelled_by: labelledBy,
-        placeholder,
-        title,
-        name_attribute: name,
-        data_test_id: testId,
-        id,
-        text: textContent,
-        disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'),
-        editable: Boolean(element.isContentEditable || ['input', 'textarea', 'select'].includes(tag)),
-        bounds: {
-          x: Math.round(rect.x),
-          y: Math.round(rect.y),
-          width: Math.round(rect.width),
-          height: Math.round(rect.height),
-        },
-        css_candidates: cssCandidates.slice(0, 5),
-        xpath: absoluteXPath(element),
-      };
-    });
+    const visibleElements = [...document.querySelectorAll(inputSelector)].filter(visible);
+    const elements = visibleElements.slice(0, max);
+    return {
+      total: visibleElements.length,
+      items: elements.map((element, index) => {
+        const tag = element.tagName.toLowerCase();
+        const type = String(element.getAttribute('type') || (tag === 'input' ? 'text' : '')).toLowerCase();
+        const ariaLabel = clean(element.getAttribute('aria-label'));
+        const labelledBy = clean(element.getAttribute('aria-labelledby'));
+        const textContent = clean(element.innerText || element.textContent);
+        const placeholder = clean(element.getAttribute('placeholder'));
+        const title = clean(element.getAttribute('title'));
+        const name = clean(element.getAttribute('name'));
+        const role = clean(element.getAttribute('role')) || (
+          tag === 'button' ? 'button'
+            : tag === 'a' ? 'link'
+              : tag === 'textarea' ? 'textbox'
+                : tag === 'select' ? 'combobox'
+                  : tag === 'input' && type === 'checkbox' ? 'checkbox'
+                    : tag === 'input' && type === 'radio' ? 'radio'
+                      : tag === 'input' ? 'textbox' : ''
+        );
+        const nameForTarget = ariaLabel || textContent || placeholder || title || name || labelledBy;
+        const testId = clean(element.getAttribute('data-testid') || element.getAttribute('data-test-id'));
+        const id = clean(element.id);
+        const cssCandidates = [];
+        if (name) cssCandidates.push(`${tag}[name="${cssQuote(name)}"]`);
+        if (ariaLabel) cssCandidates.push(`${tag}[aria-label="${cssQuote(ariaLabel)}"]`);
+        if (placeholder) cssCandidates.push(`${tag}[placeholder="${cssQuote(placeholder)}"]`);
+        if (title) cssCandidates.push(`${tag}[title="${cssQuote(title)}"]`);
+        const classes = stableClasses(element);
+        if (classes.length) cssCandidates.push(`${tag}.${classes.map(cssQuote).join('.')}`);
+        const rect = element.getBoundingClientRect();
+        return {
+          dom_index: index,
+          tag,
+          type,
+          role,
+          name: nameForTarget,
+          aria_label: ariaLabel,
+          labelled_by: labelledBy,
+          placeholder,
+          title,
+          name_attribute: name,
+          data_test_id: testId,
+          id,
+          text: textContent,
+          disabled: Boolean(element.disabled || element.getAttribute('aria-disabled') === 'true'),
+          editable: Boolean(element.isContentEditable || ['input', 'textarea', 'select'].includes(tag)),
+          bounds: {
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          },
+          css_candidates: cssCandidates.slice(0, 5),
+          xpath: absoluteXPath(element),
+        };
+      }),
+    };
   };
 }
 
@@ -470,14 +524,19 @@ function compactAxNodes(nodes = [], max = 120) {
     .slice(0, max);
 }
 
-async function collectAxTree(page) {
+async function collectAxTree(page, maxNodes = 120) {
   if (!page?.context || typeof page.context !== 'function') return { available: false, nodes: [], reason: 'page context unavailable' };
   let cdp;
   try {
     cdp = await page.context().newCDPSession(page);
     await cdp.send('Accessibility.enable');
     const result = await cdp.send('Accessibility.getFullAXTree');
-    return { available: true, nodes: compactAxNodes(result?.nodes || []) };
+    const meaningful = (result?.nodes || []).filter(node => !node.ignored && (node.role?.value || node.name?.value));
+    return {
+      available: true,
+      total_node_count: meaningful.length,
+      nodes: compactAxNodes(meaningful, maxNodes),
+    };
   } catch (error) {
     return { available: false, nodes: [], reason: text(error?.message || error, 240) };
   } finally {
@@ -637,46 +696,63 @@ export class NativeBrowserSession {
     return { pageId: id, page, state: this.pageStates.get(id) };
   }
 
-  async observe({ pageId = this.activePageId, maxItems = 80 } = {}) {
+  async observe({ pageId = this.activePageId, maxItems, maxChars, detail = 'compact' } = {}) {
     await this.init();
+    const profile = resolveNativeObservationProfile(detail, { maxItems, maxChars });
     const selected = this.getPage(pageId);
     const { pageId: id, page, state } = selected;
     const ready = await waitForUiReady(page, {
       timeout: positiveInt(process.env.QA_NATIVE_READY_TIMEOUT_MS, 4000, { min: 250, max: 30000 }),
       quietMs: positiveInt(process.env.QA_NATIVE_READY_QUIET_MS, 120, { min: 20, max: 1000 }),
     });
-    const dom = await page.evaluate(interactiveDomScript(INTERACTIVE_SELECTOR, maxItems), {
+    const dom = await page.evaluate(interactiveDomScript(INTERACTIVE_SELECTOR, profile.maxItems), {
       selector: INTERACTIVE_SELECTOR,
-      max: positiveInt(maxItems, 80, { min: 1, max: 200 }),
-    }).catch(error => ({ error: text(error?.message || error, 240), items: [] }));
-    const domItems = Array.isArray(dom) ? dom : [];
-    const ax = await collectAxTree(page);
-    const content = await page.evaluate(({ maxContentItems, maxChars }) => {
+      max: profile.maxItems,
+    }).catch(error => ({ error: text(error?.message || error, 240), total: 0, items: [] }));
+    const domItems = Array.isArray(dom) ? dom : (dom.items || []);
+    const domTotal = Array.isArray(dom) ? dom.length : Number(dom.total || domItems.length);
+    const ax = await collectAxTree(page, NATIVE_OBSERVATION_PROFILES.full.maxAxNodes);
+    const axOutputNodes = ax.nodes.slice(0, profile.maxAxNodes);
+    const content = await page.evaluate((limits) => {
       const visible = element => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
       };
       const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
-      const visibleText = clean(document.body?.innerText || '').slice(0, maxChars);
+      const fullVisibleText = clean(document.body?.innerText || '');
+      const allHeadings = [...document.querySelectorAll('h1,h2,h3,[role="heading"]')]
+        .filter(visible).map(element => clean(element.innerText)).filter(Boolean);
+      const allLinks = [...document.querySelectorAll('a[href]')]
+        .filter(visible).map(element => ({ text: clean(element.innerText || element.getAttribute('aria-label')), href: element.href }))
+        .filter(item => item.text || item.href);
+      const allTables = [...document.querySelectorAll('table')].filter(visible);
       return {
-        text: visibleText,
-        headings: [...document.querySelectorAll('h1,h2,h3,[role="heading"]')]
-          .filter(visible).map(element => clean(element.innerText)).filter(Boolean).slice(0, maxContentItems),
-        links: [...document.querySelectorAll('a[href]')]
-          .filter(visible).map(element => ({ text: clean(element.innerText || element.getAttribute('aria-label')), href: element.href }))
-          .filter(item => item.text || item.href).slice(0, maxContentItems),
-        tables: [...document.querySelectorAll('table')].filter(visible).slice(0, 6).map(table => ({
-          headers: [...table.querySelectorAll('thead th')].map(cell => clean(cell.innerText)).filter(Boolean).slice(0, 24),
-          rows: [...table.querySelectorAll('tbody tr')].slice(0, maxContentItems).map(row => (
-            [...row.querySelectorAll('th,td')].map(cell => clean(cell.innerText)).slice(0, 24)
+        text: fullVisibleText.slice(0, limits.maxChars),
+        total_text_chars: fullVisibleText.length,
+        headings: allHeadings.slice(0, limits.maxContentItems),
+        total_headings: allHeadings.length,
+        links: allLinks.slice(0, limits.maxLinks),
+        total_links: allLinks.length,
+        tables: allTables.slice(0, limits.maxTables).map(table => ({
+          headers: [...table.querySelectorAll('thead th')].map(cell => clean(cell.innerText)).filter(Boolean).slice(0, limits.maxColumns),
+          rows: [...table.querySelectorAll('tbody tr')].slice(0, limits.maxRowsPerTable).map(row => (
+            [...row.querySelectorAll('th,td')].map(cell => clean(cell.innerText)).slice(0, limits.maxColumns)
           )),
         })),
+        total_tables: allTables.length,
       };
-    }, {
-      maxContentItems: positiveInt(maxItems, 80, { min: 1, max: 200 }),
-      maxChars: 8000,
-    }).catch(error => ({ error: text(error?.message || error, 240), text: '', headings: [], links: [], tables: [] }));
+    }, profile).catch(error => ({
+      error: text(error?.message || error, 240),
+      text: '',
+      headings: [],
+      links: [],
+      tables: [],
+      total_text_chars: 0,
+      total_headings: 0,
+      total_links: 0,
+      total_tables: 0,
+    }));
     const refs = new Map();
     const interactive = domItems.map((item, index) => {
       const ref = `e${index + 1}`;
@@ -697,12 +773,31 @@ export class NativeBrowserSession {
         ))),
       };
       refs.set(ref, descriptor);
-      return descriptor;
+      if (profile.includeLocatorCandidates) return descriptor;
+      return {
+        ref: descriptor.ref,
+        role: descriptor.role,
+        name: descriptor.name,
+        ...(descriptor.disabled ? { disabled: true } : {}),
+        ...(descriptor.editable ? { editable: true } : {}),
+        ...(!descriptor.role ? { element: descriptor.tag } : {}),
+        locator_strategies: [...new Set(candidates.map(candidate => candidate.strategy))].slice(0, 3),
+        ...(descriptor.ax_corroborated ? { ax_corroborated: true } : {}),
+      };
     });
     state.revision += 1;
     state.stale = false;
     state.observedAt = nowIso();
     state.refs = refs;
+    const truncation = {
+      interactive: domTotal > domItems.length,
+      content_text: Number(content.total_text_chars || 0) > String(content.text || '').length,
+      headings: Number(content.total_headings || 0) > (content.headings || []).length,
+      links: Number(content.total_links || 0) > (content.links || []).length,
+      tables: Number(content.total_tables || 0) > (content.tables || []).length,
+      ax_tree: Number(ax.total_node_count || ax.nodes.length) > axOutputNodes.length,
+    };
+    truncation.any = Object.values(truncation).some(Boolean);
     const observation = {
       session_id: this.sessionId,
       page_id: id,
@@ -712,6 +807,7 @@ export class NativeBrowserSession {
       title: await page.title().catch(() => ''),
       ready,
       active: id === this.activePageId,
+      detail: profile.name,
       locator_priority: LOCATOR_PRIORITY,
       interactive,
       content: {
@@ -726,12 +822,28 @@ export class NativeBrowserSession {
       },
       ax_tree: {
         available: ax.available,
-        node_count: ax.nodes.length,
-        nodes: ax.nodes,
+        node_count: axOutputNodes.length,
+        total_node_count: Number(ax.total_node_count || ax.nodes.length),
+        nodes: axOutputNodes,
         reason: ax.reason || null,
       },
       pages: [...this.pages.entries()].map(([pageIdValue, pageValue]) => pageSummary(pageValue, pageIdValue, this.authMode)),
       runtime_cursor: this.runtimeCursor(),
+      truncation: {
+        ...truncation,
+        returned_interactive: domItems.length,
+        total_interactive: domTotal,
+        guidance: truncation.any
+          ? 'Escalate to detail=standard/full only when the current objective or semantic target is missing'
+          : null,
+      },
+    };
+    const estimatedChars = Buffer.byteLength(JSON.stringify(observation), 'utf8');
+    observation.context_budget = {
+      profile: profile.name,
+      estimated_chars: estimatedChars,
+      estimated_tokens_utf8_div4: Math.ceil(estimatedChars / 4),
+      escalation_available: profile.name !== 'full',
     };
     state.lastObservation = observation;
     this.writeState();
@@ -1198,7 +1310,12 @@ export class NativeBrowserSession {
         ...action,
         capture_media: action.capture_media ?? index === normalized.length - 1,
       });
-      const observation = await this.observe({ pageId: result.next_page_id, maxItems: action.max_items || 80 });
+      const observation = await this.observe({
+        pageId: result.next_page_id,
+        maxItems: action.max_items,
+        maxChars: action.max_chars,
+        detail: action.observation_detail || 'compact',
+      });
       results.push({ action: result, observation });
       if (result.runtime?.failures?.length && action.continue_on_runtime_failure !== true) break;
     }

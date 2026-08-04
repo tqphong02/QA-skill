@@ -35,7 +35,7 @@ Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong **th
 ## 🧭 Workflow chính — chọn theo mục đích
 
 ### 1️⃣ Khám phá / săn bug mới (Exploratory)
-**AI tự làm:** mở URL → quan sát visible content + AX/UI → hiểu entry point, navigation, control, state, validation và feedback → map flow → lái UI qua **MCP Playwright** hoặc `playwright-runtime` (`quick-start/observe/extract/action/batch/recover/quick-finish`) với deterministic state delta, session reuse và same-session evidence. Full QA chạy independent task judge trước PASS. Tài liệu, ticket hoặc source chỉ là context bổ sung nếu có. Native runtime không dùng Browser Use
+**AI tự làm:** mở URL → quan sát compact visible content + AX/UI → hiểu entry point, navigation, control, state, validation và feedback → map flow → lái UI qua **MCP Playwright** hoặc `playwright-runtime` (`quick-start/observe/extract/action/batch/recover/quick-finish`) với deterministic state delta, session reuse và same-session evidence. Chỉ nâng observation lên standard/full khi truncation che target/oracle; full QA dùng compact `agent-context` và independent task judge trước PASS. Tài liệu, ticket hoặc source chỉ là context bổ sung nếu có. Native runtime không dùng Browser Use
 
 Bạn chỉ cần cung cấp URL/target và mục tiêu, ví dụ: *"Khám phá feature X tìm bug"* hoặc *"Test đầy đủ feature filter"*.
 

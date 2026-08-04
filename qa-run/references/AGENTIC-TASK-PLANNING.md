@@ -57,6 +57,7 @@ observe live UI
 create agentic task plan
 
 repeat:
+  load compact agent context, not the full run transcript
   evaluate previous goal
   update compact memory
   choose next goal
@@ -73,6 +74,14 @@ finish QA charters, probes, coverage and verdict
 ```
 
 Do not plan the entire click sequence from the initial page and execute it blindly. Re-observe after every action because element references, page state, dialogs, tabs and valid next steps can change
+
+Before each model decision, combine only the current native observation with:
+
+```bash
+node <skill-root>/scripts/helpers/exploratory-runner.mjs agent-context <RUN_ID>
+```
+
+This packet carries the current step, bounded budget, deduplicated compact memory, last state delta, pending rule probes and evidence counts. Do not reload `run.json`, old observations, full action history or raw traces unless a contradiction/failure needs diagnosis
 
 ## Task-plan contract
 
@@ -170,7 +179,7 @@ Link the returned `decision_id` to the exploratory action as `decision_id`. When
 
 ## Compact memory and reasoning privacy
 
-Persist only facts needed by the next step:
+Persist only facts needed by the next step. Add at most four new memory facts per decision and retain at most eight deduplicated facts:
 
 - current route/page and selected business object
 - completed goals and observed deltas

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   finishExploratoryRun,
+  getExploratoryAgentContext,
   normalizeExploratoryMode,
   recordExploratoryAction,
   recordExploratoryRuleProbe,
@@ -643,6 +644,12 @@ test('agentic task planning links a concise UI-derived decision to the executed 
     assert.equal(action.action.decision_id, 'DEC-0001');
     assert.equal(action.run.agentic_task.decisions[0].action_id, action.action.action_id);
     assert.deepEqual(action.run.agentic_task.steps[0].action_ids, [action.action.action_id]);
+
+    const agentContext = getExploratoryAgentContext({ dataDir: ctx.dataDir, runId: ctx.runId });
+    assert.equal(agentContext.task.current_step.task_step_id, 'TASK-OPEN-ORDER');
+    assert.equal(agentContext.task.last_decision.decision_id, 'DEC-0001');
+    assert.equal(agentContext.context_budget.source, 'compact-agent-context');
+    assert.ok(agentContext.context_budget.estimated_tokens_utf8_div4 < 1000);
 
     const completed = recordExploratoryTaskDecision({
       dataDir: ctx.dataDir,

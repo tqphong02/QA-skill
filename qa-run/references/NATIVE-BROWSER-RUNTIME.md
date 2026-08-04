@@ -116,6 +116,23 @@ It creates the FAST manifest/task contract, launches, navigates and observes in 
 - runtime observer cursor
 - compact visible page content: text, headings, links and tables
 
+Use progressive observation profiles:
+
+| Detail | Default bounds | Use |
+|---|---|---|
+| `compact` | 32 controls, 2,200 text chars, 16 links, 2 tables, 20 AX nodes; locator strategy names only | Default for every next-action decision |
+| `standard` | 80 controls, 8,000 chars, 50 links, 6 tables, 80 AX nodes; locator candidates included | Required target/oracle is missing from a truncated compact packet |
+| `full` | Up to 200 controls, 16,000 chars, 120 links, 10 tables, 120 AX nodes | Standard remains insufficient or failure diagnosis needs full locator detail |
+
+Every packet reports `truncation` and `context_budget.estimated_tokens_utf8_div4`. Truncation is a retrieval signal, not a test failure. Escalate only when it can hide the current semantic target or expected signal; otherwise continue compact. Prefer a target-scoped `extract` over a full observation for large tables or lists
+
+```bash
+node <skill-root>/scripts/helpers/native-browser-runtime.mjs observe \
+  <RUN_ID> --detail compact --max-items 32 --max-chars 2200
+```
+
+The session keeps full locator candidates behind each ephemeral ref even when the compact model packet exposes only locator strategy names. Action results still return the verified winning locator and attempt evidence, so compaction does not weaken selector validation
+
 The reference is intentionally ephemeral. Every successful action marks the page state stale. Reusing `e1` without a new observation fails with `STALE_TARGET`, so the agent cannot silently click an element that moved or changed meaning
 
 Every action result also contains `state_delta`: deterministic URL/title/content/control changes, new headings/alerts, runtime failures and a bounded progress classification. Use it to evaluate the previous goal and decide whether to continue or replan; do not treat the score as a QA oracle
@@ -274,7 +291,7 @@ Do not convert a daemon health response into a business PASS. Health proves tran
 
 ## Token and runtime telemetry
 
-The native browser runtime does not call an LLM and therefore does not consume model tokens for `observe`, `action`, `recover` or `execute`
+The native browser runtime does not call an LLM and therefore does not directly consume model tokens for `observe`, `action`, `recover` or `execute`. Its JSON output can become host-model input, so compact observations report their estimated packet cost and support explicit standard/full escalation
 
 Model token usage is still measured by the host provider through `QA_TOKEN_USAGE_FILE` and `record-model-usage.mjs`. The business-intelligence card has its own deterministic context estimate. Browser runtime telemetry records action count, elapsed time, worker count, event count, screenshot count and recovery count, not invented model usage
 

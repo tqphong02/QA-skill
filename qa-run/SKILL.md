@@ -66,8 +66,8 @@ AGENTIC_TASK_EXECUTION =
 
 | User entrypoint | Required stack | Read now |
 |---|---|---|
-| Exploratory browser QA, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE`; add `AGENTIC_TASK_EXECUTION` when the path is non-deterministic | [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md), [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md), [references/AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md), and [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md); use [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) only when optional source/knowledge exists |
-| Generic browser agent or simple browser task | `EXPLORATORY_BROWSER_QA` + `FAST` profile (`BROWSER_TASK_FAST` label) | [references/FAST-BROWSER-TASK.md](references/FAST-BROWSER-TASK.md), [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md), and [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) |
+| Exploratory browser QA, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE`; add `AGENTIC_TASK_EXECUTION` when the path is non-deterministic | Always read [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md); add [references/AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md) only for a non-deterministic path, [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md) only when an applicable hidden-rule probe needs its payload/evidence contract, and [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) only when optional source/knowledge exists |
+| Generic browser agent or simple browser task | `EXPLORATORY_BROWSER_QA` + `FAST` profile (`BROWSER_TASK_FAST` label) | Read [references/FAST-BROWSER-TASK.md](references/FAST-BROWSER-TASK.md) and [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md); read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) only for non-default auth/session, worker, recovery or troubleshooting behavior |
 | Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md), and [testcase-template/references/execution-contract.md](../testcase-template/references/execution-contract.md) |
 | Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
@@ -86,9 +86,21 @@ Network, console and page-error evidence must come from the same session as the 
 
 Before every executable browser route, validate the target URL/domain boundary and objective. For full `EXPLORATORY_BROWSER_QA`/`EXPLORATORY_ADHOC`, start UI-first discovery directly when no requirements, source or saved knowledge is available; the live page supplies the initial flow, targets and visible oracles. If optional source/requirements/knowledge exist, `prepare-test-intelligence.mjs` may enrich risk ranking but is not a gate for exploratory execution. The `FAST` profile remains the low-friction utility path. Do not replace purposeful UI exploration with a generic element checklist
 
-For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, after the target/domain gate read [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md) and [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md), declare the rule plan before the first browser action and drive the active UI-derived charter with its bounded observe → plan → act → verify → recover → re-rank loop. The `FAST` profile uses [references/FAST-BROWSER-TASK.md](references/FAST-BROWSER-TASK.md) instead. This makes browser interaction autonomous without requiring a document or weakening the oracle, observer, safety, evidence, coverage or provenance gates. `RETEST_PLUS` reuses this loop only as its `DISCOVERY_CORE` layer
+For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, after the target/domain gate read [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md), declare a compact rule plan before the first browser action and drive the active UI-derived charter with its bounded observe → plan → act → verify → recover → re-rank loop. Read [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md) only when uniqueness, authorization, side-effect or ambiguous-oracle probing is applicable and needs the full contract. The `FAST` profile uses [references/FAST-BROWSER-TASK.md](references/FAST-BROWSER-TASK.md) instead. `RETEST_PLUS` reuses this loop only as its `DISCOVERY_CORE` layer
 
 When the user gives a natural-language objective and the action path is not already deterministic, read [references/AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md). After the first live observation, decompose the objective into bounded goals with observable success signals, record one compact decision before each action, evaluate progress from the runtime's deterministic `state_delta` and replan after repeated no-progress. Store concise rationale and compact memory only; never persist raw chain-of-thought. After `COMPLETE`, record `task-judge`; a full QA `PASS` requires an independent `SATISFIED` judgement with evidence for every success signal. Agentic task completion does not bypass the QA verdict gates
+
+## Token-efficient execution contract
+
+Use progressive disclosure without weakening QA gates:
+
+- Start native observations with `detail=compact` and combine the latest packet with `exploratory-runner.mjs agent-context <RUN_ID>`; do not reload full run history, raw DOM, traces or old observations before every decision
+- Read packet `truncation` and `context_budget`; escalate to `standard`, then `full`, only when the current semantic target or expected signal is absent or ambiguous
+- Prefer target-scoped `extract` for large lists/tables. Keep screenshots, locator attempts, runtime events and full traces file-backed and retrieve them only for verification, diagnosis or final reconciliation
+- Keep one current goal, one action, up to two alternatives, four new memory facts and eight deduplicated carry-forward facts. Compaction never removes re-observation, independent judge, same-session observability, hidden-rule evidence, coverage or verdict requirements
+- A compact packet that lacks proof triggers escalation or `UNTEST`; it never permits `PASS`
+
+Read [references/RUN-OPTIMIZATION.md](references/RUN-OPTIMIZATION.md) when measuring token savings, cache behavior, repeated-run cost or model routing
 
 For `UI_BUSINESS_RECONCILIATION`, require an explicit live URL or component snapshot plus an atomic requirement registry matching [references/UI_REQUIREMENT_TRACEABILITY_SCHEMA.json](references/UI_REQUIREMENT_TRACEABILITY_SCHEMA.json). Fail closed when either input is missing. Preserve a stable `uiItemId` and emit one row for every UI item and every requirement in `ui-requirement-traceability.json`; use only `MAPPED`, `UI_ONLY`, `REQ_ONLY`, `CONFLICT`, `AMBIGUOUS`, `UNREACHABLE`, or `NOT_APPLICABLE`. Runtime actions are opt-in and require `--verify-runtime` plus an exact user-authorized action selector immediately before execution
 
@@ -140,44 +152,10 @@ Apply the following exact order for all models, especially fast or small-context
    - Start observation before the first critical action. After each submit, save, delete, calculation, navigation, upload, retry, permission change, or other business transition, inspect matching XHR/fetch/document requests and console/page errors
    - Inspect response bodies only for failed or contract-relevant requests, including GraphQL HTTP 200 responses with `errors`; redact secrets and personal data before persistence
    - If browser observability is unavailable, record the technical layer as unavailable and finish the user-facing run as `UNTEST` when that observer is needed for the requested oracle
-   - For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, start `scripts/helpers/exploratory-runner.mjs` with the same `RUN_ID` after the manifest; use its `rule-plan`, `page`, `task-plan`, `decision`, `action`, `task-judge`, `rule-probe`, `coverage`, `charter` and `finish` commands as the runtime ledger boundary. For a deterministic supplied testcase, `task-plan`/`decision` may mirror the supplied steps; for an unknown path they must be derived from the current live observation. Use resolved driver/observer values, not `auto`, before a final `PASS`
+   - For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, start `scripts/helpers/exploratory-runner.mjs` with the same `RUN_ID` after the manifest; use `rule-plan`, `page`, `task-plan`, compact `agent-context`, `decision`, `action`, `task-judge`, `rule-probe`, `coverage`, `charter` and `finish` as the runtime boundary. For unknown paths derive decisions from the latest live observation plus `agent-context`, not the full ledger. Use resolved driver/observer values, not `auto`, before a final `PASS`
    - For `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST` (human label `BROWSER_TASK_FAST`), do not start `exploratory-runner.mjs` or create a full QA ledger. Use `native-browser-runtime.mjs quick-start [RUN_ID] --url <URL> --objective <TASK> --allowed-domain <ORIGIN>` when the native runtime is selected; it creates the manifest and first live observation and generates a run ID when omitted. Use `batch` only for bounded read-only actions, then `quick-finish` with `PASS|FAILED|N/A|UNTEST`. FAST `PASS` means the task objective completed, not release-quality QA
-   - When MCP drivers are unavailable, start `scripts/helpers/native-browser-runtime.mjs` with the same `RUN_ID`; use `observe → decision → action → observe → native-action` for agentic objectives and keep the daemon's `session_id`, `page_id`, `decision_id`, runtime cursor and media references attached to the ledger. Read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) before using session/profile/CDP attach or workers
-4. With `SHEET_TESTCASE_EXECUTION` (when user provides a Google Sheet URL/ID containing testcases):
-   - **Standard schema is pre-baked** — read [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json); DO NOT rescan headers each time. Schema summary:
-     ```
-     Sheet: "Test cases_App"  |  Header row: 9 (0-indexed: 8)
-     B=Scenario ID  C=Scenario Name  D=Test case ID  E=Description
-     F=Pre-condition  G=Procedure  H=Expected Results
-     I=Result  J=Priority  K=Date  L=Tester  M=Notes
-     ```
-     Columns I-M (idx 8-12) are **write columns**; columns B-H (idx 1-7) are **read-only design**.
-   - If G/H contain `[S01]`, `[S02]` markers, treat the row as a structured execution contract: execute each step in order, verify its matching H assertion before continuing, then verify `[OUTCOME]`. Do not collapse the row into one blind click sequence
-   - Read [the shared execution contract](../testcase-template/references/execution-contract.md) when the testcase Markdown or JSON is available. `entry` is the required starting route/role/state/data, `target.key` identifies the semantic UI object, and `cleanup` is part of the contract for mutating flows
-   - For a legacy text-only row, normalize the missing step IDs, target, wait signal or final oracle during scoped discovery. If the missing field cannot be resolved from requirements, knowledge or the live page, mark the case `Untest` or `N/A`; never invent an expected result or selector
-   - A semantic target is not a locator. Resolve the target against the same browser session's DOM and use the locator only after uniqueness, visibility and actionability are verified
-   - Generate the functional-group worker plan first:
-     ```bash
-     node scripts/helpers/execute-sheet.mjs \
-       --sheet-url <URL> \
-       --module <requested-module-if-known> \
-       --parallel \
-       --plan-only
-     ```
-   - Read `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/sheet-worker-plan.json`, show `Requested module`, exact `Resolved functional groups`, available groups, testcase count and proposed shards, then stop for three explicit user confirmations:
-     1. Confirm the exact module/functional-group scope, for example `LOGIN`
-     2. Ask how many workers to use from 1 to 4; do not provide a final execution command with a default worker count
-     3. Ask whether to run `all`, selected worker IDs such as `1,2`, or `cancel`
-   - These confirmations are mandatory in Antigravity and every other host. A module named in the original prompt is a requested filter, not confirmation. Do not silently confirm the module, choose the worker count, or choose all workers
-   - Resume with `--module <requested> --confirmed-module <confirmed> --workers <confirmed-count> --selected-workers <all|1,2>`. Missing any confirmation is `BLOCKED` before browser action or write-back
-   - When a single module such as `LOGIN` is assigned multiple workers, shard its testcases across the confirmed worker count without duplicating rows; when assignments exceed the concurrency limit, run later waves
-   - After the user confirms, delegate each selected assignment to an independent browser sub-agent/worker when the host supports parallel agents
-   - Every worker must return JSON matching [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json). Every `Pass` and `Fail` testcase must include at least one final-state screenshot or video (`png`, `jpg`, `jpeg`, `webp`, `gif`, `mp4`, `webm`, `mov`, `m4v`); JSON, trace, console or network evidence alone is insufficient. `Fail`, `Untest`, and `N/A` require Note
-   - Store local media under the assigned `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/` or return an `image:`/`video:` remote URL. Store plan, assignments, worker results and write-back JSON separately under `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`. The executor rejects local media outside the testcase's assigned function/date directory and appends valid media references to the Sheet Note
-   - Merge worker outputs and import with `--results-file <JSON>`, or supply a real external executor with `--worker-script <PATH>`. Without valid media evidence, no `Pass`/`Fail` cell may be changed
-   - **Write-back rules**: `Result` col I: exactly `Pass`, `Fail`, `N/A`, `Untest` (case-sensitive). `Priority` col J: exactly `Critical`, `High`, `Medium`, `Low`. `Note` col M: mandatory when Fail/Untest/N/A — concise manual-friendly context (no stacktraces, no raw HTTP codes).
-   - After row execution, complete the remaining `SHEET_EXECUTION_PLUS` layers: Sanity, Impacted Regression, Scoped Business Discovery, Exploratory, Ad-hoc, and UI/UX
-   - Add Original Retest only for rows tied to a Plane ticket or previously failed execution; do not perform Plane comment/state mutations without a ticket
+   - When MCP drivers are unavailable, start `scripts/helpers/native-browser-runtime.mjs` with the same `RUN_ID`; use compact `observe → agent-context → decision → action → observe → native-action`. Escalate observation detail only on truncation/missing target or oracle. Keep `session_id`, `page_id`, `decision_id`, runtime cursor and media references attached to the ledger. Read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) before non-default session/profile/CDP attach, workers, recovery or troubleshooting
+4. With `SHEET_TESTCASE_EXECUTION`, read [references/SHEET-EXECUTION.md](references/SHEET-EXECUTION.md), use the pre-baked schemas, generate a plan before browser execution, and require explicit module, worker-count and worker-selection confirmation. Isolate/shard workers without duplicate rows; require valid screenshot/video evidence before any `Pass`/`Fail` write-back; finish every `SHEET_EXECUTION_PLUS` layer
 5. **[BEFORE TEST — VERIFY intelligence provenance]** The preparation command must resolve `<project-root>/qa-knowledge/knowledge-index.json` and current source artifacts before UI execution:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - For the prepared run, read `business-execution-card.json` before any full brief or Markdown; do not load both projections simultaneously
@@ -193,7 +171,7 @@ Apply the following exact order for all models, especially fast or small-context
 7. Copy the test contract from the `READY` brief. Do not rewrite it from memory or replace missing fields with generic steps.
 8. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
 9. Update verdict/evidence into the ledger immediately after each layer; every user-facing result must be `PASS`, `FAILED`, `N/A` or `UNTEST` with a reason when it is not `PASS`
-   - In exploratory mode, create `rule-plan` before browser action. For a natural-language/non-deterministic objective, observe the live page, create `task-plan`, write a `decision` before each autonomous action and link its `decision_id` to the verified `action`; after every action re-observe, evaluate the previous goal from `state_delta` and update compact memory. After `COMPLETE`, record `task-judge` against every declared success signal. Record applicable hidden-rule results with `rule-probe`, record the declared dimensions with `coverage`, decide each high-priority charter with `charter`, and finalize the runner before `run-manifest.mjs finish`. A budget stop, missing target, missing data, missing authority or missing oracle is `UNTEST`; retry-derived `RECOVERED`/`FLAKY` is not a clean `PASS`
+   - In exploratory mode, create `rule-plan` before browser action. For a natural-language/non-deterministic objective, observe the live page, create `task-plan`, load compact `agent-context`, write one `decision` and link its `decision_id` to the verified action; after every action re-observe, evaluate `state_delta` and update bounded memory. After `COMPLETE`, record `task-judge` for every success signal. Complete applicable `rule-probe`, `coverage` and high-priority `charter` records before finish. A budget stop, missing target/data/authority/oracle or unresolved truncation is `UNTEST`; retry-derived `RECOVERED`/`FLAKY` is not a clean `PASS`
 10. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`.
 11. After every QA run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`. The `FAST` profile finishes with its task result and evidence packet instead
 12. **[AFTER EVERY QA RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory for full QA profiles and does not apply to `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST`:
@@ -243,37 +221,9 @@ These must be observed at all times, even before reading any reference file:
 - **DO NOT confuse the bounded `contextSlice` or HTML overview canvas with project completeness** — retain all normalized nodes/relations by default and retrieve only the relevant slice into AI context
 - **DO NOT let an optional HTML companion replace canonical JSON, Markdown, Excel or XMind** — render only after the source artifact validates
 
-## Canonical artifact layout
+## Artifacts and scripts
 
-```text
-<project-root>/
-├── .env
-├── auth.json
-├── evidence/
-│   ├── exploratory/<run-id>/ (run.json, redacted action ledger and stop state)
-│   ├── runs/<run-id>/ (manifest.json, screenshots/, logs/, redacted/)
-│   ├── network/<run-id>/ (sanitized request/response summaries)
-│   ├── console/<run-id>/ (sanitized error/warning summaries)
-│   ├── sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/ (Sheet screenshots/videos)
-│   ├── sheet/_runs/<YYYY-MM-DD>/<run-id>/ (Sheet plans/results/write-back metadata)
-│   ├── visual-*/
-│   └── .runtime-events.json
-├── qa-knowledge/
-│   ├── knowledge-index.json        ← entry point (always read first)
-│   ├── system-overview.md
-│   ├── flows/, rules/, contracts/, evidence/
-│   ├── app-business-guide.md       ← compatibility/overview layer
-│   ├── app-flow-map.json
-│   ├── checklists/, merged/, repositories/, ui-business/
-│   ├── context/
-│   │   ├── business-execution-brief.json  ← canonical gate/audit artifact
-│   │   ├── business-execution-card.json   ← bounded model-facing projection
-│   │   └── context-budget.json             ← deterministic budget/cache telemetry
-│   ├── repositories/<repo>/graphify-discovery.json
-│   ├── repositories/<repo>/graphify-code-only/graphify-out/
-├── FINDINGS.md
-└── reports/ (retest/, exports/)
-```
+Write runtime artifacts only under the tested project (`cwd` or `QA_DATA_DIR`). Keep media/traces file-backed and put compact redacted summaries plus relative evidence pointers into model context. Read [references/ARTIFACTS-AND-SCRIPTS.md](references/ARTIFACTS-AND-SCRIPTS.md) only when locating artifacts, diagnosing helpers or extending the skill; `scripts/registry.mjs` is the script-path source of truth
 
 ## Output format
 
@@ -282,48 +232,6 @@ These must be observed at all times, even before reading any reference file:
 - PASS comment: Result + Conclusion + inline image only
 - FAILED comment: adds Actual + Expected
 - BLOCKED comment: adds Blocker only
-
-## Scripts reference
-
-> **Lưu ý kiến trúc thư mục**: Toàn bộ script trong `qa-run/scripts/` được chia thành 7 nhóm (`discovery/`, `rbac/`, `ui-reconciliation/`, `writers/`, `analysis/`, `orchestrators/`, `helpers/`). Các orchestrator được hỗ trợ bởi `scripts/registry.mjs` cho phép gọi script con bằng tên ngắn gọn hoặc đầy đủ.
-
-| Script | Purpose |
-|---|---|
-| `scripts/helpers/context-builder.mjs` | Build the deterministic Business Execution Brief and return `READY`, `NEEDS_DISCOVERY`, or `BLOCKED` |
-| `scripts/helpers/context-card.mjs` | Project a bounded model-facing execution card and write deterministic context-budget telemetry |
-| `scripts/helpers/prepare-test-intelligence.mjs` | Refresh stale source knowledge, build the brief, rank risks and generate evidence-linked exploratory charters |
-| `scripts/helpers/record-model-usage.mjs` | Ingest provider/host-reported token, latency and cost telemetry without putting it into the model-facing card |
-| `scripts/helpers/evaluate-business-intelligence.mjs` | Compare a READY brief with a project golden dataset using deterministic precision/recall |
-| `scripts/helpers/validate-host-smoke.mjs` | Fail-closed validation of Antigravity same-session smoke evidence |
-| `scripts/helpers/exploratory-runner.mjs` | Runtime ledger, agentic task-plan/decision/replan/task-judge state, rule-plan/probe/coverage gate, action/time budget, same-session page binding, selector/safety checks and exploratory PASS evidence gate |
-| `scripts/helpers/native-browser-runtime.mjs` | One-command FAST start/finish, first-party Playwright/CDP session daemon, visible-content/AX observation, structured extraction, deterministic state delta, bounded read-only batch/recovery and isolated 1–4 worker pool |
-| `lib/native-browser.mjs` | Native browser session/pool implementation with masked screenshots and same-session observer |
-| `scripts/discovery/graphify-adapter.mjs` | Run optional Graphify code-only discovery or import graph.json, retain the complete normalized project graph and produce a separate token-bounded context slice |
-| `scripts/helpers/run-manifest.mjs` | Initialize & log Run Manifest for full traceability |
-| `scripts/helpers/runtime-observer.mjs` | Capture and redact same-session HTTP failures, GraphQL errors, request failures, console warnings/errors and page exceptions |
-| `scripts/helpers/extract-flow.mjs` | Extract business flows from web app (DOM + network + CDP) |
-| `scripts/helpers/execute-sheet.mjs` | Resolve and confirm module scope, worker count and selection; shard assignments; require image/video evidence; write back validated verdicts |
-| `scripts/helpers/generate-checklist.mjs` | Auto-scan 100% items on screen → Markdown Checklist |
-| `scripts/helpers/visual-audit.mjs` | Visual Heuristic Audit: overflow/clipping/touch targets/z-index |
-| `scripts/analysis/attack-surface.mjs` | Classify Action Safety, auto-inject mutations |
-| `scripts/rbac/rbac-api-tester.mjs` | Test API endpoints against expected roles (5 conflict types) |
-| `scripts/analysis/finding-reconciler.mjs` | Reconcile runtime evidence into KB and feedback Q&A to BA |
-| `scripts/writers/write-rbac-matrix.mjs` | Generate human-readable RBAC Markdown report with Section 5 |
-| `scripts/helpers/data-factory.mjs` | Isolate accounts & data namespace per worker |
-| `scripts/writers/validate-knowledge.mjs` | Check knowledge freshness, hash routes & git commit |
-| `scripts/helpers/collect-evidence.mjs` | Bundle screenshots, traces, logs into artifact package |
-| `scripts/writers/write-business-guide.mjs` | Deterministic renderer/validator for business guide |
-| `scripts/writers/render-intelligence-html.mjs` | Render and validate an optional self-contained interactive view from canonical QA intelligence JSON |
-| `scripts/helpers/log-bug.mjs` | Log Plane bug with inline image evidence |
-| `scripts/helpers/login.mjs` | Create auth.json |
-| `lib/driver.mjs` | Headless browser + screenshot to file |
-| `lib/ui.mjs` | Scope snapshot, network recording, `withRevert` |
-| `lib/wait.mjs` | Same-session adaptive document/XHR/fetch readiness and bounded quiet-window telemetry |
-| `lib/change-impact.mjs` | Conservative incremental scanner selection by changed-file business impact |
-| `lib/git-changes.mjs` | Collect committed, staged, unstaged and untracked source paths |
-| `lib/discovery-gate.mjs` | Fail-closed scanner result and canonical-artifact gate |
-| `lib/model-telemetry.mjs` | Normalize optional provider-reported token/latency/cost telemetry |
-| `lib/assert.mjs` | `check/eq/summary` compact |
 
 ## Related skills
 

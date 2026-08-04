@@ -12,6 +12,7 @@
  *   rule-plan <run-id> --rule-plan-file <json>
  *   page <run-id> --page-file <json>
  *   task-plan <run-id> --task-plan-file <json>
+ *   agent-context <run-id>
  *   decision <run-id> --decision-file <json>
  *   task-judge <run-id> --judge-file <json>
  *   action <run-id> --action-file <json>
@@ -170,8 +171,21 @@ function arrayOf(value) {
   return [value];
 }
 
-function safeArray(value, max = 32) {
-  return arrayOf(value).map(item => text(item, 500)).filter(Boolean).slice(0, max);
+function safeArray(value, max = 32, itemMax = 500) {
+  return arrayOf(value).map(item => text(item, itemMax)).filter(Boolean).slice(0, max);
+}
+
+function compactUnique(value, max = 8, itemMax = 240) {
+  const seen = new Set();
+  const result = [];
+  for (const item of safeArray(value, 64, itemMax)) {
+    const key = item.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+    if (result.length >= max) break;
+  }
+  return result;
 }
 
 function readJson(filePath, label) {
@@ -522,16 +536,16 @@ export function setExploratoryTaskPlan({ dataDir = DATA_DIR, runId, plan }) {
   if (!Number.isInteger(observationRevision) || observationRevision < 1) {
     fail('agentic task plan requires observation_revision >= 1 from the live page');
   }
-  const objective = text(plan.objective || run.agentic_task?.objective || run.scope, 700);
-  const successSignals = safeArray(plan.success_signals, 12);
-  const stopConditions = safeArray(plan.stop_conditions, 12);
-  const rationale = text(plan.rationale, 600);
+  const objective = text(plan.objective || run.agentic_task?.objective || run.scope, 500);
+  const successSignals = compactUnique(plan.success_signals, 8, 400);
+  const stopConditions = compactUnique(plan.stop_conditions, 8, 400);
+  const rationale = text(plan.rationale, 320);
   if (!objective || !successSignals.length || !stopConditions.length || !rationale) {
     fail('agentic task plan requires objective, success_signals, stop_conditions and concise rationale');
   }
   const previous = run.agentic_task || {};
   const isReplan = previous.status && previous.status !== 'UNPLANNED';
-  const replanReason = text(plan.replan_reason, 600);
+  const replanReason = text(plan.replan_reason, 320);
   if (isReplan && !replanReason) fail('replacing an agentic task plan requires replan_reason');
   if (isReplan && Number(previous.replan_count || 0) >= Number(previous.max_replans || DEFAULT_MAX_AGENT_REPLANS)) {
     fail(`agentic task replan budget exhausted (${previous.max_replans || DEFAULT_MAX_AGENT_REPLANS})`, 'BUDGET_EXHAUSTED');
@@ -554,14 +568,14 @@ export function setExploratoryTaskPlan({ dataDir = DATA_DIR, runId, plan }) {
     objective,
     success_signals: successSignals,
     stop_conditions: stopConditions,
-    constraints: safeArray(plan.constraints, 12),
+    constraints: compactUnique(plan.constraints, 8, 300),
     rationale,
     plan_revision: planRevision,
     plan_history: history.slice(-DEFAULT_MAX_AGENT_REPLANS),
     current_step_id: steps[0].task_step_id,
     steps,
     decisions: Array.isArray(previous.decisions) ? previous.decisions : [],
-    compact_memory: safeArray(previous.compact_memory, 16),
+    compact_memory: compactUnique(previous.compact_memory, 8, 240),
     no_progress_count: 0,
     requires_replan: false,
     replan_count: Number(previous.replan_count || 0) + (isReplan ? 1 : 0),
@@ -608,26 +622,26 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   const step = getTaskStep(run, input.task_step_id || task.current_step_id);
   const evaluation = text(input.evaluation_previous_goal, 80).toUpperCase();
   const decisionType = text(input.decision, 80).toUpperCase();
-  const nextGoal = text(input.next_goal, 600);
-  const rationale = text(input.rationale, 600);
+  const nextGoal = text(input.next_goal, 320);
+  const rationale = text(input.rationale, 280);
   if (!ALLOWED_GOAL_EVALUATIONS.has(evaluation)) fail(`unsupported previous-goal evaluation: ${evaluation || 'missing'}`);
   if (!ALLOWED_AGENT_DECISIONS.has(decisionType)) fail(`unsupported agentic decision: ${decisionType || 'missing'}`);
   if (!rationale) fail('agentic task decision requires a concise rationale');
   const selected = input.selected_action || {};
   const selectedAction = {
     type: text(selected.type || selected.action_type, 80).toLowerCase(),
-    semantic_target: text(selected.semantic_target || selected.target, 500),
-    expected_signal: text(selected.expected_signal, 700),
-    safety_boundary: text(selected.safety_boundary || step.safety_boundary, 500),
+    semantic_target: text(selected.semantic_target || selected.target, 300),
+    expected_signal: text(selected.expected_signal, 400),
+    safety_boundary: text(selected.safety_boundary || step.safety_boundary, 300),
   };
   if (decisionType === 'ACT' && (!nextGoal || !selectedAction.type || !selectedAction.semantic_target
     || !selectedAction.expected_signal || !selectedAction.safety_boundary)) {
     fail('ACT decision requires next_goal and selected_action type, semantic_target, expected_signal and safety_boundary');
   }
-  if (decisionType === 'REPLAN' && !text(input.replan_reason, 600)) {
+  if (decisionType === 'REPLAN' && !text(input.replan_reason, 320)) {
     fail('REPLAN decision requires replan_reason');
   }
-  const memory = safeArray(input.memory, 8);
+  const memory = compactUnique(input.memory, 4, 240);
   const previous = task.decisions[task.decisions.length - 1];
   const fingerprint = decisionType === 'ACT'
     ? [page.page_id, step.task_step_id, nextGoal, selectedAction.type, selectedAction.semantic_target]
@@ -651,17 +665,17 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
     decision: decisionType,
     next_goal: nextGoal || null,
     selected_action: decisionType === 'ACT' ? selectedAction : null,
-    alternatives_considered: safeArray(input.alternatives_considered, 6),
+    alternatives_considered: compactUnique(input.alternatives_considered, 2, 240),
     rationale,
     memory,
-    replan_reason: text(input.replan_reason, 600) || null,
-    evidence_refs: safeArray(input.evidence_refs, 12),
+    replan_reason: text(input.replan_reason, 320) || null,
+    evidence_refs: compactUnique(input.evidence_refs, 8, 300),
     fingerprint,
     action_id: null,
     recorded_at: nowIso(),
   };
   task.decisions.push(record);
-  task.compact_memory = safeArray([...task.compact_memory, ...memory], 16);
+  task.compact_memory = compactUnique([...memory, ...task.compact_memory], 8, 240);
   task.status = decisionType === 'COMPLETE' ? 'COMPLETED'
     : decisionType === 'STOP' ? 'STOPPED'
       : 'IN_PROGRESS';
@@ -680,6 +694,80 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   task.updated_at = nowIso();
   saveRun(filePath, run);
   return { run, decision: record, filePath };
+}
+
+export function getExploratoryAgentContext({ dataDir = DATA_DIR, runId }) {
+  const { run, filePath } = loadRun(path.resolve(dataDir), runId);
+  const task = run.agentic_task || {};
+  const page = run.browser.pages.find(item => item.page_id === run.browser.active_page_id) || null;
+  const currentStep = task.steps?.find(item => item.task_step_id === task.current_step_id) || null;
+  const lastDecision = task.decisions?.[task.decisions.length - 1] || null;
+  const payload = {
+    run_id: run.run_id,
+    status: run.status,
+    scope: run.scope,
+    browser: {
+      session_id: run.browser.session_id,
+      page_id: page?.page_id || run.browser.active_page_id,
+      url: page?.url || null,
+      title: page?.title || null,
+    },
+    budget: {
+      action_count: run.budget.action_count,
+      max_actions: run.budget.max_actions,
+      elapsed_ms: run.budget.elapsed_ms,
+      max_ms: run.budget.max_ms,
+    },
+    task: {
+      status: task.status,
+      objective: task.objective,
+      success_signals: task.success_signals || [],
+      stop_conditions: task.stop_conditions || [],
+      current_step: currentStep ? {
+        task_step_id: currentStep.task_step_id,
+        goal: currentStep.goal,
+        success_signal: currentStep.success_signal,
+        safety_boundary: currentStep.safety_boundary,
+        status: currentStep.status,
+        attempts: currentStep.attempts,
+      } : null,
+      compact_memory: compactUnique(task.compact_memory, 8, 240),
+      requires_replan: Boolean(task.requires_replan),
+      replan_count: Number(task.replan_count || 0),
+      max_replans: Number(task.max_replans || DEFAULT_MAX_AGENT_REPLANS),
+      last_decision: lastDecision ? {
+        decision_id: lastDecision.decision_id,
+        evaluation_previous_goal: lastDecision.evaluation_previous_goal,
+        decision: lastDecision.decision,
+        next_goal: lastDecision.next_goal,
+        selected_action: lastDecision.selected_action,
+        observed_delta: lastDecision.observed_delta || null,
+        action_id: lastDecision.action_id,
+      } : null,
+    },
+    rule_plan: {
+      status: run.rule_discovery?.status,
+      pending_probe_ids: (run.rule_discovery?.probes || [])
+        .filter(item => !item.outcome)
+        .map(item => item.probe_id)
+        .slice(0, 12),
+      gap_count: run.rule_discovery?.gaps?.length || 0,
+    },
+    evidence: {
+      media_count: run.evidence?.media_refs?.length || 0,
+      network_count: run.evidence?.network_refs?.length || 0,
+      console_count: run.evidence?.console_refs?.length || 0,
+      page_error_count: run.evidence?.page_error_refs?.length || 0,
+    },
+    run_file: filePath,
+  };
+  const estimatedChars = Buffer.byteLength(JSON.stringify(payload), 'utf8');
+  payload.context_budget = {
+    estimated_chars: estimatedChars,
+    estimated_tokens_utf8_div4: Math.ceil(estimatedChars / 4),
+    source: 'compact-agent-context',
+  };
+  return payload;
 }
 
 export function recordExploratoryTaskJudge({ dataDir = DATA_DIR, runId, judge: input }) {
@@ -1662,7 +1750,7 @@ function cliNativeResultPayload(argv = args) {
 export async function main(argv = process.argv.slice(2)) {
   const command = argv[0] || 'help';
   if (command === 'help') {
-    console.log('exploratory-runner: start | rule-plan | page | task-plan | decision | task-judge | action | native-action | rule-probe | coverage | charter | finish');
+    console.log('exploratory-runner: start | rule-plan | page | task-plan | agent-context | decision | task-judge | action | native-action | rule-probe | coverage | charter | finish');
     return 0;
   }
   const localGetArg = (flag, fallback = '') => {
@@ -1694,6 +1782,10 @@ export async function main(argv = process.argv.slice(2)) {
     ? argv[1]
     : localGetArg('--run-id', '');
   if (!runId) fail(`run id is required for ${command}`);
+  if (command === 'agent-context') {
+    console.log(JSON.stringify(getExploratoryAgentContext({ dataDir: DATA_DIR, runId }), null, 2));
+    return 0;
+  }
   if (command === 'rule-plan') {
     const result = setExploratoryRulePlan({ dataDir: DATA_DIR, runId, plan: cliRulePlanPayload(argv) });
     printResult(result);

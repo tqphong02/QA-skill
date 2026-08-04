@@ -176,7 +176,12 @@ async function main() {
       const worker = pool.getWorker(workerId);
       let result;
       if (requestUrl.pathname === '/observe') {
-        result = await worker.observe({ pageId: payload.page_id, maxItems: payload.max_items });
+        result = await worker.observe({
+          pageId: payload.page_id,
+          maxItems: payload.max_items,
+          maxChars: payload.max_chars,
+          detail: payload.detail || 'compact',
+        });
       } else if (requestUrl.pathname === '/action') {
         result = await worker.performAction({ ...payload.action, page_id: payload.page_id || payload.action?.page_id });
       } else if (requestUrl.pathname === '/batch') {
