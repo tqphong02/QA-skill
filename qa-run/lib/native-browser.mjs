@@ -82,6 +82,7 @@ const ACTION_TYPES = new Set([
   'extract',
   'switch_page',
   'download',
+  'upload',
 ]);
 
 const READ_ONLY_BATCH_ACTION_TYPES = new Set([
@@ -995,7 +996,7 @@ export class NativeBrowserSession {
     const safety = evaluateActionSafety({
       actionText,
       selector: text(action.selector || action.target_ref, 500),
-      httpMethod: text(action.http_method, 20) || (['click', 'fill', 'type', 'check', 'uncheck', 'select'].includes(action.type) ? 'GET' : 'GET'),
+      httpMethod: text(action.http_method, 20) || (action.type === 'upload' ? 'POST' : 'GET'),
       targetUrl,
       env: text(action.environment, 80) || process.env.QA_ENV || 'UAT',
       allowAction: text(action.allow_action, 120),
@@ -1081,6 +1082,7 @@ export class NativeBrowserSession {
     let locatorEvidence = null;
     let extractedContent = null;
     let attachments = [];
+    let uploadEvidence = null;
     let popupPage = null;
     const pagesBefore = new Set(this.context.pages?.() || []);
     const popupPromise = ['click', 'navigate'].includes(type) && this.context.waitForEvent
@@ -1206,6 +1208,62 @@ export class NativeBrowserSession {
           await download.saveAs(downloadPath);
           attachments = [downloadPath];
         }
+        if (type === 'upload') {
+          const suppliedPath = text(action.file_path || action.path, 2000);
+          if (!suppliedPath || !path.isAbsolute(suppliedPath)) {
+            const error = new Error('upload requires an absolute file_path');
+            error.code = 'UPLOAD_FILE_PATH_REQUIRED';
+            throw error;
+          }
+          const dataRoot = fs.realpathSync(this.options.dataDir);
+          let realFilePath;
+          try {
+            realFilePath = fs.realpathSync(suppliedPath);
+          } catch {
+            const error = new Error('upload file does not exist');
+            error.code = 'UPLOAD_FILE_NOT_FOUND';
+            throw error;
+          }
+          const relativeFilePath = path.relative(dataRoot, realFilePath);
+          if (!relativeFilePath || relativeFilePath.startsWith('..') || path.isAbsolute(relativeFilePath)) {
+            const error = new Error('upload file must stay inside QA_DATA_DIR');
+            error.code = 'UPLOAD_PATH_OUTSIDE_DATA_DIR';
+            throw error;
+          }
+          const fileStat = fs.statSync(realFilePath);
+          if (!fileStat.isFile()) {
+            const error = new Error('upload target must be a regular file');
+            error.code = 'UPLOAD_NOT_REGULAR_FILE';
+            throw error;
+          }
+          const maxUploadBytes = positiveInt(action.max_upload_bytes, 25 * 1024 * 1024, {
+            min: 1,
+            max: 250 * 1024 * 1024,
+          });
+          if (fileStat.size > maxUploadBytes) {
+            const error = new Error(`upload file exceeds max_upload_bytes (${fileStat.size} > ${maxUploadBytes})`);
+            error.code = 'UPLOAD_FILE_TOO_LARGE';
+            throw error;
+          }
+          const targetKind = await resolved.locator.evaluate(element => ({
+            tag: element.tagName.toLowerCase(),
+            type: String(element.getAttribute('type') || '').toLowerCase(),
+          }));
+          if (targetKind.tag === 'input' && targetKind.type === 'file') {
+            await resolved.locator.setInputFiles(realFilePath);
+          } else {
+            const chooserPromise = page.waitForEvent('filechooser', { timeout: this.options.actionTimeout });
+            await resolved.locator.click({ timeout: this.options.actionTimeout });
+            const chooser = await chooserPromise;
+            await chooser.setFiles(realFilePath);
+          }
+          attachments = [relativeFilePath];
+          uploadEvidence = {
+            file_name: path.basename(realFilePath),
+            relative_path: relativeFilePath,
+            size_bytes: fileStat.size,
+          };
+        }
         if (type === 'fill') {
           if (action.value === undefined || action.value === null) throw new Error('fill requires value');
           await resolved.locator.fill(String(action.value));
@@ -1281,6 +1339,7 @@ export class NativeBrowserSession {
         state_delta: stateDelta,
         extracted_content: extractedContent,
         attachments,
+        upload: uploadEvidence,
         media_refs: mediaRefs,
         test_data_namespace: this.dataNamespace,
         next_observation_required: true,

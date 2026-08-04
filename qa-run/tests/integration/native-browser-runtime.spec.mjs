@@ -26,6 +26,8 @@ test('native runtime observes AX state, resolves data-testid first and invalidat
       '<input id="order-number" data-testid="order-number" placeholder="Order number">',
       '<button id="search" data-testid="search-order" onclick="document.querySelector(\'[role=status]\').textContent=\'Search complete\'">Search</button>',
       '<a data-testid="download-report" download="report.txt" href="data:text/plain,READY">Download report</a>',
+      '<label for="upload-file">Upload input</label>',
+      '<input id="upload-file" data-testid="upload-file" type="file">',
       '<div role="status">Ready</div>',
       '</main>',
     ].join(''));
@@ -89,6 +91,45 @@ test('native runtime observes AX state, resolves data-testid first and invalidat
     });
     assert.equal(download.attachments.length, 1);
     assert.equal(fs.existsSync(download.attachments[0]), true);
+
+    const uploadFixtureDir = path.join(dataDir, 'test-data');
+    const uploadFixture = path.join(uploadFixtureDir, 'qa-upload.txt');
+    fs.mkdirSync(uploadFixtureDir, { recursive: true });
+    fs.writeFileSync(uploadFixture, 'QA upload fixture\n', 'utf8');
+    const uploadObservation = await session.observe({ detail: 'standard' });
+    const uploadRef = uploadObservation.interactive.find(item => item.name === 'Upload input')?.ref
+      || uploadObservation.interactive.find(item => item.candidates?.some(candidate => candidate.value === 'upload-file'))?.ref;
+    assert.ok(uploadRef);
+    const upload = await session.performAction({
+      type: 'upload',
+      target_ref: uploadRef,
+      file_path: uploadFixture,
+      http_method: 'POST',
+      action: 'Select the isolated QA upload fixture',
+      intent: 'Prepare one bounded upload without submitting the form',
+      capture_media: false,
+    });
+    assert.equal(upload.upload.file_name, 'qa-upload.txt');
+    assert.equal(upload.upload.relative_path, 'test-data/qa-upload.txt');
+    assert.equal(upload.attachments[0], 'test-data/qa-upload.txt');
+    assert.equal(await page.locator('#upload-file').evaluate(element => element.files?.[0]?.name), 'qa-upload.txt');
+
+    const outsideFixture = path.join(path.dirname(dataDir), 'outside-qa-upload.txt');
+    fs.writeFileSync(outsideFixture, 'outside\n', 'utf8');
+    await session.observe();
+    await assert.rejects(
+      () => session.performAction({
+        type: 'upload',
+        selector: '#upload-file',
+        strategy: 'STABLE_CSS',
+        file_path: outsideFixture,
+        action: 'Attempt an out-of-bound upload',
+        intent: 'Verify the upload data boundary',
+        capture_media: false,
+      }),
+      error => error.code === 'UPLOAD_PATH_OUTSIDE_DATA_DIR',
+    );
+    fs.unlinkSync(outsideFixture);
 
     const secondPage = await session.context.newPage();
     await secondPage.setContent('<h1>Second task page</h1>');

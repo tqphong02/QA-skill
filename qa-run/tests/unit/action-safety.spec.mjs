@@ -12,6 +12,17 @@ test('Action Safety: SAFE_WRITE actions pass for test inputs', () => {
   assert.equal(res.safety, 'SAFE_WRITE');
 });
 
+test('Action Safety: upload dropzone is not mistaken for a destructive DROP action', () => {
+  const res = evaluateActionSafety({
+    actionText: 'Select isolated QA workbook',
+    selector: 'div.dropzone',
+    httpMethod: 'POST',
+    targetUrl: 'https://uat.example.test/import',
+    env: 'UAT',
+  });
+  assert.equal(res.safety, 'SAFE_WRITE');
+});
+
 test('Action Safety: Destructive action BLOCKED by default', () => {
   const res = evaluateActionSafety({ actionText: 'Delete user account', httpMethod: 'DELETE' });
   assert.equal(res.safety, 'BLOCKED');

@@ -88,7 +88,10 @@ export function evaluateActionSafety({ actionText, selector = '', httpMethod = '
   }
 
   // 5. Destructive Category with Strict Policy Allowlist Validation
-  if (/delete|remove|destroy|purge|drop|reset-db|clear-all|truncate|xóa|xoá/i.test(text)) {
+  // Match destructive verbs as complete tokens. Upload controls commonly use
+  // class names such as `dropzone`; substring matching `drop` there would
+  // incorrectly block a scoped QA upload before POST safety is evaluated
+  if (/\b(?:delete|remove|destroy|purge|drop|reset-db|clear-all|truncate)\b|xóa|xoá/i.test(text)) {
     if (allowAction && ALLOWED_ACTION_POLICIES.has(allowAction)) {
       return { safety: 'DESTRUCTIVE_ALLOWED', reason: `Opt-in action enabled via valid policy: ${allowAction}` };
     }

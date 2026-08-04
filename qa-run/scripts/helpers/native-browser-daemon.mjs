@@ -127,7 +127,15 @@ async function main() {
   const close = async (reason = 'shutdown') => {
     if (closing) return;
     closing = true;
-    try { await pool?.close(); } catch { /* preserve shutdown */ }
+    // Browser/context shutdown can occasionally wait forever on a stale
+    // Playwright child process. Keep daemon shutdown bounded so a completed QA
+    // run cannot leave an invisible Node/browser process alive indefinitely
+    try {
+      await Promise.race([
+        Promise.resolve().then(() => pool?.close()).catch(() => undefined),
+        new Promise(resolve => setTimeout(resolve, 5000)),
+      ]);
+    } catch { /* preserve shutdown */ }
     try { server?.close(); } catch { /* already closed */ }
     state = {
       ...state,
@@ -138,7 +146,9 @@ async function main() {
       token,
     };
     writeState(filePath, state);
-    setTimeout(() => process.exit(0), 20).unref?.();
+    // Keep this short timer referenced so process exit is guaranteed even if a
+    // browser transport left another active handle behind
+    setTimeout(() => process.exit(0), 20);
   };
   process.once('SIGTERM', () => { close('SIGTERM'); });
   process.once('SIGINT', () => { close('SIGINT'); });

@@ -163,7 +163,7 @@ Coordinates are not a normal selector strategy. If a future driver needs coordin
 
 ## Action contract
 
-Supported action types are `navigate`, `click`, `fill`, `type`, `press`, `check`, `uncheck`, `select`, `scroll`, `back`, `reload`, `wait`, `screenshot`, `switch_page`, read-only `extract` and single-step `download`. Download resolves a semantic target, waits for the browser download event, saves the file under the worker evidence directory and returns `attachments`; it is never batchable
+Supported action types are `navigate`, `click`, `fill`, `type`, `press`, `check`, `uncheck`, `select`, `scroll`, `back`, `reload`, `wait`, `screenshot`, `switch_page`, read-only `extract`, single-step `download` and single-step `upload`. Download resolves a semantic target, waits for the browser download event, saves the file under the worker evidence directory and returns `attachments`; it is never batchable. Upload accepts one absolute `file_path` that resolves to a regular file inside `QA_DATA_DIR`, enforces `max_upload_bytes` with a 25 MB default, uses either a visible file input or a visible control that opens a file chooser, and returns only redacted filename/path/size evidence; it never returns file content and is never batchable
 
 Every action is checked by `attack-surface.mjs` before browser execution
 
@@ -173,6 +173,7 @@ Every action is checked by `attack-surface.mjs` before browser execution
 - destructive actions require the existing explicit policy
 - writes carry the run/worker test-data namespace in the result
 - sensitive values are never copied into the action result or ledger
+- upload paths outside `QA_DATA_DIR`, missing files, directories and files above the declared size limit are blocked before the chooser receives data
 
 The result contains the action ID, same-session identifiers, safety decision, locator evidence, before/after visible state, deterministic state delta, optional structured extraction, readiness result, runtime failure summary, screenshot reference and the `next_observation_required` marker
 
