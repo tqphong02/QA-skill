@@ -10,9 +10,39 @@ _resolve_skill_dir() {
 }
 SKILL_DIR="$(_resolve_skill_dir)"
 
-# Load optional non-secret defaults. API keys belong in environment variables.
+# Load only the Plane keys this skill supports. In particular, do not source
+# arbitrary `.env` assignments because a user may keep an unsupported password
+# variable there and the skill must never import it into the process
+_load_plane_env() {
+    local file="$1" line key value
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line#${line%%[![:space:]]*}}"
+        [ -z "$line" ] && continue
+        case "$line" in \#*) continue ;; esac
+        case "$line" in export\ *) line="${line#export }" ;; esac
+        case "$line" in *=*) ;; *) continue ;; esac
+        key="${line%%=*}"
+        value="${line#*=}"
+        case "$value" in
+            \"*\") value="${value#\"}"; value="${value%\"}" ;;
+            \'*\') value="${value#\'}"; value="${value%\'}" ;;
+        esac
+        case "$key" in
+            PLANE_BASE_URL|PLANE_API_VERSION|PLANE_WORKSPACE_SLUG|PLANE_DEFAULT_PROJECT_ID|PLANE_EMAIL|PLANE_BROWSER_STATE_PATH|PLANE_BROWSER_PROFILE_DIR|PLANE_QA_RUN_ROOT|PLANE_LOCAL_CONFIG_DIR|PLANE_API_KEY|PLANE_API_KEY_*)
+                export "$key=$value"
+                ;;
+        esac
+    done < "$file"
+}
+
 if [ -f "$SKILL_DIR/config.env" ]; then
-    source "$SKILL_DIR/config.env"
+    _load_plane_env "$SKILL_DIR/config.env"
+fi
+if [ -f "$SKILL_DIR/.env" ]; then
+    _load_plane_env "$SKILL_DIR/.env"
+fi
+if [ -n "${PLANE_LOCAL_CONFIG_DIR:-}" ] && [ -f "${PLANE_LOCAL_CONFIG_DIR}/.env" ]; then
+    _load_plane_env "${PLANE_LOCAL_CONFIG_DIR}/.env"
 fi
 : "${PLANE_BASE_URL:=https://api.plane.so}"
 : "${PLANE_API_VERSION:=v1}"

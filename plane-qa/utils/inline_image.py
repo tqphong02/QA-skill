@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 # ============================================================
-# Plane — Inline image helper (ảnh hiện THẲNG trong comment/description, không bắt tải về)
+# Plane — Legacy API attachment-backed image helper
 # ============================================================
-# Cơ chế: API key chỉ upload được qua `issue-attachments` (lấy asset_id), rồi nhúng
-# node TipTap <image-component src=asset_id ...> mà editor instance dùng -> render inline.
+# Cơ chế: API key upload qua `issue-attachments` rồi nhúng node image-component.
+# Đây là legacy attachment-backed behavior, không đáp ứng browser-first Attachments 0.
 # KHÔNG chèn icon/emoji vào nội dung. Dùng chung cho comment + log-bug.
 #
 # Dùng như module:
 #   from utils.inline_image import Client
-#   c = Client()                                  # đọc config.env
+#   c = Client()                                  # đọc config.env hoặc .env
 #   pid, iid = c.resolve("PROJ-1")               # hoặc truyền thẳng (pid, iid)
-#   c.post_comment(pid, iid, "Nội dung text", ["evidence/a.png", "evidence/b.png"])
+#   c.post_comment(pid, iid, "Nội dung text")     # text-only compatibility
 # ============================================================
 import os, re, json, uuid, struct, urllib.request, urllib.parse
 
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ALLOWED_CONFIG_KEYS = {
+    "PLANE_BASE_URL", "PLANE_API_VERSION", "PLANE_WORKSPACE_SLUG",
+    "PLANE_DEFAULT_PROJECT_ID", "PLANE_EMAIL", "PLANE_BROWSER_STATE_PATH",
+    "PLANE_BROWSER_PROFILE_DIR", "PLANE_API_KEY",
+}
 
 
 def _load_cfg():
@@ -23,20 +28,22 @@ def _load_cfg():
         "PLANE_API_VERSION": os.environ.get("PLANE_API_VERSION", "v1"),
         "PLANE_WORKSPACE_SLUG": os.environ.get("PLANE_WORKSPACE_SLUG", ""),
     }
-    config_path = os.path.join(SKILL_DIR, "config.env")
-    if not os.path.isfile(config_path):
-        return cfg
-    with open(config_path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, _, v = line.partition("=")
-            k = k.strip(); v = v.strip().strip('"')
-            m = re.search(r":-(.*?)\}$", v)          # "${KEY:-default}"
-            if m:
-                v = m.group(1)
-            cfg[k] = os.environ.get(k, v)
+    for config_path in (os.path.join(SKILL_DIR, "config.env"), os.path.join(SKILL_DIR, ".env")):
+        if not os.path.isfile(config_path):
+            continue
+        with open(config_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip(); v = v.strip().strip('"')
+                if k not in ALLOWED_CONFIG_KEYS and not k.startswith("PLANE_API_KEY_"):
+                    continue
+                m = re.search(r":-(.*?)\}$", v)          # "${KEY:-default}"
+                if m:
+                    v = m.group(1)
+                cfg[k] = os.environ.get(k, v)
     return cfg
 
 
@@ -217,8 +224,10 @@ class Client:
                 f'width="{cw}px" height="{ch}px" aspectratio="{ar}" alignment="left" '
                 f'status="uploaded"></image-component>')
 
-    def inline_html(self, pid, iid, files):
+    def inline_html(self, pid, iid, files, allow_legacy_attachment=False):
         """Upload mỗi ảnh -> trả chuỗi HTML các image-component (ghép liền)."""
+        if files and not allow_legacy_attachment:
+            raise RuntimeError("BROWSER REQUIRED: image insertion must use the authenticated browser editor")
         nodes = []
         for fp in files:
             if not os.path.exists(fp):
@@ -227,10 +236,10 @@ class Client:
         return "".join(nodes)
 
     # ---- post comment text + ảnh inline (nội dung sạch, không emoji) ----
-    def post_comment(self, pid, iid, text_or_html="", files=None, raw_html=False):
+    def post_comment(self, pid, iid, text_or_html="", files=None, raw_html=False, allow_legacy_attachment=False):
         files = files or []
         intro = text_or_html if raw_html else (f"<p>{_esc(text_or_html)}</p>" if text_or_html else "")
-        html = intro + self.inline_html(pid, iid, files)
+        html = intro + self.inline_html(pid, iid, files, allow_legacy_attachment=allow_legacy_attachment)
         if not html:
             raise ValueError("Không có nội dung lẫn ảnh để post")
         return self.api("POST", f"/workspaces/{self.slug}/projects/{pid}/work-items/{iid}/comments/",

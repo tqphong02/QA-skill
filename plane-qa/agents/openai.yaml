@@ -1,4 +1,4 @@
 interface:
   display_name: "Plane QA"
-  short_description: "Đọc và quản lý bug, report QA trên Plane"
-  default_prompt: "Use $plane-qa for this Plane URL or ticket ID. If it is only a link, run the doctor and read the ticket; if it is a retest, hand off to $qa-run RETEST_PLUS and then post the verified result."
+  short_description: "Quản lý bug, comment và ảnh inline trên Plane bằng browser"
+  default_prompt: "Use $plane-qa for this Plane URL or ticket ID. Read QUICK_REF.md. For Description or Comment images, validate and run scripts/browser-inline-evidence.mjs with exact placeholders, reuse ignored browser auth, never call /issue-attachments/, and accept success only after read-back proves rendered inline images and Attachments 0."

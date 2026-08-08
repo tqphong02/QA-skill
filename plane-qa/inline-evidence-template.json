@@ -1,0 +1,15 @@
+{
+  "ticket_url": "https://plane.example.com/workspace-a/browse/PROJ-102/",
+  "content_format": "bug",
+  "title": "[W32][Module] Triệu chứng người dùng quan sát được",
+  "description_html": "<p><strong>OS:</strong> macOS 15</p><p><strong>Browser:</strong> Chrome 139</p><p><strong>Environment:</strong> UAT</p><p><strong>URL:</strong> <a href=\"https://app.example.com/path\">https://app.example.com/path</a></p><p><strong>Test account:</strong> qa@example.com</p><p><strong>Test data:</strong> Dữ liệu kiểm thử</p><p><strong>Precondition:</strong></p><ol><li>Điều kiện trước</li></ol><p><strong>Steps:</strong></p><ol><li>Thao tác người dùng</li></ol><p><strong>Expected:</strong></p><p>Kết quả mong đợi</p><p><strong>Actual:</strong></p><p>Kết quả thực tế</p><p><strong>Evidence:</strong></p>{{PLANE_DESCRIPTION_IMAGE_1}}",
+  "description_images": [
+    "evidence/description.png"
+  ],
+  "comment_html": "<p><strong>Result:</strong> FAILED</p><p><strong>Actual:</strong></p><ul><li>Kết quả vẫn sai</li></ul><p><strong>Expected:</strong></p><ul><li>Kết quả đúng kỳ vọng</li></ul><p><strong>Conclusion:</strong></p><ul><li>Bug vẫn còn và cần sửa lại</li></ul>{{PLANE_COMMENT_IMAGE_1}}",
+  "comment_images": [
+    "evidence/comment.png"
+  ],
+  "verdict": "FAILED",
+  "expected_attachment_count": 0
+}

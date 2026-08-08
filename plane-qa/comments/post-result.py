@@ -80,6 +80,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("spec", help="JSON comment specification")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--legacy-attachment", action="store_true", help="Explicitly allow the legacy attachment-backed image route")
     args = parser.parse_args()
 
     with open(args.spec, encoding="utf-8") as handle:
@@ -103,6 +104,10 @@ def main():
         print(body)
         return 0
 
+    if spec.get("evidence") and not args.legacy_attachment:
+        print("BROWSER REQUIRED: validate with --dry-run, then post the image through the authenticated browser editor")
+        return 2
+
     if spec.get("url"):
         client, project_id, work_item_id = Client.from_url(spec["url"])
         if not project_id or not work_item_id:
@@ -118,6 +123,7 @@ def main():
         body,
         spec["evidence"],
         raw_html=True,
+        allow_legacy_attachment=args.legacy_attachment,
     )
     if state_id:
         client.api(

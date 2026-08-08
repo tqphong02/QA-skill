@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
 # ============================================================
-# Plane — Log bug đúng format chuẩn (manual-friendly) + ảnh inline + assign
+# Plane — Log bug đúng format chuẩn (manual-friendly) + assign
 # ============================================================
 # Tạo 1 hoặc nhiều bug theo format team: tiêu đề [Sprint][Module] + body có
 # các mục in đậm (Dùng thiết bị / Precondition / Steps / Expected / Actual /
-# Ghi chú kỹ thuật), assign cho reporter, **upload ảnh evidence lên Plane
-# CDN rồi embed URL vào description** (mặc định) để xem inline không cần
-# tải về. Có flag --attach để chỉ upload attachment (cũ).
+# Ghi chú kỹ thuật), assign cho reporter. Ảnh evidence phải được paste trong
+# Description bằng browser editor. Legacy attachment upload cần flag rõ ràng.
 #
 # Dùng:
-#   python3 work-items/log-bug.py bug.json              # upload + embed URL vào description (mặc định)
-#   python3 work-items/log-bug.py bug.json --attach    # chỉ upload attachment, không embed
-#   python3 work-items/log-bug.py bug.json --dry-run   # chỉ in payload, KHÔNG ghi
+#   python3 work-items/log-bug.py bug.json --dry-run   # validate format, KHÔNG ghi
+#   python3 work-items/log-bug.py bug.json             # chỉ dùng khi không có ảnh evidence
+#   python3 work-items/log-bug.py bug.json --legacy-attachment  # legacy, không dùng mặc định
 #
 # Cấu trúc bug.json: xem ../bug-template.json
 # ============================================================
 import os, re, sys, json, uuid, urllib.request, urllib.error, urllib.parse
 
 SKILL_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ALLOWED_CONFIG_KEYS = {
+    "PLANE_BASE_URL", "PLANE_API_VERSION", "PLANE_WORKSPACE_SLUG",
+    "PLANE_DEFAULT_PROJECT_ID", "PLANE_EMAIL", "PLANE_BROWSER_STATE_PATH",
+    "PLANE_BROWSER_PROFILE_DIR", "PLANE_API_KEY",
+}
 
 DEFAULTS = {
     "project_id": os.environ.get("PLANE_DEFAULT_PROJECT_ID", ""),
@@ -31,19 +35,21 @@ def load_cfg():
         "PLANE_WORKSPACE_SLUG": os.environ.get("PLANE_WORKSPACE_SLUG", ""),
         "PLANE_API_KEY": os.environ.get("PLANE_API_KEY", ""),
     }
-    config_path = os.path.join(SKILL_DIR, "config.env")
-    if not os.path.isfile(config_path):
-        return cfg
-    with open(config_path) as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, _, v = line.partition("=")
-            k = k.strip(); v = v.strip().strip('"')
-            m = re.search(r":-(.*?)\}$", v)        # "${KEY:-default}"
-            if m: v = m.group(1)
-            cfg[k] = os.environ.get(k, v)
+    for config_path in (os.path.join(SKILL_DIR, "config.env"), os.path.join(SKILL_DIR, ".env")):
+        if not os.path.isfile(config_path):
+            continue
+        with open(config_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, _, v = line.partition("=")
+                k = k.strip(); v = v.strip().strip('"')
+                if k not in ALLOWED_CONFIG_KEYS and not k.startswith("PLANE_API_KEY_"):
+                    continue
+                m = re.search(r":-(.*?)\}$", v)        # "${KEY:-default}"
+                if m: v = m.group(1)
+                cfg[k] = os.environ.get(k, v)
     return cfg
 
 CFG = load_cfg()
@@ -255,10 +261,11 @@ def main():
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     dry   = "--dry-run" in sys.argv
     attach_only = "--attach" in sys.argv
+    legacy_attachment = "--legacy-attachment" in sys.argv
     if not args:
-        print("Dùng: python3 log-bug.py <bug.json> [--dry-run] [--attach]")
-        print("  (mặc định: upload ảnh + embed URL inline trong description)")
-        print("  --attach: chỉ upload file attachment (cũ, cần tải về xem)")
+        print("Dùng: python3 log-bug.py <bug.json> [--dry-run] [--legacy-attachment]")
+        print("  Ảnh evidence phải được paste bằng browser editor để giữ Attachments 0")
+        print("  --legacy-attachment: cho phép route attachment cũ, chỉ dùng khi được yêu cầu rõ")
         sys.exit(1)
     spec = json.load(open(args[0]))
     url_pid = configure_from_url(spec["url"]) if spec.get("url") else None
@@ -275,7 +282,7 @@ def main():
     evdir = spec.get("evidence_dir", "")
     bugs  = spec.get("bugs", [spec] if "title" in spec or "symptom" in spec else [])
 
-    mode_str = "attach-only" if attach_only else "upload+embed"
+    mode_str = "attach-only" if attach_only else ("legacy-attachment" if legacy_attachment else "browser-editor")
     created = []
     invalid_count = 0
     for b in bugs:
@@ -294,11 +301,18 @@ def main():
                for e in b.get("evidence", [])]
         miss = [e for e in evs if not os.path.exists(e)]
 
+        if not dry and evs and not legacy_attachment:
+            print(f"[BROWSER REQUIRED] {title}")
+            print("  Không tạo ticket vì evidence phải được paste vào Description bằng browser editor")
+            print("  Dùng --dry-run để validate format, sau đó mở browser editor và paste ảnh")
+            invalid_count += 1
+            continue
+
         # Dry-run: chỉ in payload
         if dry:
             n_evidence = sum(1 for e in evs if os.path.exists(e))
             print(f"[DRY] {prio:6} | {title} | state={state_name}")
-            print(f"      {n_evidence} ảnh (sẽ upload + embed) | mode={mode_str}"
+            print(f"      {n_evidence} ảnh (sẽ paste trong browser editor) | mode={mode_str}"
                   + (f" | THIẾU: {miss}" if miss else ""))
             continue
 
@@ -330,8 +344,8 @@ def main():
 
         if cycle:
             api("POST", f"/workspaces/{SLUG}/projects/{pid}/cycles/{cycle}/cycle-issues/", {"issues": [iid]})
-        img_n = len(evidence_items) if not attach_only else 0
-        img_label = "ảnh inline" if not attach_only else "no inline"
+        img_n = len(evidence_items) if legacy_attachment and not attach_only else 0
+        img_label = "legacy attachment" if legacy_attachment and not attach_only else "browser editor required"
         created.append((seq, prio, img_n, len(miss), title))
         print(f"  #{seq} | {prio:6} | {img_label} {img_n}"
               + (f" (thiếu {len(miss)})" if miss else "")

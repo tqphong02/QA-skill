@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 # ============================================================
-# Plane — Post comment có ẢNH INLINE (xem thẳng, không bắt tải về). Không chèn icon/emoji.
+# Plane — Text-only comment compatibility helper
+#
+# Image arguments are blocked in the default workflow because this client uses
+# the legacy attachment-backed API path. Use the authenticated browser editor
+# route in
+# references/BROWSER_EDITOR.md for inline images with Attachments 0
 # ============================================================
 # Dùng:
-#   # bằng ref tiện (tự resolve PROJ-1 -> project/work-item):
-#   python3 comments/post-inline.py --ref PROJ-1 --text "Retest PASS" --img a.png --img b.png
+#   # text-only bằng ref tiện:
+#   python3 comments/post-inline.py --ref PROJ-1 --text "Retest PASS"
 #
-#   # hoặc bằng id trực tiếp:
-#   python3 comments/post-inline.py --wi <work_item_id> --project <project_id> \
-#           --text "..." --img evidence/x.png
-#
-#   # chỉ ảnh, không text:    --img a.png
 #   # dùng HTML thô cho text: --html "<p><strong>Kết quả</strong></p>"
+#   # Ảnh phải paste bằng browser editor, không truyền --img
 #   # xoá 1 comment test:     --delete <comment_id> --ref PROJ-1
 # ============================================================
 import sys, os, re
@@ -47,6 +48,9 @@ def parse(argv):
 
 def main():
     a = parse(sys.argv[1:])
+    if a.get("img"):
+        print("BROWSER REQUIRED: không upload ảnh qua issue-attachments. Dùng browser editor và paste ảnh vào Description hoặc Comment")
+        sys.exit(2)
     if a.get("url"):
         c, pid, iid = Client.from_url(a["url"])
         if not pid or not iid:

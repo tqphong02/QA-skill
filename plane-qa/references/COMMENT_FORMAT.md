@@ -58,7 +58,8 @@ State after BLOCKED: keep the current state.
 
 - Render Result as one paragraph.
 - Render Conclusion and the optional Actual, Expected, or Blocker sections with compact `<ul>` blocks.
-- Upload each screenshot, obtain its Plane asset ID, and append an editor `<image-component>` node so the image renders directly in the comment.
+- Paste each screenshot into the authenticated browser editor so the image renders inside the comment content.
+- Do not call `/issue-attachments/` or use the ticket-level Attach control. The ticket must remain at `Attachments 0`.
 - Do not render an Evidence heading, local path, filename, direct link, or attachment list in comment text. Evidence is the inline image itself.
 
 ## Posting
@@ -67,19 +68,35 @@ Preferred deterministic flow:
 
 ```bash
 python3 comments/post-result.py result.json --dry-run
-python3 comments/post-result.py result.json
+node scripts/browser-inline-evidence.mjs --input request.json
+node scripts/browser-inline-evidence.mjs --input request.json --apply
 ```
 
-Free-form comment with inline images:
+Use the authenticated browser editor for the final comment and image paste. The
+script's non-dry-run image path is legacy attachment-backed behavior and must
+not be used for the browser-first workflow
+
+Free-form text-only comment compatibility:
 
 ```bash
 python3 comments/post-inline.py \
   --ref PROJ-150 \
-  --html '<p><strong>Result:</strong> PASS</p><p><strong>Conclusion:</strong> Bug đã được sửa và kết quả đúng kỳ vọng</p>' \
-  --img evidence/retest-step-1.png \
-  --img evidence/retest-result.png
+  --html '<p><strong>Result:</strong> PASS</p><p><strong>Conclusion:</strong> Bug đã được sửa và kết quả đúng kỳ vọng</p>'
 ```
 
-Run a dry run and verify the ticket reference, verdict, content, and image paths before the external write.
+Do not pass `--img` in the browser-first workflow. Validate the image paths with
+`post-result.py --dry-run`, then paste the screenshots into the authenticated
+browser editor as described below
 
-`comments/post-result.py` resolves the target state by name before writing. PASS posts the comment and moves the ticket to `Done`. FAILED posts the comment and moves the ticket to `In Progress`. BLOCKED does not change state.
+## Browser posting with inline images
+
+1. Put `{{PLANE_COMMENT_IMAGE_N}}` at each intended image position in `comment_html`
+2. Declare the matching paths in `comment_images`
+3. Run `browser-inline-evidence.mjs` without `--apply` to validate format and placeholders
+4. Run it with `--apply` only when the user authorized the comment write
+5. The helper opens the exact ticket, stages each image through browser paste, inserts clean `<image-component>` nodes, posts the comment, and reads it back
+6. Confirm exact comment ID, expected image-node count, visible previews, expected state, no placeholders, no `/issue-attachments/`, and `Attachments 0`
+
+If the browser session is logged out or unavailable, return `BLOCKED` and do not post an attachment-backed substitute
+
+For browser-inline evidence, `browser-inline-evidence.mjs` resolves the target state by exact name after posting. PASS moves to `Done`, FAILED moves to `In Progress`, and BLOCKED does not change state

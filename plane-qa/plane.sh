@@ -70,7 +70,7 @@ case "$RESOURCE" in
         echo -e "${BOLD}Config:${NC}"
         echo -e "  Export credentials before starting Codex:"
         echo -e "    PLANE_API_KEY          - Personal API key (never store in this repo)"
-        echo -e "  Non-secret defaults are read from ${YELLOW}$PLANE_ROOT/config.env${NC}:"
+        echo -e "  Non-secret defaults are read from ${YELLOW}$PLANE_ROOT/.env${NC} or config.env:"
         echo -e "    PLANE_WORKSPACE_SLUG   - Your workspace slug"
         echo -e "    PLANE_DEFAULT_PROJECT_ID - Default project ID (optional)"
         echo ""

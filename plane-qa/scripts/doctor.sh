@@ -2,10 +2,10 @@
 set -u
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [ -f "$ROOT/config.env" ]; then
-    # shellcheck source=../config.env
-    source "$ROOT/config.env"
-fi
+# Reuse the allowlisted loader; it deliberately ignores PLANE_PASSWORD and
+# every other unsupported assignment in local env files
+# shellcheck source=../utils/common.sh
+source "$ROOT/utils/common.sh"
 : "${PLANE_BASE_URL:=https://api.plane.so}"
 : "${PLANE_API_VERSION:=v1}"
 

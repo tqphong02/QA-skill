@@ -8,25 +8,22 @@ Bộ công cụ CRUD cho [Plane](https://plane.so) - công cụ quản lý dự 
 
 > 📋 **Viết Daily Report?** Đọc **[REPORT_FORMAT.md](REPORT_FORMAT.md)** — format chuẩn plain-list (không bảng, không icon/emoji), gồm Task / Tổng quan / Evidence / Bug log / Blocker / Next plan. Khi user yêu cầu "viết report", "tổng kết hôm nay", "báo cáo cycle" → xuất theo structure đó.
 
-> 🖼️ **Ảnh xem THẲNG trong comment (không bắt tải về)?** Dùng `comments/post-inline.py` — upload ảnh rồi nhúng node `<image-component>` của editor để render inline. **Không chèn icon/emoji vào nội dung.**
-> ```bash
-> python3 comments/post-inline.py --ref PROJ-1 --text "Retest PASS" --img a.png --img b.png
-> python3 comments/post-inline.py --wi <work_item_id> --project <project_id> --img evidence/x.png
-> python3 comments/post-inline.py --ref PROJ-1 --delete <comment_id>   # xoá
-> ```
-> Lý do: API key chỉ upload được qua `issue-attachments` (lấy `asset_id`); endpoint editor-asset `/api/assets/v2/...` chặn API key (401). Logic dùng chung ở `utils/inline_image.py` (class `Client`: `resolve` / `upload_asset` / `image_node` / `post_comment` / `delete_comment`).
+> 🖼️ **Ảnh inline trong Description hoặc Comment?** Dùng authenticated browser editor và paste ảnh vào rich-text content để giữ `Attachments 0`. API image routes bên dưới chỉ là legacy compatibility và không dùng mặc định.
+> `comments/post-inline.py --img` is blocked in the default workflow. Use it only for an explicitly requested legacy attachment workflow. Text-only comments remain supported.
 
 ## 📁 Cấu trúc
 
 ```
 plane-qa/
 ├── plane.sh              # Main entry point
+├── .env.example          # Local non-secret browser/routing placeholder
+├── .gitignore             # Local credentials and browser state exclusions
 ├── config.env.example    # Mẫu cấu hình non-secret
 ├── README.md             # Tài liệu này
 ├── utils/
 │   ├── common.sh         # Hàm chung (API request, colors, helpers)
 │   ├── paginate.sh       # Xử lý phân trang cursor-based
-│   └── inline_image.py   # Client: upload asset + nhúng <image-component> (ảnh inline)
+│   └── inline_image.py   # Legacy API attachment-backed image client
 ├── projects/
 │   └── manage.sh         # CRUD Projects
 ├── work-items/
@@ -37,7 +34,7 @@ plane-qa/
 │   └── manage.sh         # CRUD Modules
 └── comments/
     ├── manage.sh         # CRUD Comments
-    └── post-inline.py    # Post comment kèm ẢNH INLINE (xem thẳng, không icon)
+    └── post-inline.py    # Text-only compatibility; image args blocked by default
 ```
 
 ## ⚙️ Cài đặt
@@ -47,7 +44,7 @@ plane-qa/
 Tạo cấu hình non-secret và export API key riêng:
 
 ```bash
-cp config.env.example config.env
+cp .env.example .env
 
 # API Key lấy từ Profile Settings → Personal Access Tokens
 export PLANE_API_KEY="plane_api_your_key_here"
@@ -56,7 +53,15 @@ export PLANE_API_KEY="plane_api_your_key_here"
 export PLANE_API_KEY_WORKSPACE_A="plane_api_workspace_a"
 ```
 
-Không ghi API key vào `config.env`, JSON, Markdown hoặc Git. Khi có URL Plane, skill tự nhận base URL, workspace, project và ticket từ URL đó.
+`.env` là file local-only chứa routing, `PLANE_EMAIL`, `PLANE_PASSWORD`, `PLANE_API_KEY` và tuỳ chọn `PLANE_BROWSER_STATE_PATH`. Không in credential ra log và không ghi vào JSON, Markdown hoặc Git. Browser login dùng email/password khi người dùng cho phép; API route chỉ dùng Personal API Key. Khi có URL Plane, skill tự nhận base URL, workspace, project và ticket từ URL đó.
+
+Khởi tạo storage state bằng Playwright khi chưa có session:
+
+```bash
+node scripts/browser-auth.mjs --url 'https://projects.metasolutions.ai/mds-team/browse/AIFA-459/' --state auth.json
+```
+
+Browser sẽ mở ở chế độ headed, tự điền email/password từ `.env`, chờ MFA nếu tài khoản yêu cầu, xác minh `/api/users/me/`, rồi lưu `auth.json`. File này đã nằm trong `.gitignore`
 
 ### 2. Cấp quyền thực thi
 

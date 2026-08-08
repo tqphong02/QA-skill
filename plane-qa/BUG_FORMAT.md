@@ -34,7 +34,7 @@ Actual:
 <observed user-visible behavior and exact error text>
 
 Evidence:
-- <attachment or direct link>
+- {{PLANE_DESCRIPTION_IMAGE_1}}
 - Testcase: <ID, only when the source provides it>
 
 Technical note:
@@ -98,7 +98,8 @@ Every newly logged bug must be created in `Todo`. Do not create a new bug direct
 - [ ] OS, Browser, Environment, URL, and a safe Test account are present.
 - [ ] Precondition and Steps are numbered lists.
 - [ ] Expected and Actual are separate and specific.
-- [ ] Evidence exists or is explicitly marked unavailable.
+- [ ] Evidence is pasted inline in the Description editor; do not use the ticket-level Attach control.
+- [ ] Every evidence path has one exact `{{PLANE_DESCRIPTION_IMAGE_N}}` placeholder and the final read-back contains no placeholder.
 - [ ] Technical details appear only in `Technical note`.
 - [ ] No secret or password appears anywhere.
 - [ ] No emoji appears anywhere.

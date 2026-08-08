@@ -15,17 +15,27 @@ Keep internal instructions, execution notes and agent-facing contracts in Englis
 
 This section is a mandatory execution contract for every model, especially fast or small-context models such as Gemini Flash/Pro. Do not skip a step because the model believes it already understands the request.
 
+### Model-neutral Plane inline evidence
+
+Apply these rules identically on GLM, Gemini, Codex, Claude, and every other provider
+
+- Read `plane-qa/QUICK_REF.md` after `plane-qa/SKILL.md` whenever Plane is routed
+- For an existing ticket with an image in Description or Comment, build `plane-qa/inline-evidence-template.json`, run `node plane-qa/scripts/browser-inline-evidence.mjs --input <request.json>` first, then add `--apply` only for the authorized write
+- Use exact `{{PLANE_DESCRIPTION_IMAGE_N}}` and `{{PLANE_COMMENT_IMAGE_N}}` placeholders; do not rely on the current ProseMirror cursor after pasting large HTML
+- Accept success only when read-back proves exact ticket/comment IDs, expected image-node counts, visible previews, expected state, `attachments_count: 0`, empty `issue_attachment_requests`, and no placeholders
+- Never click ticket-level `Attach`, call `/issue-attachments/`, copy credentials between hosts, or substitute an attachment when browser staging fails
+
 ### URL/artifact-first dispatch
 
 Always scan the user's message verbatim before responding. The user does not need to name a skill or provide a complete command. URLs, IDs, filenames, extensions and business verbs in the router are sufficient signals to load the matching skill.
 
 Apply these read-only defaults:
 
-- A Plane URL or ticket ID only → load `plane-qa`, parse the target, run doctor and read the ticket
+- Chỉ có Plane URL hoặc ticket ID → load `plane-qa`, parse the target, run doctor and read the ticket
 - A Plane URL/ticket ID with `retest`, `re-test`, `verify`, `kiểm tra lại`, `PASS`, `FAILED` or `BLOCKED` → `plane-qa` doctor/read → `qa-run` RETEST_PLUS → `plane-qa` comment/state
-- A Drive/Docs/Sheets/Slides URL or ID only → load `google-drive-qa`, resolve it and read metadata/content through Drive MCP
+- Chỉ có Drive/Docs/Sheets/Slides URL hoặc ID → load `google-drive-qa`, resolve it and read metadata/content through Drive MCP
 - A GitHub repository/PR/Issue/Actions URL only → load `github-mcp-qa` and inspect the resource read-only
-- A URL or artifact with an explicit mutation verb → perform the requested operation only after exact-target validation; a bare link does not authorize a write
+- A URL or artifact with an explicit mutation verb → perform the requested operation only after exact-target validation; link đứng một mình không cấp quyền write
 
 After routing, start the appropriate read-only action or canonical doctor. Do not stop at introducing a skill, ask the user to call `$skill-name`, or ask which skill to use. If the runtime/tool is unavailable, run the relevant doctor and report the exact failing layer.
 
@@ -88,23 +98,24 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 
 ### Required invariants
 
-- `DISCOVERY_CORE` = UI Flow Discovery + Exploratory + Ad-hoc + UI/UX
+- `DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 - `BROWSER_OBSERVABILITY` = same-session Network + Console + Page Error correlation, applied to every live browser workflow without changing the number of `DISCOVERY_CORE` layers
 - `EXPLORATORY_AGENT_LOOP` = Observe → Plan → Act → Verify → Recover → Re-rank; `exploratory-runner.mjs` enforces ledger/budget/evidence boundaries; native `playwright-runtime` provides session daemon, AX/CDP references, selector priority and isolated worker pool; the loop adds browser-agent capability but does not replace business oracle, same-session observability, safety, evidence or provenance gates
 - `AGENTIC_TASK_EXECUTION` = Objective + Live Page State → bounded Task Plan → Previous-goal Evaluation + Compact Memory + Next Goal + One Action → deterministic State Delta → Complete | Replan | Stop → independent Success-Signal Judge; task completion is not automatically QA PASS
 - `TEST_INTELLIGENCE` = Requirement + Runtime Knowledge + Current Source + UI Observation → provenance-aware business model/brief → ranked risks → exploratory charters; static code/UI is read-only candidate context until runtime confirms it
 - `HIDDEN_RULE_DISCOVERY` = Rule Plan → Safe Probe → Same-session Evidence → Provenance Classification → Scoped Coverage; `COMPLETE_FOR_SCOPE` does not mean full-system coverage
-- `performance-qa` is the only public performance skill; JMeter and k6 are internal engines sharing config, smoke gates and result schema
+- `performance-qa` là public skill duy nhất cho performance; JMeter and k6 are internal engines sharing config, smoke gates and result schema
 - Performance `.env` is only an ignored `PERF_*` input layer; generated YAML remains the canonical config, request/body/secret values use placeholders and credentials must not be committed
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; retain the separate 6-row RETEST_PLUS ledger
 - Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; add Original Retest and Plane action only for rows with a ticket/previous failure
-- For retest/Sheet/source-driven QA, never replace a missing business flow with a generic flow; copy the test contract from the `READY` Business Execution Brief with the same source hash. Exploratory/ad-hoc UI-first may derive a flow directly from the runtime UI and must mark the oracle as `UI_DERIVED`
+- Business Execution Brief là `READY` before retest, Sheet and source-driven execution; copy its test contract with the same source hash
+- Không được tự thay business flow thiếu bằng flow generic; exploratory/ad-hoc UI-first may derive a flow directly from the runtime UI and must mark the oracle as `UI_DERIVED`
 - Retest tickets always run Retest, Sanity, Impacted Regression, Exploratory, Ad-hoc and UI/UX
 - PASS → `Done`
 - FAILED → `In Progress`
-- BLOCKED → leave unchanged
+- BLOCKED → giữ nguyên trạng thái
 - Exploratory/ad-hoc user-facing verdicts are only `PASS`, `FAILED`, `N/A`, `UNTEST`; the Plane mapping above does not create a fifth verdict
-- New bug → `Todo`
+- Bug mới → `Todo`
 - Plane comments, testcase prose and reader-visible content created/edited through Drive CRUD must not end sentences with `.` and must not contain emoji/icons
 - Preserve IDs, URLs, filenames, sheet/tab names, formulas, code, decimal numbers and machine-readable values
 - Business analysis must generate `.xmind`, Q&A Markdown and Q&A Excel from the same JSON; Question IDs must match across both Q&A outputs
@@ -232,7 +243,7 @@ Read [`qa-run/SKILL.md`](qa-run/SKILL.md)
 - Do not end testcase content with `.` or add emoji/icons
 - Keep the current flow as default; read `references/api-testcases.md` and create an `api` object only when the user explicitly requests API testcase writing; merely mentioning an API artifact does not change mode
 - Always run `scripts/import-api-spec.py` for API files; run Excel only when `review_required` is empty
-- The generator must create complete testcase Markdown before Excel; read Markdown instead of parsing Excel on later runs
+- Markdown trước Excel: the generator must create complete testcase Markdown before Excel; read Markdown instead of parsing Excel on later runs
 
 ### Core principle
 
@@ -316,8 +327,12 @@ Read [`pentest-run/SKILL.md`](pentest-run/SKILL.md)
 - Parse workspace/project/ticket from the URL before using defaults
 - Run `scripts/doctor.sh` before live read/write
 - Use `post-result.py` for PASS/FAILED/BLOCKED and read back the comment and state
+- Use the authenticated browser editor for every image in a Description or Comment; never click ticket-level `Attach` or call `/issue-attachments/`
+- Use `browser-inline-evidence.mjs` with exact placeholders for the final browser-inline write; do not improvise editor cursor placement
+- Keep `Attachments 0` for inline evidence; if browser authentication is unavailable, return `BLOCKED` and do not fall back to an attachment
+- If the browser shows the Plane login screen and the user explicitly authorizes auto-login, use `PLANE_EMAIL` and `PLANE_PASSWORD` only from the ignored Plane skill `.env`, never print them, save the authenticated browser state, then resume
 - PASS → `Done`; FAILED → `In Progress`; BLOCKED remains unchanged; new bug → `Todo`
-- Never receive or store passwords; use only the Personal API Key from the environment
+- Keep browser passwords only in the ignored local `.env`; never put passwords in tracked files, logs, Plane content, screenshots, reports, or shell arguments; API operations use only the Personal API Key
 
 Read [`plane-qa/SKILL.md`](plane-qa/SKILL.md)
 
@@ -359,5 +374,9 @@ Read [`github-mcp-qa/SKILL.md`](github-mcp-qa/SKILL.md)
 ## General setup and configuration
 
 - **API key**: one shared `config/api_keys.json` (gitignored) for AI helpers. Plane and Drive use separate environment/MCP credentials; never commit secrets. See [`README.md`](README.md) section “API Keys” and `scripts/ai_provider.py`
-- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git`, then run `./scripts/setup.sh --agent=<host> --yes`
+- **Canonical source**: edit skills only under this `QA-Skill` repository; project-local copies are not canonical
+- **Publish after every new or updated skill**: run `./scripts/setup.sh --agent=<host> --profile=full --skip-deps --skip-mcp-setup --yes`; `full` dynamically discovers every top-level folder containing `SKILL.md`
+- **Codex discovery**: publish QA skills to `$HOME/.agents/skills`; do not create another QA copy under `$HOME/.codex/skills`
+- **New skill catalog**: after publishing a newly named skill, start a new agent session if the host does not show it immediately
+- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git`, then run `./scripts/setup.sh --agent=<host> --profile=full --yes`
 - **Detailed setup**: see [`SETUP-GUIDE.md`](SETUP-GUIDE.md)

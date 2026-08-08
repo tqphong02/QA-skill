@@ -11,6 +11,16 @@ Repo này phân phối 23 skill Quality Engineering (QE), Security Engineering v
 
 Phần này là hợp đồng thực thi bắt buộc cho mọi model, đặc biệt model nhanh hoặc context nhỏ như Gemini Flash/Pro. Không được bỏ bước vì model nghĩ rằng đã hiểu yêu cầu.
 
+### Plane inline evidence bắt buộc cho mọi model
+
+Áp dụng nguyên vẹn cho Gemini, GLM, Codex, Claude và mọi provider khác
+
+- Sau `plane-qa/SKILL.md` phải đọc `plane-qa/QUICK_REF.md`
+- Khi Description hoặc Comment có ảnh, tạo input theo `plane-qa/inline-evidence-template.json`, chạy `node plane-qa/scripts/browser-inline-evidence.mjs --input <request.json>` để dry-run rồi chỉ thêm `--apply` khi write đã được phép
+- Dùng đúng placeholder `{{PLANE_DESCRIPTION_IMAGE_N}}` và `{{PLANE_COMMENT_IMAGE_N}}`; không dựa vào vị trí con trỏ ProseMirror sau khi paste HTML dài
+- Chỉ báo thành công khi read-back đúng ticket/comment ID, đủ image node, preview hiển thị, state đúng, `attachments_count: 0`, `issue_attachment_requests` rỗng và không còn placeholder
+- Không click `Attach`, không gọi `/issue-attachments/`, không copy credential sang host khác và không fallback sang attachment khi browser staging lỗi
+
 ### URL/artifact-first dispatch
 
 Luôn scan nguyên văn user message trước khi trả lời. User không cần gọi tên skill hoặc viết câu lệnh đầy đủ. Tín hiệu URL, ID, filename, extension và động từ nghiệp vụ trong router là đủ để load skill tương ứng.
@@ -259,8 +269,11 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Parse workspace/project/ticket từ URL trước khi dùng cấu hình mặc định
 - Chạy `scripts/doctor.sh` trước live read/write
 - Dùng `post-result.py` cho PASS/FAILED/BLOCKED rồi read-back comment và state
+- Dùng `browser-inline-evidence.mjs` với placeholder chính xác cho Description hoặc Comment có ảnh; không tự chế cách đặt con trỏ editor
+- Giữ `Attachments 0` và fail nếu có request `/issue-attachments/`
+- Credential chỉ nằm trong `.env` ignored; bản publish dùng `PLANE_LOCAL_CONFIG_DIR` rõ ràng để trỏ tới một config local dùng chung, không copy secret
 - PASS → `Done`; FAILED → `In Progress`; BLOCKED giữ nguyên; bug mới → `Todo`
-- Không nhận hoặc lưu mật khẩu; chỉ dùng Personal API Key từ environment
+- API dùng Personal API Key; password chỉ dùng cho browser auto-login đã được user cho phép và không bao giờ in ra
 
 Đọc chi tiết: [`plane-qa/SKILL.md`](plane-qa/SKILL.md)
 
