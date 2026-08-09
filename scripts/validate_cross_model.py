@@ -777,7 +777,7 @@ REQUIRED = {
     "WINDOWS-SETUP.md": [
         "setup.ps1 -Agent codex",
         "setup.ps1 -Agent antigravity",
-        "%USERPROFILE%\\.codex\\skills",
+        "%USERPROFILE%\\.agents\\skills",
         "%USERPROFILE%\\.gemini\\config\\skills",
     ],
     "doc-to-md/scripts/convert.sh": [

@@ -28,6 +28,12 @@ Không copy `.env`, PAT, OAuth credential, database DSN, browser profile hoặc 
 
 ## 3. Cài skill
 
+`setup.ps1` là wrapper PowerShell gọi `scripts/setup.sh` qua Git Bash. Nếu PowerShell chặn việc chạy script, chỉ mở quyền trong phiên hiện tại:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
 Codex:
 
 ```powershell
@@ -50,21 +56,23 @@ Dry-run:
 
 ```powershell
 .\scripts\setup.ps1 -Agent antigravity -Profile core -DryRun -SkipDeps -Yes
+```
 
-`-Profile core` cài 10 skill thường dùng và là mặc định. `-Profile full` cài đủ 23 skill; `ego-browser` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
+`-Profile core` cài 10 skill thường dùng. `-Profile full` cài đủ 23 skill; `ego-browser` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
 
-Khi chuyển từ full về core, installer chuyển skill chuyên sâu sang `qa-skill-disabled` ngoài discovery thay vì xóa
+Script hiện mặc định là `full` nếu bỏ qua `-Profile`, vì vậy nên truyền rõ `core` hoặc `full` ở cả bước setup và doctor
 
 ```powershell
 .\scripts\setup.ps1 -Agent antigravity -Profile full -Yes
 ```
-```
+
+Khi chuyển từ `full` về `core`, installer chuyển skill chuyên sâu sang `qa-skill-disabled` ngoài discovery thay vì xóa
 
 Target mặc định:
 
 | Host | Windows path |
 |---|---|
-| Codex | `%USERPROFILE%\.codex\skills` |
+| Codex | `%USERPROFILE%\.agents\skills` |
 | Antigravity | `%USERPROFILE%\.gemini\config\skills` |
 | Claude | `%USERPROFILE%\.claude\skills` |
 
@@ -73,8 +81,16 @@ Target mặc định:
 Trong Git Bash:
 
 ```bash
-bash scripts/doctor-agent.sh --agent=codex
-bash scripts/doctor-agent.sh --agent=antigravity
+bash scripts/doctor-agent.sh --agent=codex --profile=core
+bash scripts/doctor-agent.sh --agent=antigravity --profile=core
+```
+
+Nếu đã cài `full`, thay `--profile=core` bằng `--profile=full`. Doctor phải dùng cùng profile với lệnh setup
+
+Có thể kiểm tra nhanh bằng PowerShell:
+
+```powershell
+Test-Path "$HOME\.agents\skills\qa-run\SKILL.md"
 ```
 
 Mở lại host sau khi setup
@@ -104,16 +120,16 @@ wsl --install
 Sau đó clone repository bên trong filesystem WSL và chạy:
 
 ```bash
-./scripts/setup.sh --agent=codex --yes
+./scripts/setup.sh --agent=codex --profile=full --yes
 ```
 
-Không trộn `node_modules` giữa Windows và WSL
+Chỉ dùng thư mục skill và `node_modules` trong cùng môi trường; không trộn `node_modules` giữa Windows và WSL
 
 ## 7. Cập nhật
 
 ```powershell
 git pull --ff-only
-.\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
+.\scripts\setup.ps1 -Agent codex -Profile full -Yes
 ```
 
 Installer backup skill cũ trước khi copy bản mới

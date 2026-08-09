@@ -1,6 +1,6 @@
 # Setup QA-skill trên máy mới
 
-Repository phân phối 23 skill. Profile `core` cài 10 skill thường dùng và là mặc định; profile `full` cài đủ 23 skill. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
+Repository phân phối 23 skill. Profile `core` cài 10 skill thường dùng; profile `full` cài đủ 23 skill. Script mặc định là `full` nếu không truyền profile, vì vậy nên chọn rõ `core` hoặc `full`. Danh sách canonical nằm trong `scripts/setup_lib.sh` tại `CORE_SKILLS` và `FULL_SKILLS`.
 
 ## 1. Yêu cầu
 
@@ -43,7 +43,7 @@ Target là `~/.claude/skills`
 
 Sau khi cài, mở phiên Codex mới. Skill tồn tại trong repository không có nghĩa là Codex đã discover được skill đó.
 
-Target là `${CODEX_HOME:-$HOME/.codex}/skills`
+Target hiện tại của installer và doctor là `$HOME/.agents/skills`
 
 ### Google Antigravity
 
@@ -59,23 +59,37 @@ Khi profile có `postman`, installer tự merge và bật Postman remote MCP tro
 
 ### Windows PowerShell
 
+PowerShell wrapper dùng Git Bash từ Git for Windows
+
 ```powershell
+# Codex
 .\scripts\setup.ps1 -Agent codex -Profile core -Yes
+
+# Antigravity
 .\scripts\setup.ps1 -Agent antigravity -Profile core -Yes
+
+# Claude Code
 .\scripts\setup.ps1 -Agent claude -Profile core -Yes
+```
 
 Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa`, `github-mcp-qa` và `postman`
 
 Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa`, `whitebox-qa`, `ego-browser`, `ui-ux-design-qa`, `release-governance-qa`, `appsec-supply-chain-qa`, `reliability-resilience-qa` và `compatibility-localization-qa`
 
-```bash
-./scripts/setup.sh --agent=antigravity --profile=full --yes
+```powershell
+# Cài đủ 23 skill cho Codex
+.\scripts\setup.ps1 -Agent codex -Profile full -Yes
 ```
 
 Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 13 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
+
+Kiểm tra trong Git Bash bằng cùng profile đã cài:
+
+```bash
+bash scripts/doctor-agent.sh --agent=codex --profile=core
 ```
 
-PowerShell wrapper dùng Git Bash từ Git for Windows. Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
+Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
 
 ### Chỉ cài một số skill
 
@@ -192,7 +206,7 @@ Các smoke test theo capability:
 ```bash
 cd /path/to/QA-skill
 git pull --ff-only
-./scripts/setup.sh --agent=<codex|antigravity|claude> --yes
+./scripts/setup.sh --agent=<codex|antigravity|claude> --profile=<core|full> --yes
 ```
 
 Giữ backup khi setup báo xung đột và không xóa thay đổi local chưa kiểm tra.
