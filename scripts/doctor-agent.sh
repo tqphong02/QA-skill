@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 agent=""
-profile="core"
+profile="full"
 doctor_args=()
 
 while [[ $# -gt 0 ]]; do

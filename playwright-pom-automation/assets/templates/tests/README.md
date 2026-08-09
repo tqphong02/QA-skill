@@ -21,14 +21,14 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 ## 📚 Quy ước viết spec
 
 1. **Tag mỗi test** (`test('happy path @ui', ...)`) → CI filter chính xác.
-2. **KHÔNG raw `page.locator(...)` trong spec** — instantiate Page Object trong `beforeEach`, gọi method.
+2. **KHÔNG raw `page.locator(...)` hoặc `page.getBy*()` trong spec** — instantiate Page Object trong `beforeEach`, gọi method
 3. Mỗi UI target phải map từ `execution.steps[].target.key` và có runtime selector evidence trước khi code được xem là sẵn sàng
 4. **`expect()` chỉ ở spec** — không assert trong Page Object method.
 5. **Một intent / test** — split flow dài thành nhiều test nhỏ (login → create → delete = 3 test riêng).
 6. **Cleanup data tạo ra** — exact ID trong `finally`/fixture teardown; chỉ dùng `afterAll` cho serial worker-owned lifecycle.
 7. **Parallel data isolation** — import `test` từ `fixtures/data-driven`, không dùng chung account/record/file mutable.
 
-Sau khi generate code, chạy `npm run traceability -- --testcases <generated-markdown>` để archive source hash, TestCase ID mapping và selector evidence
+Sau khi generate code, chạy `npm run pom-plan -- --manifest <generated-automation-manifest>` rồi `npm run traceability -- --testcases <generated-markdown> --manifest <generated-automation-manifest>` để kiểm tra source hash, behavior/RBAC markers, TestCase ID và selector evidence
 
 ## 📂 Example files hiện có
 

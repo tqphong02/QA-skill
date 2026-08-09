@@ -60,13 +60,13 @@ If Claude Code loses access, or Playwright MCP is removed/broken -> **skill stil
 | **Login state** | Playwright `auth.json` | Kế thừa từ user's ego lite browser | Re-login qua `login.mjs` |
 | Fetch ticket from URL | `WebFetch` | `serverFetch(url)` trong heredoc | Antigravity web tool / `curl` |
 | Run probe script | `node scripts/x.mjs` via Bash tool | `node scripts/x.mjs` via terminal | `node scripts/x.mjs` via terminal |
-| Log bug | `node log-bug.mjs ...` | `node log-bug.mjs ...` | `node log-bug.mjs ...` |
+| Log bug | Plane browser editor for images | Plane browser editor for images | Plane browser editor for images |
 
 ### Workflow on Antigravity
 1. Open Antigravity IDE -> open project folder (e.g. `MyProject/qa/`)
 2. Agent (Gemini) uses **Gemini-in-Chrome** itself to navigate/click/snapshot/probe API
 3. When needing batch/regression -> agent runs `node <skill-root>/scripts/sweep.mjs`
-4. When logging bug -> agent runs `node log-bug.mjs ...` (portable script)
+4. When logging a bug with evidence -> agent opens the exact Plane ticket in the authenticated browser editor and pastes the image inline; the helper remains text-only by default
 5. Verdict + report in same format (`report/REPORT-TEMPLATE.md`)
 
 Before claiming an Antigravity smoke PASS, save a redacted JSON result with
@@ -100,7 +100,7 @@ Antigravity; a host without a live smoke artifact remains `BLOCKED`
 | Not writing business guide after run | AI has to re-explore from scratch next time | Always merge valid knowledge, write guide and validate read-back |
 | Absolute trust in old guides | Environment/version can change | Check verify date, source and confidence then re-verify parts within current scope |
 | Lumped "overall OK" verdict | Hides individual failed ACs | MUST mark PASS/FAILED per AC |
-| Image in Plane bug appears broken | Used base64 data URI instead of asset URL | Upload via `issues/{id}/issue-attachments/` then embed URL |
+| Image in Plane bug appears as an attachment | Used the ticket-level Attach control or API attachment route | Paste it in the authenticated browser editor and verify `Attachments 0` |
 | `Cannot find .env` | Wrong cwd | `cd ~/Documents/QA-MDS/<project>` before running |
 | `401 Unauthorized` (Plane) | Wrong/expired API key | Rotate key in Plane Profile |
 | Skill not appearing | Folder in wrong location | Run `scripts/doctor-agent.sh --agent=<host>` from repository then open new agent session |

@@ -1,6 +1,6 @@
 ---
 name: google-drive-qa
-description: Perform CRUD on Google Drive files/folders, Docs, Sheets, Slides, permissions, QA evidence, and reports. Trigger whenever the user mentions Drive or provides a drive.google.com or docs.google.com URL, file/folder ID, Sheet/Doc/Slide, or asks to create, read, search, update, rename, move, copy, upload, download, share, or delete Drive content; do not require the skill name. A Drive URL or ID by itself is a complete safe-read request; resolve it through the Drive MCP and read its metadata/content. Never infer a write from a bare link.
+description: Perform Google Drive CRUD for files, folders, Docs, Sheets, Slides, permissions, QA evidence, and reports. Trigger on Drive or Docs URLs/IDs and create, read, search, update, rename, move, copy, upload, download, share, or delete requests. A bare URL or ID authorizes only safe reading. Auto-route; do not require the skill name.
 ---
 
 # Google Drive QA
@@ -22,6 +22,8 @@ Use these gates literally on every model:
 7. Read the affected object back and verify its ID, name, parent/location, and changed content or permission
 
 Never substitute web search or a local same-named file for private Drive content. Never test deletion on real data.
+
+A Drive URL or ID by itself is a complete safe-read request
 
 ## Route the request
 

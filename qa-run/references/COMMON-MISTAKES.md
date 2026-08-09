@@ -15,7 +15,7 @@
 | Not writing business guide after run | AI has to re-explore from scratch next time | Always merge valid knowledge and validate read-back |
 | Absolute trust in old guides | Environment/version can change | Check verify date, source and confidence; re-verify parts within current scope |
 | Lumped "overall OK" verdict | Hides individual failed ACs | MUST mark PASS/FAILED per AC |
-| Image in Plane bug appears broken | Used base64 data URI instead of asset URL | Upload via `issues/{id}/issue-attachments/` then embed URL |
+| Image in Plane bug appears as an attachment | Used the ticket-level Attach control or API attachment route | Paste it in the authenticated browser editor and verify `Attachments 0` |
 | Ticket FAILED because of a new unrelated bug | Mixes two independent root causes | Keep original verdict separate; open new bug in Todo |
 
 ## Environment & Setup Errors

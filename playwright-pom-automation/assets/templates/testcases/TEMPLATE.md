@@ -15,7 +15,7 @@
 
 ## UI/functional execution contract
 
-When the testcase is a browser flow, use the shared `execution` contract from `testcase-template/references/execution-contract.md` in the source JSON or Markdown companion
+When the testcase is a browser flow, use the shared `execution` contract from `testcase-template/references/execution-contract.md`. The generated `.automation.json` companion is the lossless POM source; Markdown is the readable companion
 
 - `entry`: route, role, starting state and test data
 - `steps`: ordered atomic `[S01]`, `[S02]` actions with `target.key`, semantic target hints, wait signal and step assertions
@@ -69,7 +69,7 @@ Resource schema:  <link tới file schema nếu có, vd: src/types/user.ts>
 | `TC_<RESOURCE>_08` | additional | `<AI thêm ngoài AC, flag rõ>` | ... | ... | ... | ... | Low |
 
 > **Convention ID**: `TC_<FEATURE>_<NN>` (vd: `TC_USER_01`, `TC_ORDER_03`).
-> **STT liên tục** trong cùng resource.
+> **Testcase ID ổn định**: không đổi ID cũ khi thêm hoặc sắp xếp lại testcase; khoảng trống ID được phép. Chỉ STT dòng trong Excel phải liên tục.
 > **Priority**: High (blocker/critical) / Medium (normal) / Low (minor/trivial).
 
 ### 8 loại testcase — định nghĩa (từ `testcase-template` skill)
@@ -112,7 +112,8 @@ grep -c "test('TC_<RESOURCE>_" tests/api/<resource>.api.spec.ts
 # → phải khớp N+M+K+P+Q+R
 
 # UI/functional suite: verify the exact Markdown source and selector evidence
-npm run traceability -- --testcases testcases/<resource>.md
+npm run pom-plan -- --manifest testcases/<resource>.automation.json
+npm run traceability -- --testcases testcases/<resource>.md --manifest testcases/<resource>.automation.json
 ```
 
 ---

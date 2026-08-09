@@ -3,7 +3,7 @@ param(
     [ValidateSet("codex", "antigravity", "claude")]
     [string]$Agent,
     [ValidateSet("core", "full")]
-    [string]$Profile = "core",
+    [string]$Profile = "full",
     [string]$Only = "",
     [switch]$SkipDeps,
     [switch]$SkipMcpSetup,

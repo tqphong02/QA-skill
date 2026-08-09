@@ -1,6 +1,6 @@
 ---
 name: ai-quality-qa
-description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, extraction, and generative AI features for correctness, groundedness, safety, structured-output validity, regression, latency, reliability, and cost. Trigger on AI quality, prompt/model comparison, hallucination, RAG grounding, agent/tool behavior, golden dataset, repeatable evals, traces, or AI regression evidence; do not require the skill name. Define the golden dataset and metrics before running an evaluation.
+description: Evaluate LLM, chatbot, copilot, RAG, agent, tool-calling, classification, and extraction quality for correctness, grounding, safety, structured output, latency, reliability, and cost. Trigger on hallucination, prompt/model comparison, golden datasets, evals, traces, or AI regression. Auto-route; do not require the skill name.
 ---
 
 # AI Quality QA

@@ -7,8 +7,8 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
 | [qa-run](./qa-run/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
-| [testcase-template](./testcase-template/SKILL.md) | Sinh test case Excel theo template Nina Studio (4 sheet, formulas, dropdowns) | `Template.xlsx` |
-| [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Scaffold & viết Playwright + TS + POM (UI / API / Performance / CI-CD) | `.spec.ts` + `pages/` + `selectors/` + pipeline |
+| [testcase-template](./testcase-template/SKILL.md) | Sinh testcase manual, RBAC Matrix và contract POM lossless | `.md` + `.automation.json` + `.xlsx` |
+| [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Lập POM plan, sinh Playwright + TS + POM và audit testcase-to-code | `.pom-plan.json` + `.spec.ts` + `pages/` + `selectors/` + pipeline |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
 | [business-analysis](./business-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
 | [pentest-run](./pentest-run/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |
@@ -131,16 +131,15 @@ git clone git@github.com:tqphong02/QA-skill.git
 cd QA-skill
 
 # 2a. Codex
-./scripts/setup.sh --agent=codex --profile=core --yes
+./scripts/setup.sh --agent=codex --profile=full --yes
 
 # 2b. Antigravity
-./scripts/setup.sh --agent=antigravity --profile=core --yes
+./scripts/setup.sh --agent=antigravity --profile=full --yes
 
 # 2c. Claude Code
-./scripts/setup.sh --agent=claude --profile=core --yes
+./scripts/setup.sh --agent=claude --profile=full --yes
 
-# Cài đủ 23 skill chuyên sâu khi cần
-./scripts/setup.sh --agent=antigravity --profile=full --yes
+# Profile full tự discover mọi top-level folder có SKILL.md, gồm cả skill mới build
 
 # Cài Postman skill + MCP + Postman CLI + Newman
 ./scripts/setup.sh --agent=antigravity --only=postman --yes

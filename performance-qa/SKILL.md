@@ -1,6 +1,6 @@
 ---
 name: performance-qa
-description: Orchestrate safe performance testing with JMeter or k6 from one common run config, including engine auto-discovery, workload design, smoke gating, load/stress/spike/soak/volume/scalability execution, dataset-volume and capacity-profile comparison, JMX or k6 generation, JTL/k6 result normalization, shared PASS/FAIL thresholds, HTML/Markdown/JSON reports, frontend traces, and bottleneck analysis. Trigger on performance, latency, throughput, concurrency, virtual users, request rate, load, stress, spike, soak, volume testing, scalability, capacity testing, performance regression, JMeter, `.jmx`, Thread Group, JTL, k6, k6 script, Chrome DevTools MCP, k6 MCP, or bottleneck; do not require the skill name. A bare `.jmx` or k6 `.js`/`.ts` file is a safe inspect/validate request, not authorization to run load.
+description: Orchestrate safe JMeter or k6 performance testing for latency, throughput, concurrency, load, stress, spike, soak, volume, scalability, and capacity. Trigger on virtual users, request rate, JMX, JTL, Thread Group, k6 scripts, Chrome DevTools, thresholds, reports, or bottlenecks. A bare test file authorizes inspection only. Auto-route; do not require the skill name.
 ---
 
 # Performance QA

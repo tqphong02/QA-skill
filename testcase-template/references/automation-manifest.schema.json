@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-skill.local/schemas/testcase-automation-manifest-v1.json",
+  "title": "Lossless testcase to POM automation manifest",
+  "type": "object",
+  "required": ["schema_version", "source", "rbac", "testcases"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "source": {
+      "type": "object",
+      "required": ["project_code", "markdown_file", "markdown_sha256", "testcase_count"],
+      "properties": {
+        "project_code": { "type": "string" },
+        "source_document": { "type": ["string", "null"] },
+        "markdown_file": { "type": "string", "minLength": 1 },
+        "markdown_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "testcase_count": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "rbac": { "type": ["object", "null"] },
+    "testcases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "testcase_id", "testcase_id_display", "section_kind", "group",
+          "scenario_id", "scenario_name", "type", "requirement", "priority",
+          "description", "execution"
+        ],
+        "properties": {
+          "testcase_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$"
+          },
+          "testcase_id_display": { "type": "string", "pattern": "^\\[[^\\]]+\\]$" },
+          "case_ref": { "type": ["string", "null"] },
+          "section_kind": { "type": "string", "minLength": 1 },
+          "group": { "type": "string", "minLength": 1 },
+          "scenario_id": { "type": "string", "minLength": 1 },
+          "scenario_name": { "type": "string", "minLength": 1 },
+          "type": { "type": "string", "minLength": 1 },
+          "requirement": { "type": "string", "minLength": 1 },
+          "priority": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "execution": { "type": ["object", "null"] },
+          "api": { "type": ["object", "null"] }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

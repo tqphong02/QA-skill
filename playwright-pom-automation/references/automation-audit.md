@@ -4,9 +4,10 @@ The POM skill must leave an auditable chain for every generated UI automation su
 
 ```text
 testcase Markdown
-  └─ SHA-256 + testcase IDs
-       └─ spec test title / Allure TMS ID
-            └─ execution.steps[].target.key
+  └─ lossless .automation.json + SHA-256
+       └─ deterministic pom-plan markers
+            └─ spec test title / source + step/outcome/RBAC/cleanup markers
+                 └─ execution.steps[].target.key and assertion-only target keys
                  └─ selector-evidence/<feature>.json
                       └─ runtime-verified locator in selectors/
 ```
@@ -18,6 +19,7 @@ Run this after the POM agent generates or changes a suite:
 ```bash
 npm run traceability -- \
   --testcases testcases/login.md \
+  --manifest testcases/login.automation.json \
   --selector-evidence-dir selector-evidence \
   --output reports/testcase-automation-traceability.json
 ```
@@ -25,14 +27,16 @@ npm run traceability -- \
 The generated JSON answers:
 
 - which exact testcase file was consumed and its `sha256`
+- whether Markdown matches the hash recorded by the automation manifest
 - which testcase IDs were found and whether each ID appears in a Playwright test/TMS mapping
+- whether the spec contains the current automation-manifest hash and every required behavior/RBAC marker
 - which `target.key` values came from the execution contract
 - which evidence file resolved each target and the exact locator expression
-- whether the evidence recorded `count=1`, `visible=true`, and `actionable=true` when the action needs it
+- whether the evidence recorded `count=1`, `visible=true|false` matching the assertion, and `actionable=true` when the action needs it
 - whether the recorded locator is present in `selectors/`
 - why the suite is `PASS` or `BLOCKED`
 
-`BLOCKED` is the expected result when a testcase is legacy text-only, a target has no runtime evidence, a selector is ambiguous, or the locator is not present in selector code. Do not fix that result by inventing an XPath
+`BLOCKED` is the expected result when the lossless manifest is missing, a spec is empty, a source/step/outcome/cleanup/role/RBAC marker is missing, a testcase is legacy text-only, a target has no runtime evidence, a selector is ambiguous, or the locator is not present in selector code. Do not fix that result by inventing an XPath or copying marker text into a test that does not implement the action
 
 ## What proves an XPath is correct
 
@@ -69,6 +73,7 @@ node ../../QA-skill/qa-run/scripts/helpers/record-model-usage.mjs \
 
 npm run traceability -- \
   --testcases testcases/login.md \
+  --manifest testcases/login.automation.json \
   --token-usage "$QA_TOKEN_USAGE_FILE"
 ```
 

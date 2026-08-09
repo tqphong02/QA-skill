@@ -1,6 +1,6 @@
 ---
 name: compatibility-localization-qa
-description: Build and validate versioned browser, device, operating-system, viewport/resolution, locale, timezone, currency, text-expansion, and RTL compatibility coverage for web or mobile releases. Trigger on browser compatibility, Chrome, Safari, Firefox, Edge, browser version, device matrix, cross-browser, responsive support, screen resolution, tablet, Android, iOS, i18n, l10n, locale, timezone, currency, RTL, translation, Unicode, or regional formatting; do not require the skill name. Use qa-run or mobile-qa for live execution after the matrix is approved.
+description: Validate browser, device, OS, viewport, locale, timezone, currency, text expansion, Unicode, and RTL compatibility. Trigger on Chrome/Safari/Firefox/Edge versions, cross-browser, responsive matrices, Android/iOS, i18n, l10n, translations, or regional formatting. Auto-route; do not require the skill name.
 ---
 
 # Compatibility & Localization QA

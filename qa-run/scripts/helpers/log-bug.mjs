@@ -1,5 +1,6 @@
-// log-bug.mjs — Log bug lên Plane với ảnh PREVIEW INLINE trong description
-// (KHÔNG upload file đính kèm kiểu cũ — user phải tải về mới xem được).
+// log-bug.mjs — Text/API compatibility helper for Plane bug metadata
+// Image evidence must be pasted into the authenticated browser editor so the
+// ticket keeps Attachments 0. The attachment route is legacy and opt-in only
 //
 // CÁCH DÙNG:
 //   1. Copy file này vào thư mục dự án:  cp <skill>/scripts/log-bug.mjs <project>/qa/log-bug.mjs
@@ -20,15 +21,15 @@
 //          --steps "1. Mở /events|2. Chọn Status=Pending" \
 //          --expected "Total = 6" \
 //          --actual "Total = 0|Không có row nào hiển thị" \
-//          --screenshots "evidence/probe-430.png" \
 //          --assign hungtn,phongtq --state Todo
+//        # paste evidence into Description in the authenticated browser editor
 //
 //   (b) RETEST FAIL — chuyển ticket ĐANG retest về In Progress + comment lý do:
 //        node log-bug.mjs --mode retest-fail --issue-id <uuid> \
 //          --reason "Filter Status=Pending trả 0 thay vì 6, AC #1 fail" \
-//          --screenshots "evidence/probe-430-after.png" \
+//          # paste evidence in the authenticated browser Comment editor
 //          --assign hungtn,phongtq
-//        → script PATCH state=In Progress + POST comment_html (có ảnh inline).
+//        → use the browser editor for the image, then PATCH state=In Progress
 //
 //   (c) RETEST PASS — chuyển sang Done:
 //        node log-bug.mjs --mode retest-pass --issue-id <uuid> \
@@ -36,8 +37,8 @@
 //
 //   AI (Claude) sẽ tự build command đúng mode khi user nói "log bug mới" / "retest fail #X" / "retest pass #X".
 //
-// KẾT QUẢ: in ra URL ticket + sequence ID. Mở ticket sẽ thấy ảnh preview ngay
-// trong description / comment (KHÔNG cần tải file về).
+// KẾT QUẢ: in ra URL ticket + sequence ID. For image evidence, use the
+// authenticated browser editor and verify the image is inline with Attachments 0
 //
 // DEP: zero external deps — chỉ dùng fetch của Node ≥ 18.
 
@@ -59,11 +60,26 @@ if (!API_KEY || !BASE || !WORKSPACE || !PROJECT) {
   process.exit(1);
 }
 
-// Parse args
-const args = Object.fromEntries(process.argv.slice(2).reduce((acc, cur) => {
-  if (cur.startsWith('--')) { const [k, ...rest] = cur.slice(2).split('='); acc.push([k, rest.join('=')]); }
-  return acc;
-}, []));
+// Parse args (supports both --key=value and --key value)
+const args = {};
+for (let i = 2; i < process.argv.length; i++) {
+  const cur = process.argv[i];
+  if (cur.startsWith('--')) {
+    const eq = cur.indexOf('=');
+    if (eq !== -1) {
+      args[cur.slice(2, eq)] = cur.slice(eq + 1);
+    } else {
+      const key = cur.slice(2);
+      const next = process.argv[i + 1];
+      if (next && !next.startsWith('--')) {
+        args[key] = next;
+        i++;
+      } else {
+        args[key] = 'true';
+      }
+    }
+  }
+}
 
 function req(k, required=false) {
   const v = args[k];
@@ -79,6 +95,7 @@ const STEPS      = (req('steps') || '').split('|').map(s => s.trim()).filter(Boo
 const EXPECTED   = req('expected');
 const ACTUAL     = (req('actual') || '').split('|').map(s => s.trim()).filter(Boolean);
 const SHOTS      = (req('screenshots') || '').split(',').map(s => s.trim()).filter(Boolean);
+const LEGACY_ATTACHMENT = args['legacy-attachment'] === 'true';
 const ASSIGN_LIST= (req('assign') || '').split(',').map(s => s.trim()).filter(Boolean);
 const STATE_NAME = req('state') || (MODE === 'create' ? 'Todo' : MODE === 'retest-fail' ? 'In Progress' : 'Done');
 const PRIORITY   = req('priority') || 'high';
@@ -90,6 +107,13 @@ const NOTE       = req('note') || '';        // cho retest-pass: ghi chú PASS
 // Validate mode
 if (MODE === 'create' && !TITLE) { console.error('❌ Mode "create" cần --title'); process.exit(1); }
 if (MODE !== 'create' && !ISSUE_ID) { console.error(`❌ Mode "${MODE}" cần --issue-id <uuid>`); process.exit(1); }
+
+if (SHOTS.length && !LEGACY_ATTACHMENT) {
+  console.error('BROWSER REQUIRED: không upload screenshots qua issue-attachments');
+  console.error('Mở ticket trong browser đã xác thực và paste ảnh vào Description hoặc Comment');
+  console.error('Chỉ dùng --legacy-attachment khi user yêu cầu rõ route attachment cũ');
+  process.exit(2);
+}
 
 async function plane(method, url, body) {
   const r = await fetch(BASE + url, {
@@ -103,6 +127,7 @@ async function plane(method, url, body) {
 }
 
 async function uploadImagesAndGetUrls(issueId, shots) {
+  // Legacy attachment-backed route, reachable only with --legacy-attachment
   const imgUrls = [];
   for (const shot of shots) {
     if (!fs.existsSync(shot)) { console.warn(`  ⚠️ Không thấy file: ${shot}, skip`); continue; }
@@ -113,20 +138,23 @@ async function uploadImagesAndGetUrls(issueId, shots) {
     if (size > 5 * 1024 * 1024) { console.warn(`  ⚠️ ${shot} > 5MB, skip (nén trước)`); continue; }
 
     console.log(`→ Upload ${name} (${(size/1024).toFixed(1)}KB)…`);
-    // Init attachment → S3 presigned
-    const init = await plane('POST', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issueId}/issue-attachments/`, { name, type, size });
-    const { upload_data, asset_id } = init;
-    // Upload file to S3
-    const fd = new FormData();
-    for (const [k, v] of Object.entries(upload_data.fields || {})) fd.append(k, v);
-    fd.append('file', new Blob([buf], { type }), name);
-    const upR = await fetch(upload_data.url, { method: 'POST', body: fd });
-    if (!upR.ok) { console.error(`❌ S3 upload fail: ${upR.status}`); process.exit(1); }
-    // Mark uploaded → get URL
-    const final = await plane('PATCH', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issueId}/issue-attachments/${asset_id}/`, { is_uploaded: true });
-    const url = final.asset_url || final.url || upload_data.url;
-    imgUrls.push({ name, url });
-    console.log(`  ✓ ${name} → ${url.slice(0, 80)}…`);
+    try {
+      const init = await plane('POST', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issueId}/issue-attachments/`, { name, type, size });
+      const { upload_data, asset_url } = init;
+      const fd = new FormData();
+      for (const [k, v] of Object.entries(upload_data.fields || {})) fd.append(k, v);
+      fd.append('file', new Blob([buf], { type }), name);
+      const upR = await fetch(upload_data.url, { method: 'POST', body: fd });
+      if (!upR.ok) throw new Error(`S3 upload ${upR.status}`);
+      imgUrls.push({ name, url: asset_url, kind: 's3' });
+      console.log(`  ✓ S3 ${name} → ${asset_url.slice(0, 80)}…`);
+    } catch (e) {
+      // Fallback: base64 inline in comment_html (Plane chấp nhận data: URI ở comments)
+      console.log(`  ⚠ S3 fail (${e.message}); fallback base64 trong comment`);
+      const b64 = buf.toString('base64');
+      const dataUri = `data:${type};base64,${b64}`;
+      imgUrls.push({ name, url: dataUri, kind: 'base64' });
+    }
   }
   return imgUrls;
 }
@@ -171,14 +199,29 @@ if (MODE === 'create') {
   seqId   = created.sequence_id;
   console.log(`  ✓ Tạo #${seqId} (uuid=${issueId})`);
 
-  // Upload ảnh + patch description với <img>
+  // Legacy attachment upload + patch description with <img>
   if (SHOTS.length) {
     const imgUrls = await uploadImagesAndGetUrls(issueId, SHOTS);
     if (imgUrls.length) {
-      const imgHtml = imgUrls.map(imgTag).join('\n');
-      const finalDesc = desc.replace('_(đang upload ảnh…)_', imgHtml);
-      await plane('PATCH', `/workspaces/${WORKSPACE}/projects/${PROJECT}/work-items/${issueId}/`, { description_html: finalDesc });
-      console.log(`→ Patched ${imgUrls.length} ảnh inline vào description`);
+      const s3Urls = imgUrls.filter(i => i.kind === 's3');
+      const base64s = imgUrls.filter(i => i.kind === 'base64');
+      if (s3Urls.length) {
+        const imgHtml = s3Urls.map(imgTag).join('\n');
+        const finalDesc = desc.replace('_(đang upload ảnh…)_', imgHtml);
+        await plane('PATCH', `/workspaces/${WORKSPACE}/projects/${PROJECT}/work-items/${issueId}/`, { description_html: finalDesc });
+        console.log(`→ Patched ${s3Urls.length} ảnh S3 vào description`);
+      }
+      if (base64s.length) {
+        // Legacy fallback for installations that accept data URIs in comments
+        const base64Html = '<p><strong>Evidence (inline preview):</strong></p>\n' + base64s.map(b => imgTag(b)).join('\n');
+        await plane('POST', `/workspaces/${WORKSPACE}/projects/${PROJECT}/issues/${issueId}/comments/`, { comment_html: base64Html });
+        console.log(`→ Posted ${base64s.length} ảnh base64 trong comment (Plane không nhận data: URI ở description)`);
+        if (!s3Urls.length) {
+          // Update description placeholder để point đến comment
+          const finalDesc = desc.replace('_(đang upload ảnh…)_', '<em>Evidence đã đính kèm trong comment bên dưới</em>');
+          await plane('PATCH', `/workspaces/${WORKSPACE}/projects/${PROJECT}/work-items/${issueId}/`, { description_html: finalDesc });
+        }
+      }
     }
   }
 

@@ -81,21 +81,23 @@ Report & comment following **standard format** in `report/REPORT-TEMPLATE.md`:
 - Rule #1: **Actual & Steps must newline each point (bullet/numbered), DO NOT write in a single paragraph**
 - If it's a retest ticket, report must include: requirement source, business flow, AC-by-AC verdict, adjacent check and distinct evidence paths; do not merge multiple verdicts into one line
 
-## 4. Package / handoff — log Plane bug with INLINE image preview
+## 4. Package / handoff — log Plane bug with browser-inline evidence
 
 **Goal**: open Plane ticket -> scroll description -> **see image preview immediately**, NO need to click download file.
 
-**Method** (verified with Plane self-hosted):
-1. Upload image to Plane via endpoint `issues/{id}/issue-attachments/` (S3 presigned) → returns asset URL
-2. In `description_html`, embed that URL with `<img src="<plane-asset-url>">`
-3. When rendering, Plane displays image inline in description + simultaneously lists in Attachments
+**Method**:
+1. Open the exact ticket in an authenticated browser session
+2. Paste the screenshot into the Description or Comment rich-text editor
+3. Save and verify the rendered image is inside the content and `Attachments 0` remains unchanged
 
-> ⚠️ **DO NOT use base64 data URI** in description — Plane self-hosted will **strip image when rendering**. Must use asset URL after upload.
+Do not click ticket-level `Attach` or call `/issue-attachments/`. If the browser editor is unavailable, return `BLOCKED`
 
-Wrapper script `scripts/log-bug.mjs` is ready:
+Wrapper script `scripts/log-bug.mjs` is ready for text-only metadata. Image evidence
+must be pasted later in the authenticated browser editor; do not pass `--screenshots`
+to the helper in the default workflow:
 ```bash
 node <project>/qa/log-bug.mjs --title "[W26][Login] Email validation sai" \
-  --module "Login" --severity "High" --screenshots "evidence/probe-430.png" \
+  --module "Login" --severity "High" \
   --steps "1. Mở /login\n2. Để trống Email\n3. Click Login" \
   --expected "Show prompt requesting Email" \
   --actual "No prompt, still submitted" \

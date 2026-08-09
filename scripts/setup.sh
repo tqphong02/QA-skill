@@ -41,7 +41,7 @@ source "$SCRIPT_DIR/setup_lib.sh"
 
 # ==== Defaults ====
 TARGET_AGENT="${QA_SKILL_AGENT:-auto}"
-PROFILE="${QA_SKILL_PROFILE:-core}"
+PROFILE="${QA_SKILL_PROFILE:-full}"
 SKILLS_DIR="${SKILLS_DIR:-}"
 SKIP_DEPS="${SKIP_DEPS:-0}"
 SKIP_MCP_SETUP="${SKIP_MCP_SETUP:-0}"

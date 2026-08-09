@@ -70,22 +70,22 @@ node <skill-root>/scripts/compat.mjs /login --matrix compatibility-v2.json
 
 10 category bug UI trong `references/UI-BUG-CATALOG.md`.
 
-### 4️⃣ Log bug Plane (ảnh preview INLINE trong description)
+### 4️⃣ Log bug Plane (ảnh inline qua browser editor, Attachments 0)
 ```bash
-# Bug mới (Todo)
+# Tạo metadata/text-only ticket mới (Todo), không truyền --screenshots
 node log-bug.mjs --title "[W26][Filter] Status Pending không lọc" \
   --steps "1. Mở /events|2. Chọn Status=Pending" \
   --expected "Total = 6" --actual "Total = 0" \
-  --screenshots "evidence/probe.png" --assign hungtn,phongtq --state Todo
+  --assign hungtn,phongtq --state Todo
 
-# Retest FAIL (In Progress + comment có ảnh)
-node log-bug.mjs --mode retest-fail --issue-id <uuid> \
-  --reason "AC #1 fail" --screenshots "evidence/after.png" --assign hungtn,phongtq
+# Sau đó mở đúng ticket trong browser đã xác thực, paste evidence vào Description
+# Retest FAIL: paste evidence vào Comment rich-text editor, rồi chuyển state In Progress
+# Không dùng ticket-level Attach hoặc /issue-attachments/
 
 # Retest PASS (Done)
 node log-bug.mjs --mode retest-pass --issue-id <uuid> --note "AC #1-3 đúng"
 ```
-Cần `.env` có `PLANE_API_KEY`, `PLANE_BASE_URL`, `PLANE_WORKSPACE`, `PLANE_PROJECT_ID`, `PLANE_STATE_*`.
+Cần `.env` có các biến API non-browser phù hợp. Nếu helper nhận `--screenshots`, nó dừng với `BROWSER REQUIRED`; chỉ dùng `--legacy-attachment` khi user yêu cầu rõ route cũ
 
 ### 5️⃣ Thiếu data khi test
 AI tự xử lý: **(a)** hỏi user khi cần data thật/không tạo được, **(b)** **tự tạo theo business flow** (qua API/UI) + cleanup bằng `withRevert()`.

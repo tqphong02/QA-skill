@@ -54,7 +54,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 | SAST, SCA, SBOM, secret scan, dependency/license or secure CI | `appsec-supply-chain-qa/SKILL.md` | Run a redacted local preflight; do not read secrets/keychain/registry; route exploit validation to `pentest-run` |
 | Resilience, chaos, fault injection, failover, recovery, RTO/RPO, retry or timeout | `reliability-resilience-qa/SKILL.md` | Validate the plan and stop condition first; active injection requires target, rollback, owner approval and an execution contract |
 | Cross-browser, device/OS, locale, i18n/l10n, timezone, currency or RTL | `compatibility-localization-qa/SKILL.md` | Validate the matrix first; route live web to `qa-run`, native mobile to `mobile-qa`, and missing targets to `BLOCKED` |
-| Write/edit/review testcases, Scenario ID/Name, or explicitly write API/OpenAPI/Swagger/Postman/curl testcases | `testcase-template/SKILL.md` | Read existing testcase Markdown when present; the generator must create Markdown before Excel |
+| Write/edit/review testcases, Scenario ID/Name, or explicitly write API/OpenAPI/Swagger/Postman/curl testcases | `testcase-template/SKILL.md` | Read existing testcase Markdown when present; the generator must create Markdown, lossless automation manifest, then Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve the URL/ID and use Drive MCP; for a bare URL/ID, read the object |
 | Write Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Read the POM template |
 | ego-browser, ego-lite, task space, browser automation without Playwright MCP, or reuse of the user's real login state | `ego-browser/SKILL.md` | Check installation with `ego-browser nodejs <<'EOF' cliLog(typeof snapshotText) EOF`; if absent, read `ego-browser/references/install.md` |
@@ -147,14 +147,14 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 
 ### Must do
 
-- Use the Page Object Model; do not write `page.locator()` directly in specs
+- Use the Page Object Model; do not write `page.locator()` or `page.getBy*()` directly in specs
 - Separate selectors from specs under `selectors/`
 - Tag tests (`@ui`, `@api`, `@functional`)
 - Wire Allure and CI
 
 ### Core principle
 
-> Every selector must go through a Page Object; do not write `page.locator()` directly in a spec.
+> Every selector must go through a Page Object; do not write `page.locator()` or `page.getBy*()` directly in a spec.
 
 Read [`playwright-pom-automation/SKILL.md`](playwright-pom-automation/SKILL.md)
 
@@ -214,7 +214,7 @@ Read [`qa-run/SKILL.md`](qa-run/SKILL.md)
 ## Automation quality gates
 
 - Read `playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md` and `FLAKY-TEST-MANAGEMENT.md` before creating CI automation
-- After generating POM, run `scripts/verify-testcase-traceability.mjs` from the automation project; archive `reports/testcase-automation-traceability.json` with testcase source hash, TestCase ID mapping, selector evidence and token measurement
+- After generating POM, create the deterministic plan from `.automation.json`, then run `scripts/verify-testcase-traceability.mjs` with Markdown plus manifest; archive `reports/testcase-automation-traceability.json` with source hash, behavior/RBAC markers, TestCase ID mapping, selector evidence and token measurement
 - The fixed POM locator priority is `data-testid → id → stable CSS → role/label/placeholder/text → XPath`; use `data-testid` only when present in FE source/contract or verified live DOM; do not insert test IDs into the app
 - The skill repository keeps only reusable templates (`.env.example`, `fixtures/`, `test-data/`); project `.env`, credentials, auth state, live evidence and testcase/runtime data belong in the scaffolded automation project
 - Classify retry-pass as `flaky`, preserve first-attempt and retry evidence, and never turn it into a clean PASS automatically
@@ -243,7 +243,7 @@ Read [`qa-run/SKILL.md`](qa-run/SKILL.md)
 - Do not end testcase content with `.` or add emoji/icons
 - Keep the current flow as default; read `references/api-testcases.md` and create an `api` object only when the user explicitly requests API testcase writing; merely mentioning an API artifact does not change mode
 - Always run `scripts/import-api-spec.py` for API files; run Excel only when `review_required` is empty
-- Markdown trước Excel: the generator must create complete testcase Markdown before Excel; read Markdown instead of parsing Excel on later runs
+- Markdown trước Excel remains mandatory: generate complete Markdown first, then the lossless `.automation.json`, then Excel; use the manifest for POM and Markdown for human/AI reading
 
 ### Core principle
 

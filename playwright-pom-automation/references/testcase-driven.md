@@ -107,10 +107,9 @@ test('TC_LOGIN_06 [error] — Server 500 → error message @error', async ({ pag
 
 #### 7. `ui` — display/layout
 ```typescript
-test('TC_LOGIN_07 [ui] — Logo hiển thị đúng vị trí @ui-display', async ({ page }) => {
-  const logo = page.getByTestId('app-logo');
-  await expect(logo).toBeVisible();
-  const box = await logo.boundingBox();
+test('TC_LOGIN_07 [ui] — Logo hiển thị đúng vị trí @ui-display', async () => {
+  await expect(loginPage.logo).toBeVisible();
+  const box = await loginPage.logo.boundingBox();
   expect(box?.x).toBeGreaterThan(0);
 });
 ```
@@ -163,7 +162,8 @@ Mỗi testcase nên có format thống nhất (theo `testcase-template`). Lưu t
 ## 4. Workflow 4 bước
 
 ### Bước 1 — Thu thập testcase
-- Đọc **Markdown companion do `testcase-template` sinh trước Excel** từ `testcases/`; Markdown là source AI-readable chứa `execution` contract, còn Excel là artifact cho manual execution/write-back
+- Đọc Markdown để hiểu testcase và dùng `.automation.json` cùng basename làm machine source lossless; Excel là artifact cho manual execution/write-back
+- Chạy `npm run pom-plan -- --manifest testcases/<feature>.automation.json` trước khi viết spec, rồi giữ nguyên source hash và behavior/RBAC markers trong code
 - Nếu chỉ có Excel, dừng ở bước normalize/export sang Markdown; không tự đoán `target.key`, route hoặc locator từ cell F/G/H thiếu contract
 - **Đảm bảo đủ 8 loại** — nếu thiếu, bổ sung hoặc ghi rõ "không áp dụng cho feature này".
 - Mục tiêu: biết **bao nhiêu testcase, bao nhiêu page, bao nhiêu flow, bao nhiêu error path**.
@@ -183,7 +183,7 @@ export const loginSelectors = {
 Selector selection is a verification task, not a text-generation task:
 
 1. Inspect existing FE-owned test-id, stable ID, stable CSS attributes/classes, role/name, label, placeholder, text and DOM scope
-2. Verify the candidate has `count=1`, is visible and is actionable for the requested action
+2. Verify the candidate has `count=1`, its visibility matches the expected state, and it is actionable for the requested action
 3. Select by `data-testid → id → CSS → role/label/placeholder/text → XPath`; if no FE source/contract exists, do not create a test-id and continue at the next candidate
 4. Record `target_key`, ordered candidates, selected strategy, locator, route/state and verification in `selector-evidence/<feature>.json`
 5. If the target is ambiguous, block and request a stable test-id/id/CSS/semantic scope; never add `.first()` or a full XPath to make the test compile
@@ -249,10 +249,9 @@ test.describe('Login @ui', () => {
   });
 
   // UI
-  test('TC_LOGIN_07 [ui] — Logo hiển thị đúng vị trí @ui-display', async ({ page }) => {
-    const logo = page.getByTestId('app-logo');
-    await expect(logo).toBeVisible();
-    const box = await logo.boundingBox();
+  test('TC_LOGIN_07 [ui] — Logo hiển thị đúng vị trí @ui-display', async () => {
+    await expect(loginPage.logo).toBeVisible();
+    const box = await loginPage.logo.boundingBox();
     expect(box?.x).toBeGreaterThan(0);
   });
 
@@ -318,7 +317,7 @@ grep -E "\[(happy|alternative|validation|edge|negative|error|ui|additional)\]" t
 # → 8 (đủ cả 8 loại)
 
 # Audit machine-readable: source hash + ID mapping + target key + selector evidence
-npm run traceability -- --testcases testcases/login.md
+npm run traceability -- --testcases testcases/login.md --manifest testcases/login.automation.json
 ```
 
 ---
@@ -378,7 +377,7 @@ test('TC_LOGIN_01 [happy] — Login thành công @smoke', async ({ page }) => {
 - [ ] Allure labels đầy đủ (epic/feature/story/severity)
 - [ ] Mỗi page có 1 Page Object với readonly properties
 - [ ] Mỗi feature có file `selectors/<feature>.selectors.ts`
-- [ ] Mỗi `target.key` có selector evidence runtime với `count=1`, visible và actionable khi cần
+- [ ] Mỗi `target.key` có selector evidence runtime với `count=1`, visibility khớp expected state và actionable khi cần
 - [ ] Không có XPath/CSS đoán từ prose, full XPath, generated class hoặc positional selector
 - [ ] `tsconfig.json` strict mode (template trong SKILL.md)
 - [ ] `error` tests có mock `page.route()`, không phụ thuộc backend

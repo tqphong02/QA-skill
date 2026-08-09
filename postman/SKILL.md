@@ -1,6 +1,6 @@
 ---
 name: postman
-description: Configure, authenticate, diagnose, and operate Postman through its official MCP server, Postman CLI, and Newman, including workspaces, collections, environments, specifications, mocks, monitors, local collection execution, reports, and CI-ready test runs. Trigger on Postman setup, Postman MCP or OAuth, Postman CLI, Newman, collection run, missing Postman tools or skill, workspace or collection management, or requests to connect an agent to Postman; do not require the skill name.
+description: Configure, authenticate, diagnose, and operate Postman MCP, Postman CLI, and Newman for workspaces, collections, environments, specifications, mocks, monitors, local runs, reports, and CI. Trigger on Postman setup, OAuth, missing tools, collection runs, or workspace management. Auto-route; do not require the skill name.
 ---
 
 # Postman

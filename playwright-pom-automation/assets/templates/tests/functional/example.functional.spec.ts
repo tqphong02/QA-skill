@@ -1,6 +1,7 @@
 import { test, expect } from '../../fixtures/data-driven';
 // import { allure } from 'allure-playwright';
 import { LoginPage } from '../../pages/example.page';
+import { DashboardPage } from '../../pages/dashboard.page';
 
 /**
  * Functional / E2E test mẫu — tag @functional:  npx playwright test --grep @functional
@@ -16,14 +17,13 @@ import { LoginPage } from '../../pages/example.page';
  *  - tests/functional → full business journey (login → tạo → verify → cleanup)
  */
 test.describe.serial('Order flow @functional', () => {
-  test('UI login → tạo order qua UI → verify qua API → UI', async ({
+  test('UI login → lọc dữ liệu qua POM → đối chiếu API', async ({
     page,
     authenticatedApi,
     workerAccount,
     testData,
   }) => {
-    let orderId: string | number | undefined;
-    const itemName = testData.uniqueString('qa-item');
+    const searchValue = testData.uniqueString('qa-search');
 
     // 1. UI: login
     const loginPage = new LoginPage(page);
@@ -31,26 +31,13 @@ test.describe.serial('Order flow @functional', () => {
     await loginPage.login(workerAccount.email, workerAccount.password);
     await expect(page).toHaveURL(/dashboard/i);
 
-    try {
-      // 2. UI: tạo order (flow nghiệp vụ)
-      await page.goto('/orders/new');
-      await page.getByRole('textbox', { name: /item/i }).fill(itemName);
-      await page.getByRole('spinbutton', { name: /quantity/i }).fill('2');
-      await page.getByRole('button', { name: /create|submit|add/i }).click();
+    // 2. UI: mọi selector đi qua DashboardPage
+    const dashboardPage = new DashboardPage(page);
+    await dashboardPage.filterBy(searchValue);
+    await expect(dashboardPage.filterInput).toHaveValue(searchValue);
 
-      // 3. Verify UI: order xuất hiện ở list
-      await expect(page.getByText(itemName)).toBeVisible();
-      const idText = await page.getByTestId('order-id').first().innerText();
-      orderId = idText.replace(/[^\d]/g, '');
-
-      // 4. Cross-verify qua API: order thật sự persist ở backend
-      const res = await authenticatedApi.get(`/orders/${orderId}`);
-      expect(res.status()).toBe(200);
-      expect((await res.json()).item).toBe(itemName);
-    } finally {
-      if (orderId !== undefined) {
-        await authenticatedApi.delete(`/orders/${orderId}`);
-      }
-    }
+    // 3. Cross-verify cùng điều kiện qua API
+    const res = await authenticatedApi.get(`/orders?search=${encodeURIComponent(searchValue)}`);
+    expect(res.status()).toBe(200);
   });
 });

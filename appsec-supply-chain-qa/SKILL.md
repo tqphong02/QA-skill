@@ -1,6 +1,6 @@
 ---
 name: appsec-supply-chain-qa
-description: Perform a safe local application-security and software-supply-chain preflight for secrets, dependency manifests, lockfiles, SBOM readiness, and CI security controls. Trigger on SAST, SCA, SBOM, secret scanning, dependency risk, license risk, package audit, supply-chain security, or secure CI review; do not require the skill name. Use pentest-run separately for authorized exploit-oriented testing.
+description: Review local application and software-supply-chain security for SAST, SCA, SBOM, secret scanning, manifests, lockfiles, dependency or license risk, package audits, and secure CI. Use pentest-run separately for authorized exploit validation. Auto-route; do not require the skill name.
 ---
 
 # AppSec & Supply-Chain QA

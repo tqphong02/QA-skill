@@ -1,4 +1,4 @@
 interface:
   display_name: "Testcase Template"
-  short_description: "Tạo testcase Markdown trước Excel đúng chuẩn"
-  default_prompt: "Use $testcase-template to generate matching Markdown and Excel testcases in the configured format. For new executable UI/FUNCTION cases, include the shared execution contract with atomic S## steps, semantic targets, wait signals, assertions, outcome and cleanup."
+  short_description: "Tạo testcase manual, RBAC và manifest cho POM"
+  default_prompt: "Use $testcase-template to generate synchronized Markdown, lossless automation manifest, and Excel testcases with stable IDs, detailed Vietnamese manual steps, measurable expected results, and RBAC allow/deny coverage."

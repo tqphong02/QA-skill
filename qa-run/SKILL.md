@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Run UI-first exploratory browser QA and generic browser tasks with one-command fast start, autonomous task decomposition, live-state next-action selection, structured extraction, bounded read-only action batches, replanning, independent completion judging, and same-session network/console/page-error observation. EXPLORATORY_BROWSER_QA (legacy EXPLORATORY_ADHOC) can start from a URL and natural-language objective without requirements or source documentation, infer how to complete the task from the live UI, and return PASS, FAILED, N/A or UNTEST. Trigger on generic browser task, open URL, read, extract, click, fill, download, app discovery, exploratory/ad-hoc, sanity/regression, retest, Sheet, UI/UX, browser errors, business analysis, triage, metrics or sign-off. Not for automation, native-mobile traffic interception or testcase documents.
+description: Run UI-first browser QA and generic web tasks from a URL and natural-language objective. Trigger on open/read/extract/click/fill/download, app discovery, exploratory/ad-hoc, sanity, regression, ticket retest, Sheet execution, UI/UX, browser network/console errors, business-flow discovery, triage, or sign-off. Not for automation code, native mobile, or testcase documents. Auto-route; do not require the skill name.
 ---
 
 # QA Run
@@ -38,7 +38,7 @@ Choose one entrypoint, then expand every required layer in its stack. Layers are
 
 ```text
 DISCOVERY_CORE =
-  UI Flow Discovery + Exploratory + Ad-hoc + UI/UX
+  Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 
 RETEST_PLUS =
   Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE
@@ -136,6 +136,7 @@ Apply the following exact order for all models, especially fast or small-context
    - Do not invent a business expectation that is not visible or otherwise provided. When the UI does not expose a clear oracle, record the charter/run as `UNTEST` with the exact missing signal
    - Use the `business-execution-card.json` and full brief only when they already exist or when source/requirements reconciliation is explicitly requested. They are enrichment and audit context for exploratory work, not a prerequisite
    - For `RETEST_TICKET`, `SHEET_TESTCASE_EXECUTION`, `SANITY_REGRESSION` and source-driven routes, keep the existing preparation command and READY/NEEDS_DISCOVERY gates
+   - For these contract-driven routes, run `context-builder.mjs`; when the Business Execution Brief is not `READY`, stop normal execution and report the exact missing field
    - If the repository is available for optional enrichment, pass `--repo`; dirty/staged/untracked source remains candidate context until the browser confirms it
 3. **Initialize Run Manifest** after the target/domain gate:
    ```bash
@@ -148,6 +149,7 @@ Apply the following exact order for all models, especially fast or small-context
      --network-observer <auto|chrome-devtools-mcp|playwright-mcp|playwright-runtime|ego-browser|unavailable>
    ```
    `run-manifest.mjs` records the canonical route as `EXPLORATORY_BROWSER_QA` and the selected `execution_profile`. UI-first `EXPLORATORY_ADHOC` may start without `--business-context`; the runner creates a UI-derived charter. `--mode BROWSER_TASK_FAST` remains an accepted compatibility alias and is normalized to `EXPLORATORY_BROWSER_QA` + `FAST`
+   - `run-manifest.mjs` must reject a contract-driven run whose required READY context is missing or stale
    When an optional context card exists, it should match the full brief hash; a stale optional card is ignored for UI-first exploratory execution and does not replace live UI observation
    - `browser-driver` and `network-observer` are resolved **independently**; read [references/BROWSER-DRIVER-RESOLUTION.md](references/BROWSER-DRIVER-RESOLUTION.md) for the full flowchart and combination rules
    - `EXPLORATORY_BROWSER_QA` (including its `FAST` profile and `EXPLORATORY_ADHOC` alias) and `APP_BASELINE_DISCOVERY` default `browser-driver`, `browser-observer` and `network-observer` to `playwright-runtime`, which uses the bundled Playwright-managed browser and avoids system Chrome
@@ -181,6 +183,7 @@ Apply the following exact order for all models, especially fast or small-context
 9. Update verdict/evidence into the ledger immediately after each layer; every user-facing result must be `PASS`, `FAILED`, `N/A` or `UNTEST` with a reason when it is not `PASS`
    - In exploratory mode, create `rule-plan` before browser action. For a natural-language/non-deterministic objective, observe the live page, create `task-plan`, load compact `agent-context`, write one `decision` and link its `decision_id` to the verified action; after every action re-observe, evaluate `state_delta` and update bounded memory. After `COMPLETE`, record `task-judge` for every success signal. Complete applicable `rule-probe`, `coverage` and high-priority `charter` records before finish. A budget stop, missing target/data/authority/oracle or unresolved truncation is `UNTEST`; retry-derived `RECOVERED`/`FLAKY` is not a clean `PASS`
 10. Separate the original ticket verdict from new bugs, then apply the fixed state map via `plane-qa`.
+    Plane state map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
 11. After every QA run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`. The `FAST` profile finishes with its task result and evidence packet instead
 12. **[AFTER EVERY QA RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory for full QA profiles and does not apply to `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST`:
     ```bash

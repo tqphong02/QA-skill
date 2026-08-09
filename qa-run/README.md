@@ -17,7 +17,7 @@ Skill `EXPLORATORY_BROWSER_QA` bằng AI lái UI qua MCP hoặc native Playwrigh
 - **Sanity retest từ 1 link ticket** (WebFetch → AC → verify → PASS/FAILED/N/A/UNTEST)
 - **UI/UX testing sâu**: spam button, UI che content, vượt layout, double-fire, a11y (`ux-health.mjs`)
 - **12 kỹ thuật** testing + **cross-browser/device** (`compat.mjs`)
-- **Log bug Plane** với ảnh preview INLINE trong description (`log-bug.mjs`, 3 mode)
+- **Log bug Plane** bằng helper text-only và browser editor cho ảnh inline (`Attachments 0`)
 - **Test data tự tạo** theo business flow + cleanup `withRevert`
 - **Antigravity fallback** nếu hết Claude Code
 

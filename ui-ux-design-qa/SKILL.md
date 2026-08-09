@@ -1,6 +1,6 @@
 ---
 name: ui-ux-design-qa
-description: Audit UI and UX intent and run structured usability reviews against requirements, design references, responsive layouts, interaction states, visual hierarchy, keyboard behavior, task completion, error recovery, usability metrics and screenshot evidence. Trigger on UI/UX review, Figma, design tokens, visual regression, responsive design, usability testing, task success, learnability, SUS, layout, interaction states, or design-to-code fidelity; do not require the skill name. Use local artifacts first and route live browser execution to qa-run with same-session evidence.
+description: Audit UI/UX against requirements and design references for responsive layout, interaction states, visual hierarchy, keyboard behavior, task completion, recovery, metrics, and screenshots. Trigger on Figma, design tokens, visual regression, usability, SUS, task success, or design-to-code fidelity. Auto-route; do not require the skill name.
 ---
 
 # UI/UX Design QA

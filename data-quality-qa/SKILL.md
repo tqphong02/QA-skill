@@ -1,6 +1,6 @@
 ---
 name: data-quality-qa
-description: Validate databases, ingestion, ETL/ELT, lakehouse, exports, reconciliation, schema drift, lineage, freshness, completeness, accuracy, uniqueness, idempotency, and source-to-target behavior. Trigger on database or pipeline testing, dataset comparison, incorrect/missing records, Postgres/MySQL/Spark/Delta flows, read-only database MCP setup/diagnosis, or data-quality evidence; do not require the skill name. Resolve the engine and prove the database role is read-only before querying.
+description: Validate databases, ingestion, ETL/ELT, lakehouse, exports, reconciliation, schema drift, lineage, freshness, completeness, accuracy, uniqueness, idempotency, and source-to-target behavior. Trigger on dataset comparison, missing records, Postgres/MySQL/Spark/Delta, or read-only database MCP diagnosis. Auto-route; do not require the skill name.
 ---
 
 # Data Quality QA

@@ -40,13 +40,13 @@ print_help() {
   cat <<'EOF'
 Usage: ./scripts/setup.sh [options]
 
-Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng core để danh sách skill gọn; full cài đủ 23 skill.
+Setup QA, Security Engineering và MCP integration skill theo profile. Mặc định dùng full để publish mọi top-level skill mới.
 
 Options:
   --skip-deps           Chỉ copy skills + setup AI config; bỏ qua npm install / pip install
   --skip-mcp-setup      Không tự cấu hình MCP cho integration skill đã chọn
   --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
-  --profile=<name>      core hoặc full; mặc định core
+  --profile=<name>      core hoặc full; mặc định full
   --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
   --agent=<name>        codex, antigravity hoặc claude; auto chỉ chạy khi detect đúng một host
   --skills-dir=<path>   Override thư mục discovery do --agent chọn
@@ -63,9 +63,9 @@ Environment variables:
   NO_COLOR=1            Tắt màu
 
 Examples:
-  ./scripts/setup.sh --agent=codex --profile=core --yes
-  ./scripts/setup.sh --agent=antigravity --profile=core --yes
-  ./scripts/setup.sh --agent=claude --profile=core --yes
+  ./scripts/setup.sh --agent=codex --profile=full --yes
+  ./scripts/setup.sh --agent=antigravity --profile=full --yes
+  ./scripts/setup.sh --agent=claude --profile=full --yes
   ./scripts/setup.sh --agent=antigravity --profile=full --yes
   ./scripts/setup.sh --agent=codex --skip-deps --yes
   ./scripts/setup.sh --agent=antigravity --dry-run
@@ -111,7 +111,7 @@ resolve_target_agent() {
 resolve_skills_dir() {
   case "$1" in
     codex)
-      printf '%s\n' "${CODEX_HOME:-$HOME/.codex}/skills"
+      printf '%s\n' "$HOME/.agents/skills"
       ;;
     antigravity)
       printf '%s\n' "$HOME/.gemini/config/skills"
@@ -225,11 +225,11 @@ warn_if_node_too_old() {
 CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa" "postman")
 SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "whitebox-qa" "ego-browser" "ui-ux-design-qa" "release-governance-qa" "appsec-supply-chain-qa" "reliability-resilience-qa" "compatibility-localization-qa")
 FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
-DEFAULT_SKILLS=("${CORE_SKILLS[@]}")
+DEFAULT_SKILLS=("${FULL_SKILLS[@]}")
 RETIRED_SKILLS=("jmeter-qa")
 
 resolve_profile() {
-  local requested="${1:-core}"
+  local requested="${1:-full}"
   case "$requested" in
     core|full)
       printf '%s\n' "$requested"
@@ -242,10 +242,18 @@ resolve_profile() {
   esac
 }
 
+discover_repo_skills() {
+  local skill_file
+  for skill_file in "$REPO_DIR"/*/SKILL.md; do
+    [[ -f "$skill_file" ]] || continue
+    basename "$(dirname "$skill_file")"
+  done | LC_ALL=C sort
+}
+
 print_profile_skills() {
   case "$1" in
     core) printf '%s\n' "${CORE_SKILLS[@]}" ;;
-    full) printf '%s\n' "${FULL_SKILLS[@]}" ;;
+    full) discover_repo_skills ;;
     *) log_err "Không resolve được profile: $1"; return 1 ;;
   esac
 }

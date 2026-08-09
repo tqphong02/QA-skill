@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { allure } from 'allure-playwright';
 import { LoginPage } from '../../pages/example.page';
+import { DashboardPage } from '../../pages/dashboard.page';
+import { ENV } from '../../fixtures/env';
 
 /**
  * UI test mẫu — Login flow đầy đủ với Annotations kiểu TestNG.
@@ -36,6 +38,7 @@ import { LoginPage } from '../../pages/example.page';
 // ─────────────────────────────────────────────────────────────
 test.describe('Login @ui', () => {
   let loginPage: LoginPage;
+  let dashboardPage: DashboardPage;
 
   // @BeforeClass — chạy 1 lần trước tất cả tests trong describe block.
   // Dùng khi cần: tạo user test, lấy token chung, seed data.
@@ -48,6 +51,7 @@ test.describe('Login @ui', () => {
   // @BeforeMethod — chạy trước MỖI test (tương đương @BeforeMethod TestNG)
   test.beforeEach(async ({ page }) => {
     loginPage = new LoginPage(page);
+    dashboardPage = new DashboardPage(page);
     await loginPage.open();
   });
 
@@ -87,8 +91,8 @@ test.describe('Login @ui', () => {
     // @Step — tương đương @Step annotation trong Allure-TestNG
     await allure.step('Fill credentials and submit', async () => {
       await loginPage.login(
-        process.env.TEST_USER ?? 'demo@example.com',
-        process.env.TEST_PASS ?? 'Demo@123',
+        ENV.testUser,
+        ENV.testPass,
       );
     });
 
@@ -96,11 +100,8 @@ test.describe('Login @ui', () => {
       await expect(page).toHaveURL(/dashboard|home/i);
     });
 
-    await allure.step('Assert welcome message visible (if element exists)', async () => {
-      const welcome = page.getByTestId('welcome-msg');
-      if (await welcome.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await expect(welcome).toBeVisible();
-      }
+    await allure.step('Assert dashboard heading visible', async () => {
+      await expect(dashboardPage.headerTitle).toBeVisible();
     });
   });
 
@@ -125,20 +126,15 @@ test.describe('Login @ui', () => {
 
   // @Test(priority=3, groups={"regression","ui"})
   // @Severity(MINOR) @Story("Negative — empty fields")
-  test('negative — bỏ trống field → submit disabled HOẶC chặn + vẫn ở /login', async ({ page }) => {
+  test('negative — bỏ trống field → submit disabled', async ({ page }) => {
     allure.severity('minor');
     allure.feature('Login');
     allure.story('Negative — empty fields');
 
     await loginPage.fillCredentials('', '');
 
-    const disabled = await loginPage.submitButton.isDisabled().catch(() => false);
-    if (!disabled) {
-      await loginPage.submit();
-      await expect(page).toHaveURL(/login/);
-    } else {
-      expect(disabled).toBe(true);
-    }
+    await expect(loginPage.submitButton).toBeDisabled();
+    await expect(page).toHaveURL(/login/);
   });
 
   // @Test(enabled=false) — skip có điều kiện theo environment

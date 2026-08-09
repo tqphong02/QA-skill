@@ -1,6 +1,6 @@
 ---
 name: whitebox-qa
-description: Analyze TypeScript, JavaScript, Python, Java, Go, C#, and Dart source code deterministically for named functions, control-flow branches, bounded execution paths, inter-function call graphs, NestJS modules and dependency injection, Jest/Vitest test generation, and runtime coverage evidence. Trigger on white-box or glass-box testing, branch/path/decision coverage, untested source logic, function-level test design, call graph, NestJS DI, `if`/`switch`/`try-catch`/early-return analysis, executable unit tests, or testcase documents derived from implementation logic; do not require the skill name. Use the bundled CLI and hand final testcase documents to `testcase-template`; never use a testcase template from an external plan.
+description: Analyze TypeScript, JavaScript, Python, Java, Go, C#, and Dart source for functions, branches, bounded paths, call graphs, NestJS DI, Jest/Vitest tests, and runtime coverage. Trigger on white-box testing, branch/path/decision coverage, untested logic, control flow, function-level tests, or implementation-derived testcases. Auto-route; do not require the skill name.
 ---
 
 # Whitebox QA

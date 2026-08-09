@@ -74,7 +74,7 @@ assets/templates/
 
 ## ➕ Thêm page mới (4 bước)
 
-1. Read the testcase `execution` contract, then run selector discovery for every `target.key`
+1. Read the generated `.automation.json`, run `npm run pom-plan`, then run selector discovery for every selector target key
 2. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
 3. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
 4. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
@@ -100,12 +100,13 @@ npm run lint                     # tsc --noEmit + eslint
 npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
-npm run traceability -- --testcases testcases/<feature>.md
+npm run pom-plan -- --manifest testcases/<feature>.automation.json
+npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.
 
-`traceability` tạo `reports/testcase-automation-traceability.json`: file này ghi testcase Markdown đã đọc (kèm SHA-256), mapping TestCase ID → spec, target key → selector evidence và token measurement. Xem **[references/automation-audit.md](references/automation-audit.md)** để phân biệt provider-reported token với estimate
+`traceability` tạo `reports/testcase-automation-traceability.json`: file này kiểm tra source hash, Testcase ID, step/outcome/cleanup, role/RBAC, target key → selector evidence và token measurement. Empty spec hoặc manifest/marker cũ đều bị `BLOCKED`. Xem **[references/automation-audit.md](references/automation-audit.md)** để phân biệt provider-reported token với estimate
 
 ## 🔄 CI/CD
 

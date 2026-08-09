@@ -1,6 +1,6 @@
 ---
 name: business-analysis
-description: Analyze BRD, SRS, FRS, requirements, and system documents as a senior fullstack QA/QC tester after local non-Markdown sources pass through doc-to-md. Trigger on business flow, requirement analysis, editable XMind map, prerequisites, related functions, ambiguity or gap analysis, clarification questions, Q&A Markdown, or Q&A Excel; do not require the skill name. For Drive URLs, use google-drive-qa to access the source first. Produce the Vietnamese XMind and matching Q&A deliverables from one validated JSON source before testcase design or browser testing
+description: Analyze BRD, SRS, FRS, requirements, and system documents for business flows, prerequisites, related functions, gaps, ambiguities, clarification questions, editable XMind, and Q&A Markdown/Excel. Use doc-to-md for local non-Markdown files and google-drive-qa for Drive sources. Auto-route; do not require the skill name.
 ---
 
 # Business Analysis

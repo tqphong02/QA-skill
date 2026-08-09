@@ -1,6 +1,6 @@
 ---
 name: doc-to-md
-description: Convert local or chat-uploaded PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, JSON, XML, or ZIP files to Markdown for other QA skills. Trigger when the user provides one of these local artifacts and asks to read, extract, convert, or analyze it; do not require the skill name. Use only for an existing local path or upload. Route drive.google.com/docs.google.com URLs and Drive IDs to google-drive-qa unless the user explicitly requests a local export first. Not for editing Markdown or scraping web pages.
+description: Convert local or uploaded PDF, DOCX, PPTX, XLSX, HTML, image, audio, CSV, JSON, XML, or ZIP artifacts to Markdown for reading, extraction, conversion, or analysis. Route Google Drive URLs and IDs to google-drive-qa. Not for editing Markdown or scraping web pages. Auto-route; do not require the skill name.
 ---
 
 # Doc to MD

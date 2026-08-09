@@ -228,6 +228,9 @@ REQUIRED = {
         "references/api-testcases.md",
         "scripts/import-api-spec.py",
         "references/markdown-testcases.md",
+        "RBAC Matrix",
+        "references/rbac-matrix.schema.json",
+        "allow_case_ref",
         "create `<output>.md` before `<output>.xlsx`",
     ],
     "plane-qa/SKILL.md": [
@@ -293,6 +296,9 @@ REQUIRED = {
         "rstrip('.')",
         "def ensure_group_capacity",
         "def write_testcase_markdown",
+        "def write_automation_manifest",
+        "def validate_rbac_contract",
+        "def write_rbac_sheet",
         "Generated Markdown first",
     ],
     "testcase-template/scripts/import-api-spec.py": [
@@ -311,7 +317,38 @@ REQUIRED = {
     "testcase-template/references/markdown-testcases.md": [
         "Mỗi lần generate Excel, tạo Markdown",
         "Testcase ID giống Excel",
+        "RBAC Matrix",
         "Không mở Excel chỉ để hiểu testcase design",
+    ],
+    "testcase-template/references/rbac-matrix.schema.json": [
+        '"ALLOW"',
+        '"DENY"',
+        '"UNRESOLVED"',
+        '"RUNTIME_CONFIRMED"',
+        '"allow_case_refs"',
+        '"deny_case_refs"',
+    ],
+    "testcase-template/references/automation-manifest.schema.json": [
+        '"markdown_sha256"',
+        '"testcase_id"',
+        '"execution"',
+    ],
+    "playwright-pom-automation/SKILL.md": [
+        "automation manifest",
+        "pom-plan",
+        "AUTOMATION_SOURCE",
+        "RBAC",
+    ],
+    "playwright-pom-automation/assets/templates/scripts/verify-testcase-traceability.mjs": [
+        "AUTOMATION_MANIFEST_MISSING",
+        "EMPTY_TEST_IMPLEMENTATION",
+        "IMPLEMENTATION_MARKER_MISSING",
+        "RAW_SELECTOR_IN_SPEC",
+    ],
+    "playwright-pom-automation/assets/templates/scripts/generate-pom-plan.mjs": [
+        "source_manifest_sha256",
+        "required_markers",
+        "selector_target_keys",
     ],
     "ui-ux-design-qa/SKILL.md": [
         "Workflow",
@@ -825,7 +862,11 @@ def main():
 
     for relative in (
         "testcase-template/examples/sample-input.json",
+        "testcase-template/examples/structured-input.json",
         "testcase-template/examples/sample-api-input.json",
+        "testcase-template/references/execution-contract.schema.json",
+        "testcase-template/references/rbac-matrix.schema.json",
+        "testcase-template/references/automation-manifest.schema.json",
         "business-analysis/examples/sample-analysis.json",
         "business-analysis/package.json",
         "postman/package.json",

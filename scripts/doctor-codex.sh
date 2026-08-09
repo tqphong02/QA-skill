@@ -6,8 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 source "$SCRIPT_DIR/setup_lib.sh"
 
-SKILLS_DIR="${SKILLS_DIR:-${CODEX_HOME:-$HOME/.codex}/skills}"
-PROFILE=$(resolve_profile "${QA_SKILL_PROFILE:-core}") || exit 2
+SKILLS_DIR="${SKILLS_DIR:-$HOME/.agents/skills}"
+PROFILE=$(resolve_profile "${QA_SKILL_PROFILE:-full}") || exit 2
 failures=0
 
 if command -v codex >/dev/null 2>&1; then

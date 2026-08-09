@@ -4,7 +4,7 @@
 
 ## Shared composition
 
-`DISCOVERY_CORE = UI Flow Discovery + Exploratory + Ad-hoc + UI/UX`
+`DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`
 
 `BROWSER_OBSERVABILITY = Same-session Network + Console + Page Error correlation`
 

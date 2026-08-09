@@ -1,6 +1,6 @@
 ---
 name: release-governance-qa
-description: Build a risk-based release quality gate from scope, test results, defect risk, evidence, approvals, and explicit exit criteria. Trigger on release sign-off, go/no-go, quality gate, release readiness, exit criteria, deployment approval, risk acceptance, or test summary review; do not require the skill name. Keep evidence local and read-only unless a separate integration explicitly authorizes a state change.
+description: Build a risk-based release quality gate from scope, test results, defect risk, evidence, approvals, and exit criteria. Trigger on release sign-off, go/no-go, readiness, deployment approval, risk acceptance, or test summary review. Keep external state read-only unless separately authorized. Auto-route; do not require the skill name.
 ---
 
 # Release Governance QA

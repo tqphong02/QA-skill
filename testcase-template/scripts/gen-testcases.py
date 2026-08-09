@@ -27,9 +27,9 @@ Logic:
   - Ghi test cases vào đúng vị trí row trống theo từng (section, group)
   - Section UI có anchor_row cho công thức test case ID [BCP-UI-NN]
   - Section Functional có anchor_row cho công thức test case ID [BCP-NN]
-  - STT liên tục trong toàn bộ file
+  - STT dòng liên tục trong toàn bộ file; Testcase ID explicit được giữ ổn định và có thể có khoảng trống
 """
-import sys, json, shutil, datetime, os, re
+import sys, json, shutil, datetime, os, re, hashlib
 from copy import copy
 import openpyxl
 from openpyxl.styles import Alignment, PatternFill, Font
@@ -65,6 +65,58 @@ EXECUTION_ACTIONS = {
     'press', 'upload', 'wait', 'observe', 'assert'
 }
 EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
+TESTCASE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$')
+RBAC_EXPECTATIONS = {'ALLOW', 'DENY', 'N/A', 'UNRESOLVED'}
+RBAC_VERIFICATION_STATUSES = {
+    'REQUIREMENT_ONLY', 'STATIC_CONFIRMED', 'RUNTIME_CONFIRMED',
+    'REQ_CODE_CONFLICT', 'RUNTIME_CONFLICT', 'RUNTIME_BYPASS', 'UNVERIFIED'
+}
+RBAC_EXPECTATION_LABELS = {
+    'ALLOW': 'CHO PHÉP',
+    'DENY': 'TỪ CHỐI',
+    'N/A': 'N/A',
+    'UNRESOLVED': 'CHƯA RÕ',
+}
+RBAC_VERIFICATION_LABELS = {
+    'REQUIREMENT_ONLY': 'Chỉ có yêu cầu, chưa đối chiếu source/runtime',
+    'STATIC_CONFIRMED': 'Yêu cầu và source khớp, chưa xác minh runtime',
+    'RUNTIME_CONFIRMED': 'Đã xác nhận bằng runtime',
+    'REQ_CODE_CONFLICT': 'Yêu cầu và source mâu thuẫn',
+    'RUNTIME_CONFLICT': 'Runtime mâu thuẫn với yêu cầu hoặc source',
+    'RUNTIME_BYPASS': 'Runtime cho phép thao tác bị cấm',
+    'UNVERIFIED': 'Chưa đủ nguồn để xác minh',
+}
+EXECUTION_ENTRY_FIELDS = (
+    'environment', 'screen', 'route', 'role', 'state', 'permissions', 'data'
+)
+EXECUTION_VALUE_ACTIONS = {'fill', 'select', 'press', 'upload'}
+MANUAL_ACTION_PATTERNS = {
+    'navigate': re.compile(r'\b(mở|truy cập|đi đến|đi tới|navigate|open)\b', re.IGNORECASE),
+    'fill': re.compile(r'\b(nhập|điền|type|fill)\b', re.IGNORECASE),
+    'clear': re.compile(r'\b(xóa|xoá|làm trống|để trống|clear)\b', re.IGNORECASE),
+    'select': re.compile(r'\b(chọn|select)\b', re.IGNORECASE),
+    'check': re.compile(r'\b(đánh dấu|tick|check)\b', re.IGNORECASE),
+    'uncheck': re.compile(r'\b(bỏ chọn|bỏ đánh dấu|uncheck)\b', re.IGNORECASE),
+    'click': re.compile(r'\b(nhấp|bấm|click|nhấn(?=\s+(?:vào\s+)?(?:nút|ô|liên kết)))\b', re.IGNORECASE),
+    'press': re.compile(r'\b(nhấn phím|press)\b', re.IGNORECASE),
+    'upload': re.compile(r'\b(tải lên|upload)\b', re.IGNORECASE),
+    'wait': re.compile(r'\b(chờ|đợi|wait)\b', re.IGNORECASE),
+    'observe': re.compile(r'\b(quan sát|kiểm tra|xác nhận|observe)\b', re.IGNORECASE),
+    'assert': re.compile(r'\b(kiểm tra|xác nhận|assert)\b', re.IGNORECASE),
+}
+MANUAL_TECHNICAL_RE = re.compile(
+    r'(?:\b(?:GET|POST|PUT|PATCH|DELETE)\s+/|\bHTTP\s+\d{3}\b|'
+    r'\bresponse(?:\.body)?\b|\bassert\b|\bstatus\s*==|'
+    r'\bnull\b|\bundefined\b|\bNaN\b)',
+    re.IGNORECASE,
+)
+VAGUE_MANUAL_RESULTS = {
+    'hệ thống xử lý đúng',
+    'hệ thống hoạt động đúng',
+    'kết quả đúng',
+    'hoạt động đúng',
+    'thành công',
+}
 
 
 def dated_artifact_path(output_path):
@@ -132,6 +184,398 @@ def validate_api_secrets(value, path):
             validate_api_secrets(item, f'{path}[{index}]')
 
 
+def _has_manual_value(value):
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, dict)):
+        return bool(value)
+    return True
+
+
+def _manual_strings(value):
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from _manual_strings(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from _manual_strings(item)
+    elif value is not None:
+        rendered = str(value).strip()
+        if rendered:
+            yield rendered
+
+
+def validate_manual_language(value, field):
+    """Reject developer-facing shorthand from manual-visible testcase content."""
+    for text in _manual_strings(value):
+        if MANUAL_TECHNICAL_RE.search(text):
+            raise ValueError(
+                f'{field} must use observable Vietnamese manual language, got: {text}'
+            )
+
+
+def _detected_manual_actions(instruction):
+    normalized = re.sub(r'\bkhông\s+nhập\b', '', instruction, flags=re.IGNORECASE)
+    normalized = re.sub(r'\bđăng\s+nhập\b', '', normalized, flags=re.IGNORECASE)
+    normalized = re.sub(r'\bbỏ\s+chọn\b', 'uncheck', normalized, flags=re.IGNORECASE)
+    return {
+        action for action, pattern in MANUAL_ACTION_PATTERNS.items()
+        if pattern.search(normalized)
+    }
+
+
+def _validate_atomic_instruction(step, index):
+    action = step['action']
+    instruction = step['instruction']
+    detected = _detected_manual_actions(instruction)
+    equivalent = {'observe', 'assert'} if action in {'observe', 'assert'} else {action}
+    if not detected.intersection(equivalent):
+        raise ValueError(
+            f'execution.steps[{index}].instruction must clearly describe action={action}'
+        )
+    unrelated = detected - equivalent
+    if unrelated:
+        raise ValueError(
+            f'execution.steps[{index}].instruction combines multiple actions '
+            f'({action} with {sorted(unrelated)}); split them into separate steps'
+        )
+
+    target = step.get('target')
+    if target is not None and action not in {'navigate'}:
+        target_name = str(target.get('name') or '').strip()
+        if target_name and target_name.casefold() not in instruction.casefold():
+            raise ValueError(
+                f'execution.steps[{index}].instruction must name the visible target '
+                f'"{target_name}"'
+            )
+
+    if action in EXECUTION_VALUE_ACTIONS:
+        value_tokens = [
+            token for token in _manual_strings(step.get('value'))
+            if len(token) >= 2 and (
+                target is None
+                or token.casefold() != str(target.get('name') or '').strip().casefold()
+            )
+        ]
+        if value_tokens and not any(
+            token.casefold() in instruction.casefold() for token in value_tokens
+        ):
+            raise ValueError(
+                f'execution.steps[{index}].instruction must state the exact value '
+                f'or test-data reference used by action={action}'
+            )
+
+
+def _manual_label(value):
+    labels = {
+        'email': 'Email',
+        'password': 'Mật khẩu',
+        'username': 'Tên đăng nhập',
+        'account': 'Tài khoản',
+        'file': 'Tệp kiểm thử',
+    }
+    key = str(value).strip()
+    return labels.get(key.casefold(), key.replace('_', ' ').strip().capitalize())
+
+
+def _render_manual_data(value):
+    """Render structured entry data as readable Vietnamese lines, never raw JSON."""
+    lines = []
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, dict) and item.get('name'):
+                name = human_text(item.get('name'), 'execution.entry.data.name')
+                item_value = human_text(item.get('value') or item.get('reference') or '', 'execution.entry.data.value')
+                condition = human_text(item.get('condition') or '', 'execution.entry.data.condition')
+                text = f'{name}: {item_value}' if item_value else name
+                if condition:
+                    text += f'; điều kiện: {condition}'
+                lines.append(text)
+            else:
+                lines.extend(_render_manual_data(item))
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            label = _manual_label(key)
+            if isinstance(item, (dict, list)):
+                nested = _render_manual_data(item)
+                lines.extend(f'{label} - {entry}' for entry in nested)
+            else:
+                lines.append(f'{label}: {human_text(item, f"execution.entry.data.{key}")}')
+    elif value not in (None, ''):
+        lines.append(human_text(value, 'execution.entry.data'))
+    return lines
+
+
+def _normalized_testcase_id(value, field='testcase_id'):
+    rendered = str(value or '').strip()
+    if rendered.startswith('[') and rendered.endswith(']'):
+        rendered = rendered[1:-1].strip()
+    if not rendered or not TESTCASE_ID_RE.fullmatch(rendered):
+        raise ValueError(
+            f'{field} must use a stable ID such as DEMO-01, DEMO-UI-01 or TC_LOGIN_01'
+        )
+    return rendered
+
+
+def iter_testcases(data):
+    """Yield cases in canonical order with stable explicit IDs for new contracts."""
+    counter = 0
+    project_code = str((data.get('project') or {}).get('code') or '')
+    contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
+    execution_required = contract_mode == 'required'
+    seen_ids = set()
+    for section in data.get('sections') or []:
+        is_ui = str(section.get('kind') or '').lower() == 'ui'
+        for group in section.get('groups') or []:
+            for scenario in group.get('scenarios') or []:
+                for case in sorted(
+                    scenario.get('cases') or [],
+                    key=lambda item: type_rank(item.get('type')),
+                ):
+                    counter += 1
+                    explicit_id = case.get('testcase_id')
+                    if execution_required and explicit_id in (None, ''):
+                        raise ValueError(
+                            'New executable UI/FUNCTION cases require stable case.testcase_id'
+                        )
+                    raw_test_id = (
+                        _normalized_testcase_id(explicit_id)
+                        if explicit_id not in (None, '')
+                        else f"{project_code}{'-UI' if is_ui else ''}-{counter:02d}"
+                    )
+                    if raw_test_id in seen_ids:
+                        raise ValueError(f'Duplicate testcase_id: {raw_test_id}')
+                    seen_ids.add(raw_test_id)
+                    test_id = f'[{raw_test_id}]'
+                    yield {
+                        'test_id': test_id,
+                        'testcase_id': raw_test_id,
+                        'case': case,
+                        'section': section,
+                        'group': group,
+                        'scenario': scenario,
+                    }
+
+
+def build_case_registry(data):
+    registry = {}
+    for record in iter_testcases(data):
+        case_ref = str(record['case'].get('case_ref') or '').strip()
+        if not case_ref:
+            continue
+        if not re.fullmatch(r'[A-Z][A-Z0-9_-]+', case_ref):
+            raise ValueError(
+                f'case_ref must use uppercase letters, digits, underscore or hyphen: {case_ref}'
+            )
+        if case_ref in registry:
+            raise ValueError(f'Duplicate case_ref: {case_ref}')
+        registry[case_ref] = record
+    return registry
+
+
+def _rbac_required_text(value, field):
+    rendered = human_text(value, field)
+    if not rendered:
+        raise ValueError(f'{field} is required')
+    validate_manual_language(rendered, field)
+    return rendered
+
+
+def _rbac_case_refs(rule, field):
+    value = rule.get(field) or []
+    if not isinstance(value, list):
+        raise ValueError(f'rbac.rules.{rule["id"]}.{field} must be an array')
+    refs = [str(item).strip() for item in value if str(item).strip()]
+    if len(refs) != len(set(refs)):
+        raise ValueError(f'rbac.rules.{rule["id"]}.{field} contains duplicate case_ref')
+    return refs
+
+
+def validate_rbac_contract(data):
+    """Validate RBAC rules and their positive/negative testcase coverage."""
+    case_registry = build_case_registry(data)
+    rbac = data.get('rbac')
+    if rbac is None:
+        return None, case_registry
+    if not isinstance(rbac, dict):
+        raise ValueError('rbac must be an object')
+    if rbac.get('version') != 1:
+        raise ValueError('rbac.version must be 1')
+
+    roles = rbac.get('roles')
+    if not isinstance(roles, list) or not roles:
+        raise ValueError('rbac.roles must be a non-empty array')
+    role_map = {}
+    role_names = set()
+    for index, role in enumerate(roles, 1):
+        if not isinstance(role, dict):
+            raise ValueError(f'rbac.roles[{index}] must be an object')
+        role_key = str(role.get('key') or '').strip()
+        role_name = _rbac_required_text(role.get('name'), f'rbac.roles[{index}].name')
+        if not role_key:
+            raise ValueError(f'rbac.roles[{index}].key is required')
+        if not re.fullmatch(r'[a-z][a-z0-9_-]*', role_key):
+            raise ValueError(
+                f'rbac.roles[{index}].key must use lowercase letters, digits, underscore or hyphen'
+            )
+        if role_key in role_map:
+            raise ValueError(f'Duplicate rbac role key: {role_key}')
+        if role_name.casefold() in role_names:
+            raise ValueError(f'Duplicate rbac role display name: {role_name}')
+        role_names.add(role_name.casefold())
+        role_map[role_key] = role_name
+
+    rules = rbac.get('rules')
+    if not isinstance(rules, list) or not rules:
+        raise ValueError('rbac.rules must be a non-empty array')
+    rule_map = {}
+    normalized_rules = []
+    required_rule_fields = (
+        'id', 'module', 'resource', 'action', 'data_scope', 'condition', 'requirement'
+    )
+    for index, rule in enumerate(rules, 1):
+        if not isinstance(rule, dict):
+            raise ValueError(f'rbac.rules[{index}] must be an object')
+        normalized = dict(rule)
+        for field in required_rule_fields:
+            normalized[field] = _rbac_required_text(
+                rule.get(field), f'rbac.rules[{index}].{field}'
+            )
+        rule_id = normalized['id']
+        if not re.fullmatch(r'RBAC-[A-Z0-9][A-Z0-9_-]*', rule_id):
+            raise ValueError(
+                f'rbac.rules[{index}].id must use format RBAC-<MODULE>-<NNN>'
+            )
+        if rule_id in rule_map:
+            raise ValueError(f'Duplicate rbac rule id: {rule_id}')
+
+        requirement_ids = {
+            str(item.get('id') or '').strip()
+            for item in data.get('requirements') or []
+            if isinstance(item, dict)
+        }
+        if normalized['requirement'] != 'UNRESOLVED' and normalized['requirement'] not in requirement_ids:
+            raise ValueError(
+                f'rbac.rules.{rule_id}.requirement references unknown requirement: '
+                f'{normalized["requirement"]}'
+            )
+        if normalized['requirement'] == 'UNRESOLVED' and not str(rule.get('notes') or '').strip():
+            raise ValueError(
+                f'rbac.rules.{rule_id}.notes is required when requirement is UNRESOLVED'
+            )
+
+        expectations = rule.get('expectations')
+        if not isinstance(expectations, dict):
+            raise ValueError(f'rbac.rules.{rule_id}.expectations must be an object')
+        missing_roles = [key for key in role_map if key not in expectations]
+        unknown_roles = [key for key in expectations if key not in role_map]
+        if missing_roles or unknown_roles:
+            raise ValueError(
+                f'rbac.rules.{rule_id}.expectations role mismatch; '
+                f'missing={missing_roles}, unknown={unknown_roles}'
+            )
+        normalized_expectations = {}
+        for role_key, value in expectations.items():
+            status = str(value or '').strip().upper()
+            if status not in RBAC_EXPECTATIONS:
+                raise ValueError(
+                    f'rbac.rules.{rule_id}.expectations.{role_key} must be one of '
+                    f'{sorted(RBAC_EXPECTATIONS)}'
+                )
+            normalized_expectations[role_key] = status
+
+        if 'UNRESOLVED' in normalized_expectations.values() and not str(rule.get('notes') or '').strip():
+            raise ValueError(
+                f'rbac.rules.{rule_id}.notes is required when any role is UNRESOLVED'
+            )
+
+        verification = str(rule.get('verification') or '').strip().upper()
+        if verification not in RBAC_VERIFICATION_STATUSES:
+            raise ValueError(
+                f'rbac.rules.{rule_id}.verification must be one of '
+                f'{sorted(RBAC_VERIFICATION_STATUSES)}'
+            )
+
+        allow_refs = _rbac_case_refs({**rule, 'id': rule_id}, 'allow_case_refs')
+        deny_refs = _rbac_case_refs({**rule, 'id': rule_id}, 'deny_case_refs')
+        coverage_required = rule.get('coverage_required', True)
+        if not isinstance(coverage_required, bool):
+            raise ValueError(f'rbac.rules.{rule_id}.coverage_required must be true or false')
+        if coverage_required and 'ALLOW' in normalized_expectations.values() and not allow_refs:
+            raise ValueError(f'rbac.rules.{rule_id} requires at least one allow_case_ref')
+        if coverage_required and 'DENY' in normalized_expectations.values() and not deny_refs:
+            raise ValueError(f'rbac.rules.{rule_id} requires at least one deny_case_ref')
+
+        for expected_status, refs in (('ALLOW', allow_refs), ('DENY', deny_refs)):
+            for case_ref in refs:
+                record = case_registry.get(case_ref)
+                if record is None:
+                    raise ValueError(
+                        f'rbac.rules.{rule_id} references unknown case_ref: {case_ref}'
+                    )
+                execution = record['case'].get('execution') or {}
+                entry = execution.get('entry') or {}
+                role_key = str(entry.get('role_key') or '').strip()
+                rbac_refs = entry.get('rbac_refs') or []
+                if role_key not in role_map:
+                    raise ValueError(
+                        f'case_ref {case_ref} must declare execution.entry.role_key '
+                        f'from rbac.roles'
+                    )
+                if entry.get('role') != role_map[role_key]:
+                    raise ValueError(
+                        f'case_ref {case_ref} role display name must match '
+                        f'rbac.roles.{role_key}.name'
+                    )
+                if rule_id not in rbac_refs:
+                    raise ValueError(
+                        f'case_ref {case_ref} must include {rule_id} in '
+                        f'execution.entry.rbac_refs'
+                    )
+                actual_status = normalized_expectations.get(role_key)
+                if actual_status != expected_status:
+                    raise ValueError(
+                        f'case_ref {case_ref} uses role {role_key}={actual_status}, '
+                        f'not {expected_status} for {rule_id}'
+                    )
+
+        evidence = rule.get('evidence') or []
+        if not isinstance(evidence, (str, list)):
+            raise ValueError(f'rbac.rules.{rule_id}.evidence must be a string or array')
+        validate_manual_language(evidence, f'rbac.rules.{rule_id}.evidence')
+        validate_manual_language(rule.get('notes'), f'rbac.rules.{rule_id}.notes')
+
+        normalized.update({
+            'expectations': normalized_expectations,
+            'verification': verification,
+            'allow_case_refs': allow_refs,
+            'deny_case_refs': deny_refs,
+            'coverage_required': coverage_required,
+        })
+        rule_map[rule_id] = normalized
+        normalized_rules.append(normalized)
+
+    for case_ref, record in case_registry.items():
+        execution = record['case'].get('execution') or {}
+        entry = execution.get('entry') or {}
+        refs = entry.get('rbac_refs')
+        if refs is None:
+            continue
+        if not isinstance(refs, list):
+            raise ValueError(f'case_ref {case_ref} execution.entry.rbac_refs must be an array')
+        unknown = [str(item) for item in refs if str(item) not in rule_map]
+        if unknown:
+            raise ValueError(f'case_ref {case_ref} has unknown rbac_refs: {unknown}')
+
+    return {
+        **rbac,
+        'roles': [{'key': key, 'name': name} for key, name in role_map.items()],
+        'rules': normalized_rules,
+    }, case_registry
+
+
 def _execution_target_name(target, field='execution.target'):
     """Return the human-facing target name from a structured step target."""
     if isinstance(target, dict):
@@ -176,9 +620,9 @@ def _validate_selector_evidence(target, field):
         )
     if not isinstance(verification, dict):
         raise ValueError(f'{field}.selector_evidence.verification must be an object')
-    if verification.get('count') != 1 or verification.get('visible') is not True:
+    if verification.get('count') != 1 or not isinstance(verification.get('visible'), bool):
         raise ValueError(
-            f'{field}.selector_evidence must prove count=1 and visible=true'
+            f'{field}.selector_evidence must prove count=1 and record visible=true|false'
         )
     if strategy == 'xpath' and not evidence.get('reason'):
         raise ValueError(
@@ -201,13 +645,30 @@ def validate_execution_contract(case):
     if case.get('api') is not None:
         raise ValueError('case.execution cannot be combined with case.api')
 
-    version = execution.get('version', 1)
+    version = execution.get('version')
     if version != 1:
         raise ValueError('case.execution.version must be 1')
 
-    entry = execution.get('entry') or {}
+    if not isinstance(execution.get('mutates'), bool):
+        raise ValueError('case.execution.mutates must be true or false')
+
+    entry = execution.get('entry')
     if not isinstance(entry, dict):
         raise ValueError('case.execution.entry must be an object')
+    missing_entry = [
+        field for field in EXECUTION_ENTRY_FIELDS
+        if not _has_manual_value(entry.get(field))
+    ]
+    if missing_entry:
+        raise ValueError(
+            'case.execution.entry must describe the manual pre-condition; missing '
+            + ', '.join(missing_entry)
+        )
+    validate_manual_language(
+        {key: entry.get(key) for key in EXECUTION_ENTRY_FIELDS if key != 'route'},
+        'case.execution.entry',
+    )
+    validate_manual_language(entry.get('setup'), 'case.execution.entry.setup')
     if 'data' in entry:
         validate_api_secrets(entry.get('data'), 'execution.entry.data')
 
@@ -239,6 +700,7 @@ def validate_execution_contract(case):
         instruction = human_text(step.get('instruction') or '', f'execution step {step_id}')
         if not instruction:
             raise ValueError(f'execution.steps[{index}].instruction is required')
+        validate_manual_language(instruction, f'execution.steps[{index}].instruction')
 
         target = step.get('target')
         if action not in {'wait', 'observe', 'assert'} and target is None:
@@ -258,9 +720,33 @@ def validate_execution_contract(case):
             _execution_target_name(target, f'execution.steps[{index}].target')
             _validate_selector_evidence(target, f'execution.steps[{index}].target')
 
+        value = step.get('value')
+        if action in EXECUTION_VALUE_ACTIONS and not _has_manual_value(value):
+            raise ValueError(
+                f'execution.steps[{index}].value is required for action={action}'
+            )
+        if action in {'fill', 'clear'}:
+            previous = normalized_steps[-1] if normalized_steps else None
+            current_key = _execution_target_key(target)
+            previous_key = _execution_target_key(previous.get('target')) if previous else ''
+            if not previous or previous.get('action') != 'click' or previous_key != current_key:
+                raise ValueError(
+                    f'execution.steps[{index}] action={action} requires a separate '
+                    f'click/focus step for target {current_key} immediately before it'
+                )
+
         wait_for = step.get('wait_for')
-        if wait_for is not None and not isinstance(wait_for, (str, dict)):
-            raise ValueError(f'execution.steps[{index}].wait_for must be a string or object')
+        if wait_for is not None:
+            if not isinstance(wait_for, dict):
+                raise ValueError(f'execution.steps[{index}].wait_for must be an object')
+            if not str(wait_for.get('kind') or '').strip():
+                raise ValueError(f'execution.steps[{index}].wait_for.kind is required')
+            wait_text = human_text(wait_for.get('text') or '', f'execution.steps[{index}].wait_for.text')
+            if not wait_text:
+                raise ValueError(
+                    f'execution.steps[{index}].wait_for.text is required for manual execution'
+                )
+            validate_manual_language(wait_text, f'execution.steps[{index}].wait_for.text')
 
         assertions = step.get('assertions') or []
         if not isinstance(assertions, list):
@@ -274,12 +760,32 @@ def validate_execution_contract(case):
                 raise ValueError(
                     f'execution.steps[{index}].assertions[{assertion_index}] must be an object'
                 )
-            if not assertion.get('text') and not assertion.get('kind'):
+            if not str(assertion.get('kind') or '').strip():
                 raise ValueError(
-                    f'execution.steps[{index}].assertions[{assertion_index}] needs text or kind'
+                    f'execution.steps[{index}].assertions[{assertion_index}].kind is required'
+                )
+            assertion_text = human_text(
+                assertion.get('text') or '',
+                f'execution.steps[{index}].assertions[{assertion_index}].text',
+            )
+            if not assertion_text:
+                raise ValueError(
+                    f'execution.steps[{index}].assertions[{assertion_index}].text '
+                    'is required for manual execution'
+                )
+            validate_manual_language(
+                assertion_text,
+                f'execution.steps[{index}].assertions[{assertion_index}].text',
+            )
+            if assertion_text.casefold() in VAGUE_MANUAL_RESULTS:
+                raise ValueError(
+                    f'execution.steps[{index}].assertions[{assertion_index}].text '
+                    'must describe an observable result'
                 )
 
-        normalized_steps.append({**step, 'id': step_id, 'action': action})
+        normalized_step = {**step, 'id': step_id, 'action': action, 'instruction': instruction}
+        _validate_atomic_instruction(normalized_step, index)
+        normalized_steps.append(normalized_step)
 
     outcome = execution.get('outcome') or {}
     if not isinstance(outcome, dict):
@@ -290,9 +796,27 @@ def validate_execution_contract(case):
     for assertion_index, assertion in enumerate(outcome_assertions, 1):
         if not isinstance(assertion, dict):
             raise ValueError(f'execution.outcome.assertions[{assertion_index}] must be an object')
-        if not assertion.get('text') and not assertion.get('kind'):
+        if not str(assertion.get('kind') or '').strip():
             raise ValueError(
-                f'execution.outcome.assertions[{assertion_index}] needs text or kind'
+                f'execution.outcome.assertions[{assertion_index}].kind is required'
+            )
+        assertion_text = human_text(
+            assertion.get('text') or '',
+            f'execution.outcome.assertions[{assertion_index}].text',
+        )
+        if not assertion_text:
+            raise ValueError(
+                f'execution.outcome.assertions[{assertion_index}].text '
+                'is required for manual execution'
+            )
+        validate_manual_language(
+            assertion_text,
+            f'execution.outcome.assertions[{assertion_index}].text',
+        )
+        if assertion_text.casefold() in VAGUE_MANUAL_RESULTS:
+            raise ValueError(
+                f'execution.outcome.assertions[{assertion_index}].text '
+                'must describe an observable result'
             )
 
     cleanup = execution.get('cleanup')
@@ -301,6 +825,7 @@ def validate_execution_contract(case):
         raise ValueError('case.execution.cleanup is required when execution.mutates=true')
     if cleanup is not None and not isinstance(cleanup, (str, dict, list)):
         raise ValueError('case.execution.cleanup must be a string, object or array')
+    validate_manual_language(cleanup, 'case.execution.cleanup')
 
     return {**execution, 'entry': entry, 'steps': normalized_steps, 'outcome': outcome}
 
@@ -329,6 +854,12 @@ def _render_wait_for(wait_for):
     return ' '.join(part for part in (kind, value) if part).strip()
 
 
+def _render_manual_wait_for(wait_for):
+    if not wait_for:
+        return ''
+    return human_text(wait_for.get('text') or '', 'wait_for.text')
+
+
 def _render_assertion(assertion):
     text = human_text(assertion.get('text') or '', 'assertion.text')
     if text:
@@ -355,32 +886,44 @@ def _render_assertion(assertion):
 def _render_execution_case(case, execution):
     entry = execution.get('entry') or {}
     precondition_parts = []
-    if entry.get('role'):
-        precondition_parts.append(f'Vai trò: {entry["role"]}')
-    if entry.get('route'):
-        precondition_parts.append(f'Trang bắt đầu: {entry["route"]}')
-    if entry.get('state'):
-        precondition_parts.append(f'Trạng thái ban đầu: {entry["state"]}')
-    if entry.get('permissions'):
-        precondition_parts.append(f'Quyền cần có: {_render_execution_value(entry["permissions"])}')
-    if entry.get('data'):
-        precondition_parts.append(f'Dữ liệu chuẩn bị: {_render_execution_value(entry["data"])}')
-    precondition = '\n'.join(precondition_parts) or human_text(
-        case.get('pre_condition', ''), 'pre_condition'
+    precondition_parts.append(f'Môi trường: {human_text(entry["environment"], "execution.entry.environment")}')
+    precondition_parts.append(f'Màn hình bắt đầu: {human_text(entry["screen"], "execution.entry.screen")}')
+    precondition_parts.append(f'Đường dẫn truy cập: {human_text(entry["route"], "execution.entry.route")}')
+    precondition_parts.append(f'Vai trò: {human_text(entry["role"], "execution.entry.role")}')
+    for rbac_ref in entry.get('rbac_refs') or []:
+        precondition_parts.append(
+            f'Quy tắc phân quyền áp dụng: {human_text(rbac_ref, "execution.entry.rbac_refs")}'
+        )
+    states = entry['state'] if isinstance(entry['state'], list) else [entry['state']]
+    precondition_parts.extend(
+        f'Trạng thái ban đầu: {human_text(value, "execution.entry.state")}'
+        for value in states
+    )
+    permissions = entry['permissions'] if isinstance(entry['permissions'], list) else [entry['permissions']]
+    precondition_parts.extend(
+        f'Quyền cần có: {human_text(value, "execution.entry.permissions")}'
+        for value in permissions
+    )
+    precondition_parts.extend(
+        f'Dữ liệu chuẩn bị: {value}' for value in _render_manual_data(entry['data'])
+    )
+    setup = entry.get('setup') or []
+    setup_items = setup if isinstance(setup, list) else [setup]
+    precondition_parts.extend(
+        f'Chuẩn bị trước khi chạy: {human_text(value, "execution.entry.setup")}'
+        for value in setup_items if value not in (None, '')
+    )
+    precondition = '\n'.join(
+        f'{index}. {value}' for index, value in enumerate(precondition_parts, 1)
     )
 
     procedure_lines = []
-    for index, step in enumerate(execution['steps'], 1):
+    for step in execution['steps']:
         instruction = human_text(step.get('instruction'), f'execution step {step["id"]}')
-        target = step.get('target')
-        target_suffix = ''
-        if target is not None:
-            target_name = _execution_target_name(target)
-            target_key = _execution_target_key(target)
-            target_suffix = f' | Đối tượng: {target_name} [{target_key}]'
-        wait_for = _render_wait_for(step.get('wait_for'))
-        suffix = f' | Điều kiện tiếp tục: {wait_for}' if wait_for else ''
-        procedure_lines.append(f'{index}. [{step["id"]}] {instruction}{target_suffix}{suffix}')
+        procedure_lines.append(instruction)
+        wait_for = _render_manual_wait_for(step.get('wait_for'))
+        if wait_for and wait_for.casefold() not in instruction.casefold():
+            procedure_lines.append(wait_for)
     cleanup = execution.get('cleanup')
     if cleanup is not None:
         cleanup_items = cleanup if isinstance(cleanup, list) else [cleanup]
@@ -391,24 +934,27 @@ def _render_execution_case(case, execution):
                 instruction = item
             if instruction:
                 procedure_lines.append(
-                    f'{len(procedure_lines) + 1}. [CLEANUP] {human_text(instruction, "cleanup")}'
+                    f'Thực hiện sau kiểm thử: {human_text(instruction, "cleanup")}'
                 )
 
     expected_lines = []
     for step in execution['steps']:
         for assertion in step.get('assertions') or []:
-            expected_lines.append(f'[{step["id"]}] {_render_assertion(assertion)}')
+            expected_lines.append(_render_assertion(assertion))
     for assertion in execution['outcome'].get('assertions') or []:
-        expected_lines.append(f'[OUTCOME] {_render_assertion(assertion)}')
+        expected_lines.append(_render_assertion(assertion))
 
     return (
         human_text(precondition, 'pre_condition'),
-        human_text('\n'.join(procedure_lines), 'procedure'),
+        human_text(
+            '\n'.join(f'{index}. {value}' for index, value in enumerate(procedure_lines, 1)),
+            'procedure',
+        ),
         human_text('\n'.join(f'{index}. {value}' for index, value in enumerate(expected_lines, 1)), 'expected'),
     )
 
 
-def render_case(case):
+def render_case(case, execution_required=False):
     """Render API, structured execution, or legacy text into F/G/H."""
     if case.get('api') is not None:
         if case.get('execution') is not None:
@@ -417,6 +963,11 @@ def render_case(case):
     execution = validate_execution_contract(case)
     if execution is not None:
         return (*_render_execution_case(case, execution), execution)
+    if execution_required:
+        raise ValueError(
+            'New UI/FUNCTION testcase requires case.execution; use '
+            'execution_contract="legacy_text_only" only for an existing legacy source'
+        )
     return (
         human_text(case.get('pre_condition', ''), 'pre_condition'),
         human_text(case.get('procedure', ''), 'procedure'),
@@ -532,9 +1083,14 @@ def append_execution_contract_markdown(lines, execution):
         '- **Entry:** '
         + '; '.join(
             item for item in (
+                f'environment={_markdown_cell(entry.get("environment"))}' if entry.get('environment') else '',
+                f'screen={_markdown_cell(entry.get("screen"))}' if entry.get('screen') else '',
                 f'role={_markdown_cell(entry.get("role"))}' if entry.get('role') else '',
+                f'role_key={_markdown_cell(entry.get("role_key"))}' if entry.get('role_key') else '',
+                f'rbac_refs={_markdown_cell(entry.get("rbac_refs"))}' if entry.get('rbac_refs') else '',
                 f'route={_markdown_cell(entry.get("route"))}' if entry.get('route') else '',
                 f'state={_markdown_cell(entry.get("state"))}' if entry.get('state') else '',
+                f'permissions={_markdown_cell(entry.get("permissions"))}' if entry.get('permissions') else '',
                 f'data={_markdown_cell(entry.get("data"))}' if entry.get('data') else '',
             ) if item
         )
@@ -542,8 +1098,8 @@ def append_execution_contract_markdown(lines, execution):
     )
     lines.extend([
         '',
-        '| Step | Action | Target key | Target | Semantic hints | Wait for | Step assertions |',
-        '|---|---|---|---|---|---|---|',
+        '| Step | Action | Target key | Manual instruction | Target | Value | Semantic hints | Wait for | Step assertions |',
+        '|---|---|---|---|---|---|---|---|---|',
     ])
     selector_statuses = []
     for step in execution.get('steps') or []:
@@ -563,7 +1119,9 @@ def append_execution_contract_markdown(lines, execution):
                 _markdown_cell(step.get('id')),
                 _markdown_cell(step.get('action')),
                 _markdown_cell(_execution_target_key(target)),
+                _markdown_cell(step.get('instruction')),
                 _markdown_cell(_execution_target_name(target) if target is not None else 'N/A'),
+                _markdown_cell(step.get('value')) or 'N/A',
                 _execution_target_hints(target) or 'N/A',
                 _markdown_cell(_render_wait_for(step.get('wait_for'))) or 'N/A',
                 assertions,
@@ -588,8 +1146,73 @@ def append_execution_contract_markdown(lines, execution):
     lines.append(f'- **Selector status:** `{selector_summary}`')
 
 
+def _rbac_case_ids(case_refs, case_registry):
+    return [case_registry[ref]['test_id'] for ref in case_refs if ref in case_registry]
+
+
+def _rbac_coverage_label(rule):
+    if not rule.get('coverage_required', True):
+        return 'CHƯA YÊU CẦU'
+    expectation_values = set(rule['expectations'].values())
+    if 'UNRESOLVED' in expectation_values:
+        return 'CHƯA RÕ'
+    if expectation_values == {'N/A'}:
+        return 'N/A'
+    missing = []
+    if 'ALLOW' in rule['expectations'].values() and not rule.get('allow_case_refs'):
+        missing.append('ALLOW')
+    if 'DENY' in rule['expectations'].values() and not rule.get('deny_case_refs'):
+        missing.append('DENY')
+    return f'THIẾU {", ".join(missing)}' if missing else 'ĐỦ'
+
+
+def append_rbac_markdown(lines, rbac, case_registry):
+    """Render the business-facing RBAC matrix from the validated JSON contract."""
+    lines.extend(['', '## RBAC Matrix', ''])
+    if rbac is None:
+        lines.append('- N/A — Không có rule RBAC trong phạm vi testcase')
+        return
+
+    role_headers = [role['name'] for role in rbac['roles']]
+    headers = [
+        'RBAC ID', 'Module', 'Chức năng/Tài nguyên', 'Hành động',
+        'Phạm vi dữ liệu', 'Điều kiện/Trạng thái', 'Requirement Ref',
+        *role_headers,
+        'Testcase cho phép', 'Testcase từ chối', 'Coverage',
+        'Mức xác minh', 'Nguồn/Evidence', 'Ghi chú/Q&A',
+    ]
+    lines.append('| ' + ' | '.join(_markdown_cell(value) for value in headers) + ' |')
+    lines.append('|' + '|'.join('---' for _ in headers) + '|')
+    for rule in rbac['rules']:
+        evidence = rule.get('evidence') or []
+        evidence_values = evidence if isinstance(evidence, list) else [evidence]
+        row = [
+            rule['id'],
+            rule['module'],
+            rule['resource'],
+            rule['action'],
+            rule['data_scope'],
+            rule['condition'],
+            rule['requirement'],
+            *(
+                RBAC_EXPECTATION_LABELS[rule['expectations'][role['key']]]
+                for role in rbac['roles']
+            ),
+            ', '.join(_rbac_case_ids(rule['allow_case_refs'], case_registry)) or 'N/A',
+            ', '.join(_rbac_case_ids(rule['deny_case_refs'], case_registry)) or 'N/A',
+            _rbac_coverage_label(rule),
+            RBAC_VERIFICATION_LABELS[rule['verification']],
+            '<br>'.join(human_text(value, 'rbac evidence') for value in evidence_values if value) or 'N/A',
+            human_text(rule.get('notes') or '', 'rbac notes') or 'N/A',
+        ]
+        lines.append('| ' + ' | '.join(_markdown_cell(value) for value in row) + ' |')
+
+
 def write_testcase_markdown(data, output_path):
     """Write the complete AI-readable testcase design before Excel generation."""
+    rbac, case_registry = validate_rbac_contract(data)
+    testcase_records = list(iter_testcases(data))
+    record_by_case = {id(record['case']): record for record in testcase_records}
     project = data.get('project') or {}
     project_code = str(project.get('code') or '')
     project_name = human_text(project.get('name') or project_code or 'Project', 'project.name')
@@ -617,6 +1240,14 @@ def write_testcase_markdown(data, output_path):
     else:
         lines.append('- Chưa có requirement được xác nhận')
 
+    append_rbac_markdown(lines, rbac, case_registry)
+
+    contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
+    if contract_mode not in {'required', 'legacy_text_only'}:
+        raise ValueError(
+            'execution_contract must be "required" or "legacy_text_only"'
+        )
+    execution_required = contract_mode == 'required'
     stt_counter = 0
     for section in data.get('sections') or []:
         section_title = human_text(section.get('title') or '', 'section title')
@@ -643,13 +1274,14 @@ def write_testcase_markdown(data, output_path):
                 cases = sorted(scenario.get('cases') or [], key=lambda case: type_rank(case.get('type')))
                 for case in cases:
                     stt_counter += 1
-                    is_ui = str(section.get('kind') or '').lower() == 'ui'
-                    test_id = f"[{project_code}{'-UI' if is_ui else ''}-{stt_counter:02d}]"
+                    test_id = record_by_case[id(case)]['test_id']
                     description = human_text(case.get('description') or '', 'description')
                     requirement = case.get('req') or scenario.get('requirement') or (
                         '(out-of-spec)' if case.get('type') == 'additional' else 'UNRESOLVED'
                     )
-                    pre_condition, procedure, expected, execution = render_case(case)
+                    pre_condition, procedure, expected, execution = render_case(
+                        case, execution_required=execution_required
+                    )
                     lines.extend([f'##### `{test_id}` — {description}', ''])
                     lines.append(f'- **Type:** {type_label(case.get("type"))}')
                     lines.append(f'- **Requirement:** `{requirement}`')
@@ -668,6 +1300,64 @@ def write_testcase_markdown(data, output_path):
     with open(output_path, 'w', encoding='utf-8') as markdown_file:
         markdown_file.write('\n'.join(lines).rstrip() + '\n')
     return stt_counter
+
+
+def build_automation_manifest(data, markdown_path):
+    """Build the lossless machine handoff consumed by POM automation."""
+    rbac, _case_registry = validate_rbac_contract(data)
+    records = list(iter_testcases(data))
+    manifest_cases = []
+    for record in records:
+        case = record['case']
+        execution = validate_execution_contract(case)
+        manifest_cases.append({
+            'testcase_id': record['testcase_id'],
+            'testcase_id_display': record['test_id'],
+            'case_ref': str(case.get('case_ref') or '').strip() or None,
+            'section_kind': str(record['section'].get('kind') or '').strip().lower(),
+            'group': human_text(record['group'].get('name') or '', 'group name'),
+            'scenario_id': str(record['scenario'].get('scenario_id') or '').strip(),
+            'scenario_name': human_text(
+                record['scenario'].get('scenario_name')
+                or record['scenario'].get('name')
+                or record['group'].get('name')
+                or '',
+                'scenario_name',
+            ),
+            'type': str(case.get('type') or 'happy').strip().lower(),
+            'requirement': str(
+                case.get('req')
+                or record['scenario'].get('requirement')
+                or ('(out-of-spec)' if case.get('type') == 'additional' else 'UNRESOLVED')
+            ).strip(),
+            'priority': human_text(case.get('priority') or 'N/A', 'priority'),
+            'description': human_text(case.get('description') or '', 'description'),
+            'execution': execution,
+            'api': case.get('api'),
+        })
+
+    with open(markdown_path, 'rb') as markdown_file:
+        markdown_bytes = markdown_file.read()
+    return {
+        'schema_version': 1,
+        'source': {
+            'project_code': str((data.get('project') or {}).get('code') or ''),
+            'source_document': data.get('source_document'),
+            'markdown_file': os.path.basename(markdown_path),
+            'markdown_sha256': hashlib.sha256(markdown_bytes).hexdigest(),
+            'testcase_count': len(manifest_cases),
+        },
+        'rbac': rbac,
+        'testcases': manifest_cases,
+    }
+
+
+def write_automation_manifest(data, markdown_path, output_path):
+    manifest = build_automation_manifest(data, markdown_path)
+    with open(output_path, 'w', encoding='utf-8') as manifest_file:
+        json.dump(manifest, manifest_file, ensure_ascii=False, indent=2)
+        manifest_file.write('\n')
+    return manifest
 
 def type_rank(t):
     t = (t or 'happy').lower().strip()
@@ -830,6 +1520,142 @@ def get_template_path(specified_path=None, project_code=None):
     return os.path.join(assets_dir, 'Template.xlsx')
 
 
+def write_rbac_sheet(workbook, rbac, case_registry):
+    """Create the derived, business-facing RBAC Matrix sheet."""
+    sheet_name = 'RBAC Matrix'
+    if sheet_name in workbook.sheetnames:
+        del workbook[sheet_name]
+    insert_at = (
+        workbook.sheetnames.index('Test cases_App') + 1
+        if 'Test cases_App' in workbook.sheetnames
+        else len(workbook.sheetnames)
+    )
+    sheet = workbook.create_sheet(sheet_name, insert_at)
+    sheet.sheet_view.showGridLines = False
+
+    roles = rbac['roles'] if rbac else []
+    headers = [
+        'RBAC ID', 'Module', 'Chức năng/Tài nguyên', 'Hành động',
+        'Phạm vi dữ liệu', 'Điều kiện/Trạng thái', 'Requirement Ref',
+        *(role['name'] for role in roles),
+        'Testcase cho phép', 'Testcase từ chối', 'Coverage',
+        'Mức xác minh', 'Nguồn/Evidence', 'Ghi chú/Q&A',
+    ]
+    last_column = len(headers)
+    last_letter = get_column_letter(last_column)
+
+    sheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=last_column)
+    title = sheet.cell(row=1, column=1, value='RBAC Matrix — Vai trò × Quyền × Testcase')
+    title.font = Font(bold=True, color='FFFFFF', size=14)
+    title.fill = PatternFill('solid', fgColor='1F4E78')
+    title.alignment = Alignment(horizontal='center', vertical='center')
+    sheet.row_dimensions[1].height = 26
+
+    sheet.merge_cells(start_row=2, start_column=1, end_row=2, end_column=last_column)
+    subtitle = sheet.cell(
+        row=2,
+        column=1,
+        value=(
+            'Dùng CHO PHÉP, TỪ CHỐI, N/A hoặc CHƯA RÕ; '
+            'quyền chưa có expected phải giữ CHƯA RÕ và chuyển sang Q&A'
+        ),
+    )
+    subtitle.font = Font(italic=True, color='404040')
+    subtitle.fill = PatternFill('solid', fgColor='D9EAF7')
+    subtitle.alignment = Alignment(wrap_text=True, vertical='center')
+    sheet.row_dimensions[2].height = 32
+
+    sheet.merge_cells(start_row=3, start_column=1, end_row=3, end_column=last_column)
+    sources = (rbac or {}).get('sources') or {}
+    if isinstance(sources, dict) and sources:
+        source_text = ' | '.join(
+            f'{_manual_label(key)}: {human_text(value, f"rbac.sources.{key}")}'
+            for key, value in sources.items() if value not in (None, '')
+        )
+    else:
+        source_text = 'Nguồn: N/A'
+    source_cell = sheet.cell(row=3, column=1, value=source_text or 'Nguồn: N/A')
+    source_cell.alignment = Alignment(wrap_text=True, vertical='center')
+    source_cell.font = Font(color='595959')
+
+    header_row = 5
+    for column, header in enumerate(headers, 1):
+        cell = sheet.cell(row=header_row, column=column, value=header)
+        cell.font = Font(bold=True, color='FFFFFF')
+        cell.fill = PatternFill('solid', fgColor='4472C4')
+        cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    sheet.row_dimensions[header_row].height = 38
+
+    role_start = 8
+    role_end = role_start + len(roles) - 1
+    data_row = header_row + 1
+    if rbac is None:
+        values = ['N/A', '', 'Không có rule RBAC trong phạm vi testcase']
+        for column, value in enumerate(values, 1):
+            sheet.cell(row=data_row, column=column, value=value)
+        coverage_column = 10
+        sheet.cell(row=data_row, column=coverage_column, value='N/A')
+        sheet.row_dimensions[data_row].height = 32
+        last_data_row = data_row
+    else:
+        for rule in rbac['rules']:
+            evidence = rule.get('evidence') or []
+            evidence_values = evidence if isinstance(evidence, list) else [evidence]
+            values = [
+                rule['id'],
+                rule['module'],
+                rule['resource'],
+                rule['action'],
+                rule['data_scope'],
+                rule['condition'],
+                rule['requirement'],
+                *(RBAC_EXPECTATION_LABELS[rule['expectations'][role['key']]] for role in roles),
+                '\n'.join(_rbac_case_ids(rule['allow_case_refs'], case_registry)) or 'N/A',
+                '\n'.join(_rbac_case_ids(rule['deny_case_refs'], case_registry)) or 'N/A',
+                _rbac_coverage_label(rule),
+                RBAC_VERIFICATION_LABELS[rule['verification']],
+                '\n'.join(human_text(value, 'rbac evidence') for value in evidence_values if value) or 'N/A',
+                human_text(rule.get('notes') or '', 'rbac notes') or 'N/A',
+            ]
+            for column, value in enumerate(values, 1):
+                cell = sheet.cell(row=data_row, column=column, value=value)
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+                if role_start <= column <= role_end:
+                    expectation = rule['expectations'][roles[column - role_start]['key']]
+                    colors = {
+                        'ALLOW': ('C6EFCE', '006100'),
+                        'DENY': ('FFC7CE', '9C0006'),
+                        'N/A': ('E7E6E6', '595959'),
+                        'UNRESOLVED': ('FFEB9C', '9C6500'),
+                    }
+                    background, foreground = colors[expectation]
+                    cell.fill = PatternFill('solid', fgColor=background)
+                    cell.font = Font(bold=True, color=foreground)
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            line_count = max(str(value or '').count('\n') + 1 for value in values)
+            sheet.row_dimensions[data_row].height = min(180.0, max(34.0, line_count * 18.0))
+            data_row += 1
+        last_data_row = data_row - 1
+
+    widths = [16, 16, 28, 20, 24, 30, 18]
+    for index, width in enumerate(widths, 1):
+        sheet.column_dimensions[get_column_letter(index)].width = width
+    for index in range(role_start, role_end + 1):
+        sheet.column_dimensions[get_column_letter(index)].width = 18
+    trailing_start = role_end + 1 if roles else 8
+    trailing_widths = [20, 20, 14, 34, 34, 34]
+    for offset, width in enumerate(trailing_widths):
+        sheet.column_dimensions[get_column_letter(trailing_start + offset)].width = width
+
+    sheet.freeze_panes = 'H6'
+    sheet.auto_filter.ref = f'A{header_row}:{last_letter}{last_data_row}'
+    sheet.print_title_rows = f'1:{header_row}'
+    sheet.sheet_properties.pageSetUpPr.fitToPage = True
+    sheet.page_setup.fitToWidth = 1
+    sheet.page_setup.fitToHeight = 0
+    sheet.page_orientation = 'landscape'
+
+
 # ---------- main ----------
 def main():
     if len(sys.argv) < 3:
@@ -844,11 +1670,28 @@ def main():
     tmpl = get_template_path(specified_path=cli_template)
     with open(inp_path, encoding='utf-8') as f:
         data = json.load(f)
+    rbac, case_registry = validate_rbac_contract(data)
+    testcase_records = list(iter_testcases(data))
+    record_by_case = {id(record['case']): record for record in testcase_records}
+    contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
+    if contract_mode not in {'required', 'legacy_text_only'}:
+        raise ValueError(
+            'execution_contract must be "required" or "legacy_text_only"'
+        )
+    execution_required = contract_mode == 'required'
 
     # 0. Generate the AI-readable testcase document before touching Excel
     md_path = os.path.splitext(out_path)[0] + '.md'
     markdown_case_count = write_testcase_markdown(data, md_path)
     print(f"  Generated Markdown first: {md_path} ({markdown_case_count} test cases)")
+
+    # 0b. Generate the lossless machine handoff after Markdown and before Excel
+    automation_path = os.path.splitext(out_path)[0] + '.automation.json'
+    automation_manifest = write_automation_manifest(data, md_path, automation_path)
+    print(
+        f"  Generated automation manifest: {automation_path} "
+        f"({len(automation_manifest['testcases'])} test cases)"
+    )
 
     # 1. Copy template → output
     shutil.copyfile(tmpl, out_path)
@@ -924,12 +1767,10 @@ def main():
     sections_in = data.get('sections', [])
     stt_counter = 0
     all_data_ranges = []
-    api_case_ids = set()
 
     for sec in sections_in:
         sec_title = sec.get('title', '')
         section_kind = sec.get('kind', '').lower()
-        is_ui = section_kind == 'ui'
         has_api_cases = any(
             case.get('api') is not None
             for grp in sec.get('groups', [])
@@ -965,7 +1806,9 @@ def main():
                     ctype = case.get('type', 'happy')
                     # Description: KHÔNG prefix [STT N][TYPE] - ghi dạng manual "Xác minh rằng..."
                     desc = human_text(case.get('description', ''), 'description')
-                    pre_condition, procedure, expected_result, _execution = render_case(case)
+                    pre_condition, procedure, expected_result, _execution = render_case(
+                        case, execution_required=execution_required
+                    )
                     req = case.get('req') or sc.get('requirement', '')
                     note = f"Ref: {req}" if req else ("Ref: (out-of-spec)" if ctype == 'additional' else "")
                     vals = {
@@ -982,10 +1825,8 @@ def main():
                         letter = get_column_letter(col)
                         wrap = col in (5, 6, 7, 8)
                         apply_style(cell, sty.get(letter) or sty['E'], wrap_text=wrap)
-                    # Cột D = hardcoded Test case ID (BCP-NN hoặc BCP-UI-NN) thay vì formula
-                    d_id = f"[{project_code}{'-UI' if is_ui else ''}-{stt_counter:02d}]"
-                    if case.get('api') is not None:
-                        api_case_ids.add(d_id)
+                    # Cột D uses the same stable ID as Markdown and automation manifest
+                    d_id = record_by_case[id(case)]['test_id']
                     dcell = ws.cell(row=current_row, column=4, value=d_id)
                     apply_style(dcell, sty['D'])
                     # I (Results), J (Priority), K (Date), L (Tester), M (Notes) - để trống cho tester
@@ -1078,19 +1919,22 @@ def main():
         else:
             ws.row_dimensions[r].outlineLevel = 0
 
-        if c2 not in (None, '') and ws.cell(row=r, column=4).value in api_case_ids:
+        if c2 not in (None, '') and ws.cell(row=r, column=4).value not in (None, ''):
             line_count = max(
                 str(ws.cell(row=r, column=c).value or '').count('\n') + 1
                 for c in range(5, 9)
             )
-            ws.row_dimensions[r].height = min(180.0, max(51.0, line_count * 15.0))
+            ws.row_dimensions[r].height = min(300.0, max(51.0, line_count * 15.0))
 
-    # 8. Save
+    # 8. Create the derived RBAC Matrix sheet from the same validated JSON source
+    write_rbac_sheet(wb, rbac, case_registry)
+
+    # 9. Save
     wb.save(out_path)
     print(f"✅ Generated {out_path}")
     print(f"   Template: {os.path.basename(tmpl)}")
     print(f"   {len(all_data_ranges)} test cases across {len(sections_in)} sections.")
-    print(f"   STT from 1 to {stt_counter} (continuous)")
+    print(f"   Row STT from 1 to {stt_counter} (continuous; Testcase IDs remain stable)")
     print(f"   Cover metadata updated (code={project_code}).")
 
 if __name__ == '__main__':

@@ -73,9 +73,7 @@ function sha256(filePath) {
 
 function isTestcaseId(value) {
   if (!value || /^S\d+$/i.test(value) || /^(?:OUTCOME|CLEANUP)$/i.test(value)) return false;
-  return /^TC_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)+$/i.test(value)
-    || /^[A-Za-z][A-Za-z0-9]*-\d+$/i.test(value)
-    || /^[A-Za-z][A-Za-z0-9]*_\d+$/i.test(value);
+  return /^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$/i.test(value);
 }
 
 function readText(filePath) {
@@ -126,6 +124,125 @@ function parseTestcases(markdown) {
   }
 
   return { cases, duplicateIds };
+}
+
+function selectorAssertionKind(kind) {
+  return new Set([
+    'visible', 'hidden', 'text', 'value', 'enabled', 'disabled', 'checked',
+    'unchecked', 'count', 'attribute', 'class', 'focused', 'actionable',
+  ]).has(String(kind || '').trim().toLowerCase());
+}
+
+function markerValue(value) {
+  if (value === undefined || value === null || value === '') return 'N/A';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value).replace(/\s+/g, ' ').trim();
+}
+
+function stepMarker(testcaseId, step) {
+  const targetKey = step?.target?.key || 'N/A';
+  return `[${testcaseId}:${step.id}] ${step.action} ${targetKey}`;
+}
+
+function outcomeMarker(testcaseId, assertion, index) {
+  const oracle = assertion?.target ?? assertion?.value ?? assertion?.state ?? 'N/A';
+  return `[${testcaseId}:OUTCOME:${String(index + 1).padStart(2, '0')}] ${assertion?.kind || 'assert'} ${markerValue(oracle)}`;
+}
+
+function parseAutomationManifest(manifestPath) {
+  const parsed = JSON.parse(readText(manifestPath));
+  if (parsed.schema_version !== 1 || !Array.isArray(parsed.testcases)) {
+    throw new Error('automation manifest must use schema_version=1 and contain testcases[]');
+  }
+  const duplicateIds = [];
+  const seenIds = new Set();
+  const cases = parsed.testcases.map((item, index) => {
+    const id = String(item.testcase_id || '').trim();
+    if (!isTestcaseId(id)) throw new Error(`Invalid testcase_id in automation manifest at testcases[${index}]`);
+    if (seenIds.has(id)) duplicateIds.push(id);
+    seenIds.add(id);
+
+    const execution = item.execution && typeof item.execution === 'object' ? item.execution : null;
+    const steps = Array.isArray(execution?.steps) ? execution.steps : [];
+    const entry = execution?.entry || {};
+    const outcomeAssertions = Array.isArray(execution?.outcome?.assertions)
+      ? execution.outcome.assertions
+      : [];
+    const targetKeys = [];
+    const allTargetKeys = [];
+    const actionsByTarget = {};
+    const targetRoutes = {};
+    const expectedVisibilityByTarget = {};
+    const addTarget = (targetKey, action, stepId, selectorRequired, route, expectedVisible = true) => {
+      const key = String(targetKey || '').trim();
+      if (!key) return;
+      if (!allTargetKeys.includes(key)) allTargetKeys.push(key);
+      if (selectorRequired && !targetKeys.includes(key)) targetKeys.push(key);
+      actionsByTarget[key] = actionsByTarget[key] || [];
+      actionsByTarget[key].push({ step_id: stepId, action });
+      if (selectorRequired && route && !targetRoutes[key]) targetRoutes[key] = route;
+      if (selectorRequired) {
+        if (expectedVisibilityByTarget[key] === undefined) expectedVisibilityByTarget[key] = expectedVisible;
+        else if (expectedVisibilityByTarget[key] !== expectedVisible) expectedVisibilityByTarget[key] = 'state_dependent';
+      }
+    };
+
+    let currentRoute = entry.route || null;
+    for (const step of steps) {
+      const action = String(step.action || '').trim().toLowerCase();
+      const targetKey = step?.target?.key;
+      addTarget(targetKey, action, step.id, !['navigate', 'wait'].includes(action), currentRoute);
+      const transitionRoute = String(step?.wait_for?.kind || '').toLowerCase() === 'url'
+        ? step.wait_for.value || currentRoute
+        : currentRoute;
+      for (const assertion of step.assertions || []) {
+        if (assertion?.target && selectorAssertionKind(assertion.kind)) {
+          addTarget(assertion.target, 'assert', `${step.id}:assert`, true, transitionRoute, String(assertion.kind).toLowerCase() !== 'hidden');
+        }
+      }
+      if (step?.wait_for?.target && selectorAssertionKind(step.wait_for.kind)) {
+        addTarget(step.wait_for.target, 'wait', `${step.id}:wait`, true, transitionRoute, String(step.wait_for.kind).toLowerCase() !== 'hidden');
+      }
+      currentRoute = transitionRoute;
+    }
+    const outcomeRoute = execution?.outcome?.route || currentRoute;
+    for (let assertionIndex = 0; assertionIndex < outcomeAssertions.length; assertionIndex += 1) {
+      const assertion = outcomeAssertions[assertionIndex];
+      if (assertion?.target && selectorAssertionKind(assertion.kind)) {
+        addTarget(assertion.target, 'assert', `OUTCOME:${assertionIndex + 1}`, true, outcomeRoute, String(assertion.kind).toLowerCase() !== 'hidden');
+      }
+    }
+
+    const rbacRefs = Array.isArray(entry.rbac_refs) ? entry.rbac_refs.map(String) : [];
+    return {
+      id,
+      case_ref: item.case_ref || null,
+      type: item.type || null,
+      requirement: item.requirement || null,
+      priority: item.priority || null,
+      entry,
+      role_key: entry.role_key || null,
+      rbac_refs: rbacRefs,
+      steps,
+      outcome_assertions: outcomeAssertions,
+      cleanup: execution?.cleanup ?? null,
+      mutates: execution?.mutates === true,
+      target_keys: targetKeys,
+      all_target_keys: allTargetKeys,
+      actions_by_target: actionsByTarget,
+      target_routes: targetRoutes,
+      expected_visibility_by_target: expectedVisibilityByTarget,
+      structured: Boolean(execution && steps.length > 0),
+      required_markers: {
+        steps: steps.map(step => stepMarker(id, step)),
+        outcomes: outcomeAssertions.map((assertion, outcomeIndex) => outcomeMarker(id, assertion, outcomeIndex)),
+        role: entry.role_key ? `[${id}:ROLE] ${entry.role_key}` : null,
+        rbac: rbacRefs.map(ref => `[${id}:RBAC] ${ref}`),
+        cleanup: execution?.cleanup != null || execution?.mutates === true ? `[${id}:CLEANUP]` : null,
+      },
+    };
+  });
+  return { cases, duplicateIds, raw: parsed };
 }
 
 function walkFiles(rootDir, predicate = () => true) {
@@ -277,30 +394,119 @@ function testDeclarationEvidence(content, testcaseId) {
     || new RegExp(`\\b(?:tcId|testCaseId)\\s*:\\s*['\"\`]${id}['\"\`]`).test(content);
 }
 
+function testcaseImplementationSlice(content, testcaseId) {
+  const idIndex = content.indexOf(testcaseId);
+  if (idIndex < 0) return '';
+  const declarationIndex = content.lastIndexOf('test(', idIndex);
+  const start = declarationIndex >= 0 ? declarationIndex : idIndex;
+  const tail = content.slice(idIndex + testcaseId.length);
+  const nextMatch = /\n\s*test\s*\(/.exec(tail);
+  const nextDeclaration = nextMatch
+    ? idIndex + testcaseId.length + nextMatch.index
+    : content.length;
+  return content.slice(start, nextDeclaration);
+}
+
+function markerExecutionEvidence(implementationText, marker, nextMarkers = [], kind = 'step') {
+  const markerIndex = implementationText.indexOf(marker);
+  if (markerIndex < 0) return false;
+  let end = implementationText.length;
+  for (const nextMarker of nextMarkers) {
+    const nextIndex = implementationText.indexOf(nextMarker, markerIndex + marker.length);
+    if (nextIndex >= 0 && nextIndex < end) end = nextIndex;
+  }
+  const body = implementationText.slice(markerIndex + marker.length, end);
+  const hasPomAction = /\bawait\s+(?!test\.step\b)[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+\s*\(/.test(body);
+  const hasAssertion = /\b(?:await\s+)?expect\s*\(/.test(body);
+  if (kind === 'outcome') return hasAssertion;
+  return hasPomAction || hasAssertion;
+}
+
+function normalizedRoute(value) {
+  const rendered = String(value || '').trim();
+  if (!rendered) return '';
+  try {
+    return new URL(rendered.replace('<BASE_URL>', 'https://qa.invalid')).pathname;
+  } catch {
+    const placeholderRemoved = rendered.replace(/^<[^>]+>/, '');
+    return placeholderRemoved.startsWith('/') ? placeholderRemoved : rendered;
+  }
+}
+
+function evidenceMatchesCase(record, testcase, targetKey) {
+  const expectedRoute = normalizedRoute(testcase.target_routes?.[targetKey] || testcase.entry?.route);
+  const evidenceRoute = normalizedRoute(record.route);
+  if (expectedRoute && evidenceRoute && expectedRoute !== evidenceRoute) return false;
+  const expectedRoles = new Set([
+    String(testcase.entry?.role || '').trim().toLowerCase(),
+    String(testcase.role_key || '').trim().toLowerCase(),
+  ].filter(Boolean));
+  const evidenceRole = String(record.role || '').trim().toLowerCase();
+  return !evidenceRole || expectedRoles.size === 0 || expectedRoles.has(evidenceRole);
+}
+
 function relativeList(files, baseDir) {
   return files.map(filePath => displayPath(filePath, baseDir));
 }
 
 function buildTraceability({
   testcasePath,
+  manifestPath,
   automationRoot,
   evidenceDir,
   tokenUsagePath,
   mode = 'ui',
 }) {
   const markdown = readText(testcasePath);
-  const parsedCases = parseTestcases(markdown);
+  const markdownCases = parseTestcases(markdown);
+  let manifestCases = null;
+  const violations = [];
+  if (manifestPath) {
+    try {
+      manifestCases = parseAutomationManifest(manifestPath);
+    } catch (error) {
+      addViolation(violations, 'AUTOMATION_MANIFEST_INVALID', error.message, {
+        file: displayPath(manifestPath, automationRoot),
+      });
+    }
+  } else if (mode === 'ui') {
+    addViolation(
+      violations,
+      'AUTOMATION_MANIFEST_MISSING',
+      'UI automation requires the lossless .automation.json companion; Markdown alone is not a machine-safe source',
+    );
+  }
+  const parsedCases = manifestCases || markdownCases;
   const cases = parsedCases.cases;
   const specs = specFiles(automationRoot);
   const selectors = selectorFiles(automationRoot);
   const pages = pageFiles(automationRoot);
   const selectorEvidence = parseSelectorEvidence(evidenceDir);
   const sourceHash = sha256(testcasePath);
-  const violations = [...selectorEvidence.parseErrors.map(error => ({
+  const manifestHash = manifestPath && fs.existsSync(manifestPath) ? sha256(manifestPath) : null;
+  violations.push(...selectorEvidence.parseErrors.map(error => ({
     code: 'SELECTOR_EVIDENCE_INVALID_JSON',
     message: error.message,
     file: displayPath(error.file, automationRoot),
-  }))];
+  })));
+
+  if (manifestCases) {
+    const markdownIds = markdownCases.cases.map(testcase => testcase.id);
+    const manifestIds = manifestCases.cases.map(testcase => testcase.id);
+    if (JSON.stringify(markdownIds) !== JSON.stringify(manifestIds)) {
+      addViolation(violations, 'MARKDOWN_MANIFEST_ID_MISMATCH', 'Markdown và automation manifest không có cùng Testcase ID/order', {
+        markdown_ids: markdownIds,
+        manifest_ids: manifestIds,
+      });
+    }
+    const recordedMarkdownHash = manifestCases.raw?.source?.markdown_sha256;
+    if (recordedMarkdownHash !== sourceHash) {
+      addViolation(violations, 'MARKDOWN_MANIFEST_HASH_MISMATCH', 'Automation manifest không khớp Markdown source hiện tại', {
+        expected: recordedMarkdownHash || null,
+        actual: sourceHash,
+      });
+    }
+  }
 
   for (const duplicateId of parsedCases.duplicateIds) {
     addViolation(violations, 'DUPLICATE_TESTCASE_ID', `Testcase ID xuất hiện nhiều lần: ${duplicateId}`, {
@@ -333,6 +539,60 @@ function buildTraceability({
       });
     }
 
+    const implementationSlices = declarationFiles.map(filePath => (
+      testcaseImplementationSlice(readText(filePath), testcase.id)
+    ));
+    const implementationText = implementationSlices.join('\n');
+    const implementationMarkers = [];
+    if (manifestCases && declarationFiles.length > 0) {
+      const sourceMarker = `[AUTOMATION_SOURCE:${manifestHash}]`;
+      if (!declarationFiles.some(filePath => readText(filePath).includes(sourceMarker))) {
+        addViolation(violations, 'AUTOMATION_SOURCE_HASH_MISSING', `${testcase.id} chưa gắn source hash của automation manifest`, {
+          testcase_id: testcase.id,
+          required_marker: sourceMarker,
+        });
+      }
+      if (!/\b(?:await|expect\s*\()/.test(implementationText)) {
+        addViolation(violations, 'EMPTY_TEST_IMPLEMENTATION', `${testcase.id} có test declaration nhưng chưa có action/assertion thực thi`, {
+          testcase_id: testcase.id,
+        });
+      }
+      const requiredMarkers = [
+        ...(testcase.required_markers?.steps || []),
+        ...(testcase.required_markers?.outcomes || []),
+        ...(testcase.required_markers?.role ? [testcase.required_markers.role] : []),
+        ...(testcase.required_markers?.rbac || []),
+        ...(testcase.required_markers?.cleanup ? [testcase.required_markers.cleanup] : []),
+      ];
+      for (const marker of requiredMarkers) {
+        const present = implementationText.includes(marker);
+        implementationMarkers.push({ marker, present });
+        if (!present) {
+          addViolation(violations, 'IMPLEMENTATION_MARKER_MISSING', `${testcase.id} thiếu mapping bắt buộc: ${marker}`, {
+            testcase_id: testcase.id,
+            marker,
+          });
+        }
+      }
+      const executableMarkers = [
+        ...(testcase.required_markers?.steps || []).map(marker => ({ marker, kind: 'step' })),
+        ...(testcase.required_markers?.outcomes || []).map(marker => ({ marker, kind: 'outcome' })),
+        ...(testcase.required_markers?.cleanup
+          ? [{ marker: testcase.required_markers.cleanup, kind: 'cleanup' }]
+          : []),
+      ];
+      for (const [index, item] of executableMarkers.entries()) {
+        if (!implementationText.includes(item.marker)) continue;
+        const followingMarkers = executableMarkers.slice(index + 1).map(entry => entry.marker);
+        if (!markerExecutionEvidence(implementationText, item.marker, followingMarkers, item.kind)) {
+          addViolation(violations, 'IMPLEMENTATION_BODY_MISSING', `${testcase.id} có mapping nhưng chưa có hành động POM hoặc assertion thật: ${item.marker}`, {
+            testcase_id: testcase.id,
+            marker: item.marker,
+          });
+        }
+      }
+    }
+
     if (mode === 'ui') {
       if (!testcase.structured || testcase.target_keys.length === 0) {
         addViolation(violations, 'LEGACY_TEXT_ONLY', `${testcase.id} chưa có execution contract/target key`, {
@@ -341,14 +601,23 @@ function buildTraceability({
       }
 
       for (const targetKey of testcase.target_keys) {
-        if (selectorCoverage.has(targetKey)) continue;
-        const records = selectorRecordsByKey.get(targetKey) || [];
+        const coverageKey = manifestCases ? `${testcase.id}::${targetKey}` : targetKey;
+        if (selectorCoverage.has(coverageKey)) continue;
+        const allRecords = selectorRecordsByKey.get(targetKey) || [];
+        const records = manifestCases
+          ? allRecords.filter(record => evidenceMatchesCase(record, testcase, targetKey))
+          : allRecords;
         const record = records[0] || null;
         const action = testcase.actions_by_target[targetKey]?.[0]?.action || null;
         const requiresActionable = ACTIONABLE_ACTIONS.has(action);
+        const expectedVisible = testcase.expected_visibility_by_target?.[targetKey] ?? true;
         const targetResult = {
+          testcase_id: testcase.id,
           target_key: targetKey,
+          route: testcase.target_routes?.[targetKey] || testcase.entry?.route || null,
+          role_key: testcase.role_key || null,
           action,
+          expected_visible: expectedVisible,
           status: record?.status || 'missing',
           evidence_file: record ? displayPath(record.evidence_file, automationRoot) : null,
           strategy: record?.strategy || null,
@@ -385,8 +654,20 @@ function buildTraceability({
               target_key: targetKey,
             });
           }
-          if (verification.visible !== true) {
-            addViolation(violations, 'SELECTOR_NOT_VISIBLE', `Selector ${targetKey} chưa chứng minh visible=true`, {
+          if (expectedVisible === true && verification.visible !== true) {
+            addViolation(violations, 'SELECTOR_NOT_VISIBLE', `Selector ${targetKey} chưa chứng minh visible=true theo expected result`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+            });
+          }
+          if (expectedVisible === false && verification.visible !== false) {
+            addViolation(violations, 'SELECTOR_NOT_HIDDEN', `Selector ${targetKey} chưa chứng minh visible=false cho assertion hidden`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+            });
+          }
+          if (expectedVisible === 'state_dependent' && !record.state) {
+            addViolation(violations, 'SELECTOR_STATE_EVIDENCE_MISSING', `Selector ${targetKey} có visibility thay đổi theo flow; evidence phải ghi state cụ thể`, {
               testcase_id: testcase.id,
               target_key: targetKey,
             });
@@ -472,7 +753,7 @@ function buildTraceability({
             });
           }
         }
-        selectorCoverage.set(targetKey, targetResult);
+        selectorCoverage.set(coverageKey, targetResult);
       }
     }
 
@@ -480,6 +761,10 @@ function buildTraceability({
       testcase_id: testcase.id,
       structured_execution_contract: testcase.structured,
       target_keys: testcase.target_keys,
+      all_target_keys: testcase.all_target_keys || testcase.target_keys,
+      role_key: testcase.role_key || null,
+      rbac_refs: testcase.rbac_refs || [],
+      implementation_markers: implementationMarkers,
       matched_spec_files: relativeList(matchedSpecFiles, automationRoot),
       declaration_files: relativeList(declarationFiles, automationRoot),
     };
@@ -498,8 +783,8 @@ function buildTraceability({
 
   for (const filePath of specs) {
     const content = readText(filePath);
-    if (/(?:page|this\.page)\.locator\s*\(/.test(content)) {
-      addViolation(violations, 'RAW_LOCATOR_IN_SPEC', `Spec chứa raw locator; chuyển selector vào Page Object: ${displayPath(filePath, automationRoot)}`, {
+    if (/(?:page|this\.page)\.(?:locator|getByTestId|getByRole|getByLabel|getByPlaceholder|getByText)\s*\(/.test(content)) {
+      addViolation(violations, 'RAW_SELECTOR_IN_SPEC', `Spec chứa raw selector; chuyển toàn bộ selector vào Page Object: ${displayPath(filePath, automationRoot)}`, {
         file: displayPath(filePath, automationRoot),
       });
     }
@@ -517,6 +802,8 @@ function buildTraceability({
     source: {
       path: displayPath(testcasePath, automationRoot),
       sha256: sourceHash,
+      automation_manifest_path: manifestPath ? displayPath(manifestPath, automationRoot) : null,
+      automation_manifest_sha256: manifestHash,
       format: path.extname(testcasePath).toLowerCase().replace('.', '') || 'unknown',
       testcase_count: cases.length,
       testcase_ids: cases.map(testcase => testcase.id),
@@ -542,8 +829,10 @@ function buildTraceability({
     summary: {
       testcase_count: cases.length,
       testcase_mapped_count: testcaseResults.filter(testcase => testcase.declaration_files.length > 0).length,
-      target_key_count: allTargetKeys.length,
+      target_key_count: selectorCoverage.size,
+      unique_target_key_count: allTargetKeys.length,
       target_key_runtime_verified_count: verifiedTargetKeys.length,
+      selector_context_count: selectorCoverage.size,
       selector_evidence_file_count: selectorEvidence.files.length,
       violation_count: violations.length,
     },
@@ -558,12 +847,20 @@ function printUsage() {
 
 Options:
   --testcases <file>             Generated testcase Markdown companion
+  --manifest <file>              Lossless .automation.json companion required for UI
   --automation-root <dir>        POM project root (default: .)
   --selector-evidence-dir <dir> Selector evidence directory (default: selector-evidence)
   --token-usage <file>           Provider-reported usage JSON (or QA_TOKEN_USAGE_FILE)
   --mode <ui|api>                UI checks selector evidence; API checks ID mapping only
   --output <file>                Audit JSON (default: reports/testcase-automation-traceability.json)
 `);
+}
+
+function discoverManifestFile(automationRoot, testcasePath) {
+  const explicit = getArg('--manifest', process.env.TESTCASE_AUTOMATION_MANIFEST || '');
+  if (explicit) return path.resolve(automationRoot, explicit);
+  const sibling = testcasePath.replace(/\.md$/i, '.automation.json');
+  return fs.existsSync(sibling) ? sibling : '';
 }
 
 function discoverTestcaseFile(automationRoot) {
@@ -582,9 +879,12 @@ function discoverTestcaseFile(automationRoot) {
 
 export {
   buildTraceability,
+  outcomeMarker,
+  parseAutomationManifest,
   parseSelectorEvidence,
   parseTestcases,
   readTokenUsage,
+  stepMarker,
 };
 
 async function main() {
@@ -601,6 +901,7 @@ async function main() {
   if (path.extname(testcasePath).toLowerCase() !== '.md') {
     throw new Error('BLOCKED: use the generated testcase Markdown companion as the automation source; do not audit a raw Excel file');
   }
+  const manifestPath = discoverManifestFile(automationRoot, testcasePath);
   const evidenceDir = path.resolve(automationRoot, getArg('--selector-evidence-dir', 'selector-evidence'));
   const tokenUsageArg = getArg('--token-usage', process.env.QA_TOKEN_USAGE_FILE || '');
   const tokenUsagePath = tokenUsageArg ? path.resolve(automationRoot, tokenUsageArg) : '';
@@ -608,6 +909,7 @@ async function main() {
 
   const report = buildTraceability({
     testcasePath,
+    manifestPath,
     automationRoot,
     evidenceDir,
     tokenUsagePath,

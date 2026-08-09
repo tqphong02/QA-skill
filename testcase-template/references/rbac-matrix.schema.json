@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-skill.local/schemas/testcase-rbac-matrix-v1.json",
+  "title": "Testcase RBAC matrix contract",
+  "$comment": "This schema validates object shape. gen-testcases.py validates declared-role completeness and all role-rule-case cross references",
+  "type": "object",
+  "required": ["version", "roles", "rules"],
+  "properties": {
+    "version": { "const": 1 },
+    "sources": {
+      "type": "object",
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["key", "name"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+          "name": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "module", "resource", "action", "data_scope", "condition",
+          "requirement", "expectations", "allow_case_refs", "deny_case_refs",
+          "coverage_required", "verification"
+        ],
+        "properties": {
+          "id": { "type": "string", "pattern": "^RBAC-[A-Z0-9][A-Z0-9_-]*$" },
+          "module": { "type": "string", "minLength": 1 },
+          "resource": { "type": "string", "minLength": 1 },
+          "action": { "type": "string", "minLength": 1 },
+          "data_scope": { "type": "string", "minLength": 1 },
+          "condition": { "type": "string", "minLength": 1 },
+          "requirement": { "type": "string", "minLength": 1 },
+          "expectations": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": {
+              "enum": ["ALLOW", "DENY", "N/A", "UNRESOLVED"]
+            }
+          },
+          "allow_case_refs": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "deny_case_refs": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "coverage_required": { "type": "boolean" },
+          "verification": {
+            "enum": [
+              "REQUIREMENT_ONLY", "STATIC_CONFIRMED", "RUNTIME_CONFIRMED",
+              "REQ_CODE_CONFLICT", "RUNTIME_CONFLICT", "RUNTIME_BYPASS",
+              "UNVERIFIED"
+            ]
+          },
+          "evidence": { "type": ["array", "string"] },
+          "notes": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,8 +1,10 @@
-# Template Schema - Chi tiết 4 sheet
+# Template Schema - Chi tiết workbook và RBAC Matrix
 
 > **Khi nào đọc file này**: Khi cần biết chi tiết về schema của từng sheet trong template (Cover metadata, Test cases_App columns, Report module codes). Tham chiếu `@references/template-schema.md` trong SKILL.md.
 
-Mỗi workbook được generate cùng một file Markdown cùng basename. Markdown chứa toàn bộ testcase design và được tạo trước Excel; 4 sheet dưới đây vẫn là cấu trúc riêng của artifact Excel
+Mỗi workbook được generate cùng một file Markdown cùng basename. Markdown chứa toàn bộ testcase design và được tạo trước Excel
+
+Master `assets/Template.xlsx` hiện có 5 sheet: `Cover`, `Test cases_App`, `Note`, `Report`, `Dropdown Keys - Do Not Delete -`. Generator thêm `RBAC Matrix` ngay sau `Test cases_App`, nên workbook đầu ra có 6 sheet
 
 The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/G/H; it never adds a selector or automation column to Excel
 
@@ -39,7 +41,34 @@ The workbook columns remain fixed. The structured `execution` contract lives in 
 | L | Tester | 12 |
 | M | Notes | 20 |
 
-## Sheet `Dropdown Keys` — controlled vocabulary
+## Sheet `RBAC Matrix` — Role × Rule × Testcase coverage
+
+Sheet này luôn có trong workbook đầu ra. Nếu scope không có rule phân quyền, sheet ghi `N/A`; không để sheet trống khiến người đọc nhầm rằng RBAC đã được phân tích
+
+| Cột | Nội dung |
+|---|---|
+| RBAC ID | Mã rule ổn định, ví dụ `RBAC-DASH-001` |
+| Module | Module nghiệp vụ |
+| Chức năng/Tài nguyên | Đối tượng cần kiểm soát quyền |
+| Hành động | Xem, tạo, sửa, xóa, phê duyệt, truy cập |
+| Phạm vi dữ liệu | Dữ liệu của mình, cùng đơn vị, toàn hệ thống |
+| Điều kiện/Trạng thái | Điều kiện làm thay đổi quyền |
+| Requirement Ref | AC/BR làm oracle |
+| Một cột cho mỗi role | `CHO PHÉP`, `TỪ CHỐI`, `N/A`, `CHƯA RÕ` |
+| Testcase cho phép | Testcase IDs được resolve từ `allow_case_refs` |
+| Testcase từ chối | Testcase IDs được resolve từ `deny_case_refs` |
+| Coverage | `ĐỦ`, `THIẾU ...`, `CHƯA YÊU CẦU` |
+| Mức xác minh | Requirement/source/runtime provenance |
+| Nguồn/Evidence | Requirement, source hoặc runtime reference đã che |
+| Ghi chú/Q&A | Gap cần BA/PO/Dev xác nhận |
+
+`rbac` JSON là source of truth. Không sửa riêng sheet rồi để JSON/Markdown lệch nhau
+
+## Sheet `Note`
+
+Giữ nguyên nội dung hướng dẫn có sẵn trong master template
+
+## Sheet `Dropdown Keys - Do Not Delete -` — controlled vocabulary
 
 | Nhóm | Values |
 |---|---|

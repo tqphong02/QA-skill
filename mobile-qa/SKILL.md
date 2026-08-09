@@ -1,6 +1,6 @@
 ---
 name: mobile-qa
-description: Plan, execute, diagnose, and report Android/iOS mobile QA with Appium MCP, native tooling, emulators, simulators, real devices, and authorized network interception. Trigger whenever the user asks to test, inspect, automate, smoke-test, regression-test, find bugs, generate mobile test code, mirror Android with scrcpy, or inspect mobile HTTP/HTTPS, WebSocket, GraphQL, HAR, API traffic, proxy behavior, latency, failures, retries, Proxyman, Charles, mitmproxy, HTTP Toolkit, or Fiddler. Select the device matrix, lifecycle, and network-capture scope before execution; do not require the skill name.
+description: Plan, run, diagnose, and report Android/iOS QA with Appium, native tools, emulators, simulators, real devices, scrcpy, and authorized traffic capture. Trigger on mobile smoke/regression, APK/IPA, device matrices, HTTP/WebSocket/GraphQL/HAR traffic, Proxyman, Charles, mitmproxy, HTTP Toolkit, or Fiddler. Auto-route; do not require the skill name.
 ---
 
 # Mobile QA

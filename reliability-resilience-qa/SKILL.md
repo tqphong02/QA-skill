@@ -1,6 +1,6 @@
 ---
 name: reliability-resilience-qa
-description: Design and assess reliability, fault-injection, recovery, backup/restore, observability, disaster-recovery, RTO/RPO, retry, timeout, and graceful-degradation tests with explicit stop conditions. Trigger on resilience, chaos, fault injection, recovery testing, backup, restore, failover, disaster recovery, RTO, RPO, retry, timeout, graceful degradation, or incident readiness; do not require the skill name. Plans are local and read-only until an authorized execution is approved.
+description: Design reliability, resilience, chaos, fault-injection, recovery, backup/restore, failover, observability, disaster-recovery, RTO/RPO, retry, timeout, and graceful-degradation tests. Require explicit stop conditions and approval before active execution. Auto-route; do not require the skill name.
 ---
 
 # Reliability & Resilience QA

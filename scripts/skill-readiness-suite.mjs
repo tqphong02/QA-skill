@@ -21,6 +21,7 @@
  */
 
 import { spawnSync } from 'node:child_process'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -443,7 +444,7 @@ function planeChecks(skill) {
 
 function pomChecks(skill) {
   const templateRoot = path.join(ROOT, 'playwright-pom-automation/assets/templates')
-  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'quality-gates.json', 'scripts/quality-gate.mjs']
+  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'quality-gates.json', 'scripts/quality-gate.mjs', 'scripts/generate-pom-plan.mjs', 'scripts/verify-testcase-traceability.mjs']
   const missing = required.filter(file => !fs.existsSync(path.join(templateRoot, file)))
   const specFiles = []
   function collect(directory) {
@@ -455,7 +456,7 @@ function pomChecks(skill) {
     }
   }
   collect(path.join(templateRoot, 'tests'))
-  const rawLocatorInSpecs = specFiles.filter(file => /page\.locator\(/.test(fs.readFileSync(file, 'utf8')))
+  const rawLocatorInSpecs = specFiles.filter(file => /page\.(?:locator|getByTestId|getByRole|getByLabel|getByPlaceholder|getByText)\s*\(/.test(fs.readFileSync(file, 'utf8')))
   const tags = specFiles.every(file => /@(ui|api|functional|perf)/.test(fs.readFileSync(file, 'utf8')))
   const structureOk = missing.length === 0 && rawLocatorInSpecs.length === 0 && tags
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
@@ -463,6 +464,7 @@ function pomChecks(skill) {
   commandPass(skill, 'POM template TypeScript compile', tsc, 'template-only compile')
   const qualityGate = runCommand(process.execPath, [path.join(templateRoot, 'scripts/quality-gate.mjs'), '--config', path.join(templateRoot, 'quality-gates.json'), '--report', path.join(templateRoot, 'reports/playwright.sample.json'), '--output', path.join(TMP_ROOT, 'quality-gate.json')], { cwd: ROOT, timeout: 30000 })
   commandPass(skill, 'automation quality gate fixture', qualityGate, 'failed/flaky/evidence/duration/coverage gate fixture')
+  runNodeTestFiles(skill, ['playwright-pom-automation/tests'], ROOT)
   addIntegration(skill, 'BLOCKED', 'no application URL, test account or approved browser target was supplied; template compilation is not a live UI certification')
 }
 
@@ -488,6 +490,7 @@ function qaRunChecks(skill) {
 }
 
 function testcaseChecks(skill) {
+  runPythonUnitTests(skill, 'testcase-template/tests')
   const output = path.join(TMP_ROOT, 'testcases', 'readiness.xlsx')
   fs.mkdirSync(path.dirname(output), { recursive: true })
   const generator = runCommand('python3', [path.join(ROOT, 'testcase-template/scripts/gen-testcases.py'), path.join(ROOT, 'testcase-template/examples/sample-input.json'), output], {
@@ -495,8 +498,24 @@ function testcaseChecks(skill) {
     timeout: 180000,
   })
   const markdown = output.replace(/\.xlsx$/, '.md')
-  const generatedOk = generator.code === 0 && fs.existsSync(output) && fs.existsSync(markdown) && /# Testcases/.test(fs.readFileSync(markdown, 'utf8'))
-  addCheck(skill, 'Markdown-first testcase generation', generatedOk ? 'PASS' : 'FAIL', generatedOk ? 'Markdown and Excel are generated from the same sample source' : `generation failed\n${generator.output}`, generator.command)
+  const manifest = output.replace(/\.xlsx$/, '.automation.json')
+  let manifestOk = false
+  if (fs.existsSync(manifest) && fs.existsSync(markdown)) {
+    try {
+      const parsedManifest = JSON.parse(fs.readFileSync(manifest, 'utf8'))
+      const markdownHash = crypto.createHash('sha256').update(fs.readFileSync(markdown)).digest('hex')
+      manifestOk = parsedManifest?.source?.markdown_sha256 === markdownHash
+        && parsedManifest?.source?.testcase_count === parsedManifest?.testcases?.length
+    } catch {
+      manifestOk = false
+    }
+  }
+  const generatedOk = generator.code === 0
+    && fs.existsSync(output)
+    && fs.existsSync(markdown)
+    && /# Testcases/.test(fs.readFileSync(markdown, 'utf8'))
+    && manifestOk
+  addCheck(skill, 'Markdown-first testcase generation', generatedOk ? 'PASS' : 'FAIL', generatedOk ? 'Markdown, lossless automation manifest and Excel are generated from the same sample source' : `generation failed or manifest/hash mismatch\n${generator.output}`, generator.command)
   const apiSource = path.join(TMP_ROOT, 'testcases', 'readiness-openapi.json')
   fs.writeFileSync(apiSource, `${JSON.stringify({
     openapi: '3.0.3',

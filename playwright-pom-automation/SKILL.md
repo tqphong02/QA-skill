@@ -1,6 +1,6 @@
 ---
 name: playwright-pom-automation
-description: Scaffold or extend Playwright Page Object Model automation for UI, API, component, contract, visual, accessibility, performance and CI quality-gate tests. Trigger on writing Playwright tests/specs, Page Object Model, selectors, automation scaffolding, Allure, flaky-test management, service virtualization, coverage, visual regression, axe, or CI setup; do not require the skill name. Keep selectors out of specs. Not for ad-hoc exploratory clicks, ticket retest execution, or production app debugging; use qa-run for those.
+description: Build or extend Playwright Page Object Model automation for UI, API, component, contract, visual, accessibility, performance, and CI tests. Trigger on Playwright specs, POM, selectors, Allure, flaky tests, service virtualization, coverage, visual regression, axe, or CI. Use qa-run for ad-hoc browser execution. Auto-route; do not require the skill name.
 ---
 
 # Playwright POM Automation
@@ -22,12 +22,13 @@ After `traceability` passes, save only verified target keys, selector strategies
 ## Hard gates
 
 1. Resolve the application, environment, test account and requested test type before scaffolding
-2. Keep every selector in `selectors/` or a Page Object; never put raw `page.locator()` in a spec
+2. Keep every selector in `selectors/` or a Page Object; never put raw `page.locator()` or `page.getBy*()` in a spec
 3. Keep assertions in specs, tag each executable test, and isolate data by worker and retry
 4. Do not run against production or create external state without an explicit target and cleanup contract
 5. Run placeholder, TypeScript and relevant test checks before handing the suite to CI
 6. Resolve every UI target from the shared testcase `execution` contract and verify its locator in the live target DOM before committing selector code
-7. Run `scripts/verify-testcase-traceability.mjs` and hand off its JSON only when testcase mapping and selector evidence are `PASS`
+7. Read the generated `.automation.json` companion, run `npm run pom-plan`, and treat its source hash plus step/outcome/role/RBAC/cleanup markers as mandatory implementation metadata
+8. Run `scripts/verify-testcase-traceability.mjs` with Markdown plus automation manifest and hand off its JSON only when behavior mapping, RBAC mapping and selector evidence are `PASS`
 
 ## The trap this skill exists to prevent
 
@@ -190,15 +191,26 @@ If no candidate is unique and actionable, stop with a selector blocker and reque
 
 Read the shared contract in [../testcase-template/references/execution-contract.md](../testcase-template/references/execution-contract.md) before generating code
 
+Generate the deterministic implementation plan before writing specs:
+
+```bash
+npm run pom-plan -- --manifest testcases/<feature>.automation.json \
+  --output testcases/<feature>.pom-plan.json
+```
+
+The automation manifest is the machine source; Markdown is the readable companion. Copy the plan's `[AUTOMATION_SOURCE:<sha256>]` marker into the spec file and use every exact step/outcome/role/RBAC/cleanup marker as the corresponding `test.step` or annotation label. Missing or stale markers are `BLOCKED`
+
 - One testcase ID maps to one `test()` block unless the user explicitly requests a different grouping
 - `execution.entry` maps to fixture/setup and route navigation
 - Each `[S##]` maps to one ordered action or Page Object method
+- Read `action`, exact structured `value`, `target.key`, waits and assertions from `.automation.json`; Excel F/G/H and Markdown prose remain readable projections and must not be used to reconstruct missing machine fields
+- For RBAC-linked cases, use `execution.entry.role_key` to select the matching account fixture and retain every `rbac_ref` in test metadata; generate separate allow/deny tests from the testcase IDs linked in the RBAC Matrix
 - Step assertions map to intermediate `expect()` calls; `outcome.assertions` map to final business assertions
 - `target.key` maps to exactly one selector entry and one Page Object getter/action surface
 - `cleanup` maps to `finally` or fixture teardown for mutating cases
 - A legacy text-only testcase must be normalized or marked not automatable before code generation
 
-After generation, run [references/automation-audit.md](references/automation-audit.md). The audit records the testcase source hash, testcase ID → spec mapping, target key → selector evidence mapping and token measurement. A green TypeScript compile alone does not prove that the correct testcase or locator was used
+After generation, run [references/automation-audit.md](references/automation-audit.md). The audit rejects empty specs and checks the automation-manifest hash, exact step/outcome/cleanup markers, role/RBAC markers, testcase ID → spec mapping and target key → selector evidence mapping. A green TypeScript compile alone does not prove that the correct testcase or locator was used
 
 ### 6. Add API layer (API testing conventions)
 - Default to using Playwright `request` fixture (`APIRequestContext`).
@@ -306,8 +318,9 @@ Filter:
 
 ### 12. Self-check before delivering
 - [ ] **`selectors/` repo created** for every page — NO hardcoded locators
-- [ ] Every selector has runtime evidence: target key, ordered candidates, selected strategy, count=1, visible and actionable when required
-- [ ] `npm run traceability -- --testcases <generated-markdown>` passes and `reports/testcase-automation-traceability.json` is archived
+- [ ] Every selector has runtime evidence: target key, ordered candidates, selected strategy, count=1, visibility matching the expected state, and actionable when required
+- [ ] `npm run pom-plan -- --manifest <generated-automation-manifest>` succeeds
+- [ ] `npm run traceability -- --testcases <generated-markdown> --manifest <generated-automation-manifest>` passes and `reports/testcase-automation-traceability.json` is archived
 - [ ] XPath/CSS appears only with a recorded fallback reason; no full XPath, generated class or positional selector
 - [ ] Page Object has NO `expect()` in action methods
 - [ ] CRUD tests clean exact created IDs in `finally`/fixture teardown; `afterAll` is limited to worker-owned serial lifecycles
@@ -333,7 +346,7 @@ Filter:
 
 | Symptom | Why it's wrong | Fix |
 |---|---|---|
-| Spec uses `page.locator('.btn-primary')` directly in spec | CSS class auto-generated, brittle | Move to `selectors/`, apply `testid → id → CSS → semantic → XPath` |
+| Spec uses `page.locator(...)` or `page.getBy*()` directly | Bypasses the selector repository and runtime evidence mapping | Move every selector to `selectors/` and expose it through a Page Object |
 | Selector was copied or guessed from testcase prose | Prose does not prove DOM identity; wrong element may still be clickable | Inspect the live DOM, verify count/visibility/actionability and record selector evidence |
 | XPath matches more than one element | `.first()` hides an ambiguous target and can click the wrong control | Narrow by `testid → id → CSS → semantic` or block and request a stable target contract |
 | Page Object method has `expect()` inside | Action methods must be purely return, assertions in spec | Extract expect to spec file |
@@ -372,6 +385,8 @@ Filter:
 - `assets/templates/github-actions-ci.yml`
 - `assets/templates/playwright.config.ts`
 - `assets/templates/scripts/check-placeholders.sh` — CI guard preventing unfilled placeholders
+- `assets/templates/scripts/generate-pom-plan.mjs` — deterministic automation-manifest → implementation-marker plan
+- `assets/templates/scripts/verify-testcase-traceability.mjs` — fail-closed source/behavior/RBAC/selector audit
 - `assets/templates/fixtures/api-client.ts`
 - `assets/templates/fixtures/auth.ts`, `env.ts`, `session.ts` — auth/session/config boundaries
 - `assets/templates/fixtures/data-driven.ts`
