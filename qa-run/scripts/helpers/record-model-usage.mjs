@@ -35,5 +35,28 @@ if (!usage) {
 
 const output = path.resolve(file);
 fs.mkdirSync(path.dirname(output), { recursive: true });
-fs.writeFileSync(output, JSON.stringify(usage, null, 2), 'utf8');
-console.log(`[model-telemetry] Saved provider-reported usage: ${output}`);
+const stage = getArg('--stage', '');
+if (stage) {
+  let existing = {};
+  if (fs.existsSync(output)) {
+    const existingText = fs.readFileSync(output, 'utf8').trim();
+    try {
+      existing = existingText ? JSON.parse(existingText) : {};
+    } catch {
+      console.error('[model-telemetry] BLOCKED: existing usage file is invalid JSON');
+      process.exit(2);
+    }
+  }
+  const staged = {
+    provider: existing.provider || usage.provider,
+    model: existing.model || usage.model,
+    recorded_at: usage.recorded_at,
+    stages: existing.stages && typeof existing.stages === 'object' ? existing.stages : {},
+  };
+  staged.stages[stage] = usage;
+  fs.writeFileSync(output, JSON.stringify(staged, null, 2), 'utf8');
+  console.log(`[model-telemetry] Saved provider-reported stage ${stage}: ${output}`);
+} else {
+  fs.writeFileSync(output, JSON.stringify(usage, null, 2), 'utf8');
+  console.log(`[model-telemetry] Saved provider-reported usage: ${output}`);
+}

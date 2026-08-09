@@ -24,7 +24,7 @@ Markdown phải chứa đầy đủ:
 - Group
 - Scenario ID và Scenario Name
 - Testcase ID giống Excel
-- Type, requirement reference và priority
+- Type, mandatory black-box technique metadata, requirement reference và priority
 - Description
 - Pre-condition
 - Procedure

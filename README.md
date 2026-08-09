@@ -7,8 +7,8 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
 | [qa-run](./qa-run/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
-| [testcase-template](./testcase-template/SKILL.md) | Sinh testcase manual, RBAC Matrix và contract POM lossless | `.md` + `.automation.json` + `.xlsx` |
-| [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Lập POM plan, sinh Playwright + TS + POM và audit testcase-to-code | `.pom-plan.json` + `.spec.ts` + `pages/` + `selectors/` + pipeline |
+| [testcase-template](./testcase-template/SKILL.md) | Sinh testcase manual, RBAC Matrix và execution contract lossless cho unified POM | `.md` + `.automation.json` + `.xlsx` |
+| [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Build POM, chạy Playwright browser, thu evidence và trả verdict testcase | POM code + execution/evidence JSON + `PASS/FAILED/N/A/UNTEST` |
 | [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
 | [business-analysis](./business-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
 | [pentest-run](./pentest-run/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |

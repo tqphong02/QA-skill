@@ -25,7 +25,7 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 - `additional` cases (not in doc) → flag clearly, **DO NOT fabricate expected result** from spec
 - Script auto-sorts by type order; AI does not need to write in order
 - Description format MANUAL: start with "Verify that..." (no technical prefix)
-- Before writing any case, identify the BB technique from the table above; add optional `bb_technique` field in JSON to trace (generator ignores this field)
+- Before writing any case, identify the BB technique from the table above; `bb_technique` is mandatory for `execution_contract="required"`, validated by the generator and preserved in `.automation.json`
 - For `validation`/`edge`: always check if Decision Table applies first (≥2 combined conditions → build table, then derive cases)
 - For `edge`: always list boundary values explicitly (min−1, min, min+1, max−1, max, max+1) before writing cases
 - For `negative`/`error`: cross-check Error Guessing list in `@references/blackbox-techniques.md` §6 for common missed cases

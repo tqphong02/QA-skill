@@ -12,7 +12,7 @@ Hard requirements:
 - Plane ticket retest order is `plane-qa doctor/read → qa-run RETEST_PLUS → plane-qa comment/state`
 - `DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 - RETEST_PLUS composes Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`
-- Sheet execution composes Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; add Original Retest and Plane actions only for a linked ticket or previous failure
+- Deterministic Sheet/testcase execution uses the single `playwright-pom-automation` BUILD_AND_RUN workflow: manifest → POM → browser evidence → `PASS|FAILED|N/A|UNTEST`; use RETEST_PLUS only for a linked ticket or previous failure
 - RETEST_PLUS includes Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, and UI/UX
 - General app exploration uses `APP_BASELINE_DISCOVERY` and writes `qa-knowledge/app-business-guide.md` with a `coverage_map`; ticket retest reads it but does not repeat the full baseline
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`

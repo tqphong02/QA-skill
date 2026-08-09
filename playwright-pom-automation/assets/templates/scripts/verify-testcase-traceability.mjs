@@ -139,9 +139,45 @@ function markerValue(value) {
   return String(value).replace(/\s+/g, ' ').trim();
 }
 
+function valueFingerprint(value) {
+  if (value === undefined) return null;
+  return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 12);
+}
+
+function pascalCase(value) {
+  return String(value || '')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map(part => `${part[0].toUpperCase()}${part.slice(1)}`)
+    .join('');
+}
+
+function stepMethodName(step) {
+  const action = String(step?.action || 'perform').replace(/[^A-Za-z0-9]/g, '');
+  const target = step?.target?.key || step?.id || 'Step';
+  return `${action}${pascalCase(target)}`;
+}
+
+function assertionMarker(testcaseId, stepId, assertion, index) {
+  const oracle = assertion?.target ?? assertion?.value ?? assertion?.state ?? 'N/A';
+  return `[${testcaseId}:${stepId}:ASSERT:${String(index + 1).padStart(2, '0')}] ${assertion?.kind || 'assert'} ${markerValue(oracle)}`;
+}
+
+function assertionMatcherTokens(kind) {
+  const mapping = {
+    visible: ['toBeVisible'], hidden: ['toBeHidden'], text: ['toHaveText', 'toContainText'],
+    value: ['toHaveValue'], enabled: ['toBeEnabled'], disabled: ['toBeDisabled'],
+    checked: ['toBeChecked'], unchecked: ['not.toBeChecked', 'toBeChecked'], count: ['toHaveCount'],
+    attribute: ['toHaveAttribute'], class: ['toHaveClass'], focused: ['toBeFocused'],
+    url: ['toHaveURL'], actionable: ['toBeEnabled'], state: ['expect('],
+  };
+  return mapping[String(kind || '').trim().toLowerCase()] || ['expect('];
+}
+
 function stepMarker(testcaseId, step) {
   const targetKey = step?.target?.key || 'N/A';
-  return `[${testcaseId}:${step.id}] ${step.action} ${targetKey}`;
+  const fingerprint = valueFingerprint(step?.value);
+  return `[${testcaseId}:${step.id}] ${step.action} ${targetKey}${fingerprint ? ` value=${fingerprint}` : ''}`;
 }
 
 function outcomeMarker(testcaseId, assertion, index) {
@@ -216,8 +252,12 @@ function parseAutomationManifest(manifestPath) {
     const rbacRefs = Array.isArray(entry.rbac_refs) ? entry.rbac_refs.map(String) : [];
     return {
       id,
+      group: item.group || null,
+      scenario_id: item.scenario_id || null,
+      scenario_name: item.scenario_name || null,
       case_ref: item.case_ref || null,
       type: item.type || null,
+      bb_technique: item.bb_technique || null,
       requirement: item.requirement || null,
       priority: item.priority || null,
       entry,
@@ -235,6 +275,11 @@ function parseAutomationManifest(manifestPath) {
       structured: Boolean(execution && steps.length > 0),
       required_markers: {
         steps: steps.map(step => stepMarker(id, step)),
+        step_assertions: steps.map(step => (
+          (step.assertions || []).map((assertion, assertionIndex) => (
+            assertionMarker(id, step.id, assertion, assertionIndex)
+          ))
+        )),
         outcomes: outcomeAssertions.map((assertion, outcomeIndex) => outcomeMarker(id, assertion, outcomeIndex)),
         role: entry.role_key ? `[${id}:ROLE] ${entry.role_key}` : null,
         rbac: rbacRefs.map(ref => `[${id}:RBAC] ${ref}`),
@@ -323,6 +368,9 @@ function parseSelectorEvidence(evidenceDir) {
             role: target.role ?? parsed.role,
             locale: target.locale ?? parsed.locale,
             state: target.state ?? parsed.state,
+            captured_at: target.captured_at ?? parsed.captured_at,
+            run_id: target.run_id ?? parsed.run_id,
+            app_build: target.app_build ?? parsed.app_build,
             evidence_file: filePath,
           });
         }
@@ -358,6 +406,17 @@ function readTokenUsage(filePath) {
 
   try {
     const parsed = JSON.parse(readText(filePath));
+    const stages = Array.isArray(parsed.stages)
+      ? parsed.stages
+      : parsed.stages && typeof parsed.stages === 'object'
+        ? Object.entries(parsed.stages).map(([stage, usage]) => ({ stage, ...usage }))
+        : [];
+    if (stages.length > 0) {
+      for (const field of fields) {
+        const values = stages.map(stage => Number(stage[field])).filter(value => Number.isFinite(value) && value >= 0);
+        if (values.length > 0) result[field] = values.reduce((sum, value) => sum + value, 0);
+      }
+    }
     for (const field of fields) {
       const value = Number(parsed[field]);
       if (Number.isFinite(value) && value >= 0) result[field] = value;
@@ -373,6 +432,10 @@ function readTokenUsage(filePath) {
       provider: String(parsed.provider || parsed.host || 'unknown'),
       model: String(parsed.model || 'unknown'),
       recorded_at: parsed.recorded_at || null,
+      stages: stages.map(stage => ({
+        stage: String(stage.stage || 'unknown'),
+        ...Object.fromEntries(fields.filter(field => Number.isFinite(Number(stage[field]))).map(field => [field, Number(stage[field])])),
+      })),
       ...Object.fromEntries(fields.filter(field => result[field] !== undefined).map(field => [field, result[field]])),
     };
   } catch (error) {
@@ -407,7 +470,7 @@ function testcaseImplementationSlice(content, testcaseId) {
   return content.slice(start, nextDeclaration);
 }
 
-function markerExecutionEvidence(implementationText, marker, nextMarkers = [], kind = 'step') {
+function markerExecutionEvidence(implementationText, marker, nextMarkers = [], options = {}) {
   const markerIndex = implementationText.indexOf(marker);
   if (markerIndex < 0) return false;
   let end = implementationText.length;
@@ -418,8 +481,54 @@ function markerExecutionEvidence(implementationText, marker, nextMarkers = [], k
   const body = implementationText.slice(markerIndex + marker.length, end);
   const hasPomAction = /\bawait\s+(?!test\.step\b)[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+\s*\(/.test(body);
   const hasAssertion = /\b(?:await\s+)?expect\s*\(/.test(body);
-  if (kind === 'outcome') return hasAssertion;
-  return hasPomAction || hasAssertion;
+  if (options.kind === 'assertion' || options.kind === 'outcome') {
+    if (!hasAssertion) return false;
+    return assertionMatcherTokens(options.assertion?.kind).some(token => body.includes(token));
+  }
+  if (options.kind === 'cleanup') {
+    return /\.cleanup\s*\(/.test(body);
+  }
+  const requiredMethod = options.requiredMethod;
+  if (!requiredMethod) return hasPomAction || hasAssertion;
+  const methodPattern = new RegExp(`\\.${escapeRegExp(requiredMethod)}\\s*\\(`);
+  if (!hasPomAction || !methodPattern.test(body)) return false;
+  const value = options.step?.value;
+  if (['string', 'number', 'boolean'].includes(typeof value)) {
+    return body.includes(String(value));
+  }
+  return true;
+}
+
+function pageMethodActionEvidence(files, methodName, action) {
+  const primitivePatterns = {
+    navigate: /\.(?:goto|navigate|open|visit)\s*\(/,
+    click: /\.click\s*\(/,
+    fill: /\.(?:fill|type)\s*\(/,
+    clear: /\.clear\s*\(/,
+    select: /\.(?:selectOption|select)\s*\(/,
+    select_option: /\.selectOption\s*\(/,
+    check: /\.check\s*\(/,
+    uncheck: /\.uncheck\s*\(/,
+    press: /\.press\s*\(/,
+    upload: /\.(?:setInputFiles|upload)\s*\(/,
+    hover: /\.hover\s*\(/,
+    drag: /\.dragTo\s*\(/,
+    wait: /\.(?:waitFor|waitForURL|waitForResponse)\s*\(/,
+    observe: /\.(?:textContent|inputValue|isVisible|count)\s*\(/,
+    assert: /\bexpect\s*\(/,
+  };
+  const primitive = primitivePatterns[String(action || '').toLowerCase()];
+  if (!primitive) return true;
+  const methodPattern = new RegExp(`(?:async\\s+)?${escapeRegExp(methodName)}\\s*\\([^)]*\\)[^{]*\\{`, 'm');
+  return files.some(filePath => {
+    const source = readText(filePath);
+    const match = methodPattern.exec(source);
+    if (!match) return false;
+    const tail = source.slice(match.index + match[0].length, match.index + match[0].length + 1200);
+    const nextMethod = /\n\s*(?:async\s+|get\s+|set\s+)[A-Za-z_$]/.exec(tail);
+    const body = nextMethod ? tail.slice(0, nextMethod.index) : tail;
+    return primitive.test(body);
+  });
 }
 
 function normalizedRoute(value) {
@@ -455,6 +564,8 @@ function buildTraceability({
   automationRoot,
   evidenceDir,
   tokenUsagePath,
+  expectedAppBuild = '',
+  maxEvidenceAgeHours = 168,
   mode = 'ui',
 }) {
   const markdown = readText(testcasePath);
@@ -559,6 +670,7 @@ function buildTraceability({
       }
       const requiredMarkers = [
         ...(testcase.required_markers?.steps || []),
+        ...(testcase.required_markers?.step_assertions || []).flat(),
         ...(testcase.required_markers?.outcomes || []),
         ...(testcase.required_markers?.role ? [testcase.required_markers.role] : []),
         ...(testcase.required_markers?.rbac || []),
@@ -575,8 +687,24 @@ function buildTraceability({
         }
       }
       const executableMarkers = [
-        ...(testcase.required_markers?.steps || []).map(marker => ({ marker, kind: 'step' })),
-        ...(testcase.required_markers?.outcomes || []).map(marker => ({ marker, kind: 'outcome' })),
+        ...(testcase.required_markers?.steps || []).map((marker, stepIndex) => ({
+          marker,
+          kind: 'step',
+          step: testcase.steps[stepIndex],
+          requiredMethod: stepMethodName(testcase.steps[stepIndex]),
+        })),
+        ...(testcase.required_markers?.step_assertions || []).flatMap((markers, stepIndex) => (
+          markers.map((marker, assertionIndex) => ({
+            marker,
+            kind: 'assertion',
+            assertion: testcase.steps[stepIndex]?.assertions?.[assertionIndex],
+          }))
+        )),
+        ...(testcase.required_markers?.outcomes || []).map((marker, assertionIndex) => ({
+          marker,
+          kind: 'outcome',
+          assertion: testcase.outcome_assertions[assertionIndex],
+        })),
         ...(testcase.required_markers?.cleanup
           ? [{ marker: testcase.required_markers.cleanup, kind: 'cleanup' }]
           : []),
@@ -584,10 +712,29 @@ function buildTraceability({
       for (const [index, item] of executableMarkers.entries()) {
         if (!implementationText.includes(item.marker)) continue;
         const followingMarkers = executableMarkers.slice(index + 1).map(entry => entry.marker);
-        if (!markerExecutionEvidence(implementationText, item.marker, followingMarkers, item.kind)) {
-          addViolation(violations, 'IMPLEMENTATION_BODY_MISSING', `${testcase.id} có mapping nhưng chưa có hành động POM hoặc assertion thật: ${item.marker}`, {
+        if (!markerExecutionEvidence(implementationText, item.marker, followingMarkers, item)) {
+          const violationCode = item.kind === 'step'
+            ? 'IMPLEMENTATION_ACTION_MISMATCH'
+            : item.kind === 'cleanup'
+              ? 'IMPLEMENTATION_CLEANUP_MISMATCH'
+              : 'IMPLEMENTATION_ASSERTION_MISMATCH';
+          addViolation(violations, violationCode, `${testcase.id} có marker nhưng implementation không khớp action/assertion bắt buộc: ${item.marker}`, {
             testcase_id: testcase.id,
             marker: item.marker,
+            required_method: item.requiredMethod || null,
+            required_matchers: item.assertion ? assertionMatcherTokens(item.assertion.kind) : null,
+          });
+        }
+        if (item.kind === 'step' && !pageMethodActionEvidence(
+          pages,
+          item.requiredMethod,
+          item.step?.action,
+        )) {
+          addViolation(violations, 'PAGE_METHOD_ACTION_MISMATCH', `${item.requiredMethod} không chứa Playwright action phù hợp với ${item.step?.action}`, {
+            testcase_id: testcase.id,
+            marker: item.marker,
+            required_method: item.requiredMethod,
+            action: item.step?.action || null,
           });
         }
       }
@@ -624,6 +771,9 @@ function buildTraceability({
           locator: record?.locator || null,
           candidates: Array.isArray(record?.candidates) ? record.candidates : null,
           verification: record?.verification || null,
+          captured_at: record?.captured_at || null,
+          run_id: record?.run_id || null,
+          app_build: record?.app_build || null,
           selector_files: [],
         };
 
@@ -633,6 +783,42 @@ function buildTraceability({
             target_key: targetKey,
           });
         } else {
+          const capturedAtMs = Date.parse(record.captured_at || '');
+          const evidenceAgeHours = Number.isFinite(capturedAtMs)
+            ? (Date.now() - capturedAtMs) / 3_600_000
+            : Number.POSITIVE_INFINITY;
+          if (!record.captured_at || !Number.isFinite(capturedAtMs)) {
+            addViolation(violations, 'SELECTOR_CAPTURE_TIME_MISSING', `Evidence của ${targetKey} thiếu captured_at ISO-8601`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+            });
+          } else if (Number.isFinite(maxEvidenceAgeHours) && evidenceAgeHours > maxEvidenceAgeHours) {
+            addViolation(violations, 'SELECTOR_EVIDENCE_STALE', `Evidence của ${targetKey} đã quá ${maxEvidenceAgeHours} giờ`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+              captured_at: record.captured_at,
+              age_hours: Number(evidenceAgeHours.toFixed(2)),
+            });
+          }
+          if (!record.run_id) {
+            addViolation(violations, 'SELECTOR_RUN_ID_MISSING', `Evidence của ${targetKey} thiếu browser run_id`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+            });
+          }
+          if (!record.app_build) {
+            addViolation(violations, 'SELECTOR_APP_BUILD_MISSING', `Evidence của ${targetKey} thiếu app_build`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+            });
+          } else if (expectedAppBuild && record.app_build !== expectedAppBuild) {
+            addViolation(violations, 'SELECTOR_APP_BUILD_MISMATCH', `Evidence của ${targetKey} thuộc build khác`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+              expected_app_build: expectedAppBuild,
+              evidence_app_build: record.app_build,
+            });
+          }
           if (records.length > 1) {
             addViolation(violations, 'SELECTOR_EVIDENCE_DUPLICATE', `Có nhiều selector evidence cho target key ${targetKey}; cần route/state mapping rõ ràng`, {
               testcase_id: testcase.id,
@@ -851,6 +1037,8 @@ Options:
   --automation-root <dir>        POM project root (default: .)
   --selector-evidence-dir <dir> Selector evidence directory (default: selector-evidence)
   --token-usage <file>           Provider-reported usage JSON (or QA_TOKEN_USAGE_FILE)
+  --app-build <id>               Current application build/commit expected in selector evidence
+  --max-evidence-age-hours <n>   Freshness limit (default: 168)
   --mode <ui|api>                UI checks selector evidence; API checks ID mapping only
   --output <file>                Audit JSON (default: reports/testcase-automation-traceability.json)
 `);
@@ -878,6 +1066,8 @@ function discoverTestcaseFile(automationRoot) {
 }
 
 export {
+  assertionMarker,
+  assertionMatcherTokens,
   buildTraceability,
   outcomeMarker,
   parseAutomationManifest,
@@ -885,6 +1075,8 @@ export {
   parseTestcases,
   readTokenUsage,
   stepMarker,
+  stepMethodName,
+  valueFingerprint,
 };
 
 async function main() {
@@ -905,6 +1097,11 @@ async function main() {
   const evidenceDir = path.resolve(automationRoot, getArg('--selector-evidence-dir', 'selector-evidence'));
   const tokenUsageArg = getArg('--token-usage', process.env.QA_TOKEN_USAGE_FILE || '');
   const tokenUsagePath = tokenUsageArg ? path.resolve(automationRoot, tokenUsageArg) : '';
+  const expectedAppBuild = getArg('--app-build', process.env.QA_APP_BUILD || '');
+  const maxEvidenceAgeHours = Number(getArg('--max-evidence-age-hours', '168'));
+  if (!Number.isFinite(maxEvidenceAgeHours) || maxEvidenceAgeHours <= 0) {
+    throw new Error('BLOCKED: --max-evidence-age-hours must be a positive number');
+  }
   const outputPath = path.resolve(automationRoot, getArg('--output', 'reports/testcase-automation-traceability.json'));
 
   const report = buildTraceability({
@@ -913,6 +1110,8 @@ async function main() {
     automationRoot,
     evidenceDir,
     tokenUsagePath,
+    expectedAppBuild,
+    maxEvidenceAgeHours,
     mode,
   });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });

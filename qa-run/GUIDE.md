@@ -4,7 +4,7 @@
 >
 > **Phân biệt skill:**
 > - **qa-run** (this) → săn bug **live**, AI lái UI tương tác, exploratory/retest/sanity
-> - **playwright-pom-automation** → viết **test code** deterministic (regression suite, CI)
+> - **playwright-pom-automation** → build và chạy **testcase/POM** deterministic, thu evidence và verdict
 > - **testcase-template** → sinh **test case Excel** theo template team
 
 Kết quả cuối của exploratory/ad-hoc chỉ có: `PASS` (đã test và đúng), `FAILED` (đã test và sai), `N/A` (không áp dụng) hoặc `UNTEST` (cần test nhưng chưa thể kết luận). `BLOCKED` và `PARTIAL` chỉ được giữ trong ledger kỹ thuật nội bộ

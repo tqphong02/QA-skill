@@ -74,6 +74,8 @@ The automation project should keep a small manifest next to the selector reposit
   "route": "/login",
   "role": "Guest",
   "captured_at": "<ISO-8601>",
+  "run_id": "<same-browser-run-id>",
+  "app_build": "<commit-or-deployment-id>",
   "targets": [
     {
       "target_key": "login_submit",
@@ -131,5 +133,7 @@ Re-run selector discovery when any of these changes:
 - accessible name, label, test-id or component structure changes
 - a selector fails strictness, actionability or points to a different state
 - a testcase target key or entry state changes
+
+The audit requires `captured_at`, `run_id` and `app_build`, blocks evidence older than the configured freshness limit, and compares `app_build` with `--app-build`/`QA_APP_BUILD`. Do not copy evidence between deployments or browser sessions.
 
 Retries do not prove selector correctness. A retry-pass is a flaky result and must retain first-attempt evidence

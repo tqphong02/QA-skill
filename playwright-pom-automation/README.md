@@ -1,6 +1,6 @@
-# Playwright POM Automation — Skill template cho project QA
+# Testcase Execution & Playwright POM — Skill template cho project QA
 
-Template scaffold + quy trình viết test Playwright + TypeScript theo **Page Object Model**, deterministic, chạy trong CI. **Project-agnostic** — không hardcode domain/URL/business logic; mỗi project adapt theo `PLACEHOLDERS.md`.
+Một workflow deterministic để build Page Object Model, chạy Playwright browser, thu evidence cùng session và trả verdict testcase. **Project-agnostic** — không hardcode domain/URL/business logic; mỗi project adapt theo `PLACEHOLDERS.md`.
 
 ## 📚 Tài liệu
 
@@ -65,7 +65,7 @@ assets/templates/
 │   └── performance/                 @perf  — Playwright + k6 (Tier 2)
 ├── sessions/                      ← runtime-generated auth state (gitignored) — xem README riêng
 ├── testdata/                      ← runtime-generated test data (gitignored) — xem README riêng
-├── scripts/                       ← CI helpers (check-placeholders.sh)
+├── scripts/                       ← unified testcase/POM runner, traceability, plan và CI helpers
 ├── quality-gates.json             ← thresholds for failed/flaky/evidence/duration/coverage
 └── testcases/                     ← manual test case Excel template
 ```
@@ -74,7 +74,7 @@ assets/templates/
 
 ## ➕ Thêm page mới (4 bước)
 
-1. Read the generated `.automation.json`, run `npm run pom-plan`, then run selector discovery for every selector target key
+1. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then run selector discovery for every selected target key
 2. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
 3. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
 4. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
@@ -100,13 +100,15 @@ npm run lint                     # tsc --noEmit + eslint
 npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
-npm run pom-plan -- --manifest testcases/<feature>.automation.json
-npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json
+npm run pom-plan -- --manifest testcases/<feature>.automation.json --group <group> --max-cases 20
+npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --app-build "$QA_APP_BUILD"
+npm run testcase-workflow -- --phase plan --manifest testcases/<feature>.automation.json --group <group>
+npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD"
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.
 
-`traceability` tạo `reports/testcase-automation-traceability.json`: file này kiểm tra source hash, Testcase ID, step/outcome/cleanup, role/RBAC, target key → selector evidence và token measurement. Empty spec hoặc manifest/marker cũ đều bị `BLOCKED`. Xem **[references/automation-audit.md](references/automation-audit.md)** để phân biệt provider-reported token với estimate
+`testcase-workflow --phase execute` chỉ mở browser sau khi traceability PASS, bật screenshot/video/trace và tạo `reports/testcase-pom-execution.json` với `PASS|FAILED|N/A|UNTEST`. `traceability` kiểm tra source hash, Testcase ID, action/value/assertion, cleanup, role/RBAC và selector evidence theo build/freshness. Xem **[references/testcase-execution.md](references/testcase-execution.md)** và **[references/automation-audit.md](references/automation-audit.md)**
 
 ## 🔄 CI/CD
 
@@ -121,5 +123,5 @@ Quality gate phải giữ lại first-attempt/retry evidence, phân loại flaky
 
 ## 🔗 Skill liên quan
 
-- **[qa-run](../qa-run/)** — exploratory QA dùng MCP Playwright (live AI-driven)
+- **[qa-run](../qa-run/)** — chỉ dùng cho exploratory/ad-hoc hoặc ticket retest không có deterministic suite
 - **[testcase-template](../testcase-template/)** — sinh test case Excel theo template team

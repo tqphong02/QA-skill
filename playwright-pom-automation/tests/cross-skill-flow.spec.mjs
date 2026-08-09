@@ -49,7 +49,50 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
 
     const parsed = parseAutomationManifest(manifestPath);
     const plan = buildPomPlan(manifestPath);
+    const slicedPlan = buildPomPlan(manifestPath, { testcaseIds: ['DEMO-01'] });
+    const rawManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
     assert.deepEqual(parsed.cases.map(item => item.id), ['DEMO-01', 'DEMO-02']);
+    assert.deepEqual(
+      plan.testcases.map(item => item.steps.map(step => ({ action: step.action, value: step.value }))),
+      rawManifest.testcases.map(item => item.execution.steps.map(step => ({ action: step.action, value: step.value ?? null }))),
+    );
+    assert.deepEqual(slicedPlan.testcases.map(item => item.testcase_id), ['DEMO-01']);
+    assert.equal(slicedPlan.selection.total_count, 2);
+    const planScript = path.join(
+      REPO_ROOT,
+      'playwright-pom-automation/assets/templates/scripts/generate-pom-plan.mjs',
+    );
+    const oversized = spawnSync('node', [
+      planScript, '--manifest', manifestPath, '--max-cases', '1',
+    ], { encoding: 'utf8' });
+    assert.equal(oversized.status, 2);
+    assert.match(oversized.stderr, /selection contains 2 cases/);
+    const slicedOutput = path.join(testcaseDir, 'demo-one.pom-plan.json');
+    const sliced = spawnSync('node', [
+      planScript,
+      '--manifest', manifestPath,
+      '--testcase-id', 'DEMO-01',
+      '--max-cases', '1',
+      '--output', slicedOutput,
+    ], { encoding: 'utf8' });
+    assert.equal(sliced.status, 0, sliced.stderr);
+    assert.equal(JSON.parse(fs.readFileSync(slicedOutput, 'utf8')).testcases.length, 1);
+    const unifiedRunner = path.join(
+      REPO_ROOT,
+      'playwright-pom-automation/assets/templates/scripts/run-testcase-pom.mjs',
+    );
+    const unifiedPlanOutput = path.join(root, 'reports', 'testcase-pom-plan.json');
+    const unifiedPlan = spawnSync('node', [
+      unifiedRunner,
+      '--phase', 'plan',
+      '--project-root', root,
+      '--manifest', manifestPath,
+      '--testcase-id', 'DEMO-01',
+      '--max-cases', '1',
+      '--plan-output', unifiedPlanOutput,
+    ], { encoding: 'utf8' });
+    assert.equal(unifiedPlan.status, 0, `${unifiedPlan.stdout}\n${unifiedPlan.stderr}`);
+    assert.equal(JSON.parse(fs.readFileSync(unifiedPlanOutput, 'utf8')).testcases[0].testcase_id, 'DEMO-01');
     assert.ok(plan.testcases[0].outcome_assertions.some(item => item.assertion.target === 'dashboard_heading'));
     assert.deepEqual(plan.testcases[0].rbac_refs, ['RBAC-DASH-001']);
 
@@ -68,10 +111,18 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
         specLines.push(`  test.info().annotations.push({ type: 'contract', description: '${marker}' });`);
       }
       for (const step of testcase.steps) {
-        specLines.push(`  await test.step('${step.marker}', async () => { await generatedPage.performStep('${step.id}'); });`);
+        const primitiveValue = ['string', 'number', 'boolean'].includes(typeof step.value)
+          ? JSON.stringify(step.value)
+          : '';
+        specLines.push(`  await test.step('${step.marker}', async () => { await generatedPage.${step.required_method}(${primitiveValue}); });`);
+        for (const assertion of step.assertions) {
+          const matcher = assertion.required_matchers.find(item => item !== 'expect(') || 'toBeTruthy';
+          specLines.push(`  await test.step('${assertion.marker}', async () => { await expect(generatedPage.outcomeLocator).${matcher}(); });`);
+        }
       }
       for (const outcome of testcase.outcome_assertions) {
-        specLines.push(`  await test.step('${outcome.marker}', async () => { await expect(generatedPage.outcomeLocator).toBeVisible(); });`);
+        const matcher = outcome.required_matchers.find(item => item !== 'expect(') || 'toBeTruthy';
+        specLines.push(`  await test.step('${outcome.marker}', async () => { await expect(generatedPage.outcomeLocator).${matcher}(); });`);
       }
       if (testcase.required_markers.cleanup) {
         specLines.push(`  await test.step('${testcase.required_markers.cleanup}', async () => { await generatedPage.cleanup(); });`);
@@ -79,23 +130,38 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
       specLines.push('});');
     }
     fs.writeFileSync(path.join(specDir, 'demo.ui.spec.ts'), `${specLines.join('\n')}\n`, 'utf8');
-    fs.writeFileSync(path.join(pageDir, 'generated.page.ts'), `
-import type { Locator, Page } from '@playwright/test';
-import { generatedSelectors } from '../selectors/demo.selectors';
-
-export class GeneratedPage {
-  constructor(private readonly page: Page) {}
-  async performStep(stepId: string): Promise<void> {
-    await generatedSelectors.byStep(this.page, stepId).click();
-  }
-  get outcomeLocator(): Locator {
-    return generatedSelectors.outcome(this.page);
-  }
-  async cleanup(): Promise<void> {
-    await this.page.goto('/cleanup');
-  }
-}
-`, 'utf8');
+    const pageLines = [
+      "import type { Locator, Page } from '@playwright/test';",
+      "import { generatedSelectors } from '../selectors/demo.selectors';",
+      'export class GeneratedPage {',
+      '  constructor(private readonly page: Page) {}',
+    ];
+    const emittedMethods = new Set();
+    for (const testcase of plan.testcases) {
+      for (const step of testcase.steps) {
+        if (emittedMethods.has(step.required_method)) continue;
+        emittedMethods.add(step.required_method);
+        const locator = `generatedSelectors.byStep(this.page, '${step.id}')`;
+        const implementation = step.action === 'navigate'
+          ? "await this.page.goto('/fixture');"
+          : step.action === 'fill'
+            ? `await ${locator}.fill('fixture');`
+            : step.action === 'clear'
+              ? `await ${locator}.clear();`
+              : step.action === 'select'
+                ? `await ${locator}.selectOption('fixture');`
+                : step.action === 'press'
+                  ? `await ${locator}.press('Enter');`
+                  : `await ${locator}.click();`;
+        pageLines.push(`  async ${step.required_method}(): Promise<void> { ${implementation} }`);
+      }
+    }
+    pageLines.push(
+      '  get outcomeLocator(): Locator { return generatedSelectors.outcome(this.page); }',
+      "  async cleanup(): Promise<void> { await this.page.goto('/cleanup'); }",
+      '}',
+    );
+    fs.writeFileSync(path.join(pageDir, 'generated.page.ts'), `${pageLines.join('\n')}\n`, 'utf8');
 
     const selectorLines = [
       "import type { Page } from '@playwright/test';",
@@ -129,6 +195,9 @@ export class GeneratedPage {
     fs.writeFileSync(path.join(evidenceDir, 'demo.json'), JSON.stringify({
       schema_version: 1,
       feature: 'demo',
+      captured_at: new Date().toISOString(),
+      run_id: 'fixture-selector-run',
+      app_build: 'fixture-build',
       targets: evidenceTargets,
     }, null, 2), 'utf8');
 

@@ -109,11 +109,12 @@ test.describe('Feature @ui', () => {
 ```typescript
 // playwright.config.ts
 use: {
-  trace: 'retain-on-failure',     // best setting — captures only failures
-  screenshot: 'only-on-failure',
-  video: 'retain-on-failure',
+  trace: unifiedEvidence ? 'on' : 'retain-on-failure',
+  screenshot: unifiedEvidence ? 'on' : 'only-on-failure',
+  video: unifiedEvidence ? 'on' : 'retain-on-failure',
 }
 ```
+- `run-testcase-pom.mjs` sets `QA_UNIFIED_EVIDENCE=true`, so deterministic testcase execution retains visual and same-session trace evidence for both PASS and FAILED
 - **Trace viewer** (`npx playwright show-trace trace.zip`) = full timeline (DOM snapshot, network, console, source). The #1 debugging tool.
 - In CI: archive `test-results/` as artifact on failure (see `cicd.md`).
 

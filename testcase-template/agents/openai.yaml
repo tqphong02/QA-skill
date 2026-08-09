@@ -1,4 +1,4 @@
 interface:
   display_name: "Testcase Template"
-  short_description: "Tạo testcase manual, RBAC và manifest cho POM"
-  default_prompt: "Use $testcase-template to generate synchronized Markdown, lossless automation manifest, and Excel testcases with stable IDs, detailed Vietnamese manual steps, measurable expected results, and RBAC allow/deny coverage."
+  short_description: "Tạo testcase và manifest cho unified POM"
+  default_prompt: "Use $testcase-template to generate synchronized Markdown, a lossless manifest for unified Playwright POM build-and-run, and Excel from a compact reusable JSON source with stable IDs, one AC per scenario, black-box metadata, detailed Vietnamese steps, measurable results, and optional RBAC coverage."

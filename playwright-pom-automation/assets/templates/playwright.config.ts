@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Set once in the config process; every worker inherits the same run ID.
 process.env.RUN_ID ??= `local-${Date.now()}-${process.pid}`;
+const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE === 'true';
 
 function resolveRetries(): number {
   if (!process.env.CI) return 0;
@@ -47,9 +48,10 @@ export default defineConfig({
 
   use: {
     baseURL: process.env.UI_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
-    trace: 'retain-on-failure',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
+    // Unified testcase execution records browser evidence for PASS and FAILED
+    trace: unifiedEvidence ? 'on' : 'retain-on-failure',
+    screenshot: unifiedEvidence ? 'on' : 'only-on-failure',
+    video: unifiedEvidence ? 'on' : 'retain-on-failure',
     actionTimeout: 10000,
     navigationTimeout: 30000,
   },

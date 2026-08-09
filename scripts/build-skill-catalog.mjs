@@ -123,9 +123,9 @@ const RELATIONSHIPS = [
     sourceRefs: [{ path: 'plane-qa/SKILL.md', line: 3, quote: 'qa-run RETEST_PLUS → plane-qa comment/state' }],
   },
   {
-    from: 'google-drive-qa', to: 'qa-run', flow: 'sheet', kind: 'composition',
+    from: 'google-drive-qa', to: 'playwright-pom-automation', flow: 'sheet', kind: 'composition',
     label: 'Sheet execution', labelVi: 'thực thi testcase Sheet',
-    sourceRefs: [{ path: 'google-drive-qa/SKILL.md', line: 32, quote: 'use `qa-run` `SHEET_TESTCASE_EXECUTION`' }],
+    sourceRefs: [{ path: 'google-drive-qa/SKILL.md', line: 34, quote: 'use `playwright-pom-automation` BUILD_AND_RUN' }],
   },
   {
     from: 'qa-run', to: 'playwright-pom-automation', flow: 'browser', kind: 'exit',
@@ -269,11 +269,11 @@ const FLOWS = [
   {
     id: 'sheet',
     label: 'Sheet execution',
-    summary: 'Drive owns Sheet CRUD while qa-run owns testcase execution',
-    steps: ['google-drive-qa resolves and reads the Sheet', 'qa-run executes SHEET_TESTCASE_EXECUTION', 'google-drive-qa writes verified results'],
+    summary: 'Drive owns Sheet CRUD while unified POM owns build, browser execution, evidence and verdict',
+    steps: ['google-drive-qa resolves and reads the Sheet', 'playwright-pom-automation BUILD_AND_RUN', 'google-drive-qa writes verified results'],
     labelVi: 'Thực thi Google Sheet',
-    summaryVi: 'Drive phụ trách CRUD trên Sheet còn qa-run phụ trách thực thi testcase',
-    stepsVi: ['google-drive-qa xác định và đọc Sheet', 'qa-run chạy SHEET_TESTCASE_EXECUTION', 'google-drive-qa ghi kết quả đã xác minh'],
+    summaryVi: 'Drive phụ trách CRUD trên Sheet còn unified POM phụ trách build, chạy browser, evidence và verdict',
+    stepsVi: ['google-drive-qa xác định và đọc Sheet', 'playwright-pom-automation BUILD_AND_RUN', 'google-drive-qa ghi kết quả đã xác minh'],
   },
   {
     id: 'api',
@@ -392,12 +392,6 @@ const OPERATIONAL_BRANCHES = {
       titleVi: 'Retest ticket đầy đủ',
       summaryVi: 'Xác minh lỗi gốc và vùng ảnh hưởng thay vì chỉ lặp lại một bước',
       childrenVi: ['Original Retest', 'Sanity', 'Impacted Regression', 'DISCOVERY_CORE'],
-    },
-    {
-      id: 'SHEET_EXECUTION_PLUS',
-      titleVi: 'Thực thi testcase Google Sheet',
-      summaryVi: 'Thực thi testcase đã xác nhận rồi mở rộng các lớp kiểm thử bắt buộc',
-      childrenVi: ['Sheet Testcase Execution', 'Sanity', 'Impacted Regression', 'DISCOVERY_CORE', 'Original Retest khi row gắn ticket hoặc từng fail'],
     },
     {
       id: 'SANITY_REGRESSION_PLUS',
@@ -574,6 +568,14 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['Case coverage', 'qa-run', 'mobile-qa', 'Screenshot/video', 'Release risk'],
     },
   ],
+  'playwright-pom-automation': [
+    {
+      id: 'TESTCASE_POM_EXECUTION',
+      titleVi: 'Unified testcase execution và POM',
+      summaryVi: 'Một workflow build POM, chạy browser, thu evidence và trả verdict cho đúng Testcase ID',
+      childrenVi: ['Manifest plan', 'Selectors + Page Objects + Specs', 'Traceability gate', 'Playwright execution', 'Visual + same-session trace', 'PASS/FAILED/N/A/UNTEST', 'Optional Sheet projection'],
+    },
+  ],
 };
 
 const AUXILIARY = [
@@ -646,7 +648,7 @@ const VI_SKILL_TEXT = {
   'pentest-run': 'Điều phối pentest được ủy quyền từ engagement contract, reconnaissance đến validation, evidence và reporting',
   'performance-qa': 'Điều phối performance test an toàn bằng JMeter hoặc k6 với workload chung, smoke gate, threshold và báo cáo bottleneck',
   'plane-qa': 'Đọc và quản lý ticket Plane, bug, comment, evidence và trạng thái QA trên nhiều workspace',
-  'playwright-pom-automation': 'Scaffold và mở rộng automation Playwright theo Page Object Model cho UI, API và CI',
+  'playwright-pom-automation': 'Build và chạy testcase Playwright POM với browser evidence, verdict, Sheet projection và CI',
   'postman': 'Cấu hình và vận hành Postman MCP, Postman CLI và Newman cho collection, environment, spec, mock và monitor',
   'qa-run': 'Thực thi browser QA theo rủi ro từ business logic, source, requirement và runtime evidence với quan sát network/console cùng session',
   'testcase-template': 'Tạo, chỉnh sửa và review testcase Markdown/Excel đồng bộ từ một nguồn JSON đã xác thực',
@@ -712,8 +714,8 @@ const VI_SKILL_INSIGHTS = {
     limitations: ['Phụ thuộc API key và quyền workspace', 'Write phải xác định đúng ticket rồi read-back'],
   },
   'playwright-pom-automation': {
-    advantages: ['Tách selector qua Page Object và hỗ trợ CI/Allure', 'Phù hợp xây regression suite có thể bảo trì'],
-    limitations: ['Không dùng cho exploratory hoặc retest ad-hoc', 'Cần duy trì selector và test data theo thay đổi UI'],
+    advantages: ['Một workflow từ manifest đến POM, browser evidence và verdict', 'Tách selector qua Page Object và hỗ trợ Sheet/CI/Allure'],
+    limitations: ['Không dùng cho exploratory hoặc retest ad-hoc', 'Cần target, selector evidence và test data đủ để thực thi'],
   },
   'postman': {
     advantages: ['Quản lý workspace, collection, environment, spec, mock và monitor', 'Hỗ trợ Postman CLI và Newman fallback có điều kiện'],

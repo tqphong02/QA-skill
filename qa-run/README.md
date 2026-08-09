@@ -79,5 +79,5 @@ Data dự án (`.env`, `auth.json`, `evidence/`, `FINDINGS.md`) nằm trong thư
 - Không để file QA rải ở root nếu đã có thư mục chuẩn phù hợp
 
 ## 🔗 Skill liên quan
-- **playwright-pom-automation** — viết test code deterministic (regression suite, CI)
+- **playwright-pom-automation** — build và chạy deterministic testcase/POM, thu evidence và verdict
 - **testcase-template** — sinh test case Excel theo template team

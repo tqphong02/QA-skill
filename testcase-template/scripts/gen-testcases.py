@@ -30,7 +30,7 @@ Logic:
   - STT dòng liên tục trong toàn bộ file; Testcase ID explicit được giữ ổn định và có thể có khoảng trống
 """
 import sys, json, shutil, datetime, os, re, hashlib
-from copy import copy
+from copy import copy, deepcopy
 import openpyxl
 from openpyxl.styles import Alignment, PatternFill, Font
 from openpyxl.worksheet.datavalidation import DataValidation
@@ -39,6 +39,10 @@ from openpyxl.formatting.rule import CellIsRule
 
 # Canonical test-case type order — cases SORT theo thứ tự này trong mỗi scenario.
 TYPE_ORDER = ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional']
+BB_TECHNIQUES = {
+    'EP', 'BVA', 'Decision Table', 'State Transition', 'Use Case Testing',
+    'Error Guessing', 'Pairwise'
+}
 TYPE_LABEL = {
     'happy': 'Happy Path',
     'alternative': 'Alternative',
@@ -66,6 +70,7 @@ EXECUTION_ACTIONS = {
 }
 EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
 TESTCASE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$')
+SCENARIO_ID_RE = re.compile(r'^SCN[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$')
 RBAC_EXPECTATIONS = {'ALLOW', 'DENY', 'N/A', 'UNRESOLVED'}
 RBAC_VERIFICATION_STATUSES = {
     'REQUIREMENT_ONLY', 'STATIC_CONFIRMED', 'RUNTIME_CONFIRMED',
@@ -90,6 +95,47 @@ EXECUTION_ENTRY_FIELDS = (
     'environment', 'screen', 'route', 'role', 'state', 'permissions', 'data'
 )
 EXECUTION_VALUE_ACTIONS = {'fill', 'select', 'press', 'upload'}
+
+
+def _deep_merge(base, override):
+    """Merge template objects deterministically; arrays are replaced, not concatenated."""
+    if isinstance(base, dict) and isinstance(override, dict):
+        merged = deepcopy(base)
+        for key, value in override.items():
+            merged[key] = _deep_merge(merged.get(key), value) if key in merged else deepcopy(value)
+        return merged
+    return deepcopy(override)
+
+
+def materialize_execution_templates(data):
+    """Expand compact execution_ref cases before Markdown/manifest/Excel generation."""
+    normalized = deepcopy(data)
+    templates = normalized.get('execution_templates') or {}
+    if not isinstance(templates, dict):
+        raise ValueError('execution_templates must be an object keyed by template name')
+
+    for section in normalized.get('sections') or []:
+        for group in section.get('groups') or []:
+            for scenario in group.get('scenarios') or []:
+                for case in scenario.get('cases') or []:
+                    execution_ref = str(case.get('execution_ref') or '').strip()
+                    overrides = case.get('execution_overrides') or {}
+                    if execution_ref and case.get('execution') is not None:
+                        raise ValueError(
+                            f'case {case.get("testcase_id") or "<unknown>"} cannot combine execution and execution_ref'
+                        )
+                    if not execution_ref:
+                        if case.get('execution_overrides') is not None:
+                            raise ValueError('execution_overrides requires execution_ref')
+                        continue
+                    if execution_ref not in templates:
+                        raise ValueError(f'Unknown execution_ref: {execution_ref}')
+                    if not isinstance(templates[execution_ref], dict):
+                        raise ValueError(f'execution_templates.{execution_ref} must be an object')
+                    if not isinstance(overrides, dict):
+                        raise ValueError('execution_overrides must be an object')
+                    case['execution'] = _deep_merge(templates[execution_ref], overrides)
+    return normalized
 MANUAL_ACTION_PATTERNS = {
     'navigate': re.compile(r'\b(mở|truy cập|đi đến|đi tới|navigate|open)\b', re.IGNORECASE),
     'fill': re.compile(r'\b(nhập|điền|type|fill)\b', re.IGNORECASE),
@@ -326,15 +372,81 @@ def iter_testcases(data):
     contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
     execution_required = contract_mode == 'required'
     seen_ids = set()
+    requirement_ids = {
+        str(item.get('id') or '').strip()
+        for item in data.get('requirements') or []
+        if isinstance(item, dict) and str(item.get('id') or '').strip()
+    }
+    if execution_required and not requirement_ids:
+        raise ValueError('execution_contract="required" requires a non-empty requirements registry')
+    if data.get('review_required'):
+        raise ValueError('review_required must be empty before testcase generation')
     for section in data.get('sections') or []:
         is_ui = str(section.get('kind') or '').lower() == 'ui'
         for group in section.get('groups') or []:
+            group_name = str(group.get('name') or '').strip()
+            if execution_required and not group_name:
+                raise ValueError('New executable cases require group.name')
             for scenario in group.get('scenarios') or []:
+                scenario_id = str(scenario.get('scenario_id') or '').strip()
+                scenario_name = str(scenario.get('scenario_name') or scenario.get('name') or '').strip()
+                scenario_requirement = str(scenario.get('requirement') or '').strip()
+                if execution_required:
+                    if not SCENARIO_ID_RE.fullmatch(scenario_id):
+                        raise ValueError(
+                            'New executable cases require scenario_id such as SCN-LOG-001'
+                        )
+                    if not scenario_name:
+                        raise ValueError('New executable cases require scenario_name')
+                    if not scenario_requirement:
+                        raise ValueError(
+                            f'{scenario_id} requires one scenario.requirement so one scenario maps to one AC'
+                        )
+                    if scenario_requirement not in requirement_ids:
+                        raise ValueError(
+                            f'{scenario_id} references unknown requirement: {scenario_requirement}'
+                        )
                 for case in sorted(
                     scenario.get('cases') or [],
                     key=lambda item: type_rank(item.get('type')),
                 ):
                     counter += 1
+                    case_type = str(case.get('type') or '').strip().lower()
+                    if execution_required and case_type not in TYPE_ORDER:
+                        raise ValueError(
+                            f'case.type must be one of {TYPE_ORDER}: {case.get("type")}'
+                        )
+                    case_requirement = str(case.get('req') or '').strip()
+                    if execution_required:
+                        if case_type == 'additional':
+                            if case_requirement not in {'', '(out-of-spec)'}:
+                                raise ValueError(
+                                    'additional testcase req must be empty or (out-of-spec)'
+                                )
+                        else:
+                            if not case_requirement:
+                                raise ValueError('New executable cases require case.req')
+                            if case_requirement != scenario_requirement:
+                                raise ValueError(
+                                    f'{scenario_id} mixes requirements {scenario_requirement} and {case_requirement}; split the scenario'
+                                )
+                            if case_requirement not in requirement_ids:
+                                raise ValueError(
+                                    f'case.req references unknown requirement: {case_requirement}'
+                                )
+                        techniques = case.get('bb_technique')
+                        if isinstance(techniques, str):
+                            techniques = [techniques]
+                        if not isinstance(techniques, list) or not techniques:
+                            raise ValueError('New executable cases require bb_technique')
+                        invalid_techniques = [
+                            technique for technique in techniques
+                            if technique not in BB_TECHNIQUES
+                        ]
+                        if invalid_techniques:
+                            raise ValueError(
+                                f'Unsupported bb_technique: {invalid_techniques}; allowed={sorted(BB_TECHNIQUES)}'
+                            )
                     explicit_id = case.get('testcase_id')
                     if execution_required and explicit_id in (None, ''):
                         raise ValueError(
@@ -1284,6 +1396,10 @@ def write_testcase_markdown(data, output_path):
                     )
                     lines.extend([f'##### `{test_id}` — {description}', ''])
                     lines.append(f'- **Type:** {type_label(case.get("type"))}')
+                    techniques = case.get('bb_technique') or []
+                    if isinstance(techniques, str):
+                        techniques = [techniques]
+                    lines.append(f'- **BB Technique:** {", ".join(techniques) if techniques else "N/A"}')
                     lines.append(f'- **Requirement:** `{requirement}`')
                     lines.append(f'- **Priority:** {human_text(case.get("priority") or "N/A", "priority")}')
                     append_markdown_block(lines, 'Pre-condition', pre_condition)
@@ -1325,6 +1441,7 @@ def build_automation_manifest(data, markdown_path):
                 'scenario_name',
             ),
             'type': str(case.get('type') or 'happy').strip().lower(),
+            'bb_technique': deepcopy(case.get('bb_technique')),
             'requirement': str(
                 case.get('req')
                 or record['scenario'].get('requirement')
@@ -1669,7 +1786,7 @@ def main():
     cli_template = sys.argv[3] if len(sys.argv) > 3 else None
     tmpl = get_template_path(specified_path=cli_template)
     with open(inp_path, encoding='utf-8') as f:
-        data = json.load(f)
+        data = materialize_execution_templates(json.load(f))
     rbac, case_registry = validate_rbac_contract(data)
     testcase_records = list(iter_testcases(data))
     record_by_case = {id(record['case']): record for record in testcase_records}

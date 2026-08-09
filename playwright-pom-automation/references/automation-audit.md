@@ -21,6 +21,7 @@ npm run traceability -- \
   --testcases testcases/login.md \
   --manifest testcases/login.automation.json \
   --selector-evidence-dir selector-evidence \
+  --app-build "$QA_APP_BUILD" \
   --output reports/testcase-automation-traceability.json
 ```
 
@@ -30,13 +31,15 @@ The generated JSON answers:
 - whether Markdown matches the hash recorded by the automation manifest
 - which testcase IDs were found and whether each ID appears in a Playwright test/TMS mapping
 - whether the spec contains the current automation-manifest hash and every required behavior/RBAC marker
+- whether every step calls the deterministic `<action><TargetKey>` Page Object method, carries the value fingerprint, and every assertion uses a matcher compatible with its assertion kind
+- whether that Page Object method contains the matching Playwright primitive (`fill`, `click`, `goto`, `selectOption`, and so on)
 - which `target.key` values came from the execution contract
 - which evidence file resolved each target and the exact locator expression
 - whether the evidence recorded `count=1`, `visible=true|false` matching the assertion, and `actionable=true` when the action needs it
 - whether the recorded locator is present in `selectors/`
 - why the suite is `PASS` or `BLOCKED`
 
-`BLOCKED` is the expected result when the lossless manifest is missing, a spec is empty, a source/step/outcome/cleanup/role/RBAC marker is missing, a testcase is legacy text-only, a target has no runtime evidence, a selector is ambiguous, or the locator is not present in selector code. Do not fix that result by inventing an XPath or copying marker text into a test that does not implement the action
+`BLOCKED` is the expected result when the lossless manifest is missing, a spec is empty, action/value/assertion semantics do not match the plan, a source/step/outcome/cleanup/role/RBAC marker is missing, a testcase is legacy text-only, selector evidence is stale/from another build, a target has no runtime evidence, a selector is ambiguous, or the locator is not present in selector code. Do not fix that result by inventing an XPath or copying marker text into a test that does not implement the action
 
 ## What proves an XPath is correct
 
@@ -51,6 +54,8 @@ The audit is a consistency gate; it is not a substitute for a live browser check
 
 The audit expects the selected strategy to follow `testid → id → CSS → role/label/placeholder/text → XPath`. Evidence should record every ordered candidate, including unavailable test-id when no FE source/contract exists. XPath is a last resort and must include a reason in evidence. Absolute XPath, generated CSS classes and positional selectors are blocked by the audit
 
+After audit PASS, run [testcase-execution.md](testcase-execution.md). Traceability PASS authorizes the selected implementation to execute but is not the testcase verdict; only the evidence-gated Playwright run returns `PASS`, `FAILED`, `N/A` or `UNTEST`.
+
 ## Token usage
 
 The audit separates three measurements:
@@ -59,12 +64,15 @@ The audit separates three measurements:
 - `token_usage.measurement=provider_reported`: exact input/output/total token counts supplied by the model host
 - `token_usage.measurement=not_available`: the host did not expose usage; the audit must not fabricate a number
 
+Call the recorder once per phase with `--stage testcase_generation|selector_discovery|pom_generation|repair`. The audit reports each stage and the aggregate; do not overwrite one phase with another.
+
 Playwright itself does not consume LLM tokens. Tokens are spent while the AI reads the testcase and generates code. To attach provider usage when the host exposes it, write the canonical QA usage file and pass it to the audit:
 
 ```bash
 QA_TOKEN_USAGE_FILE=reports/model-usage.json
 node ../../QA-skill/qa-run/scripts/helpers/record-model-usage.mjs \
   --file "$QA_TOKEN_USAGE_FILE" \
+  --stage pom_generation \
   --provider "$QA_MODEL_PROVIDER" \
   --model "$QA_MODEL_NAME" \
   --input-tokens "$INPUT_TOKENS" \

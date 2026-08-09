@@ -314,8 +314,8 @@ Full factorial: 3 × 4 × 2 = 24 case. Pairwise: ~10 case đại diện.
    → Use Case Testing cho happy/alternative; EP cho validation/negative; Error Guessing cho thêm vào
 ```
 
-## Ghi metadata `bb_technique` (optional)
+## Ghi metadata `bb_technique` (bắt buộc với contract mới)
 
-Field `bb_technique` trong JSON case là **metadata tùy chọn** — AI ghi vào để trace kỹ thuật, generator bỏ qua khi sinh Excel. Không bắt buộc, nhưng nên có khi dùng Decision Table hoặc State Transition để reviewer hiểu nguồn gốc case.
+Mọi case dưới `execution_contract="required"` phải có `bb_technique`. Có thể dùng một chuỗi hoặc mảng khi case kết hợp nhiều kỹ thuật. Generator xác thực giá trị, giữ metadata trong `.automation.json` và chặn case thiếu/sai kỹ thuật. `legacy_text_only` vẫn tương thích mà không bắt buộc field này.
 
 Giá trị hợp lệ: `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Error Guessing`, `Pairwise`

@@ -55,7 +55,7 @@ class RbacMatrixTests(unittest.TestCase):
 
     def test_case_role_must_match_expected_branch(self):
         data = self.data()
-        negative_case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][1]
+        negative_case = data['sections'][0]['groups'][0]['scenarios'][1]['cases'][0]
         negative_case['execution']['entry']['role_key'] = 'employee'
         negative_case['execution']['entry']['role'] = 'Nhân viên'
         with self.assertRaisesRegex(ValueError, 'not DENY'):

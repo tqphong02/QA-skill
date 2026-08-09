@@ -10,7 +10,8 @@
  * Metadata: evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/
  *
  * Planning:
- *   node execute-sheet.mjs --sheet-url <URL> --module LOGIN --parallel --plan-only
+ *   node execute-sheet.mjs --sheet-url <URL> --manifest <file.automation.json> \
+ *     --module LOGIN --parallel --plan-only
  *
  * Execute with an external Node worker:
  *   node execute-sheet.mjs --sheet-url <URL> --module LOGIN \
@@ -24,6 +25,7 @@
  */
 
 import { spawn, spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
@@ -311,6 +313,94 @@ export function parseStructuredExecutionContract(procedure, expected) {
     outcome_assertions: outcomeAssertions,
     cleanup,
   };
+}
+
+function normalizeTestcaseId(value) {
+  return String(value || '').trim().replace(/^\[|\]$/g, '').trim();
+}
+
+export function resolveAutomationManifestPath(source, explicitPath = '', dataRoot = DATA) {
+  if (explicitPath) {
+    const resolved = path.isAbsolute(explicitPath)
+      ? explicitPath
+      : path.resolve(dataRoot, explicitPath);
+    if (!fs.existsSync(resolved)) throw new Error(`Không tìm thấy automation manifest: ${resolved}`);
+    return resolved;
+  }
+  const sourcePath = String(source || '');
+  if (!sourcePath || !fs.existsSync(sourcePath)) return '';
+  const resolvedSource = path.resolve(sourcePath);
+  const candidate = resolvedSource.replace(/\.(?:xlsx|xlsm|xls)$/i, '.automation.json');
+  return candidate !== resolvedSource && fs.existsSync(candidate) ? candidate : '';
+}
+
+export function loadAutomationManifest(filePath) {
+  const raw = fs.readFileSync(filePath);
+  let manifest;
+  try {
+    manifest = JSON.parse(raw.toString('utf8'));
+  } catch {
+    throw new Error(`Automation manifest không phải JSON hợp lệ: ${filePath}`);
+  }
+  if (Number(manifest?.schema_version) !== 1 || !Array.isArray(manifest?.testcases)) {
+    throw new Error('Automation manifest phải có schema_version=1 và testcases[]');
+  }
+  return {
+    manifest,
+    metadata: {
+      path: path.resolve(filePath),
+      sha256: crypto.createHash('sha256').update(raw).digest('hex'),
+      markdown_sha256: manifest?.source?.markdown_sha256 || null,
+      testcase_count: manifest.testcases.length,
+    },
+  };
+}
+
+export function attachAutomationManifest(testcases, manifest) {
+  const manifestById = new Map();
+  for (const manifestCase of manifest.testcases || []) {
+    const id = normalizeTestcaseId(manifestCase.testcase_id);
+    if (!id) throw new Error('Automation manifest có testcase thiếu testcase_id');
+    if (manifestById.has(id)) throw new Error(`Automation manifest trùng testcase_id: ${id}`);
+    manifestById.set(id, manifestCase);
+  }
+
+  const seenSheetIds = new Set();
+  return testcases.map((testcase) => {
+    const id = normalizeTestcaseId(testcase.testcase_id);
+    if (!id) throw new Error(`Sheet row ${testcase.row_number || 'unknown'} thiếu testcase_id`);
+    if (seenSheetIds.has(id)) throw new Error(`Sheet trùng testcase_id: ${id}`);
+    seenSheetIds.add(id);
+    const manifestCase = manifestById.get(id);
+    if (!manifestCase) throw new Error(`Testcase ${id} không tồn tại trong automation manifest`);
+    const execution = manifestCase.execution;
+    if (!execution || !Array.isArray(execution.steps) || execution.steps.length === 0) {
+      throw new Error(`Testcase ${id} thiếu execution contract trong automation manifest`);
+    }
+    return {
+      ...testcase,
+      testcase_id: id,
+      group: manifestCase.group || testcase.group,
+      scenario_id: manifestCase.scenario_id || testcase.scenario_id,
+      scenario_name: manifestCase.scenario_name || testcase.scenario_name,
+      description: manifestCase.description || testcase.description,
+      priority: manifestCase.priority || testcase.priority,
+      execution_contract: {
+        schema_version: 1,
+        status: 'manifest',
+        source: 'automation_manifest',
+        testcase_id: id,
+        type: manifestCase.type || null,
+        bb_technique: manifestCase.bb_technique || null,
+        requirement: manifestCase.requirement || null,
+        entry: execution.entry || {},
+        steps: execution.steps,
+        outcome_assertions: execution.outcome?.assertions || [],
+        cleanup: execution.cleanup || null,
+        mutates: Boolean(execution.mutates),
+      },
+    };
+  });
 }
 
 function getExportedKeysFile() {
@@ -814,6 +904,7 @@ function writeExecutionPlan({
   requestedModule,
   resolvedGroups,
   confirmationRequired,
+  automationManifest,
 }) {
   const runDir = sheetRunMetadataDir(runDate, runId);
   fs.mkdirSync(runDir, { recursive: true });
@@ -823,6 +914,7 @@ function writeExecutionPlan({
     run_id: runId,
     run_date: runDate,
     source,
+    automation_manifest: automationManifest || null,
     sheet_name: sheetData.sheet_name,
     header_row: sheetData.header_row,
     module_scope: {
@@ -945,10 +1037,14 @@ async function main() {
   const dataFile = resolveDataPath(getArg('--data-file', 'test-data.md'));
   const runId = sanitizeRunId(getArg('--run-id', `sheet-${new Date().toISOString().replace(/\D/g, '').slice(0, 17)}`));
   const runDate = normalizeRunDate(getArg('--run-date', ''));
+  const manifestPath = resolveAutomationManifestPath(source, getArg('--manifest', ''));
 
   const sheetData = readSheetTestcases(source, sheetName);
-  const allCases = (Array.isArray(sheetData.testcases) ? sheetData.testcases : [])
-    .map((testcase) => ({
+  const sheetCases = Array.isArray(sheetData.testcases) ? sheetData.testcases : [];
+  const loadedManifest = manifestPath ? loadAutomationManifest(manifestPath) : null;
+  const allCases = loadedManifest
+    ? attachAutomationManifest(sheetCases, loadedManifest.manifest)
+    : sheetCases.map((testcase) => ({
       ...testcase,
       execution_contract: parseStructuredExecutionContract(
         testcase.procedure,
@@ -997,6 +1093,7 @@ async function main() {
         worker_count: true,
         worker_selection: true,
       },
+      automationManifest: loadedManifest?.metadata || null,
     });
     console.log(`Plan: ${planPath}`);
     console.log(
@@ -1047,6 +1144,7 @@ async function main() {
       worker_count: false,
       worker_selection: !selectedWorkers,
     },
+    automationManifest: loadedManifest?.metadata || null,
   });
   console.log(`Plan: ${planPath}`);
 

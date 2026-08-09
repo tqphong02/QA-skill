@@ -41,7 +41,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 |---|---|---|
 | Plane URL (`projects.metasolutions.ai`, path có `/issues/` hoặc `/work-items/`), ticket ID, log bug, comment PASS/FAILED/BLOCKED | `plane-qa/SKILL.md` | Parse URL rồi chạy Plane doctor; bare URL/ID thì đọc ticket |
 | Retest, re-test, verify bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, hoặc chạy execution testcase từ Google Sheet URL | `qa-run/SKILL.md` | Đọc app guide/Sheet URL; tạo plan bằng `scripts/helpers/execute-sheet.mjs --module <requested-if-known> --parallel --plan-only`, hiển thị resolved module rồi hỏi user xác nhận module, số worker 1-4 và all/worker ID/cancel; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc hoặc UI/UX không có deterministic testcase suite | `qa-run/SKILL.md` | Khởi động từ URL + objective; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `qa-run/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi qa-run và business-analysis |
 | Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `qa-run/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; map từng UI item với requirement theo 7 trạng thái, kiểm tra 10 ambiguity patterns, xuất traceability JSON và guide 12 sections |
 | Figma, design token, design-to-code fidelity, responsive visual review, interaction state hoặc UX spec | `ui-ux-design-qa/SKILL.md` | Validate review packet requirement/viewport/state/media trước; live browser execution chuyển sang `qa-run`, accessibility chuyển sang `accessibility-qa` |
@@ -51,7 +51,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 | Cross-browser, device/OS, locale, i18n/l10n, timezone, currency hoặc RTL | `compatibility-localization-qa/SKILL.md` | Validate matrix trước; live web chuyển `qa-run`, native mobile chuyển `mobile-qa`, thiếu target thì `BLOCKED` |
 | Viết/sửa/review testcase, Scenario ID/Name, hoặc yêu cầu rõ viết testcase API hay viết testcase cho OpenAPI/Swagger/Postman/curl | `testcase-template/SKILL.md` | Đọc testcase Markdown cũ nếu có; generator phải tạo Markdown trước Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve URL/ID rồi dùng Drive MCP; bare URL/ID thì đọc object |
-| Viết Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Đọc template POM |
+| Viết hoặc chạy deterministic testcase/Excel/Sheet automation, Playwright hoặc POM | `playwright-pom-automation/SKILL.md` | Chạy unified `BUILD`, `RUN` hoặc mặc định `BUILD_AND_RUN`; browser execution phải có evidence và verdict `PASS|FAILED|N/A|UNTEST` |
 | ego-browser, ego-lite, ego lite, task space, browser automation không cần Playwright MCP, kế thừa login state thật của user | `ego-browser/SKILL.md` | Kiểm tra ego lite đã install chưa bằng `ego-browser nodejs <<'EOF' cliLog(typeof snapshotText) EOF`; nếu chưa, đọc `ego-browser/references/install.md` |
 | Chuyển PDF/DOCX/PPTX sang Markdown | `doc-to-md/SKILL.md` | Chọn converter theo file type |
 | Phân tích business document, dựng business flow, tạo XMind hoặc Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` khi nguồn chưa là Markdown | Convert trước, review đủ 18 vùng rồi generate 3 output khớp nhau |
@@ -94,7 +94,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - `DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 - `performance-qa` là public skill duy nhất cho performance; JMeter và k6 là engine nội bộ dùng chung config, smoke gate và result schema
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; vẫn giữ ledger RETEST_PLUS 6 dòng riêng
-- Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; chỉ thêm Original Retest và Plane action cho row có ticket/previous failure
+- Deterministic Sheet execution = unified POM BUILD_AND_RUN với Testcase ID chính xác, browser evidence và verdict projection; chỉ chạy `DISCOVERY_CORE` riêng khi user yêu cầu exploratory coverage, còn row có ticket/previous failure dùng RETEST_PLUS
 - Không được tự thay business flow thiếu bằng flow generic; test contract phải copy từ Business Execution Brief `READY` cùng source hash
 - Retest ticket luôn chạy đủ Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
 - PASS → `Done`
@@ -115,11 +115,12 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
 - Không xem `source_available` là tool đã cài hoặc được phép chạy
 
-## Playwright POM Automation
+## Testcase Execution and Playwright POM
 
 ### Khi nào áp dụng
 - Scaffold dự án Playwright mới
 - Viết test UI / API / Performance
+- Chạy deterministic testcase từ Markdown, Excel, Sheet hoặc `.automation.json`
 - Setup CI cho QA project
 
 ### Không dùng
@@ -131,9 +132,11 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Tách selector khỏi spec, đặt trong `selectors/`
 - Gắn tag cho test (`@ui`, `@api`, `@functional`)
 - Wire Allure + CI
+- Mặc định dùng `BUILD_AND_RUN`: build POM → traceability PASS → browser run → screenshot/video + same-session trace → `PASS`, `FAILED`, `N/A` hoặc `UNTEST`
+- Không dùng `qa-run` để chạy lại cùng deterministic testcase suite
 
 ### Nguyên tắc cốt lõi
-> Mọi selector phải đi qua Page Object — không viết `page.locator()` trực tiếp trong spec.
+> Một manifest, một POM, một browser run và một verdict có evidence
 
 Đọc chi tiết: [`playwright-pom-automation/SKILL.md`](playwright-pom-automation/SKILL.md)
 
@@ -147,14 +150,12 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 
 ### Không dùng
 - Viết script automation mới (→ `playwright-pom-automation`)
+- Chạy deterministic testcase/Excel/Sheet hoặc POM (→ `playwright-pom-automation`)
 - Tạo test case document (→ `testcase-template`)
 
 ### Phải làm
 - Phân tầng Sanity → Smoke → Regression (không full regression mỗi cycle)
 - Mọi yêu cầu retest ticket tự chạy RETEST_PLUS gồm retest flow gốc, sanity, impacted regression, exploratory, ad-hoc và UI/UX
-- Antigravity Sheet execution phải hiển thị requested/resolved/available module rồi dừng hỏi user xác nhận module, số worker 1-4 và `all`/worker ID/`cancel`; không tự coi module trong prompt là đã xác nhận và không hardcode worker count
-- Một module như `LOGIN` phải shard testcase theo số worker user xác nhận; mỗi `Pass`/`Fail` phải có ít nhất một screenshot hoặc video tồn tại, JSON/trace/network đơn lẻ không đủ evidence
-- Antigravity phải ghi Sheet evidence theo `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`; plan/result metadata vào `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`, không gộp media nhiều chức năng
 - Tối ưu token (scope snapshot, batch fill, deterministic wait)
 - Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
 - Đọc `qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md` trước browser action nếu có

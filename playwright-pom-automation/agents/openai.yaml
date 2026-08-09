@@ -1,4 +1,4 @@
 interface:
-  display_name: "Playwright POM Automation"
-  short_description: "Sinh POM plan và audit Playwright từ testcase"
-  default_prompt: "Use $playwright-pom-automation to build Playwright Page Object tests from the lossless testcase automation manifest, generate the POM plan, verify selectors in the runtime DOM, and pass behavior, RBAC, source-hash, and selector traceability gates."
+  display_name: "Testcase Execution & POM"
+  short_description: "Build POM, chạy browser, thu evidence và verdict"
+  default_prompt: "Use $playwright-pom-automation to build and run a bounded testcase manifest slice through Playwright POM, capture same-session visual and trace evidence, and return only PASS, FAILED, N/A or UNTEST."

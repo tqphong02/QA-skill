@@ -44,8 +44,9 @@
       "outcome": "[OUTCOME]",
       "cleanup": "[CLEANUP]"
     },
-    "execution_rule": "Run structured steps in order and verify the matching expected assertion before continuing",
-    "legacy_rule": "Text-only rows require scoped normalization; unresolved route, role, data, target, transition or expected result is Untest or BLOCKED",
+    "execution_rule": "Prefer matching .automation.json and run its structured steps in order with exact entry, values, assertions and cleanup",
+    "manifest_rule": "Join Sheet rows and automation manifest by exact testcase_id; local Excel auto-discovers the same-basename sidecar and remote Sheet accepts --manifest",
+    "legacy_rule": "Parse F/G/H only when no manifest exists; text-only rows require scoped normalization and unresolved route, role, data, target, transition or expected result is Untest or BLOCKED",
     "selector_rule": "Semantic target hints are candidates only; locator must be verified in the same runtime browser session with count=1, visible=true and actionable=true when applicable"
   },
 

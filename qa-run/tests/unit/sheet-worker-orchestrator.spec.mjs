@@ -5,14 +5,17 @@ import os from 'node:os';
 import path from 'node:path';
 
 import {
+  attachAutomationManifest,
   buildWorkerAssignments,
   evidenceSlug,
   functionalGroupOf,
   isVisualEvidenceReference,
+  loadAutomationManifest,
   parseWorkerSelection,
   partitionByFunctionalGroup,
   parseStructuredExecutionContract,
   resolveFunctionalGroupNames,
+  resolveAutomationManifestPath,
   resolveModuleConfirmation,
   resolveWorkerCount,
   resolveWorkerSelection,
@@ -56,6 +59,67 @@ test('Sheet workers: text-only testcase is explicitly legacy', () => {
     parseStructuredExecutionContract('1. Mở trang đăng nhập', '1. Trang hiển thị').status,
     'legacy',
   );
+});
+
+test('Sheet workers: automation manifest is the lossless execution source', () => {
+  const manifest = {
+    schema_version: 1,
+    testcases: [{
+      testcase_id: 'TC-001',
+      group: 'LOGIN',
+      scenario_id: 'SCN-LOGIN-001',
+      scenario_name: 'Đăng nhập thành công',
+      type: 'happy',
+      bb_technique: 'Use Case Testing',
+      requirement: 'AC-LOGIN-01',
+      execution: {
+        version: 1,
+        mutates: false,
+        entry: { route: '/login', role: 'Nhân viên' },
+        steps: [{
+          id: 'S01',
+          action: 'fill',
+          target: { key: 'email_input', kind: 'field', name: 'Email' },
+          value: 'qa@example.com',
+          assertions: [{ kind: 'value', target: 'email_input', value: 'qa@example.com' }],
+        }],
+        outcome: { assertions: [{ kind: 'url', value: '/dashboard' }] },
+      },
+    }],
+  };
+  const [joined] = attachAutomationManifest([
+    testcase(1, 'SHEET GROUP', { testcase_id: '[TC-001]', procedure: 'prose bị bỏ qua' }),
+  ], manifest);
+
+  assert.equal(joined.group, 'LOGIN');
+  assert.equal(joined.execution_contract.status, 'manifest');
+  assert.equal(joined.execution_contract.source, 'automation_manifest');
+  assert.equal(joined.execution_contract.steps[0].action, 'fill');
+  assert.equal(joined.execution_contract.steps[0].value, 'qa@example.com');
+  assert.deepEqual(joined.execution_contract.outcome_assertions, [{ kind: 'url', value: '/dashboard' }]);
+});
+
+test('Sheet workers: manifest mismatch fails closed instead of reparsing prose', () => {
+  assert.throws(
+    () => attachAutomationManifest([testcase(1, 'LOGIN')], { schema_version: 1, testcases: [] }),
+    /không tồn tại trong automation manifest/,
+  );
+});
+
+test('Sheet workers: local Excel auto-discovers and validates its manifest sidecar', () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'sheet-manifest-'));
+  try {
+    const excelPath = path.join(tempRoot, 'login.xlsx');
+    const manifestPath = path.join(tempRoot, 'login.automation.json');
+    fs.writeFileSync(excelPath, 'fixture');
+    fs.writeFileSync(manifestPath, JSON.stringify({ schema_version: 1, source: {}, testcases: [] }));
+    assert.equal(resolveAutomationManifestPath(excelPath), manifestPath);
+    const loaded = loadAutomationManifest(manifestPath);
+    assert.equal(loaded.metadata.testcase_count, 0);
+    assert.match(loaded.metadata.sha256, /^[a-f0-9]{64}$/);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
 });
 
 test('Sheet workers: evidence path is grouped by function, date, run, and worker', () => {

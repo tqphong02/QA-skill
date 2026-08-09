@@ -1,6 +1,6 @@
 ---
 name: qa-run
-description: Run UI-first browser QA and generic web tasks from a URL and natural-language objective. Trigger on open/read/extract/click/fill/download, app discovery, exploratory/ad-hoc, sanity, regression, ticket retest, Sheet execution, UI/UX, browser network/console errors, business-flow discovery, triage, or sign-off. Not for automation code, native mobile, or testcase documents. Auto-route; do not require the skill name.
+description: Run UI-first exploratory browser QA and generic web tasks from a URL and natural-language objective. Trigger on open/read/extract/click/fill/download, app discovery, exploratory/ad-hoc, sanity, ticket retest, UI/UX, browser network/console errors, business-flow discovery, triage, or sign-off. Not for deterministic testcase execution, POM/automation code, native mobile, or testcase documents; route testcase BUILD/RUN to playwright-pom-automation. Auto-route; do not require the skill name.
 ---
 
 # QA Run
@@ -44,8 +44,7 @@ RETEST_PLUS =
   Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE
 
 SHEET_EXECUTION_PLUS =
-  Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE
-  + Original Retest only for rows linked to a ticket or previous failure
+  Compatibility label owned by playwright-pom-automation BUILD_AND_RUN
 
 BROWSER_OBSERVABILITY =
   Same-session Network + Console + Page Error correlation
@@ -69,12 +68,12 @@ AGENTIC_TASK_EXECUTION =
 | Exploratory browser QA, ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE`; add `AGENTIC_TASK_EXECUTION` when the path is non-deterministic | Always read [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md); add [references/AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md) only for a non-deterministic path, [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md) only when an applicable hidden-rule probe needs its payload/evidence contract, and [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) only when optional source/knowledge exists |
 | Generic browser agent or simple browser task | `EXPLORATORY_BROWSER_QA` + `FAST` profile (`BROWSER_TASK_FAST` label) | Read [references/FAST-BROWSER-TASK.md](references/FAST-BROWSER-TASK.md) and [references/BROWSER-OBSERVABILITY.md](references/BROWSER-OBSERVABILITY.md); read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) only for non-default auth/session, worker, recovery or troubleshooting behavior |
 | Plane ticket plus retest, re-test, verify, PASS, FAILED or BLOCKED | `RETEST_PLUS` | [references/RETEST-PLUS.md](references/RETEST-PLUS.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Google Sheet URL/ID plus execute or run testcases | `SHEET_EXECUTION_PLUS` | [references/TESTCASE_SHEET_SCHEMA.json](references/TESTCASE_SHEET_SCHEMA.json), [references/SHEET_WORKER_RESULT_SCHEMA.json](references/SHEET_WORKER_RESULT_SCHEMA.json), [references/RETEST-PLUS.md](references/RETEST-PLUS.md), [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md), and [testcase-template/references/execution-contract.md](../testcase-template/references/execution-contract.md) |
+| Google Sheet URL/ID plus execute or run deterministic testcases | Exit `qa-run` | Route to `playwright-pom-automation` BUILD_AND_RUN; it owns POM code, browser evidence, verdict and optional Sheet result projection |
 | Sanity, smoke, impacted or recurring regression | `SANITY_REGRESSION_PLUS = Sanity + Impacted Regression + DISCOVERY_CORE` | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | First exploration of an app or feature | `APP_BASELINE_DISCOVERY = DISCOVERY_CORE` at app/feature scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md), [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md), [references/EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md), and [references/BUSINESS-RULE-DISCOVERY.md](references/BUSINESS-RULE-DISCOVERY.md) |
 | Analyze repository business logic | `REPO_BUSINESS_DISCOVERY`; add `DISCOVERY_CORE` when a live runtime is in scope | [references/TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md), [references/PIPELINE.md](references/PIPELINE.md), and [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md) |
 | Reconcile UI with source, docs or runtime | `UI_BUSINESS_RECONCILIATION + DISCOVERY_CORE` | [references/PIPELINE.md](references/PIPELINE.md) and [references/PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
-| Write Playwright automation or POM | Exit `qa-run` | Route to `playwright-pom-automation` |
+| Write or run deterministic testcase/POM automation | Exit `qa-run` | Route to `playwright-pom-automation` |
 
 Create a ledger row for every expanded layer. Every user-facing exploratory result must be exactly `PASS`, `FAILED`, `N/A`, or `UNTEST`. Technical safety and coverage records may retain internal blocker/partial classifications, but they are normalized to `UNTEST` at the run/charter result boundary.
 
@@ -135,7 +134,7 @@ Apply the following exact order for all models, especially fast or small-context
    - If optional source/requirements/knowledge exist, `prepare-test-intelligence.mjs` may be run to enrich risk ranking; its absence or `NEEDS_DISCOVERY` status must not stop UI-first exploratory execution
    - Do not invent a business expectation that is not visible or otherwise provided. When the UI does not expose a clear oracle, record the charter/run as `UNTEST` with the exact missing signal
    - Use the `business-execution-card.json` and full brief only when they already exist or when source/requirements reconciliation is explicitly requested. They are enrichment and audit context for exploratory work, not a prerequisite
-   - For `RETEST_TICKET`, `SHEET_TESTCASE_EXECUTION`, `SANITY_REGRESSION` and source-driven routes, keep the existing preparation command and READY/NEEDS_DISCOVERY gates
+   - For `RETEST_TICKET`, `SANITY_REGRESSION` and source-driven routes, keep the existing preparation command and READY/NEEDS_DISCOVERY gates
    - For these contract-driven routes, run `context-builder.mjs`; when the Business Execution Brief is not `READY`, stop normal execution and report the exact missing field
    - If the repository is available for optional enrichment, pass `--repo`; dirty/staged/untracked source remains candidate context until the browser confirms it
 3. **Initialize Run Manifest** after the target/domain gate:
@@ -165,7 +164,7 @@ Apply the following exact order for all models, especially fast or small-context
    - For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, start `scripts/helpers/exploratory-runner.mjs` with the same `RUN_ID` after the manifest; use `rule-plan`, `page`, `task-plan`, compact `agent-context`, `decision`, `action`, `task-judge`, `rule-probe`, `coverage`, `charter` and `finish` as the runtime boundary. For unknown paths derive decisions from the latest live observation plus `agent-context`, not the full ledger. Use resolved driver/observer values, not `auto`, before a final `PASS`
    - For `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST` (human label `BROWSER_TASK_FAST`), do not start `exploratory-runner.mjs` or create a full QA ledger. Use `native-browser-runtime.mjs quick-start [RUN_ID] --url <URL> --objective <TASK> --allowed-domain <ORIGIN>` when the native runtime is selected; it creates the manifest and first live observation and generates a run ID when omitted. Use `batch` only for bounded read-only actions, then `quick-finish` with `PASS|FAILED|N/A|UNTEST`. FAST `PASS` means the task objective completed, not release-quality QA
    - When MCP drivers are unavailable, start `scripts/helpers/native-browser-runtime.mjs` with the same `RUN_ID`; use compact `observe → agent-context → decision → action → observe → native-action`. Escalate observation detail only on truncation/missing target or oracle. Keep `session_id`, `page_id`, `decision_id`, runtime cursor and media references attached to the ledger. Read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) before non-default session/profile/CDP attach, workers, recovery or troubleshooting
-4. With `SHEET_TESTCASE_EXECUTION`, read [references/SHEET-EXECUTION.md](references/SHEET-EXECUTION.md), use the pre-baked schemas, generate a plan before browser execution, and require explicit module, worker-count and worker-selection confirmation. Isolate/shard workers without duplicate rows; require valid screenshot/video evidence before any `Pass`/`Fail` write-back; finish every `SHEET_EXECUTION_PLUS` layer
+4. With deterministic testcase, Sheet execution, POM BUILD, RUN or BUILD_AND_RUN, exit `qa-run` before browser action and route to `playwright-pom-automation`; do not load Sheet/POM contracts here
 5. **[BEFORE TEST — VERIFY intelligence provenance]** The preparation command must resolve `<project-root>/qa-knowledge/knowledge-index.json` and current source artifacts before UI execution:
    - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
    - For the prepared run, read `business-execution-card.json` before any full brief or Markdown; do not load both projections simultaneously
@@ -210,7 +209,7 @@ Exploratory result map: `PASS`, `FAILED`, `N/A`, `UNTEST`. Plane state transitio
 
 - `APP_BASELINE_DISCOVERY`: bootstrap project lacking `qa-knowledge/knowledge-index.json`. Run `scripts/helpers/extract-flow.mjs` first; map modules → traverse accessible main business flows, role/state/input/side-effect/integration/UI/UX and coverage gaps.
 - `REPO_BUSINESS_DISCOVERY`: run `node scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode <full|incremental> --parallel auto --graphify auto`. Incremental mode collects committed, staged, unstaged and untracked changes, selects conservative API/UI/DB/RBAC/state scanner impact, and fails closed on scanner/artifact errors. Graphify runs code-only when available and contributes dependency candidates; canonical QA-skill scanners still produce rules, flows, contracts and permissions. Use `--graphify required` only when Graphify itself is required by the user
-- `SHEET_TESTCASE_EXECUTION`: load `qa-knowledge/app-flow-map.json`, generate the plan with `node scripts/helpers/execute-sheet.mjs --sheet-url <URL> --module <requested-if-known> --parallel --plan-only`, show the resolved module scope, then ask the user to confirm module, worker count 1-4 and worker selection. Run only confirmed assignments and import image/video-backed results. Finish every `SHEET_EXECUTION_PLUS` layer
+- `SHEET_TESTCASE_EXECUTION`: compatibility label only; route deterministic BUILD/RUN and Sheet result projection to `playwright-pom-automation`
 - `RETEST_TICKET`: do not rescan the full app. Run Scoped Business Discovery from ticket/index shards, refresh only missing or stale feature knowledge, then finish every RETEST_PLUS row.
 - `SANITY_REGRESSION` and the full `EXPLORATORY_BROWSER_QA` profile (`EXPLORATORY_ADHOC` alias): start from the live UI; reuse existing guides when present, expand `DISCOVERY_CORE`, and update knowledge exactly in the inspected scope. The `FAST` profile does not write business-guide facts.
 - Do not call baseline exhaustive if you have not traversed enough modules, roles, states or data. Log `covered`, `partial`, `blocked` or `not_covered` in `coverage_map`.
@@ -247,7 +246,7 @@ Write runtime artifacts only under the tested project (`cwd` or `QA_DATA_DIR`). 
 
 ## Related skills
 
-- [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — write deterministic test-as-code (DIFFERENT from this live exploratory)
+- [playwright-pom-automation](../playwright-pom-automation/SKILL.md) — build and run deterministic testcase automation with evidence/verdict (DIFFERENT from this exploratory skill)
 - [testcase-template](../testcase-template/SKILL.md) — document Excel test cases (DIFFERENT from this bug hunting)
 - [testcase-template execution contract](../testcase-template/references/execution-contract.md) — structured steps shared by Sheet execution and POM automation
 - [doc-to-md](../doc-to-md/SKILL.md) — convert PDF/DOCX to MD for AI to read spec

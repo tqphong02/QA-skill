@@ -31,7 +31,7 @@ A Drive URL or ID by itself is a complete safe-read request
    - Drive/Docs/Sheets/Slides URL or ID only → resolve and read metadata plus accessible content
    - URL/ID plus read/summarize/analyze language → perform that read-only operation
    - URL/ID plus explicit create/update/rename/move/copy/upload/share/delete language → perform only that mutation after exact-target checks
-   - Google Sheet URL plus execute/run testcase language → use `qa-run` `SHEET_TESTCASE_EXECUTION`, with this skill handling Sheet CRUD
+   - Google Sheet URL plus execute/run testcase language → use `playwright-pom-automation` BUILD_AND_RUN, with this skill handling Sheet CRUD only
 2. Read [references/ROUTING.md](references/ROUTING.md).
 3. Read [references/CRUD.md](references/CRUD.md) for every Drive create, read, update, delete, permission, or native Google file request.
 4. For private Drive access, use the configured `google-drive` MCP or the pre-built Python CLI scripts in `scripts/drive_crud.py`.

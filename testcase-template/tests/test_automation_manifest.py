@@ -43,6 +43,7 @@ class AutomationManifestTests(unittest.TestCase):
         self.assertEqual(manifest, persisted)
         self.assertEqual(['DEMO-01', 'DEMO-02'], [case['testcase_id'] for case in manifest['testcases']])
         first = manifest['testcases'][0]
+        self.assertEqual('Use Case Testing', first['bb_technique'])
         self.assertEqual('employee', first['execution']['entry']['role_key'])
         self.assertEqual(['RBAC-DASH-001'], first['execution']['entry']['rbac_refs'])
         self.assertEqual('dashboard_heading', first['execution']['outcome']['assertions'][1]['target'])
@@ -80,6 +81,55 @@ class AutomationManifestTests(unittest.TestCase):
         first_case['testcase_id'] = 'DEMO-UI-01'
         records = list(self.generator.iter_testcases(data))
         self.assertEqual('DEMO-UI-01', records[0]['testcase_id'])
+
+    def test_required_contract_enforces_requirement_type_scenario_and_bb_technique(self):
+        mutations = [
+            ('case.req', lambda data: data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0].pop('req'), 'require case.req'),
+            ('case.type', lambda data: data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0].__setitem__('type', 'other'), 'case.type must be one of'),
+            ('scenario_id', lambda data: data['sections'][0]['groups'][0]['scenarios'][0].__setitem__('scenario_id', ''), 'require scenario_id'),
+            ('bb_technique', lambda data: data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0].pop('bb_technique'), 'require bb_technique'),
+        ]
+        for label, mutate, message in mutations:
+            with self.subTest(label=label):
+                data = self.data()
+                mutate(data)
+                with self.assertRaisesRegex(ValueError, message):
+                    list(self.generator.iter_testcases(data))
+
+    def test_required_contract_rejects_mixed_scenario_requirements(self):
+        data = self.data()
+        case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
+        case['req'] = 'AC2'
+        with self.assertRaisesRegex(ValueError, 'mixes requirements'):
+            list(self.generator.iter_testcases(data))
+
+    def test_execution_template_reuse_materializes_deterministically(self):
+        data = self.data()
+        case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
+        data['execution_templates'] = {'LOGIN_BASE': copy.deepcopy(case['execution'])}
+        case.pop('execution')
+        case['execution_ref'] = 'LOGIN_BASE'
+        case['execution_overrides'] = {
+            'entry': {'screen': 'Đăng nhập dành cho kiểm thử'},
+            'outcome': {'state': 'Đã xác minh'},
+        }
+
+        compact_size = len(json.dumps(data, ensure_ascii=False))
+        materialized = self.generator.materialize_execution_templates(data)
+        resolved = materialized['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]['execution']
+
+        self.assertEqual('Đăng nhập dành cho kiểm thử', resolved['entry']['screen'])
+        self.assertEqual('Đã xác minh', resolved['outcome']['state'])
+        self.assertGreater(len(resolved['steps']), 1)
+        self.assertLess(compact_size, len(json.dumps(materialized, ensure_ascii=False)))
+        with tempfile.TemporaryDirectory() as temp_dir:
+            markdown_path = pathlib.Path(temp_dir) / 'compact.md'
+            manifest_path = pathlib.Path(temp_dir) / 'compact.automation.json'
+            self.generator.write_testcase_markdown(materialized, markdown_path)
+            manifest = self.generator.write_automation_manifest(
+                materialized, markdown_path, manifest_path
+            )
+        self.assertEqual('Đăng nhập dành cho kiểm thử', manifest['testcases'][0]['execution']['entry']['screen'])
 
 
 if __name__ == '__main__':

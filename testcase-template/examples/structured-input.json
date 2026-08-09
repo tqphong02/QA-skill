@@ -67,6 +67,7 @@
                   "testcase_id": "DEMO-01",
                   "case_ref": "LOGIN_EMPLOYEE_SUCCESS",
                   "type": "happy",
+                  "bb_technique": "Use Case Testing",
                   "req": "AC1",
                   "description": "Xác minh rằng người dùng có thể đăng nhập thành công với tài khoản hợp lệ",
                   "priority": "High",
@@ -235,11 +236,19 @@
                     },
                     "cleanup": "Đăng xuất và đóng phiên kiểm thử nếu môi trường yêu cầu"
                   }
-                },
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-LOG-002",
+              "requirement": "AC2",
+              "scenario_name": "Chặn truy cập Dashboard khi chưa đăng nhập",
+              "cases": [
                 {
                   "testcase_id": "DEMO-02",
                   "case_ref": "DASHBOARD_UNAUTHENTICATED_DENY",
                   "type": "negative",
+                  "bb_technique": "State Transition",
                   "req": "AC2",
                   "description": "Xác minh rằng người chưa đăng nhập không thể truy cập Dashboard",
                   "priority": "High",

@@ -46,7 +46,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 | Plane URL (`projects.metasolutions.ai`, path containing `/issues/` or `/work-items/`), ticket ID, bug logging, PASS/FAILED/BLOCKED comment | `plane-qa/SKILL.md` | Parse the URL, then run Plane doctor; for a bare URL/ID, read the ticket |
 | Retest, re-test, verify a bug/ticket | `plane-qa/SKILL.md` + `qa-run/SKILL.md` | Plane doctor/read → RETEST_PLUS |
 | Generic browser task, open/read/extract/search/scroll/click/fill a simple page | `qa-run/SKILL.md` (`EXPLORATORY_BROWSER_QA` + FAST profile; `BROWSER_TASK_FAST` label) | Validate URL/domain, prefer native `quick-start`, use structured `extract`, read-only `batch` with at most 5 actions and `quick-finish`; no business brief is required and FAST PASS means task completion only |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc, UI/UX, browser response/network/console error, or testcase execution from a Google Sheet URL | `qa-run/SKILL.md` | Exploratory/ad-hoc and app baseline start from URL + objective and inspect the UI flow; use `prepare-test-intelligence.mjs` only as enrichment when requirements/knowledge/source exist; resolve the browser observer in the same session; for Sheets, create the plan, show the resolved module and ask the user to confirm module, worker count 1–4 and all/worker ID/cancel |
+| App baseline discovery, sanity, exploratory, ad-hoc, UI/UX, browser response/network/console error | `qa-run/SKILL.md` | Start from URL + objective and inspect the UI flow; use `prepare-test-intelligence.mjs` only as enrichment when requirements/knowledge/source exist; resolve the browser observer in the same session |
 | Analyze a repository, learn business flows from source, scan system logic or create a business guide from code | `qa-run/SKILL.md` (`REPO_BUSINESS_DISCOVERY`) | Run `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full --parallel auto --graphify auto`; incremental mode collects committed/staged/unstaged/untracked deltas, selects scanners by impact and fails closed; Graphify code-only adds dependency candidates while Phases 2+3 still produce and merge canonical business sources into `qa-knowledge/merged/system-business-guide.md` |
 | Infer a flow from UI, reconcile Source Code + Docs + Runtime, find UI vs Backend/BRD conflicts, or generate BA/PO/Dev questions | `qa-run/SKILL.md` (`UI_BUSINESS_RECONCILIATION`) | Run `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; map each UI item through 7 statuses, check 10 ambiguity patterns, and write traceability JSON plus the 12-section guide |
 | Figma, design tokens, design-to-code fidelity, responsive visual review, interaction state or UX specification | `ui-ux-design-qa/SKILL.md` | Validate review packet requirement/viewport/state/media first; route live browser execution to `qa-run` and accessibility to `accessibility-qa` |
@@ -56,7 +56,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 | Cross-browser, device/OS, locale, i18n/l10n, timezone, currency or RTL | `compatibility-localization-qa/SKILL.md` | Validate the matrix first; route live web to `qa-run`, native mobile to `mobile-qa`, and missing targets to `BLOCKED` |
 | Write/edit/review testcases, Scenario ID/Name, or explicitly write API/OpenAPI/Swagger/Postman/curl testcases | `testcase-template/SKILL.md` | Read existing testcase Markdown when present; the generator must create Markdown, lossless automation manifest, then Excel |
 | `drive.google.com`, `docs.google.com/document`, `docs.google.com/spreadsheets`, `docs.google.com/presentation`, Drive ID, Docs, Sheets, Slides, upload/share/CRUD | `google-drive-qa/SKILL.md` | Resolve the URL/ID and use Drive MCP; for a bare URL/ID, read the object |
-| Write Playwright automation/POM | `playwright-pom-automation/SKILL.md` | Read the POM template |
+| Write or execute deterministic testcase/Excel/Sheet automation, Playwright or POM | `playwright-pom-automation/SKILL.md` | Run unified BUILD, RUN or BUILD_AND_RUN; browser execution must produce evidence and `PASS|FAILED|N/A|UNTEST` |
 | ego-browser, ego-lite, task space, browser automation without Playwright MCP, or reuse of the user's real login state | `ego-browser/SKILL.md` | Check installation with `ego-browser nodejs <<'EOF' cliLog(typeof snapshotText) EOF`; if absent, read `ego-browser/references/install.md` |
 | Convert PDF/DOCX/PPTX to Markdown | `doc-to-md/SKILL.md` | Select the converter for the file type |
 | Analyze business documents, build business flows, or create XMind/Q&A Markdown/Excel | `business-analysis/SKILL.md` + `doc-to-md/SKILL.md` when the source is not Markdown | Convert first, review all 18 areas and generate the three matching outputs |
@@ -83,7 +83,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 7. For pentest, require `.pentest/engagement.md`, target, authorization, exclusions and rate limit before network requests; request approval immediately before Level 2/3 actions
 8. A cloned pentest source is only `source_available`; run tools only when the doctor confirms the executable and dependency are `available`
 9. Skill Markdown does not replace MCP runtime; before reporting an integration failure, distinguish `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` and `permission_denied`
-10. For qa-run QA routes, exploratory/ad-hoc and app baseline are UI-first: only an exact target URL/reachable target, objective and domain boundary are mandatory; documents/source/role/test data/brief/guide are optional enrichment. Source-driven, retest and Sheet routes still use the card/brief contract. Full `EXPLORATORY_BROWSER_QA`/`EXPLORATORY_ADHOC`/`APP_BASELINE_DISCOVERY` always read `EXPLORATORY-AGENT-LOOP.md`; read `AGENTIC-TASK-PLANNING.md` only for non-deterministic paths, `BUSINESS-RULE-DISCOVERY.md` when an applicable hidden-rule probe needs its full payload/evidence contract, and `NATIVE-BROWSER-RUNTIME.md` for non-default auth/session/worker/recovery/troubleshooting. Start the runner with the same `RUN_ID`, create `rule-plan`, use compact native `observe` + `agent-context` → `task-plan`/`decision` → action → deterministic `state_delta` → replan/complete → independent `task-judge`; escalate observation to `standard/full` only when truncation hides the target/oracle. Do not reload the full ledger/raw trace at every step. QA PASS still requires `SATISFIED` judge, same-session observer, evidence, applicable `rule-probe`, coverage and complete high-priority charters. Missing target/session/authority/oracle/evidence/budget or unresolved truncation is user-facing `UNTEST`; the only results are `PASS`, `FAILED`, `N/A`, `UNTEST`. FAST is bounded task completion: prefer `quick-start`, target-scoped `extract`, read-only `batch` of at most 5 actions and `quick-finish`, then raise to the full profile when QA requirements appear
+10. For qa-run QA routes, exploratory/ad-hoc and app baseline are UI-first: only an exact target URL/reachable target, objective and domain boundary are mandatory; documents/source/role/test data/brief/guide are optional enrichment. Source-driven and retest routes still use the card/brief contract; deterministic Sheet/testcase routes exit to `playwright-pom-automation` and require the exact manifest, target, role/data and cleanup contract there. Full `EXPLORATORY_BROWSER_QA`/`EXPLORATORY_ADHOC`/`APP_BASELINE_DISCOVERY` always read `EXPLORATORY-AGENT-LOOP.md`; read `AGENTIC-TASK-PLANNING.md` only for non-deterministic paths, `BUSINESS-RULE-DISCOVERY.md` when an applicable hidden-rule probe needs its full payload/evidence contract, and `NATIVE-BROWSER-RUNTIME.md` for non-default auth/session/worker/recovery/troubleshooting. Start the runner with the same `RUN_ID`, create `rule-plan`, use compact native `observe` + `agent-context` → `task-plan`/`decision` → action → deterministic `state_delta` → replan/complete → independent `task-judge`; escalate observation to `standard/full` only when truncation hides the target/oracle. Do not reload the full ledger/raw trace at every step. QA PASS still requires `SATISFIED` judge, same-session observer, evidence, applicable `rule-probe`, coverage and complete high-priority charters. Missing target/session/authority/oracle/evidence/budget or unresolved truncation is user-facing `UNTEST`; the only results are `PASS`, `FAILED`, `N/A`, `UNTEST`. FAST is bounded task completion: prefer `quick-start`, target-scoped `extract`, read-only `batch` of at most 5 actions and `quick-finish`, then raise to the full profile when QA requirements appear
 11. Live browser qa-run must observe network, console and page errors in the exact session executing the UI; do not combine evidence from another browser MCP session
 12. Graphify is an optional static discovery provider: do not run installer/hook/AGENTS mutations; default to `--code-only`; retain all normalized project nodes/relations; separate token-limited `contextSlice`; preserve `EXTRACTED`/`INFERRED`/`AMBIGUOUS`; and never promote a relation to business truth, runtime evidence or measured coverage
 13. effective-html only affects companion HTML generated from validated JSON; every interactive companion must use `render-intelligence-html.mjs` with `catalog-v2` layout synchronized with `QA-skill.html`, two-finger pan, pinch/`Ctrl`/`Cmd`+wheel zoom, a route chip highlighting the end-to-end path, hover/active edge-label pills and node-click path highlighting with a detail drawer containing `Làm được gì`, flow information and related paths, then pass `--check`; JSON, Markdown, Excel, XMind and standard evidence remain the sources of truth
@@ -107,7 +107,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 - `performance-qa` là public skill duy nhất cho performance; JMeter and k6 are internal engines sharing config, smoke gates and result schema
 - Performance `.env` is only an ignored `PERF_*` input layer; generated YAML remains the canonical config, request/body/secret values use placeholders and credentials must not be committed
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; retain the separate 6-row RETEST_PLUS ledger
-- Sheet execution = Sheet Testcase Execution + Sanity + Impacted Regression + `DISCOVERY_CORE`; add Original Retest and Plane action only for rows with a ticket/previous failure
+- Deterministic Sheet execution = unified POM BUILD_AND_RUN with exact Testcase IDs, browser evidence and verdict projection; run `DISCOVERY_CORE` separately only when exploratory coverage is explicitly requested, and use RETEST_PLUS for ticket/previous-failure rows
 - Business Execution Brief là `READY` before retest, Sheet and source-driven execution; copy its test contract with the same source hash
 - Không được tự thay business flow thiếu bằng flow generic; exploratory/ad-hoc UI-first may derive a flow directly from the runtime UI and must mark the oracle as `UI_DERIVED`
 - Retest tickets always run Retest, Sanity, Impacted Regression, Exploratory, Ad-hoc and UI/UX
@@ -138,6 +138,8 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 
 - Scaffold a new Playwright project
 - Write UI/API/performance tests
+- Execute testcase Markdown/Excel/Sheet or `.automation.json` through Playwright
+- Produce browser evidence and testcase verdicts
 - Set up CI for QA
 
 ### Do not use for
@@ -150,7 +152,13 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 - Use the Page Object Model; do not write `page.locator()` or `page.getBy*()` directly in specs
 - Separate selectors from specs under `selectors/`
 - Tag tests (`@ui`, `@api`, `@functional`)
-- Wire Allure and CI
+- For testcase-driven work, run a target-scoped `pom-plan` with `--group` or `--testcase-id`; the default batch guard is 20 cases
+- Map every step to `<action><PascalTargetKey>`, preserve value fingerprints and use assertion-kind-compatible matchers
+- Require selector evidence with `captured_at`, same-browser `run_id` and current `app_build`
+- Default testcase workflow is BUILD_AND_RUN: traceability → browser run → screenshot/video + same-session trace → `PASS|FAILED|N/A|UNTEST`
+- Retry-pass is `FAILED`/flaky; missing test, browser target, report, visual or trace is `UNTEST`
+- Sheet module, worker count 1–4 and worker selection require confirmation before execution/write-back
+- Wire Allure and CI only when pipeline/release delivery is in scope
 
 ### Core principle
 
@@ -170,14 +178,13 @@ Read [`playwright-pom-automation/SKILL.md`](playwright-pom-automation/SKILL.md)
 ### Do not use for
 
 - Writing new automation scripts (→ `playwright-pom-automation`)
+- Executing deterministic testcase/POM suites (→ `playwright-pom-automation`)
 - Creating testcase documents (→ `testcase-template`)
 
 ### Must do
 
 - Layer Sanity → Smoke → Regression; do not run full regression every cycle
 - Every retest-ticket request automatically runs RETEST_PLUS: original retest flow, sanity, impacted regression, exploratory, ad-hoc and UI/UX
-- Sheet testcase execution must show requested/resolved/available module and ask the user to confirm the exact module, worker count 1–4 and `all`/worker ID/`cancel`; the module in the prompt is only a filter, not confirmation; this also applies to Antigravity
-- A module such as `LOGIN` must shard testcases by the confirmed worker count without duplicate rows; delegate each assignment to an independent browser sub-agent/worker when the host supports parallel agents
 - Exploratory/ad-hoc browser actions must resolve semantic targets in the same session, prefer accessibility/DOM evidence, adaptive waits and bounded recovery; coordinates or XPath must not be automatically promoted to POM selectors
 - Human-facing reports must begin with a `Role/Data mapping` table and use concrete business-role names; do not display shortened account codes such as `U1`, `U2`, `U3` or `U4`. Keep aliases only in redacted evidence JSON when machine traceability requires them
 - The exploratory runner must record page/action/charter ledgers, enforce numeric action/time budgets and fail-closed `PASS` when a high-priority verdict, resolved observer, screenshot/video or clean retry quality is missing
@@ -214,7 +221,8 @@ Read [`qa-run/SKILL.md`](qa-run/SKILL.md)
 ## Automation quality gates
 
 - Read `playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md` and `FLAKY-TEST-MANAGEMENT.md` before creating CI automation
-- After generating POM, create the deterministic plan from `.automation.json`, then run `scripts/verify-testcase-traceability.mjs` with Markdown plus manifest; archive `reports/testcase-automation-traceability.json` with source hash, behavior/RBAC markers, TestCase ID mapping, selector evidence and token measurement
+- After generating POM, create a bounded deterministic plan from `.automation.json`, then run `scripts/verify-testcase-traceability.mjs` with Markdown plus manifest and current `--app-build`; archive `reports/testcase-automation-traceability.json` with source hash, action/value/assertion/RBAC markers, TestCase ID mapping, fresh selector evidence and staged token measurement
+- Unified POM BUILD_AND_RUN owns deterministic browser execution and verdict; it must not reconstruct testcase flow when the shared manifest exists
 - The fixed POM locator priority is `data-testid → id → stable CSS → role/label/placeholder/text → XPath`; use `data-testid` only when present in FE source/contract or verified live DOM; do not insert test IDs into the app
 - The skill repository keeps only reusable templates (`.env.example`, `fixtures/`, `test-data/`); project `.env`, credentials, auth state, live evidence and testcase/runtime data belong in the scaffolded automation project
 - Classify retry-pass as `flaky`, preserve first-attempt and retry evidence, and never turn it into a clean PASS automatically
@@ -243,7 +251,9 @@ Read [`qa-run/SKILL.md`](qa-run/SKILL.md)
 - Do not end testcase content with `.` or add emoji/icons
 - Keep the current flow as default; read `references/api-testcases.md` and create an `api` object only when the user explicitly requests API testcase writing; merely mentioning an API artifact does not change mode
 - Always run `scripts/import-api-spec.py` for API files; run Excel only when `review_required` is empty
-- Markdown trước Excel remains mandatory: generate complete Markdown first, then the lossless `.automation.json`, then Excel; use the manifest for POM and Markdown for human/AI reading
+- Markdown trước Excel remains mandatory: generate complete Markdown first, then the lossless `.automation.json`, then Excel; use the manifest for unified POM BUILD_AND_RUN and Markdown for human/AI reading
+- New executable cases require a non-empty requirements registry, stable Scenario ID/Name, one matching AC per scenario, a valid type and `bb_technique`
+- Reuse genuinely identical flows through `execution_templates` plus `execution_ref`/`execution_overrides`; do not duplicate full entry/steps across cases
 
 ### Core principle
 

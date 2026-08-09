@@ -6,7 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import {
   buildTraceability,
+  parseAutomationManifest,
   parseTestcases,
+  readTokenUsage,
 } from '../assets/templates/scripts/verify-testcase-traceability.mjs';
 
 function fileSha256(filePath) {
@@ -17,6 +19,7 @@ function writeFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-traceability-'));
   fs.mkdirSync(path.join(root, 'tests', 'ui'), { recursive: true });
   fs.mkdirSync(path.join(root, 'selectors'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'pages'), { recursive: true });
   fs.mkdirSync(path.join(root, 'selector-evidence'), { recursive: true });
 
   const testcasePath = path.join(root, 'login.md');
@@ -26,6 +29,12 @@ function writeFixture() {
 |---|---|---|---|
 | S01 | fill | email_input | Email |
 | S02 | click | login_submit | Đăng nhập |
+`, 'utf8');
+  fs.writeFileSync(path.join(root, 'pages', 'login.page.ts'), `
+export class LoginPage {
+  async fillEmailInput(value: string) { await this.email.fill(value); }
+  async clickLoginSubmit() { await this.submit.click(); }
+}
 `, 'utf8');
 
   const manifestPath = path.join(root, 'login.automation.json');
@@ -93,6 +102,10 @@ function writeFixture() {
   };
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
   const manifestHash = fileSha256(manifestPath);
+  const contract = parseAutomationManifest(manifestPath).cases[0];
+  const [stepOne, stepTwo] = contract.required_markers.steps;
+  const stepOneAssertion = contract.required_markers.step_assertions[0][0];
+  const outcome = contract.required_markers.outcomes[0];
 
   fs.writeFileSync(path.join(root, 'tests', 'ui', 'login.ui.spec.ts'), `
 import { test, expect } from '@playwright/test';
@@ -100,9 +113,10 @@ const source = '[AUTOMATION_SOURCE:${manifestHash}]';
 test('TC_LOGIN_01 [happy] — Login thành công @ui', async () => {
   test.info().annotations.push({ type: 'contract', description: '[TC_LOGIN_01:ROLE] employee' });
   test.info().annotations.push({ type: 'contract', description: '[TC_LOGIN_01:RBAC] RBAC-LOGIN-001' });
-  await test.step('[TC_LOGIN_01:S01] fill email_input', async () => { await loginPage.fillEmail(); });
-  await test.step('[TC_LOGIN_01:S02] click login_submit', async () => { await loginPage.submit(); });
-  await test.step('[TC_LOGIN_01:OUTCOME:01] visible dashboard_heading', async () => { await expect(loginPage.dashboardHeading).toBeVisible(); });
+  await test.step('${stepOne}', async () => { await loginPage.fillEmailInput('qa@example.com'); });
+  await test.step('${stepOneAssertion}', async () => { await expect(loginPage.emailInput).toHaveValue('qa@example.com'); });
+  await test.step('${stepTwo}', async () => { await loginPage.clickLoginSubmit(); });
+  await test.step('${outcome}', async () => { await expect(loginPage.dashboardHeading).toBeVisible(); });
 });
 `, 'utf8');
   fs.writeFileSync(path.join(root, 'selectors', 'login.selectors.ts'), `
@@ -117,6 +131,9 @@ export const loginSelectors = {
     feature: 'login',
     route: '/login',
     role: 'employee',
+    captured_at: new Date().toISOString(),
+    run_id: 'selector-run-001',
+    app_build: 'build-001',
     targets: [
       {
         target_key: 'email_input',
@@ -225,13 +242,78 @@ test('traceability audit blocks mapped steps whose bodies contain no POM action 
   try {
     const specPath = path.join(fixture.root, 'tests', 'ui', 'login.ui.spec.ts');
     const hollow = fs.readFileSync(specPath, 'utf8')
-      .replace('await loginPage.fillEmail();', 'void source;')
-      .replace('await loginPage.submit();', 'void source;')
+      .replace("await loginPage.fillEmailInput('qa@example.com');", 'void source;')
+      .replace("await expect(loginPage.emailInput).toHaveValue('qa@example.com');", 'void source;')
+      .replace('await loginPage.clickLoginSubmit();', 'void source;')
       .replace('await expect(loginPage.dashboardHeading).toBeVisible();', 'void source;');
     fs.writeFileSync(specPath, hollow, 'utf8');
     const report = audit(fixture);
     assert.equal(report.status, 'BLOCKED');
-    assert.equal(report.violations.filter(violation => violation.code === 'IMPLEMENTATION_BODY_MISSING').length, 3);
+    assert.equal(report.violations.filter(violation => (
+      violation.code === 'IMPLEMENTATION_ACTION_MISMATCH'
+      || violation.code === 'IMPLEMENTATION_ASSERTION_MISMATCH'
+    )).length, 4);
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('traceability audit blocks a generic click implementation for a fill contract', () => {
+  const fixture = writeFixture();
+  try {
+    const specPath = path.join(fixture.root, 'tests', 'ui', 'login.ui.spec.ts');
+    const wrong = fs.readFileSync(specPath, 'utf8')
+      .replace("loginPage.fillEmailInput('qa@example.com')", "loginPage.performStep('S01')");
+    fs.writeFileSync(specPath, wrong, 'utf8');
+    const report = audit(fixture);
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(violation => (
+      violation.code === 'IMPLEMENTATION_ACTION_MISMATCH'
+      && violation.required_method === 'fillEmailInput'
+    )));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('traceability audit blocks a correctly named Page Object method with the wrong primitive', () => {
+  const fixture = writeFixture();
+  try {
+    const pagePath = path.join(fixture.root, 'pages', 'login.page.ts');
+    const wrong = fs.readFileSync(pagePath, 'utf8')
+      .replace('this.email.fill(value)', 'this.email.click()');
+    fs.writeFileSync(pagePath, wrong, 'utf8');
+    const report = audit(fixture);
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(violation => (
+      violation.code === 'PAGE_METHOD_ACTION_MISMATCH'
+      && violation.required_method === 'fillEmailInput'
+    )));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('traceability audit blocks stale or wrong-build selector evidence', () => {
+  const fixture = writeFixture();
+  try {
+    const evidencePath = path.join(fixture.root, 'selector-evidence', 'login.json');
+    const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
+    evidence.captured_at = '2020-01-01T00:00:00.000Z';
+    fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2), 'utf8');
+    const report = buildTraceability({
+      testcasePath: fixture.testcasePath,
+      manifestPath: fixture.manifestPath,
+      automationRoot: fixture.root,
+      evidenceDir: path.join(fixture.root, 'selector-evidence'),
+      tokenUsagePath: fixture.tokenUsagePath,
+      expectedAppBuild: 'build-002',
+      maxEvidenceAgeHours: 24,
+      mode: 'ui',
+    });
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(violation => violation.code === 'SELECTOR_EVIDENCE_STALE'));
+    assert.ok(report.violations.some(violation => violation.code === 'SELECTOR_APP_BUILD_MISMATCH'));
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
@@ -330,4 +412,25 @@ test('Markdown parser accepts generated UI testcase IDs', () => {
 | S01 | click | save_button | Save |
 `);
   assert.deepEqual(parsed.cases.map(item => item.id), ['DEMO-UI-01']);
+});
+
+test('token telemetry aggregates named generation stages', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-token-usage-'));
+  try {
+    const usagePath = path.join(root, 'usage.json');
+    fs.writeFileSync(usagePath, JSON.stringify({
+      provider: 'test-host',
+      model: 'test-model',
+      stages: {
+        testcase_generation: { input_tokens: 20, output_tokens: 10, total_tokens: 30 },
+        pom_generation: { input_tokens: 40, output_tokens: 5, total_tokens: 45 },
+      },
+    }), 'utf8');
+    const usage = readTokenUsage(usagePath);
+    assert.equal(usage.measurement, 'provider_reported');
+    assert.equal(usage.total_tokens, 75);
+    assert.equal(usage.stages.length, 2);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
