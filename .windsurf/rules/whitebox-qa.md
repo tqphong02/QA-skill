@@ -1,8 +1,0 @@
----
-trigger: model_decision
-description: Use for multi-language white-box, call graph, unit-test and coverage analysis
----
-
-# Whitebox QA
-
-Load [`whitebox-qa/SKILL.md`](../../whitebox-qa/SKILL.md), resolve an exact function, analyze compact output, and expand to graph, NestJS DI, executable Jest/Vitest, runtime coverage, or `testcase-template` handoff only when requested

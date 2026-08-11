@@ -1,4 +1,0 @@
-interface:
-  display_name: "Performance QA"
-  short_description: "Orchestrate safe JMeter and k6 performance tests"
-  default_prompt: "Use $performance-qa as the single public performance skill, select JMeter or k6 internally, require the workload approvals, smoke with one user, validate volume or scalability profiles when requested, and produce common JSON, Markdown, and HTML reports."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Compatibility Localization QA"
+  short_description: "Check versioned browsers devices and locales"
+  default_prompt: "Use $dynamic-compatibility to create a versioned browser, OS, device, viewport and locale matrix, then verify i18n, timezone, currency, RTL and resolution risks."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "AI Quality QA"
-  short_description: "Evaluate AI outputs, safety, quality, and cost"
-  default_prompt: "Use $ai-quality-qa to design and run an evidence-based evaluation for this AI feature."

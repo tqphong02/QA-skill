@@ -3,7 +3,7 @@
 #
 # Clone về → chạy 1 lệnh → setup đủ:
 #   • Copy profile core hoặc full vào đúng thư mục discovery của Codex, Antigravity hoặc Claude
-#   • Cài Node deps (qa-run + playwright-pom-automation)
+#   • Cài Node deps (dynamic-web-exploratory + dynamic-web-automation)
 #   • Cài Python deps (markitdown[all] + openpyxl) dùng prebuilt wheel
 #   • Auto-detect AI env (Antigravity / Copilot / Claude Code / standalone)
 #   • Tạo config/api_keys.json từ template (nếu standalone)

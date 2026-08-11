@@ -1,0 +1,10 @@
+---
+trigger: model_decision
+description: A Drive, Docs, Sheets or Slides URL/ID alone triggers exact resolve plus safe read; use for Drive CRUD and permissions
+---
+
+# Google Drive QA
+
+Load [`integration/google-drive/SKILL.md`](../../integration/google-drive/SKILL.md), resolve the exact ID, use the Drive MCP and read the object back after a write
+
+A bare Drive URL/ID is a complete read request and never implies a write

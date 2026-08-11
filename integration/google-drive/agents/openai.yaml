@@ -1,0 +1,4 @@
+interface:
+  display_name: "Google Drive QA"
+  short_description: "CRUD file và báo cáo QA trên Google Drive"
+  default_prompt: "Use $integration-google-drive for this Drive, Docs, Sheets, or Slides URL/ID. Resolve and read a bare link safely; mutate only when the request explicitly names the write operation."

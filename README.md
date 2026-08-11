@@ -6,29 +6,29 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 
 | Skill | Mục đích | Đầu ra |
 |---|---|---|
-| [qa-run](./qa-run/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
-| [testcase-template](./testcase-template/SKILL.md) | Sinh testcase manual, RBAC Matrix và execution contract lossless cho unified POM | `.md` + `.automation.json` + `.xlsx` |
-| [playwright-pom-automation](./playwright-pom-automation/SKILL.md) | Build POM, chạy Playwright browser, thu evidence và trả verdict testcase | POM code + execution/evidence JSON + `PASS/FAILED/N/A/UNTEST` |
-| [doc-to-md](./doc-to-md/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
-| [business-analysis](./business-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
-| [pentest-run](./pentest-run/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |
-| [plane-qa](./plane-qa/SKILL.md) | CRUD ticket Plane đa workspace, log bug, comment retest và evidence inline | ticket/comment Plane |
-| [google-drive-qa](./google-drive-qa/SKILL.md) | CRUD Drive, Docs, Sheets, Slides và permissions qua MCP | file/folder/report trên Drive |
-| [data-quality-qa](./data-quality-qa/SKILL.md) | Database, ETL/ELT, reconciliation, lineage và schema drift | data-quality evidence |
-| [ai-quality-qa](./ai-quality-qa/SKILL.md) | LLM, RAG, agent, structured output, safety và regression | eval dataset + report |
-| [accessibility-qa](./accessibility-qa/SKILL.md) | WCAG 2.2, axe, keyboard và screen reader | accessibility evidence |
-| [performance-qa](./performance-qa/SKILL.md) | Một orchestrator cho JMeter/k6, common config, threshold, report và bottleneck | `.jmx`/k6 + JSON/Markdown/HTML report |
-| [api-contract-qa](./api-contract-qa/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
-| [postman](./postman/SKILL.md) | OAuth MCP, Postman CLI, Newman và collection execution | MCP connection + JSON/JUnit/console evidence |
-| [mobile-qa](./mobile-qa/SKILL.md) | Android/iOS, Appium MCP, WebdriverIO, scrcpy Wi-Fi và authorized network proxy inspection | mobile QA evidence + sanitized HAR/network report + test code |
-| [whitebox-qa](./whitebox-qa/SKILL.md) | White-box đa ngôn ngữ, call graph, NestJS DI, Jest/Vitest và runtime coverage | compact/full analysis + executable test + coverage evidence + testcase-template handoff |
-| [github-mcp-qa](./github-mcp-qa/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
-| [ego-browser](./ego-browser/SKILL.md) | Browser driver macOS kế thừa login state thật, có safety gate cho external effects | browser session + UI evidence |
-| [ui-ux-design-qa](./ui-ux-design-qa/SKILL.md) | Review design-to-code, visual hierarchy, responsive states và UX evidence | UI/UX review packet + screenshot/video evidence |
-| [release-governance-qa](./release-governance-qa/SKILL.md) | Risk-based release gate, defect risk, evidence, approval và exit criteria | release gate JSON + go/no-go decision |
-| [appsec-supply-chain-qa](./appsec-supply-chain-qa/SKILL.md) | Local redacted secret, dependency, SBOM và secure-CI preflight | supply-chain report + candidate findings |
-| [reliability-resilience-qa](./reliability-resilience-qa/SKILL.md) | Validate fault-injection, recovery, observability, RTO/RPO và stop conditions | bounded resilience plan + readiness report |
-| [compatibility-localization-qa](./compatibility-localization-qa/SKILL.md) | Browser/device/locale/timezone/currency/i18n/RTL coverage | compatibility matrix + coverage report |
+| [dynamic-web-exploratory](./dynamic-testing/web-exploratory/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
+| [support-testcase-authoring](./support/testcase-authoring/SKILL.md) | Sinh testcase manual, RBAC Matrix và execution contract lossless cho unified POM | `.md` + `.automation.json` + `.xlsx` |
+| [dynamic-web-automation](./dynamic-testing/web-automation/SKILL.md) | Build POM, chạy Playwright browser, thu evidence và trả verdict testcase | POM code + execution/evidence JSON + `PASS/FAILED/N/A/UNTEST` |
+| [support-document-conversion](./support/document-conversion/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
+| [static-requirements-analysis](./static-testing/requirements-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
+| [dynamic-security-pentest](./dynamic-testing/security-pentest/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |
+| [integration-plane](./integration/plane/SKILL.md) | CRUD ticket Plane đa workspace, log bug, comment retest và evidence inline | ticket/comment Plane |
+| [integration-google-drive](./integration/google-drive/SKILL.md) | CRUD Drive, Docs, Sheets, Slides và permissions qua MCP | file/folder/report trên Drive |
+| [dynamic-data-quality](./dynamic-testing/data-quality/SKILL.md) | Database, ETL/ELT, reconciliation, lineage và schema drift | data-quality evidence |
+| [dynamic-ai-evaluation](./dynamic-testing/ai-evaluation/SKILL.md) | LLM, RAG, agent, structured output, safety và regression | eval dataset + report |
+| [hybrid-accessibility](./hybrid-testing/accessibility/SKILL.md) | WCAG 2.2, axe, keyboard và screen reader | accessibility evidence |
+| [dynamic-performance](./dynamic-testing/performance/SKILL.md) | Một orchestrator cho JMeter/k6, common config, threshold, report và bottleneck | `.jmx`/k6 + JSON/Markdown/HTML report |
+| [hybrid-api-contract](./hybrid-testing/api-contract/SKILL.md) | OpenAPI/Postman/GraphQL/gRPC contract verification | contract evidence |
+| [integration-postman](./integration/postman/SKILL.md) | OAuth MCP, Postman CLI, Newman và collection execution | MCP connection + JSON/JUnit/console evidence |
+| [dynamic-mobile](./dynamic-testing/mobile/SKILL.md) | Android/iOS, Appium MCP, WebdriverIO, scrcpy Wi-Fi và authorized network proxy inspection | mobile QA evidence + sanitized HAR/network report + test code |
+| [hybrid-source-coverage](./hybrid-testing/source-coverage/SKILL.md) | White-box đa ngôn ngữ, call graph, NestJS DI, Jest/Vitest và runtime coverage | compact/full analysis + executable test + coverage evidence + support-testcase-authoring handoff |
+| [integration-github](./integration/github/SKILL.md) | GitHub MCP, repository, PR, Issues và Actions CI/CD | MCP config + verified operation |
+| [adapter-browser-session](./adapter/browser-session/SKILL.md) | Browser driver macOS kế thừa login state thật, có safety gate cho external effects | browser session + UI evidence |
+| [hybrid-ui-ux-review](./hybrid-testing/ui-ux-review/SKILL.md) | Review design-to-code, visual hierarchy, responsive states và UX evidence | UI/UX review packet + screenshot/video evidence |
+| [governance-release-quality](./governance/release-quality/SKILL.md) | Risk-based release gate, defect risk, evidence, approval và exit criteria | release gate JSON + go/no-go decision |
+| [static-supply-chain-security](./static-testing/supply-chain-security/SKILL.md) | Local redacted secret, dependency, SBOM và secure-CI preflight | supply-chain report + candidate findings |
+| [dynamic-resilience](./dynamic-testing/resilience/SKILL.md) | Validate fault-injection, recovery, observability, RTO/RPO và stop conditions | bounded resilience plan + readiness report |
+| [dynamic-compatibility](./dynamic-testing/compatibility/SKILL.md) | Browser/device/locale/timezone/currency/i18n/RTL coverage | compatibility matrix + coverage report |
 
 ## 🗺️ Master Skill Architecture & Flow Diagram
 
@@ -54,7 +54,7 @@ Format tương tác hiện tại:
 - Nhãn mũi tên dùng pill có nền riêng và lane tách biệt để không bị đường nối che hoặc chồng lên nhau
 - Click/tap skill card được xử lý trực tiếp ở `pointerup` khi dịch chuyển dưới 5 px; drag thật chỉ di chuyển canvas và không mở panel
 - Card hiển thị số nhánh thực thi nếu skill có workflow nội bộ; tìm kiếm bao phủ cả tên workflow và tên mục
-- `Exploratory Browser QA & Ad-hoc` là một flow riêng: qa-run tự quan sát visible content + AX browser live, suy luận task plan từ UI, chọn next action theo deterministic state delta, replan khi không tiến triển, independent-judge success signal, rồi chạy Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
+- `Exploratory Browser QA & Ad-hoc` là một flow riêng: dynamic-web-exploratory tự quan sát visible content + AX browser live, suy luận task plan từ UI, chọn next action theo deterministic state delta, replan khi không tiến triển, independent-judge success signal, rồi chạy Exploratory + Ad-hoc + UI/UX và đối chiếu Network + Console + Page Error cùng session
 - `BROWSER_TASK_FAST` là nhãn của profile FAST bên trong `EXPLORATORY_BROWSER_QA` cho task đơn giản chạy ngay; native path có `quick-start`, structured `extract`, read-only `batch` tối đa 5 action và `quick-finish`; khi có bug/business rule/expected/PASS-FAILED thì chuyển sang profile exploratory đầy đủ trong cùng skill; verdict user-facing chỉ gồm PASS, FAILED, N/A, UNTEST
 - `Browser MCP: Network & Console` tách riêng Playwright MCP, Chrome DevTools MCP và runtime observer theo hard gate cùng session
 - `Mobile: Appium & Network` tách Appium MCP thực thi UI khỏi proxy capture bằng Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit; evidence phải được làm sạch và đối chiếu với bước UI
@@ -67,15 +67,15 @@ Tạo lại catalog đệ quy và render Effective HTML chuẩn:
 node scripts/build-effective-skill-html.mjs \
   --bundle skill-catalog/QA-skill-effective-html-04-08-2026
 
-node qa-run/scripts/writers/render-intelligence-html.mjs \
+node dynamic-testing/web-exploratory/scripts/writers/render-intelligence-html.mjs \
   --check skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill.html
 ```
 
 Hướng dẫn cài đặt, cấu hình công cụ và ví dụ sử dụng security skill: [PENTEST-RUN-GUIDE.md](./PENTEST-RUN-GUIDE.md)
 
-Hướng dẫn dùng skill performance cho JMeter/k6: [performance-qa/GUIDE.md](./performance-qa/GUIDE.md)
+Hướng dẫn dùng skill performance cho JMeter/k6: [dynamic-testing/performance/GUIDE.md](./dynamic-testing/performance/GUIDE.md)
 
-Hướng dẫn phân biệt skill với MCP và kết nối QA MCP stack: [qa-mcp-stack-vi.md](./github-mcp-qa/references/qa-mcp-stack-vi.md)
+Hướng dẫn phân biệt skill với MCP và kết nối QA MCP stack: [qa-mcp-stack-vi.md](./integration/github/references/qa-mcp-stack-vi.md)
 
 ## Cross-model compatibility
 
@@ -108,10 +108,10 @@ Report dễ đọc nằm tại `evidence/skill-readiness/latest.md`, JSON pretty
 
 Bộ skill dùng thêm hai lớp vận hành để tránh chỉ có checklist mà thiếu quản trị chất lượng:
 
-- Manual QA: [qa-run/references/SENIOR-QA-OPERATING-MODEL.md](qa-run/references/SENIOR-QA-OPERATING-MODEL.md) — test strategy, risk, environment/test data, defect triage, RCA, metrics và post-release verification
-- Release packet: [qa-run/references/RELEASE-QUALITY-METRICS.md](qa-run/references/RELEASE-QUALITY-METRICS.md) — numerator/denominator, risk coverage, flaky rate, evidence rate và ownership
-- Automation: [playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md](playwright-pom-automation/references/AUTOMATION-QUALITY-GATES.md) — component/contract/UI routing, visual/axe, coverage và CI gates
-- Flaky tests: [playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md](playwright-pom-automation/references/FLAKY-TEST-MANAGEMENT.md) — retry evidence, quarantine, owner và stability window
+- Manual QA: [dynamic-testing/web-exploratory/references/SENIOR-QA-OPERATING-MODEL.md](dynamic-testing/web-exploratory/references/SENIOR-QA-OPERATING-MODEL.md) — test strategy, risk, environment/test data, defect triage, RCA, metrics và post-release verification
+- Release packet: [dynamic-testing/web-exploratory/references/RELEASE-QUALITY-METRICS.md](dynamic-testing/web-exploratory/references/RELEASE-QUALITY-METRICS.md) — numerator/denominator, risk coverage, flaky rate, evidence rate và ownership
+- Automation: [dynamic-testing/web-automation/references/AUTOMATION-QUALITY-GATES.md](dynamic-testing/web-automation/references/AUTOMATION-QUALITY-GATES.md) — component/contract/UI routing, visual/axe, coverage và CI gates
+- Flaky tests: [dynamic-testing/web-automation/references/FLAKY-TEST-MANAGEMENT.md](dynamic-testing/web-automation/references/FLAKY-TEST-MANAGEMENT.md) — retry evidence, quarantine, owner và stability window
 
 Playwright template có `quality-gates.json` và `scripts/quality-gate.mjs` để đánh giá failed tests, retry-derived flaky tests, evidence completeness, duration và coverage sau khi tạo `reports/playwright.json`
 
@@ -142,10 +142,10 @@ cd QA-skill
 # Profile full tự discover mọi top-level folder có SKILL.md, gồm cả skill mới build
 
 # Cài Postman skill + MCP + Postman CLI + Newman
-./scripts/setup.sh --agent=antigravity --only=postman --yes
+./scripts/setup.sh --agent=antigravity --only=integration-postman --yes
 
 # Cấp đúng 1 skill cho intern, không kèm nested/vendor skill
-./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
+./scripts/setup.sh --agent=codex --only=dynamic-web-exploratory --skip-deps --yes
 
 # 3. Export Plane API key trước khi mở agent
 export PLANE_API_KEY="plane_pat_xxx"
@@ -158,11 +158,11 @@ codex mcp add google-drive \
 
 # 5. GitHub MCP cho Codex dùng PAT từ environment, không ghi token vào repo
 # Export GITHUB_PAT_TOKEN bằng secret manager hoặc terminal hiện tại trước bước này
-bash github-mcp-qa/scripts/install-codex.sh
+bash integration/github/scripts/install-codex.sh
 
 # 6. Kiểm tra host và QA MCP stack
 bash scripts/doctor-agent.sh --agent=codex
-bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
+bash integration/github/scripts/doctor-stack.sh --agent=codex
 ```
 
 Windows PowerShell:
@@ -174,17 +174,17 @@ Windows PowerShell:
 .\scripts\setup.ps1 -Agent antigravity -Profile full -Yes
 ```
 
-Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `plane-qa/ACCOUNT-PROFILE.example.md` và `google-drive-qa/ACCOUNT-PROFILE.example.md`.
+Không commit Plane API key, OAuth credential hoặc token. Có thể tạo profile định tuyến cục bộ từ `integration/plane/ACCOUNT-PROFILE.example.md` và `integration/google-drive/ACCOUNT-PROFILE.example.md`.
 
 Với Postman trên Antigravity, setup tự thêm hoặc bật `mcpServers.postman`, cài local Postman CLI và Newman, đồng thời giữ nguyên các MCP khác. Sau setup, restart Antigravity, chạy `/mcp` và đăng nhập Postman qua OAuth; không cần sửa JSON
 
-Google Drive MCP lần đầu cần cấu hình Google Cloud project, APIs, Audience, scopes và OAuth Desktop client theo [GOOGLE_CLOUD_OAUTH_SETUP.md](./google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md)
+Google Drive MCP lần đầu cần cấu hình Google Cloud project, APIs, Audience, scopes và OAuth Desktop client theo [GOOGLE_CLOUD_OAUTH_SETUP.md](./integration/google-drive/references/GOOGLE_CLOUD_OAUTH_SETUP.md)
 
-Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) và [WINDOWS-SETUP.md](./WINDOWS-SETUP.md). GitHub MCP có guide riêng cho [Codex](./github-mcp-qa/references/codex-github-mcp-vi.md) và [Antigravity](./github-mcp-qa/references/antigravity-github-mcp-vi.md)
+Xem [SETUP-GUIDE.md](./SETUP-GUIDE.md) và [WINDOWS-SETUP.md](./WINDOWS-SETUP.md). GitHub MCP có guide riêng cho [Codex](./integration/github/references/codex-github-mcp-vi.md) và [Antigravity](./integration/github/references/antigravity-github-mcp-vi.md)
 
 ## API Keys (cho AI models)
 
-Bộ skill này dùng AI model (Claude, GPT, Gemini) cho một số tác vụ (vd testcase-template có thể dùng AI để suggest test cases). Hỗ trợ 3 cách config:
+Bộ skill này dùng AI model (Claude, GPT, Gemini) cho một số tác vụ (vd support-testcase-authoring có thể dùng AI để suggest test cases). Hỗ trợ 3 cách config:
 
 **Cách 1: Dùng môi trường free (KHÔNG cần API key)**
 

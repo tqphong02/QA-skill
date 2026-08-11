@@ -1,4 +1,0 @@
-interface:
-  display_name: "AppSec Supply Chain QA"
-  short_description: "Scan code dependencies and secrets safely"
-  default_prompt: "Use $appsec-supply-chain-qa to run a local AppSec and software-supply-chain preflight with redacted evidence."

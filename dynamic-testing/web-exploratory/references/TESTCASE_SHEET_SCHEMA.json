@@ -1,0 +1,118 @@
+{
+  "_comment": "Canonical column schema for the team's standard testcase template (assets/Template.xlsx). AI reads this file directly — no need to scan the Excel or Sheet header row. Update here if the template ever changes.",
+
+  "sheet_name": "Test cases_App",
+  "header_row": 9,
+
+  "column_mapping": {
+    "scenario_id":   1,
+    "scenario_name": 2,
+    "testcase_id":   3,
+    "description":   4,
+    "precondition":  5,
+    "procedure":     6,
+    "expected":      7,
+    "result":        8,
+    "priority":      9,
+    "date":          10,
+    "tester":        11,
+    "note":          12
+  },
+
+  "column_letters": {
+    "scenario_id":   "B",
+    "scenario_name": "C",
+    "testcase_id":   "D",
+    "description":   "E",
+    "precondition":  "F",
+    "procedure":     "G",
+    "expected":      "H",
+    "result":        "I",
+    "priority":      "J",
+    "date":          "K",
+    "tester":        "L",
+    "note":          "M"
+  },
+
+  "read_only_columns": ["scenario_id", "scenario_name", "testcase_id", "description", "precondition", "procedure", "expected"],
+  "write_columns":     ["result", "priority", "date", "tester", "note"],
+
+  "execution_contract": {
+    "source": "../../../support/testcase-authoring/references/execution-contract.md",
+    "structured_markers": {
+      "step": "[S##]",
+      "outcome": "[OUTCOME]",
+      "cleanup": "[CLEANUP]"
+    },
+    "execution_rule": "Prefer matching .automation.json and run its structured steps in order with exact entry, values, assertions and cleanup",
+    "manifest_rule": "Join Sheet rows and automation manifest by exact testcase_id; local Excel auto-discovers the same-basename sidecar and remote Sheet accepts --manifest",
+    "legacy_rule": "Parse F/G/H only when no manifest exists; text-only rows require scoped normalization and unresolved route, role, data, target, transition or expected result is Untest or BLOCKED",
+    "selector_rule": "Semantic target hints are candidates only; locator must be verified in the same runtime browser session with count=1, visible=true and actionable=true when applicable"
+  },
+
+  "section_markers": {
+    "ui":         "1.1. USER INTERFACE",
+    "functional": "1.2. FUNCTION"
+  },
+
+  "testcase_id_patterns": {
+    "ui":         "[{CODE}-UI-{NN}]",
+    "functional": "[{CODE}-{NN}]"
+  },
+
+  "dropdown_values": {
+    "result":   ["Pass", "Fail", "N/A", "Untest"],
+    "priority": ["Critical", "High", "Medium", "Low"]
+  },
+
+  "note_required_when_result": ["Fail", "Untest", "N/A"],
+
+  "workflow_composition": {
+    "name": "SHEET_EXECUTION_PLUS",
+    "required_layers": [
+      "Sheet Testcase Execution",
+      "Sanity",
+      "Impacted Regression",
+      "Scoped Business Discovery",
+      "Exploratory",
+      "Ad-hoc",
+      "UI/UX"
+    ],
+    "conditional_layer": "Original Retest only for rows linked to a Plane ticket or previous failure",
+    "plane_mutation_rule": "Do not comment or change Plane state without an exact ticket",
+    "confirmation_gates": [
+      "Exact module or functional-group scope",
+      "Worker count from 1 to 4",
+      "All workers, selected worker IDs, or cancel"
+    ],
+    "module_rule": "A module named in the prompt is a requested filter and must be confirmed before execution",
+    "single_module_sharding": "Split one module across the confirmed worker count without duplicating testcase rows",
+    "visual_evidence_rule": "Every Pass and Fail testcase requires at least one existing screenshot or video; JSON, trace, console, or network evidence alone is insufficient",
+    "visual_evidence_extensions": ["png", "jpg", "jpeg", "webp", "gif", "mp4", "webm", "mov", "m4v"],
+    "evidence_media_layout": "evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/",
+    "evidence_metadata_layout": "evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/",
+    "evidence_placement_rule": "Local media must be written under the testcase evidence_directory assigned by the executor"
+  },
+
+  "cover_sheet": {
+    "sheet_name": "Cover",
+    "cells": {
+      "project_name":    "B3",
+      "project_code":    "C3",
+      "device":          "D3",
+      "priority_total":  "E3",
+      "description":     "B5",
+      "version":         "D5",
+      "test_date":       "E5",
+      "objective":       "B7",
+      "author":          "D7",
+      "reviewer":        "E7"
+    }
+  },
+
+  "report_sheet": {
+    "sheet_name": "Report",
+    "aggregate_range": "Test cases_App!rows 9-1723",
+    "counts": ["Pass", "Fail", "N/A", "Untested"]
+  }
+}

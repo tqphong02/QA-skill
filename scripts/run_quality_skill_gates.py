@@ -21,7 +21,7 @@ def run(command: list[str]) -> None:
 
 
 def main() -> int:
-    run(["node", "--check", "data-quality-qa/scripts/supabase_readonly_smoke.js"])
+    run(["node", "--check", "dynamic-testing/data-quality/scripts/supabase_readonly_smoke.js"])
     run(
         [
             sys.executable,
@@ -29,7 +29,7 @@ def main() -> int:
             "unittest",
             "discover",
             "-s",
-            "ai-quality-qa/tests",
+            "dynamic-testing/ai-evaluation/tests",
             "-p",
             "test_*.py",
             "-v",
@@ -42,7 +42,7 @@ def main() -> int:
             "unittest",
             "discover",
             "-s",
-            "data-quality-qa/tests",
+            "dynamic-testing/data-quality/tests",
             "-p",
             "test_*.py",
             "-v",
@@ -51,8 +51,8 @@ def main() -> int:
     run(
         [
             sys.executable,
-            "ai-quality-qa/scripts/evaluate_jsonl.py",
-            "ai-quality-qa/tests/fixtures/duocare_golden_v1.jsonl",
+            "dynamic-testing/ai-evaluation/scripts/evaluate_jsonl.py",
+            "dynamic-testing/ai-evaluation/tests/fixtures/duocare_golden_v1.jsonl",
             "--min-pass-rate",
             "1",
             "--max-p95-latency-ms",

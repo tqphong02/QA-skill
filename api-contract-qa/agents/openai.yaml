@@ -1,4 +1,0 @@
-interface:
-  display_name: "API Contract QA"
-  short_description: "Validate OpenAPI behavior and compatibility"
-  default_prompt: "Use $api-contract-qa to validate this API implementation against its contract."

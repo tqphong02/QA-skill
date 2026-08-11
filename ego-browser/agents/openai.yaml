@@ -1,4 +1,0 @@
-interface:
-  display_name: "ego-browser"
-  short_description: "Drive a logged-in macOS browser safely"
-  default_prompt: "Use $ego-browser to interact with the exact logged-in browser task space, enforce external-effect safety gates, and capture scoped UI evidence."

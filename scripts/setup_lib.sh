@@ -47,7 +47,7 @@ Options:
   --skip-mcp-setup      Không tự cấu hình MCP cho integration skill đã chọn
   --dry-run             In mọi command sẽ chạy, KHÔNG mutate filesystem
   --profile=<name>      core hoặc full; mặc định full
-  --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=qa-run,doc-to-md)
+  --only=<skill[,..]>   Chỉ setup 1 hoặc nhiều skill (vd: --only=dynamic-web-exploratory,support-document-conversion)
   --agent=<name>        codex, antigravity hoặc claude; auto chỉ chạy khi detect đúng một host
   --skills-dir=<path>   Override thư mục discovery do --agent chọn
   --yes / -y            Non-interactive (default = backup khi xung đột)
@@ -69,7 +69,7 @@ Examples:
   ./scripts/setup.sh --agent=antigravity --profile=full --yes
   ./scripts/setup.sh --agent=codex --skip-deps --yes
   ./scripts/setup.sh --agent=antigravity --dry-run
-  ./scripts/setup.sh --agent=claude --only=doc-to-md --yes
+  ./scripts/setup.sh --agent=claude --only=support-document-conversion --yes
   ./scripts/setup.sh --agent=codex --skills-dir=/custom/path --yes
 EOF
 }
@@ -155,7 +155,7 @@ check_python() {
 warn_if_python_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
-    log_warn "Python 3 NOT found. doc-to-md + testcase-template + business-analysis sẽ KHÔNG chạy được."
+    log_warn "Python 3 NOT found. support-document-conversion + support-testcase-authoring + static-requirements-analysis sẽ KHÔNG chạy được."
     local os
     os=$(detect_os)
     case "$os" in
@@ -174,7 +174,7 @@ warn_if_python_too_old() {
   major=$(echo "$v" | cut -d. -f1)
   minor=$(echo "$v" | cut -d. -f2)
   if [[ "$major" -lt 3 ]] || { [[ "$major" -eq 3 ]] && [[ "$minor" -lt 10 ]]; }; then
-    log_warn "Python $v found (< 3.10). doc-to-md cần >= 3.10."
+    log_warn "Python $v found (< 3.10). support-document-conversion cần >= 3.10."
     log_warn "  Tải Python 3.10+ từ https://python.org/downloads"
     return 1
   fi
@@ -195,7 +195,7 @@ check_node() {
 warn_if_node_too_old() {
   local v="$1"
   if [[ -z "$v" ]]; then
-    log_warn "Node.js NOT found. qa-run + business-analysis sẽ KHÔNG chạy được."
+    log_warn "Node.js NOT found. dynamic-web-exploratory + static-requirements-analysis sẽ KHÔNG chạy được."
     local os
     os=$(detect_os)
     case "$os" in
@@ -213,7 +213,7 @@ warn_if_node_too_old() {
   local major
   major=$(echo "$v" | cut -d. -f1)
   if [[ "$major" -lt 20 ]]; then
-    log_warn "Node $v found (< 20). qa-run + business-analysis cần >= 20."
+    log_warn "Node $v found (< 20). dynamic-web-exploratory + static-requirements-analysis cần >= 20."
     log_warn "  'brew install node@20' hoặc 'nvm install 20'"
     return 1
   fi
@@ -222,8 +222,8 @@ warn_if_node_too_old() {
 }
 
 # ==== Skills resolution ====
-CORE_SKILLS=("qa-run" "testcase-template" "playwright-pom-automation" "doc-to-md" "business-analysis" "pentest-run" "plane-qa" "google-drive-qa" "github-mcp-qa" "postman")
-SPECIALIZED_SKILLS=("data-quality-qa" "ai-quality-qa" "accessibility-qa" "performance-qa" "api-contract-qa" "mobile-qa" "whitebox-qa" "ego-browser" "ui-ux-design-qa" "release-governance-qa" "appsec-supply-chain-qa" "reliability-resilience-qa" "compatibility-localization-qa")
+CORE_SKILLS=("dynamic-web-exploratory" "support-testcase-authoring" "dynamic-web-automation" "support-document-conversion" "static-requirements-analysis" "dynamic-security-pentest" "integration-plane" "integration-google-drive" "integration-github" "integration-postman")
+SPECIALIZED_SKILLS=("dynamic-data-quality" "dynamic-ai-evaluation" "hybrid-accessibility" "dynamic-performance" "hybrid-api-contract" "dynamic-mobile" "hybrid-source-coverage" "adapter-browser-session" "hybrid-ui-ux-review" "governance-release-quality" "static-supply-chain-security" "dynamic-resilience" "dynamic-compatibility")
 FULL_SKILLS=("${CORE_SKILLS[@]}" "${SPECIALIZED_SKILLS[@]}")
 DEFAULT_SKILLS=("${FULL_SKILLS[@]}")
 RETIRED_SKILLS=("jmeter-qa")
@@ -243,11 +243,67 @@ resolve_profile() {
 }
 
 discover_repo_skills() {
+  if command -v node >/dev/null 2>&1 && [[ -f "$REPO_DIR/scripts/skill-registry-cli.mjs" ]]; then
+    node "$REPO_DIR/scripts/skill-registry-cli.mjs" list "" "$REPO_DIR" && return 0
+  fi
   local skill_file
-  for skill_file in "$REPO_DIR"/*/SKILL.md; do
+  while IFS= read -r skill_file; do
     [[ -f "$skill_file" ]] || continue
-    basename "$(dirname "$skill_file")"
-  done | LC_ALL=C sort
+    sed -n 's/^name:[[:space:]]*//p' "$skill_file" | head -1
+  done < <(skill_manifest_files)
+}
+
+skill_manifest_files() {
+  find "$REPO_DIR" -mindepth 3 -maxdepth 3 -type f -name SKILL.md \
+    -not -path '*/vendor/*' -not -path '*/node_modules/*' | sort
+}
+
+skill_repo_path() {
+  local requested="$1"
+  if command -v node >/dev/null 2>&1 && [[ -f "$REPO_DIR/scripts/skill-registry-cli.mjs" ]]; then
+    local registry_path
+    if registry_path=$(node "$REPO_DIR/scripts/skill-registry-cli.mjs" path "$requested" "$REPO_DIR"); then
+      printf '%s\n' "$registry_path"
+      return 0
+    fi
+  fi
+  local skill_file
+  local skill_id
+  local aliases
+  while IFS= read -r skill_file; do
+    [[ -f "$skill_file" ]] || continue
+    skill_id=$(sed -n 's/^name:[[:space:]]*//p' "$skill_file" | head -1)
+    aliases=$(sed -n 's/^legacy_aliases:[[:space:]]*//p' "$skill_file" | head -1)
+    if [[ "$requested" == "$skill_id" || "$requested" == "$aliases" ]]; then
+      dirname "$skill_file"
+      return 0
+    fi
+  done < <(skill_manifest_files)
+  return 1
+}
+
+canonical_skill_id() {
+  local requested="$1"
+  if command -v node >/dev/null 2>&1 && [[ -f "$REPO_DIR/scripts/skill-registry-cli.mjs" ]]; then
+    local registry_id
+    if registry_id=$(node "$REPO_DIR/scripts/skill-registry-cli.mjs" id "$requested" "$REPO_DIR"); then
+      printf '%s\n' "$registry_id"
+      return 0
+    fi
+  fi
+  local skill_file
+  local skill_id
+  local aliases
+  while IFS= read -r skill_file; do
+    [[ -f "$skill_file" ]] || continue
+    skill_id=$(sed -n 's/^name:[[:space:]]*//p' "$skill_file" | head -1)
+    aliases=$(sed -n 's/^legacy_aliases:[[:space:]]*//p' "$skill_file" | head -1)
+    if [[ "$requested" == "$skill_id" || "$requested" == "$aliases" ]]; then
+      printf '%s\n' "$skill_id"
+      return 0
+    fi
+  done < <(skill_manifest_files)
+  return 1
 }
 
 print_profile_skills() {
@@ -269,8 +325,9 @@ resolve_skill_list() {
   local req=($only)
   local valid=()
   for s in "${req[@]}"; do
-    if [[ -d "$REPO_DIR/$s" ]]; then
-      valid+=("$s")
+    local canonical
+    if canonical=$(canonical_skill_id "$s"); then
+      valid+=("$canonical")
     else
       log_err "Skill không tồn tại trong repo: $s (đã bỏ qua)"
     fi
@@ -328,7 +385,7 @@ retire_legacy_skills() {
   for skill in "${RETIRED_SKILLS[@]}"; do
     local src="$SKILLS_DIR/$skill"
     [[ -e "$src" ]] || continue
-    local dst="$stash_dir/${skill}-merged-into-performance-qa-${stamp}"
+    local dst="$stash_dir/${skill}-merged-into-dynamic-performance-${stamp}"
     if [[ "$DRY_RUN" -eq 1 ]]; then
       log_dry "retire $src → $dst"
       continue
@@ -345,8 +402,14 @@ retire_legacy_skills() {
 
 # ==== Copy skill (with excludes) ====
 copy_skill() {
-  local src="$REPO_DIR/$1"
-  local dst="$SKILLS_DIR/$1"
+  local skill="$1"
+  local src
+  local dst="$SKILLS_DIR/$skill"
+
+  if ! src=$(skill_repo_path "$skill"); then
+    log_err "Không resolve được source cho skill: $skill"
+    return 1
+  fi
 
   if [[ ! -d "$src" ]]; then
     log_err "Source không tồn tại: $src"
@@ -386,7 +449,7 @@ copy_skill() {
   # Only the selected top-level skill is public. Bundled examples, templates or
   # third-party sources must not register additional user-selectable skills.
   find "$dst" -mindepth 2 -type f -name 'SKILL.md' -delete 2>/dev/null || true
-  log_ok "$1 → $dst"
+  log_ok "$skill → $dst"
 }
 
 resolve_skill_conflict() {
@@ -466,7 +529,7 @@ install_node_deps() {
 requires_python_packages() {
   local skill
   for skill in "$@"; do
-    [[ "$skill" == "postman" ]] || return 0
+    [[ "$skill" == "integration-postman" ]] || return 0
   done
   return 1
 }
@@ -586,14 +649,14 @@ setup_selected_integrations() {
   local skills=("$@")
   local has_postman=0
   local has_mobile=0
-  local has_qa_run=0
+  local has_web_exploratory=0
   local skill
   for skill in "${skills[@]}"; do
-    [[ "$skill" == "postman" ]] && has_postman=1
-    [[ "$skill" == "mobile-qa" ]] && has_mobile=1
-    [[ "$skill" == "qa-run" ]] && has_qa_run=1
+    [[ "$skill" == "integration-postman" ]] && has_postman=1
+    [[ "$skill" == "dynamic-mobile" ]] && has_mobile=1
+    [[ "$skill" == "dynamic-web-exploratory" ]] && has_web_exploratory=1
   done
-  if [[ "$has_postman" -ne 1 ]] && [[ "$has_mobile" -ne 1 ]] && [[ "$has_qa_run" -ne 1 ]]; then
+  if [[ "$has_postman" -ne 1 ]] && [[ "$has_mobile" -ne 1 ]] && [[ "$has_web_exploratory" -ne 1 ]]; then
     return 0
   fi
 
@@ -614,26 +677,36 @@ setup_selected_integrations() {
       log_err "Không có Python để cấu hình Appium MCP"
       return 1
     fi
-    local mobile_bootstrap="$SKILLS_DIR/mobile-qa/scripts/configure-appium-mcp.py"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-      mobile_bootstrap="$REPO_DIR/mobile-qa/scripts/configure-appium-mcp.py"
+      local mobile_root
+      mobile_root=$(skill_repo_path "dynamic-mobile") || {
+        log_err "Không resolve được source cho dynamic-mobile từ skill registry"
+        return 1
+      }
+      mobile_bootstrap="$mobile_root/scripts/configure-appium-mcp.py"
       "$py_bin" "$mobile_bootstrap" --agent antigravity --dry-run || return 1
     else
+      local mobile_bootstrap="$SKILLS_DIR/dynamic-mobile/scripts/configure-appium-mcp.py"
       "$py_bin" "$mobile_bootstrap" --agent antigravity || return 1
     fi
   fi
 
-  if [[ "$has_qa_run" -eq 1 ]] && [[ "${TARGET_AGENT:-}" == "antigravity" ]]; then
+  if [[ "$has_web_exploratory" -eq 1 ]] && [[ "${TARGET_AGENT:-}" == "antigravity" ]]; then
     log_step "Playwright MCP browser-observability bootstrap"
     if [[ -z "$py_bin" ]]; then
       log_err "Không có Python để cấu hình Playwright MCP"
       return 1
     fi
-    local browser_bootstrap="$SKILLS_DIR/qa-run/scripts/helpers/configure-browser-mcp.py"
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-      browser_bootstrap="$REPO_DIR/qa-run/scripts/helpers/configure-browser-mcp.py"
+      local browser_root
+      browser_root=$(skill_repo_path "dynamic-web-exploratory") || {
+        log_err "Không resolve được source cho dynamic-web-exploratory từ skill registry"
+        return 1
+      }
+      browser_bootstrap="$browser_root/scripts/helpers/configure-browser-mcp.py"
       "$py_bin" "$browser_bootstrap" --agent antigravity --dry-run || return 1
     else
+      local browser_bootstrap="$SKILLS_DIR/dynamic-web-exploratory/scripts/helpers/configure-browser-mcp.py"
       "$py_bin" "$browser_bootstrap" --agent antigravity || return 1
     fi
   fi
@@ -655,11 +728,14 @@ setup_selected_integrations() {
     return 1
   fi
 
-  local bootstrap="$SKILLS_DIR/postman/scripts/bootstrap.py"
-  local runner="$SKILLS_DIR/postman/scripts/runner.py"
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-    bootstrap="$REPO_DIR/postman/scripts/bootstrap.py"
-    runner="$REPO_DIR/postman/scripts/runner.py"
+    local postman_root
+    postman_root=$(skill_repo_path "integration-postman") || {
+      log_err "Không resolve được source cho integration-postman từ skill registry"
+      return 1
+    }
+    bootstrap="$postman_root/scripts/bootstrap.py"
+    runner="$postman_root/scripts/runner.py"
     "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" --dry-run || return 1
     if [[ "${SKIP_DEPS:-0}" -eq 1 ]]; then
       log_warn "Postman CLI/Newman không được auto-install do --skip-deps"
@@ -667,6 +743,8 @@ setup_selected_integrations() {
       log_dry "$py_bin $runner doctor"
     fi
   else
+    local bootstrap="$SKILLS_DIR/integration-postman/scripts/bootstrap.py"
+    local runner="$SKILLS_DIR/integration-postman/scripts/runner.py"
     "$py_bin" "$bootstrap" --agent="$TARGET_AGENT" || return 1
     if [[ "${SKIP_DEPS:-0}" -eq 1 ]]; then
       log_warn "Postman CLI/Newman không được auto-install do --skip-deps"
@@ -707,15 +785,15 @@ verify_installation() {
 
   # 3. Node smoke
   if command -v node >/dev/null 2>&1; then
-    local qa_run_tdata="$SKILLS_DIR/qa-run/lib/tdata.mjs"
+    local qa_run_tdata="$SKILLS_DIR/dynamic-web-exploratory/lib/tdata.mjs"
     if [[ -f "$qa_run_tdata" ]]; then
       if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         log_dry "node -e 'import(\"$qa_run_tdata\")...' (tdata)"
       else
-        if node -e "import('$qa_run_tdata').then(m => console.log('  qa-run tdata: ' + m.tdata('setup','smoke')))" 2>/dev/null; then
-          log_ok "Node deps (qa-run/lib/tdata.mjs)"
+        if node -e "import('$qa_run_tdata').then(m => console.log('  dynamic-web-exploratory tdata: ' + m.tdata('setup','smoke')))" 2>/dev/null; then
+          log_ok "Node deps (dynamic-web-exploratory/lib/tdata.mjs)"
         else
-          log_warn "qa-run tdata load fail — kiểm tra cd qa-run && npm install"
+          log_warn "dynamic-web-exploratory tdata load fail — kiểm tra cd dynamic-web-exploratory && npm install"
         fi
       fi
     fi
@@ -766,15 +844,15 @@ print_summary() {
   printf '  %d. Mở %s mới và kiểm tra %d skill đã chọn\n' "$next_step" "$TARGET_AGENT" "${#skills[@]}"
   next_step=$((next_step + 1))
 
-  if selected_skill "doc-to-md"; then
-    printf '  %d. Test doc-to-md:      %s/doc-to-md/scripts/convert.sh <file.pdf>\n' "$next_step" "$SKILLS_DIR"
+  if selected_skill "support-document-conversion"; then
+    printf '  %d. Test support-document-conversion:      %s/support-document-conversion/scripts/convert.sh <file.pdf>\n' "$next_step" "$SKILLS_DIR"
     next_step=$((next_step + 1))
   fi
-  if selected_skill "qa-run"; then
-    printf '  %d. Test qa-run:         cd <project>/qa && node %s/qa-run/scripts/login.mjs\n' "$next_step" "$SKILLS_DIR"
+  if selected_skill "dynamic-web-exploratory"; then
+    printf '  %d. Test dynamic-web-exploratory:         cd <project>/qa && node %s/dynamic-web-exploratory/scripts/login.mjs\n' "$next_step" "$SKILLS_DIR"
     next_step=$((next_step + 1))
   fi
-  if selected_skill "postman"; then
+  if selected_skill "integration-postman"; then
     if [[ "$TARGET_AGENT" == "antigravity" ]]; then
       printf '  %d. Postman OAuth:       restart Antigravity, chạy /mcp và đăng nhập Postman\n' "$next_step"
     elif [[ "$TARGET_AGENT" == "codex" ]]; then
@@ -788,9 +866,9 @@ print_summary() {
   printf '  %d. Agent doctor:        bash %s/scripts/doctor-agent.sh --agent=%s\n' "$next_step" "$REPO_DIR" "$TARGET_AGENT"
   next_step=$((next_step + 1))
 
-  if selected_skill "github-mcp-qa"; then
+  if selected_skill "integration-github"; then
     if [[ "$TARGET_AGENT" == "codex" || "$TARGET_AGENT" == "antigravity" ]]; then
-      printf '  %d. QA MCP stack:        bash %s/github-mcp-qa/scripts/doctor-stack.sh --agent=%s\n' "$next_step" "$SKILLS_DIR" "$TARGET_AGENT"
+      printf '  %d. QA MCP stack:        bash %s/integration-github/scripts/doctor-stack.sh --agent=%s\n' "$next_step" "$SKILLS_DIR" "$TARGET_AGENT"
     else
       printf '  %d. MCP:                 cấu hình và kiểm tra bằng MCP manager của Claude\n' "$next_step"
     fi

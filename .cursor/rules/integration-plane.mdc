@@ -1,0 +1,13 @@
+---
+description: A Plane URL or ticket ID alone triggers doctor plus read; use for bug logging, retest, evidence and status updates
+globs:
+alwaysApply: false
+---
+
+# Plane QA
+
+Load [`integration/plane/SKILL.md`](../../integration/plane/SKILL.md) and follow its cross-model hard gates
+
+A bare Plane URL or ticket ID is a complete read request. Retest routes integration-plane → dynamic-web-exploratory RETEST_PLUS → integration-plane
+
+State map: PASS → Done, FAILED → In Progress, BLOCKED → unchanged, new bug → Todo

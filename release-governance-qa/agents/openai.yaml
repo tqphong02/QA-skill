@@ -1,4 +1,0 @@
-interface:
-  display_name: "Release Governance QA"
-  short_description: "Gate releases with risk and evidence"
-  default_prompt: "Use $release-governance-qa to build a risk-based release gate and sign-off report from the available QA evidence."

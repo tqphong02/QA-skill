@@ -17,7 +17,7 @@ function run(command, args, cwd = ROOT) {
 try {
   run('python3', ['scripts/validate_cross_model.py']);
   run(process.execPath, [
-    'qa-run/scripts/writers/render-intelligence-html.mjs',
+    'dynamic-testing/web-exploratory/scripts/writers/render-intelligence-html.mjs',
     '--check',
     'skill-catalog/QA-skill-effective-html-04-08-2026/QA-skill.html',
   ]);

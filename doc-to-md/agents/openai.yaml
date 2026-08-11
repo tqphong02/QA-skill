@@ -1,4 +1,0 @@
-interface:
-  display_name: "Document to Markdown"
-  short_description: "Chuyển tài liệu sang Markdown có cấu trúc"
-  default_prompt: "Use $doc-to-md only for an existing local file path; route Google Drive sources to google-drive MCP without downloading or converting them unless a local export was explicitly requested."

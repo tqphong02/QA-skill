@@ -1,0 +1,9 @@
+---
+description: Use for multi-language white-box, call graph, unit-test and coverage analysis
+globs:
+alwaysApply: false
+---
+
+# Whitebox QA
+
+Load [`hybrid-testing/source-coverage/SKILL.md`](../../hybrid-testing/source-coverage/SKILL.md), resolve an exact function, analyze compact output, and expand to graph, NestJS DI, executable Jest/Vitest, runtime coverage, or `support-testcase-authoring` handoff only when requested

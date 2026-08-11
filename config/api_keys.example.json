@@ -8,17 +8,17 @@
     "anthropic": "https://console.anthropic.com/",
     "openai": "https://platform.openai.com/api-keys",
     "google": "https://aistudio.google.com/app/apikey",
-    "plane": "Plane → Profile → Personal Access Tokens (used by qa-run)"
+    "plane": "Plane → Profile → Personal Access Tokens (used by dynamic-web-exploratory)"
   },
 
   "anthropic": {
-    "_comment": "Claude API key (used by testcase-template, playwright-pom-automation)",
+    "_comment": "Claude API key (used by support-testcase-authoring, dynamic-web-automation)",
     "api_key": "",
     "model": "claude-sonnet-4-5"
   },
 
   "openai": {
-    "_comment": "OpenAI API key (used by AI helpers in qa-run)",
+    "_comment": "OpenAI API key (used by AI helpers in dynamic-web-exploratory)",
     "api_key": "",
     "model": "gpt-4o"
   },
@@ -30,7 +30,7 @@
   },
 
   "plane": {
-    "_comment": "Plane API token (used by qa-run for ticket fetching)",
+    "_comment": "Plane API token (used by dynamic-web-exploratory for ticket fetching)",
     "api_key": "",
     "base_url": "https://api.plane.so/api/v1",
     "workspace_slug": ""

@@ -37,7 +37,7 @@ const bundleDirectory = path.resolve(repoRoot, bundleArg);
 const jsonPath = path.join(bundleDirectory, 'QA-skill-du-lieu.json');
 const htmlPath = path.join(bundleDirectory, 'QA-skill.html');
 const builder = path.join(repoRoot, 'scripts', 'build-skill-catalog.mjs');
-const renderer = path.join(repoRoot, 'qa-run', 'scripts', 'writers', 'render-intelligence-html.mjs');
+const renderer = path.join(repoRoot, 'dynamic-testing', 'web-exploratory', 'scripts', 'writers', 'render-intelligence-html.mjs');
 
 function run(command, args) {
   const result = spawnSync(process.execPath, [command, ...args], {

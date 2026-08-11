@@ -58,7 +58,7 @@ Dry-run:
 .\scripts\setup.ps1 -Agent antigravity -Profile core -DryRun -SkipDeps -Yes
 ```
 
-`-Profile core` cài 10 skill thường dùng. `-Profile full` cài đủ 23 skill; `ego-browser` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
+`-Profile core` cài 10 skill thường dùng. `-Profile full` cài đủ 23 skill; `adapter-browser-session` vẫn được cài làm tài liệu router nhưng runtime riêng của skill này không hỗ trợ Windows
 
 Script hiện mặc định là `full` nếu bỏ qua `-Profile`, vì vậy nên truyền rõ `core` hoặc `full` ở cả bước setup và doctor
 
@@ -90,7 +90,7 @@ Nếu đã cài `full`, thay `--profile=core` bằng `--profile=full`. Doctor ph
 Có thể kiểm tra nhanh bằng PowerShell:
 
 ```powershell
-Test-Path "$HOME\.agents\skills\qa-run\SKILL.md"
+Test-Path "$HOME\.agents\skills\dynamic-web-exploratory\SKILL.md"
 ```
 
 Mở lại host sau khi setup

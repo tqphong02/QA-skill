@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { loadSkillRegistry } from './skill-registry.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const defaultRoot = path.resolve(scriptDir, '..');
@@ -38,7 +39,7 @@ const GROUPS = [
     labelVi: 'Thiết kế & tri thức',
     noteVi: 'Chuyển nguồn đầu vào thành tri thức có thể kiểm thử',
     color: 'clay',
-    skills: ['doc-to-md', 'business-analysis', 'testcase-template', 'playwright-pom-automation', 'ui-ux-design-qa'],
+    skills: ['support-document-conversion', 'static-requirements-analysis', 'support-testcase-authoring', 'dynamic-web-automation', 'hybrid-ui-ux-review'],
   },
   {
     id: 'core',
@@ -47,7 +48,7 @@ const GROUPS = [
     labelVi: 'Thực thi cốt lõi',
     noteVi: 'Khám phá, thực thi và phân tích từ implementation',
     color: 'olive',
-    skills: ['qa-run', 'whitebox-qa', 'api-contract-qa', 'release-governance-qa'],
+    skills: ['dynamic-web-exploratory', 'hybrid-source-coverage', 'hybrid-api-contract', 'governance-release-quality'],
   },
   {
     id: 'assurance',
@@ -57,16 +58,16 @@ const GROUPS = [
     noteVi: 'Các chuyên môn chất lượng và bảo mật chuyên sâu',
     color: 'blue',
     skills: [
-      'accessibility-qa',
-      'ai-quality-qa',
-      'data-quality-qa',
-      'mobile-qa',
-      'performance-qa',
-      'pentest-run',
+      'hybrid-accessibility',
+      'dynamic-ai-evaluation',
+      'dynamic-data-quality',
+      'dynamic-mobile',
+      'dynamic-performance',
+      'dynamic-security-pentest',
       'pentest-security',
-      'appsec-supply-chain-qa',
-      'reliability-resilience-qa',
-      'compatibility-localization-qa',
+      'static-supply-chain-security',
+      'dynamic-resilience',
+      'dynamic-compatibility',
     ],
   },
   {
@@ -76,7 +77,7 @@ const GROUPS = [
     labelVi: 'Hệ thống kết nối',
     noteVi: 'Đọc và ghi an toàn trên các hệ thống QA bên ngoài',
     color: 'gold',
-    skills: ['plane-qa', 'google-drive-qa', 'github-mcp-qa', 'postman', 'ego-browser'],
+    skills: ['integration-plane', 'integration-google-drive', 'integration-github', 'integration-postman', 'adapter-browser-session'],
   },
   {
     id: 'auxiliary',
@@ -92,158 +93,158 @@ const GROUPS = [
 const SKILL_INVENTORY_POLICY = {
   included: 'Root public skills plus authored and non-vendor bundled nested skills inside the repository',
   excluded: [
-    { pattern: 'vendor/**/SKILL.md', reason: 'qa-run scope contract excludes vendored development dependencies' },
+    { pattern: 'vendor/**/SKILL.md', reason: 'dynamic-web-exploratory scope contract excludes vendored development dependencies' },
   ],
 };
 
 const RELATIONSHIPS = [
   {
-    from: 'doc-to-md', to: 'google-drive-qa', flow: 'requirements', kind: 'route',
+    from: 'support-document-conversion', to: 'integration-google-drive', flow: 'requirements', kind: 'route',
     label: 'remote Drive source', labelVi: 'nguồn Drive từ xa',
-    sourceRefs: [{ path: 'doc-to-md/SKILL.md', line: 20, quote: 'route the request to `google-drive-qa`' }],
+    sourceRefs: [{ path: 'support/document-conversion/SKILL.md', line: 20, quote: 'route the request to `integration-google-drive`' }],
   },
   {
-    from: 'doc-to-md', to: 'business-analysis', flow: 'requirements', kind: 'handoff',
+    from: 'support-document-conversion', to: 'static-requirements-analysis', flow: 'requirements', kind: 'handoff',
     label: 'converted Markdown', labelVi: 'Markdown đã chuyển đổi',
-    sourceRefs: [{ path: 'business-analysis/SKILL.md', line: 23, quote: 'run `doc-to-md/scripts/convert.sh` first' }],
+    sourceRefs: [{ path: 'static-testing/requirements-analysis/SKILL.md', line: 23, quote: 'run `support/document-conversion/scripts/convert.sh` first' }],
   },
   {
-    from: 'business-analysis', to: 'testcase-template', flow: 'requirements', kind: 'handoff',
+    from: 'static-requirements-analysis', to: 'support-testcase-authoring', flow: 'requirements', kind: 'handoff',
     label: 'confirmed analysis', labelVi: 'phân tích đã xác nhận',
-    sourceRefs: [{ path: 'business-analysis/SKILL.md', line: 33, quote: 'Hand the confirmed Markdown and Q&A answers to `testcase-template`' }],
+    sourceRefs: [{ path: 'static-testing/requirements-analysis/SKILL.md', line: 33, quote: 'Hand the confirmed Markdown and Q&A answers to `support-testcase-authoring`' }],
   },
   {
-    from: 'plane-qa', to: 'qa-run', flow: 'retest', kind: 'route',
+    from: 'integration-plane', to: 'dynamic-web-exploratory', flow: 'retest', kind: 'route',
     label: 'ticket read', labelVi: 'đọc ticket',
-    sourceRefs: [{ path: 'plane-qa/SKILL.md', line: 3, quote: 'plane-qa read → qa-run RETEST_PLUS' }],
+    sourceRefs: [{ path: 'integration/plane/SKILL.md', line: 3, quote: 'integration-plane read → dynamic-web-exploratory RETEST_PLUS' }],
   },
   {
-    from: 'qa-run', to: 'plane-qa', flow: 'retest', kind: 'return',
+    from: 'dynamic-web-exploratory', to: 'integration-plane', flow: 'retest', kind: 'return',
     label: 'comment and state', labelVi: 'comment và trạng thái',
-    sourceRefs: [{ path: 'plane-qa/SKILL.md', line: 3, quote: 'qa-run RETEST_PLUS → plane-qa comment/state' }],
+    sourceRefs: [{ path: 'integration/plane/SKILL.md', line: 3, quote: 'dynamic-web-exploratory RETEST_PLUS → integration-plane comment/state' }],
   },
   {
-    from: 'google-drive-qa', to: 'playwright-pom-automation', flow: 'sheet', kind: 'composition',
+    from: 'integration-google-drive', to: 'dynamic-web-automation', flow: 'sheet', kind: 'composition',
     label: 'Sheet execution', labelVi: 'thực thi testcase Sheet',
-    sourceRefs: [{ path: 'google-drive-qa/SKILL.md', line: 34, quote: 'use `playwright-pom-automation` BUILD_AND_RUN' }],
+    sourceRefs: [{ path: 'integration/google-drive/SKILL.md', line: 34, quote: 'use `dynamic-web-automation` BUILD_AND_RUN' }],
   },
   {
-    from: 'qa-run', to: 'playwright-pom-automation', flow: 'browser', kind: 'exit',
+    from: 'dynamic-web-exploratory', to: 'dynamic-web-automation', flow: 'browser', kind: 'exit',
     label: 'automation request', labelVi: 'yêu cầu viết automation',
-    sourceRefs: [{ path: 'qa-run/SKILL.md', line: 48, quote: 'Route to `playwright-pom-automation`' }],
+    sourceRefs: [{ path: 'dynamic-testing/web-exploratory/SKILL.md', line: 75, quote: 'Route to `dynamic-web-automation` BUILD_AND_RUN; it owns' }],
   },
   {
-    from: 'playwright-pom-automation', to: 'qa-run', flow: 'browser', kind: 'route',
+    from: 'dynamic-web-automation', to: 'dynamic-web-exploratory', flow: 'browser', kind: 'route',
     label: 'exploratory/retest', labelVi: 'exploratory hoặc retest',
-    sourceRefs: [{ path: 'playwright-pom-automation/SKILL.md', line: 3, quote: 'use qa-run for those' }],
+    sourceRefs: [{ path: 'dynamic-testing/web-automation/SKILL.md', line: 3, quote: 'Use dynamic-web-exploratory only for exploratory/ad-hoc browser QA' }],
   },
   {
-    from: 'qa-run', to: 'mobile-qa', flow: 'browser', kind: 'route',
+    from: 'dynamic-web-exploratory', to: 'dynamic-mobile', flow: 'browser', kind: 'route',
     label: 'native mobile traffic', labelVi: 'traffic mobile native',
-    sourceRefs: [{ path: 'qa-run/SKILL.md', line: 52, quote: 'Route native Android/iOS traffic to `mobile-qa`' }],
+    sourceRefs: [{ path: 'dynamic-testing/web-exploratory/SKILL.md', line: 52, quote: 'Route native Android/iOS traffic to `dynamic-mobile`' }],
   },
   {
-    from: 'accessibility-qa', to: 'qa-run', flow: 'browser', kind: 'reuse',
+    from: 'hybrid-accessibility', to: 'dynamic-web-exploratory', flow: 'browser', kind: 'reuse',
     label: 'browser state route', labelVi: 'tái dùng trạng thái browser',
-    sourceRefs: [{ path: 'accessibility-qa/SKILL.md', line: 24, quote: 'existing `qa-run` browser route' }],
+    sourceRefs: [{ path: 'hybrid-testing/accessibility/SKILL.md', line: 24, quote: 'existing `dynamic-web-exploratory` browser route' }],
   },
   {
-    from: 'api-contract-qa', to: 'postman', flow: 'api', kind: 'route',
+    from: 'hybrid-api-contract', to: 'integration-postman', flow: 'api', kind: 'route',
     label: 'Postman operations', labelVi: 'vận hành Postman',
-    sourceRefs: [{ path: 'api-contract-qa/SKILL.md', line: 22, quote: 'Route Postman MCP installation, authentication, diagnosis, and workspace operations to `postman`' }],
+    sourceRefs: [{ path: 'hybrid-testing/api-contract/SKILL.md', line: 22, quote: 'Route Postman MCP installation, authentication, diagnosis, and workspace operations to `integration-postman`' }],
   },
   {
-    from: 'postman', to: 'api-contract-qa', flow: 'api', kind: 'route',
+    from: 'integration-postman', to: 'hybrid-api-contract', flow: 'api', kind: 'route',
     label: 'live contract validation', labelVi: 'xác minh contract live',
-    sourceRefs: [{ path: 'postman/SKILL.md', line: 92, quote: 'Route contract validation against a live implementation to `api-contract-qa`' }],
+    sourceRefs: [{ path: 'integration/postman/SKILL.md', line: 92, quote: 'Route contract validation against a live implementation to `hybrid-api-contract`' }],
   },
   {
-    from: 'api-contract-qa', to: 'testcase-template', flow: 'api', kind: 'handoff',
+    from: 'hybrid-api-contract', to: 'support-testcase-authoring', flow: 'api', kind: 'handoff',
     label: 'API testcase document', labelVi: 'tài liệu testcase API',
-    sourceRefs: [{ path: 'api-contract-qa/SKILL.md', line: 30, quote: 'Use `testcase-template` when the user asks to produce testcase Markdown or Excel' }],
+    sourceRefs: [{ path: 'hybrid-testing/api-contract/SKILL.md', line: 30, quote: 'Use `support-testcase-authoring` when the user asks to produce testcase Markdown or Excel' }],
   },
   {
-    from: 'postman', to: 'testcase-template', flow: 'api', kind: 'route',
+    from: 'integration-postman', to: 'support-testcase-authoring', flow: 'api', kind: 'route',
     label: 'testcase document', labelVi: 'tạo tài liệu testcase',
-    sourceRefs: [{ path: 'postman/SKILL.md', line: 92, quote: 'Route explicit testcase document creation to `testcase-template`' }],
+    sourceRefs: [{ path: 'integration/postman/SKILL.md', line: 92, quote: 'Route explicit testcase document creation to `support-testcase-authoring`' }],
   },
   {
-    from: 'api-contract-qa', to: 'performance-qa', flow: 'performance', kind: 'route',
+    from: 'hybrid-api-contract', to: 'dynamic-performance', flow: 'performance', kind: 'route',
     label: 'performance behavior', labelVi: 'hành vi hiệu năng',
-    sourceRefs: [{ path: 'api-contract-qa/SKILL.md', line: 31, quote: 'Route performance behavior, JMeter and k6 work to the single public `performance-qa`' }],
+    sourceRefs: [{ path: 'hybrid-testing/api-contract/SKILL.md', line: 31, quote: 'Route performance behavior, JMeter and k6 work to the single public `dynamic-performance`' }],
   },
   {
-    from: 'api-contract-qa', to: 'pentest-run', flow: 'api', kind: 'route',
+    from: 'hybrid-api-contract', to: 'dynamic-security-pentest', flow: 'api', kind: 'route',
     label: 'exploit-focused auth', labelVi: 'kiểm tra auth kiểu exploit',
-    sourceRefs: [{ path: 'api-contract-qa/SKILL.md', line: 32, quote: 'Route exploit-focused authorization testing to `pentest-run`' }],
+    sourceRefs: [{ path: 'hybrid-testing/api-contract/SKILL.md', line: 32, quote: 'Route exploit-focused authorization testing to `dynamic-security-pentest`' }],
   },
   {
-    from: 'whitebox-qa', to: 'testcase-template', flow: 'source', kind: 'handoff',
+    from: 'hybrid-source-coverage', to: 'support-testcase-authoring', flow: 'source', kind: 'handoff',
     label: 'source-derived testcase', labelVi: 'testcase từ source',
-    sourceRefs: [{ path: 'whitebox-qa/references/testcase-handoff.md', line: 7, quote: '`testcase-template` owns' }],
+    sourceRefs: [{ path: 'hybrid-testing/source-coverage/references/testcase-handoff.md', line: 7, quote: '`support-testcase-authoring` owns' }],
   },
   {
-    from: 'performance-qa', to: 'engine-jmeter', flow: 'performance', kind: 'internal-engine',
+    from: 'dynamic-performance', to: 'engine-jmeter', flow: 'performance', kind: 'internal-engine',
     label: 'exact .jmx', labelVi: 'engine cho .jmx',
-    sourceRefs: [{ path: 'performance-qa/SKILL.md', line: 18, quote: 'Exact `.jmx` → JMeter' }],
+    sourceRefs: [{ path: 'dynamic-testing/performance/SKILL.md', line: 18, quote: 'Exact `.jmx` → JMeter' }],
   },
   {
-    from: 'performance-qa', to: 'engine-k6', flow: 'performance', kind: 'internal-engine',
+    from: 'dynamic-performance', to: 'engine-k6', flow: 'performance', kind: 'internal-engine',
     label: 'k6 script', labelVi: 'engine cho script k6',
-    sourceRefs: [{ path: 'performance-qa/SKILL.md', line: 19, quote: 'Exact k6 `.js`, `.ts`, or `.mjs` → k6' }],
+    sourceRefs: [{ path: 'dynamic-testing/performance/SKILL.md', line: 19, quote: 'Exact k6 `.js`, `.ts`, or `.mjs` → k6' }],
   },
   {
-    from: 'retired-jmeter-qa', to: 'performance-qa', flow: 'performance', kind: 'retired-into',
+    from: 'retired-jmeter-qa', to: 'dynamic-performance', flow: 'performance', kind: 'retired-into',
     label: 'retired into', labelVi: 'đã hợp nhất vào',
     sourceRefs: [
       { path: 'scripts/setup_lib.sh', line: 229, quote: 'RETIRED_SKILLS=("jmeter-qa")' },
-      { path: 'performance-qa/SKILL.md', line: 8, quote: 'Use one public skill and two internal engines' },
+      { path: 'dynamic-testing/performance/SKILL.md', line: 8, quote: 'Use one public skill and two internal engines' },
     ],
   },
   {
-    from: 'qa-run', to: 'provider-graphify', flow: 'providers', kind: 'optional-provider',
+    from: 'dynamic-web-exploratory', to: 'provider-graphify', flow: 'providers', kind: 'optional-provider',
     label: 'static discovery', labelVi: 'provider khám phá tĩnh',
-    sourceRefs: [{ path: 'qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md', line: 16, quote: 'Graphify is an optional static discovery provider' }],
+    sourceRefs: [{ path: 'dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md', line: 16, quote: 'Graphify is an optional static discovery provider' }],
   },
   {
-    from: 'qa-run', to: 'provider-effective-html', flow: 'providers', kind: 'presentation-provider',
+    from: 'dynamic-web-exploratory', to: 'provider-effective-html', flow: 'providers', kind: 'presentation-provider',
     label: 'interactive companion', labelVi: 'trình bày HTML tương tác',
-    sourceRefs: [{ path: 'qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md', line: 72, quote: 'HTML renderer is an optional companion view' }],
+    sourceRefs: [{ path: 'dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md', line: 72, quote: 'HTML renderer is an optional companion view' }],
   },
   {
-    from: 'ui-ux-design-qa', to: 'qa-run', flow: 'browser', kind: 'route',
+    from: 'hybrid-ui-ux-review', to: 'dynamic-web-exploratory', flow: 'browser', kind: 'route',
     label: 'live browser evidence', labelVi: 'evidence browser live',
-    sourceRefs: [{ path: 'ui-ux-design-qa/SKILL.md', line: 8, quote: 'live navigation and network/console observation are handed to `qa-run`' }],
+    sourceRefs: [{ path: 'hybrid-testing/ui-ux-review/SKILL.md', line: 8, quote: 'live navigation and network/console observation are handed to `dynamic-web-exploratory`' }],
   },
   {
-    from: 'ui-ux-design-qa', to: 'accessibility-qa', flow: 'browser', kind: 'handoff',
+    from: 'hybrid-ui-ux-review', to: 'hybrid-accessibility', flow: 'browser', kind: 'handoff',
     label: 'accessibility handoff', labelVi: 'bàn giao accessibility',
-    sourceRefs: [{ path: 'ui-ux-design-qa/SKILL.md', line: 8, quote: 'WCAG conformance is handed to `accessibility-qa`' }],
+    sourceRefs: [{ path: 'hybrid-testing/ui-ux-review/SKILL.md', line: 8, quote: 'WCAG conformance is handed to `hybrid-accessibility`' }],
   },
   {
-    from: 'qa-run', to: 'release-governance-qa', flow: 'source', kind: 'handoff',
+    from: 'dynamic-web-exploratory', to: 'governance-release-quality', flow: 'source', kind: 'handoff',
     label: 'release evidence', labelVi: 'evidence release',
-    sourceRefs: [{ path: 'release-governance-qa/SKILL.md', line: 8, quote: 'It consumes evidence from `qa-run` and specialized skills' }],
+    sourceRefs: [{ path: 'governance/release-quality/SKILL.md', line: 8, quote: 'It consumes evidence from `dynamic-web-exploratory` and specialized skills' }],
   },
   {
-    from: 'appsec-supply-chain-qa', to: 'pentest-run', flow: 'api', kind: 'route',
+    from: 'static-supply-chain-security', to: 'dynamic-security-pentest', flow: 'api', kind: 'route',
     label: 'exploit validation', labelVi: 'validation exploit',
-    sourceRefs: [{ path: 'appsec-supply-chain-qa/SKILL.md', line: 16, quote: 'Route confirmed exploit validation to `pentest-run`' }],
+    sourceRefs: [{ path: 'static-testing/supply-chain-security/SKILL.md', line: 16, quote: 'Route confirmed exploit validation to `dynamic-security-pentest`' }],
   },
   {
-    from: 'reliability-resilience-qa', to: 'release-governance-qa', flow: 'performance', kind: 'handoff',
+    from: 'dynamic-resilience', to: 'governance-release-quality', flow: 'performance', kind: 'handoff',
     label: 'recovery risk', labelVi: 'rủi ro recovery',
-    sourceRefs: [{ path: 'reliability-resilience-qa/SKILL.md', line: 18, quote: 'Hand measured recovery and unresolved resilience risk to `release-governance-qa`' }],
+    sourceRefs: [{ path: 'dynamic-testing/resilience/SKILL.md', line: 18, quote: 'Hand measured recovery and unresolved resilience risk to `governance-release-quality`' }],
   },
   {
-    from: 'compatibility-localization-qa', to: 'qa-run', flow: 'browser', kind: 'route',
+    from: 'dynamic-compatibility', to: 'dynamic-web-exploratory', flow: 'browser', kind: 'route',
     label: 'web matrix execution', labelVi: 'thực thi matrix web',
-    sourceRefs: [{ path: 'compatibility-localization-qa/SKILL.md', line: 8, quote: 'live browser/device actions belong to `qa-run` or `mobile-qa`' }],
+    sourceRefs: [{ path: 'dynamic-testing/compatibility/SKILL.md', line: 8, quote: 'live browser/device actions belong to `dynamic-web-exploratory` or `dynamic-mobile`' }],
   },
   {
-    from: 'compatibility-localization-qa', to: 'mobile-qa', flow: 'browser', kind: 'route',
+    from: 'dynamic-compatibility', to: 'dynamic-mobile', flow: 'browser', kind: 'route',
     label: 'native matrix execution', labelVi: 'thực thi matrix native',
-    sourceRefs: [{ path: 'compatibility-localization-qa/SKILL.md', line: 8, quote: 'live browser/device actions belong to `qa-run` or `mobile-qa`' }],
+    sourceRefs: [{ path: 'dynamic-testing/compatibility/SKILL.md', line: 8, quote: 'live browser/device actions belong to `dynamic-web-exploratory` or `dynamic-mobile`' }],
   },
 ];
 
@@ -252,60 +253,60 @@ const FLOWS = [
     id: 'requirements',
     label: 'Requirements to testcase',
     summary: 'Resolve the source, recover business logic, then create synchronized testcase artifacts',
-    steps: ['google-drive-qa or doc-to-md', 'business-analysis', 'testcase-template'],
+    steps: ['integration-google-drive or support-document-conversion', 'static-requirements-analysis', 'support-testcase-authoring'],
     labelVi: 'Yêu cầu → testcase',
     summaryVi: 'Xác định nguồn, khôi phục logic nghiệp vụ rồi tạo các artifact testcase đồng bộ',
-    stepsVi: ['google-drive-qa hoặc doc-to-md', 'business-analysis', 'testcase-template'],
+    stepsVi: ['integration-google-drive hoặc support-document-conversion', 'static-requirements-analysis', 'support-testcase-authoring'],
   },
   {
     id: 'retest',
     label: 'Plane retest',
     summary: 'Read the exact ticket, run RETEST_PLUS, then post verified evidence and state',
-    steps: ['plane-qa read + doctor', 'qa-run RETEST_PLUS', 'plane-qa result + read-back'],
+    steps: ['integration-plane read + doctor', 'dynamic-web-exploratory RETEST_PLUS', 'integration-plane result + read-back'],
     labelVi: 'Retest Plane',
     summaryVi: 'Đọc đúng ticket, chạy RETEST_PLUS rồi đăng bằng chứng và trạng thái đã xác minh',
-    stepsVi: ['plane-qa đọc ticket + doctor', 'qa-run chạy RETEST_PLUS', 'plane-qa đăng kết quả + đọc lại'],
+    stepsVi: ['integration-plane đọc ticket + doctor', 'dynamic-web-exploratory chạy RETEST_PLUS', 'integration-plane đăng kết quả + đọc lại'],
   },
   {
     id: 'sheet',
     label: 'Sheet execution',
     summary: 'Drive owns Sheet CRUD while unified POM owns build, browser execution, evidence and verdict',
-    steps: ['google-drive-qa resolves and reads the Sheet', 'playwright-pom-automation BUILD_AND_RUN', 'google-drive-qa writes verified results'],
+    steps: ['integration-google-drive resolves and reads the Sheet', 'dynamic-web-automation BUILD_AND_RUN', 'integration-google-drive writes verified results'],
     labelVi: 'Thực thi Google Sheet',
     summaryVi: 'Drive phụ trách CRUD trên Sheet còn unified POM phụ trách build, chạy browser, evidence và verdict',
-    stepsVi: ['google-drive-qa xác định và đọc Sheet', 'playwright-pom-automation BUILD_AND_RUN', 'google-drive-qa ghi kết quả đã xác minh'],
+    stepsVi: ['integration-google-drive xác định và đọc Sheet', 'dynamic-web-automation BUILD_AND_RUN', 'integration-google-drive ghi kết quả đã xác minh'],
   },
   {
     id: 'api',
     label: 'API contract',
     summary: 'Operate Postman when needed, verify the observable contract, then hand documents to the testcase skill',
-    steps: ['postman', 'api-contract-qa', 'testcase-template'],
+    steps: ['integration-postman', 'hybrid-api-contract', 'support-testcase-authoring'],
     labelVi: 'Hợp đồng API',
     summaryVi: 'Vận hành Postman khi cần, xác minh contract quan sát được rồi bàn giao tài liệu testcase',
-    stepsVi: ['postman', 'api-contract-qa', 'testcase-template'],
+    stepsVi: ['integration-postman', 'hybrid-api-contract', 'support-testcase-authoring'],
   },
   {
     id: 'source',
     label: 'Source-derived QA',
     summary: 'Resolve repository context, analyze deterministic code paths, and execute risk-driven QA',
-    steps: ['whitebox-qa analyzes deterministic paths', 'testcase-template owns the requested document'],
+    steps: ['hybrid-source-coverage analyzes deterministic paths', 'support-testcase-authoring owns the requested document'],
     labelVi: 'QA từ source code',
     summaryVi: 'Xác định repository, phân tích đường đi code xác định và thực thi QA theo rủi ro',
-    stepsVi: ['whitebox-qa phân tích path xác định', 'testcase-template sở hữu tài liệu được yêu cầu'],
+    stepsVi: ['hybrid-source-coverage phân tích path xác định', 'support-testcase-authoring sở hữu tài liệu được yêu cầu'],
   },
   {
     id: 'exploratory-browser',
     label: 'Exploratory and ad-hoc browser execution',
-    summary: 'qa-run actively operates the live browser for scoped discovery, exploratory, ad-hoc and UI/UX testing while observing network, console and page errors in the same session',
+    summary: 'dynamic-web-exploratory actively operates the live browser for scoped discovery, exploratory, ad-hoc and UI/UX testing while observing network, console and page errors in the same session',
     steps: ['Prepare TEST_INTELLIGENCE', 'Act on the live browser', 'Run Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX', 'Correlate same-session Network + Console + Page Error', 'Save evidence and update QA knowledge'],
     labelVi: 'Khám phá & Ad-hoc browser',
-    summaryVi: 'qa-run tự thao tác trên browser đang chạy để khám phá theo phạm vi, exploratory, ad-hoc và UI/UX; đồng thời quan sát network, console và page error trong cùng session',
+    summaryVi: 'dynamic-web-exploratory tự thao tác trên browser đang chạy để khám phá theo phạm vi, exploratory, ad-hoc và UI/UX; đồng thời quan sát network, console và page error trong cùng session',
     stepsVi: ['Chuẩn bị TEST_INTELLIGENCE', 'Tự thao tác trên browser live', 'Chạy Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX', 'Đối chiếu Network + Console + Page Error cùng session', 'Lưu evidence và cập nhật QA knowledge'],
-    nodes: ['qa-run'],
+    nodes: ['dynamic-web-exploratory'],
     sourceRefs: [
-      { path: 'qa-run/SKILL.md', line: 20, quote: 'DISCOVERY_CORE =' },
-      { path: 'qa-run/SKILL.md', line: 41, quote: 'UI Flow Discovery + Exploratory + Ad-hoc + UI/UX' },
-      { path: 'qa-run/SKILL.md', line: 52, quote: 'Applied to every live browser stack without changing DISCOVERY_CORE' },
+      { path: 'dynamic-testing/web-exploratory/SKILL.md', line: 20, quote: 'DISCOVERY_CORE =' },
+      { path: 'dynamic-testing/web-exploratory/SKILL.md', line: 45, quote: 'Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX' },
+      { path: 'dynamic-testing/web-exploratory/SKILL.md', line: 52, quote: 'Applied to every live browser stack without changing DISCOVERY_CORE' },
     ],
   },
   {
@@ -316,21 +317,21 @@ const FLOWS = [
     labelVi: 'Browser MCP: Network & Console',
     summaryVi: 'Dùng MCP/observer gắn với đúng page đang thao tác UI để đọc network request, console message và page error',
     stepsVi: ['Chọn observer cùng session trước khi mở page', 'Playwright MCP đọc network/console khi chính nó điều khiển UI', 'Chrome DevTools MCP chỉ đọc khi điều khiển hoặc attach đúng page đó', 'Kiểm tra XHR/fetch/document/WebSocket cùng console/page error sau action quan trọng', 'Đối chiếu tín hiệu với bước UI đã kích hoạt'],
-    nodes: ['qa-run'],
+    nodes: ['dynamic-web-exploratory'],
     sourceRefs: [
-      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 3, quote: 'same page/session used for UI actions' },
-      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `chrome-devtools-mcp` when Chrome DevTools is explicitly selected' },
-      { path: 'qa-run/references/BROWSER-OBSERVABILITY.md', line: 61, quote: 'list_network_requests' },
+      { path: 'dynamic-testing/web-exploratory/references/BROWSER-OBSERVABILITY.md', line: 3, quote: 'same page/session used for UI actions' },
+      { path: 'dynamic-testing/web-exploratory/references/BROWSER-OBSERVABILITY.md', line: 28, quote: 'Use `chrome-devtools-mcp` when Chrome DevTools is explicitly selected' },
+      { path: 'dynamic-testing/web-exploratory/references/BROWSER-OBSERVABILITY.md', line: 61, quote: 'list_network_requests' },
     ],
   },
   {
     id: 'browser',
     label: 'Browser and mobile routing',
-    summary: 'Keep exploratory execution in qa-run, automation authoring in Playwright POM, accessibility in its audit, and native traffic in mobile QA',
-    steps: ['qa-run for browser execution', 'playwright-pom-automation for authored suites', 'mobile-qa for native traffic', 'accessibility-qa may reuse qa-run states'],
+    summary: 'Keep exploratory execution in dynamic-web-exploratory, automation authoring in Playwright POM, accessibility in its audit, and native traffic in mobile QA',
+    steps: ['dynamic-web-exploratory for browser execution', 'dynamic-web-automation for authored suites', 'dynamic-mobile for native traffic', 'hybrid-accessibility may reuse dynamic-web-exploratory states'],
     labelVi: 'Định tuyến browser và mobile',
-    summaryVi: 'Giữ exploratory execution ở qa-run, viết automation ở Playwright POM, accessibility ở audit riêng và traffic native ở mobile QA',
-    stepsVi: ['qa-run thực thi browser', 'playwright-pom-automation viết suite', 'mobile-qa xử lý traffic native', 'accessibility-qa có thể tái dùng trạng thái qa-run'],
+    summaryVi: 'Giữ exploratory execution ở dynamic-web-exploratory, viết automation ở Playwright POM, accessibility ở audit riêng và traffic native ở mobile QA',
+    stepsVi: ['dynamic-web-exploratory thực thi browser', 'dynamic-web-automation viết suite', 'dynamic-mobile xử lý traffic native', 'hybrid-accessibility có thể tái dùng trạng thái dynamic-web-exploratory'],
   },
   {
     id: 'mobile-network',
@@ -340,35 +341,35 @@ const FLOWS = [
     labelVi: 'Mobile: Appium & Network',
     summaryVi: 'Appium MCP thực thi hành trình Android/iOS; một proxy engine được ủy quyền bắt traffic và đối chiếu với từng bước UI',
     stepsVi: ['Xác định device matrix và phạm vi capture được phép', 'Appium MCP tạo đúng device session và thực thi hành trình', 'Chọn Proxyman, mitmproxy, Fiddler, Charles hoặc HTTP Toolkit qua network doctor', 'Capture thụ động và đối chiếu traffic với từng action UI', 'Làm sạch HAR/evidence rồi khôi phục proxy, CA, VPN và trạng thái thiết bị'],
-    nodes: ['mobile-qa'],
+    nodes: ['dynamic-mobile'],
     sourceRefs: [
-      { path: 'mobile-qa/SKILL.md', line: 27, quote: 'Use Appium MCP for interactive discovery' },
-      { path: 'mobile-qa/SKILL.md', line: 36, quote: 'Use Proxyman MCP for interactive macOS traffic inspection' },
-      { path: 'mobile-qa/SKILL.md', line: 85, quote: 'Inspect mobile network behavior' },
+      { path: 'dynamic-testing/mobile/SKILL.md', line: 27, quote: 'Use Appium MCP for interactive discovery' },
+      { path: 'dynamic-testing/mobile/SKILL.md', line: 36, quote: 'Use Proxyman MCP for interactive macOS traffic inspection' },
+      { path: 'dynamic-testing/mobile/SKILL.md', line: 85, quote: 'Inspect mobile network behavior' },
     ],
   },
   {
     id: 'performance',
     label: 'Performance routing',
     summary: 'One public performance skill selects JMeter or k6 internally; the old jmeter-qa surface is retired',
-    steps: ['api-contract-qa routes performance work', 'performance-qa owns the workflow', 'JMeter or k6 runs as an internal engine'],
+    steps: ['hybrid-api-contract routes performance work', 'dynamic-performance owns the workflow', 'JMeter or k6 runs as an internal engine'],
     labelVi: 'Định tuyến performance',
     summaryVi: 'Một skill performance công khai chọn JMeter hoặc k6 ở nội bộ; bề mặt jmeter-qa cũ đã ngừng dùng',
-    stepsVi: ['api-contract-qa chuyển phần hiệu năng', 'performance-qa sở hữu workflow', 'JMeter hoặc k6 chạy như engine nội bộ'],
+    stepsVi: ['hybrid-api-contract chuyển phần hiệu năng', 'dynamic-performance sở hữu workflow', 'JMeter hoặc k6 chạy như engine nội bộ'],
   },
   {
     id: 'providers',
     label: 'Optional providers',
-    summary: 'qa-run may use Graphify for static discovery and effective HTML for presentation without exposing either as a public QA skill',
-    steps: ['qa-run owns repository discovery', 'Graphify optionally supplies static candidates', 'effective HTML renders validated data'],
+    summary: 'dynamic-web-exploratory may use Graphify for static discovery and effective HTML for presentation without exposing either as a public QA skill',
+    steps: ['dynamic-web-exploratory owns repository discovery', 'Graphify optionally supplies static candidates', 'effective HTML renders validated data'],
     labelVi: 'Provider tùy chọn',
-    summaryVi: 'qa-run có thể dùng Graphify để khám phá tĩnh và effective HTML để trình bày mà không biến chúng thành skill QA công khai',
-    stepsVi: ['qa-run sở hữu repository discovery', 'Graphify cung cấp candidate tĩnh tùy chọn', 'effective HTML render dữ liệu đã xác thực'],
+    summaryVi: 'dynamic-web-exploratory có thể dùng Graphify để khám phá tĩnh và effective HTML để trình bày mà không biến chúng thành skill QA công khai',
+    stepsVi: ['dynamic-web-exploratory sở hữu repository discovery', 'Graphify cung cấp candidate tĩnh tùy chọn', 'effective HTML render dữ liệu đã xác thực'],
   },
 ];
 
 const OPERATIONAL_BRANCHES = {
-  'qa-run': [
+  'dynamic-web-exploratory': [
     {
       id: 'DISCOVERY_CORE',
       titleVi: 'Khám phá & Ad-hoc trên browser',
@@ -418,7 +419,7 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['UI observation', 'Source comparison', 'Document comparison', 'Runtime comparison', 'DISCOVERY_CORE'],
     },
   ],
-  'mobile-qa': [
+  'dynamic-mobile': [
     {
       id: 'DEVICE_MATRIX',
       titleVi: 'Chọn thiết bị và lifecycle',
@@ -468,7 +469,7 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['Stop proxy capture', 'Restore proxy/CA/VPN', 'Restore permission/orientation/locale', 'Delete owned Appium session'],
     },
   ],
-  'ui-ux-design-qa': [
+  'hybrid-ui-ux-review': [
     {
       id: 'DESIGN_REQUIREMENT_TRACE',
       titleVi: 'Trace design và requirement',
@@ -488,7 +489,7 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['Screenshot/video', 'State ID', 'Viewport', 'Accessibility handoff', 'Same-session browser run'],
     },
   ],
-  'release-governance-qa': [
+  'governance-release-quality': [
     {
       id: 'RELEASE_PACKET',
       titleVi: 'Đọc release packet',
@@ -508,7 +509,7 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['PASS', 'FAIL', 'BLOCKED', 'Gate ledger', 'Owner handoff'],
     },
   ],
-  'appsec-supply-chain-qa': [
+  'static-supply-chain-security': [
     {
       id: 'REDACTED_SECRET_SCAN',
       titleVi: 'Quét secret đã redact',
@@ -525,10 +526,10 @@ const OPERATIONAL_BRANCHES = {
       id: 'APPSEC_HANDOFF',
       titleVi: 'Handoff security finding',
       summaryVi: 'Giữ scanner alert là Candidate rồi chuyển exploit validation và release risk qua owner phù hợp',
-      childrenVi: ['Candidate', 'Reproduction', 'Control comparison', 'pentest-run', 'Release gate'],
+      childrenVi: ['Candidate', 'Reproduction', 'Control comparison', 'dynamic-security-pentest', 'Release gate'],
     },
   ],
-  'reliability-resilience-qa': [
+  'dynamic-resilience': [
     {
       id: 'RESILIENCE_HYPOTHESIS',
       titleVi: 'Hypothesis và steady state',
@@ -548,7 +549,7 @@ const OPERATIONAL_BRANCHES = {
       childrenVi: ['RTO', 'RPO', 'Recovery evidence', 'Data integrity', 'Follow-up'],
     },
   ],
-  'compatibility-localization-qa': [
+  'dynamic-compatibility': [
     {
       id: 'COMPATIBILITY_DIMENSIONS',
       titleVi: 'Chọn dimensions tương thích',
@@ -565,10 +566,10 @@ const OPERATIONAL_BRANCHES = {
       id: 'MATRIX_EXECUTION',
       titleVi: 'Coverage và evidence',
       summaryVi: 'Mỗi dimension phải có executable case trước khi route sang browser hoặc mobile execution',
-      childrenVi: ['Case coverage', 'qa-run', 'mobile-qa', 'Screenshot/video', 'Release risk'],
+      childrenVi: ['Case coverage', 'dynamic-web-exploratory', 'dynamic-mobile', 'Screenshot/video', 'Release risk'],
     },
   ],
-  'playwright-pom-automation': [
+  'dynamic-web-automation': [
     {
       id: 'TESTCASE_POM_EXECUTION',
       titleVi: 'Unified testcase execution và POM',
@@ -581,8 +582,8 @@ const OPERATIONAL_BRANCHES = {
 const AUXILIARY = [
   {
     name: 'engine-jmeter', title: 'JMeter engine', group: 'auxiliary', kind: 'internal-engine', status: 'internal',
-    sourcePath: 'performance-qa/SKILL.md', vi: {
-      summary: 'Engine nội bộ cho file .jmx, được performance-qa điều phối',
+    sourcePath: 'dynamic-testing/performance/SKILL.md', vi: {
+      summary: 'Engine nội bộ cho file .jmx, được dynamic-performance điều phối',
       advantages: ['Phù hợp workload JMeter hiện có', 'Tích hợp với report và threshold chung'],
       limitations: ['Không phải skill công khai độc lập', 'Cần JMeter runtime khả dụng'],
     },
@@ -590,8 +591,8 @@ const AUXILIARY = [
   },
   {
     name: 'engine-k6', title: 'k6 engine', group: 'auxiliary', kind: 'internal-engine', status: 'internal',
-    sourcePath: 'performance-qa/SKILL.md', vi: {
-      summary: 'Engine nội bộ cho k6 script, dùng chung workload contract của performance-qa',
+    sourcePath: 'dynamic-testing/performance/SKILL.md', vi: {
+      summary: 'Engine nội bộ cho k6 script, dùng chung workload contract của dynamic-performance',
       advantages: ['Script nhẹ và phù hợp CI', 'Dùng chung result schema với JMeter'],
       limitations: ['Không phải skill công khai độc lập', 'Cần k6 runtime khả dụng'],
     },
@@ -599,7 +600,7 @@ const AUXILIARY = [
   },
   {
     name: 'provider-graphify', title: 'Graphify', group: 'auxiliary', kind: 'optional-provider', status: 'optional',
-    sourcePath: 'qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md', vi: {
+    sourcePath: 'dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md', vi: {
       summary: 'Provider khám phá dependency tĩnh tùy chọn; không phải business oracle hay runtime observer',
       advantages: ['Lập chỉ mục dependency toàn repository', 'Hỗ trợ chọn vùng impact và call-flow candidate'],
       limitations: ['Quan hệ chỉ là static candidate', 'Không chứng minh business rule hoặc runtime behavior'],
@@ -608,7 +609,7 @@ const AUXILIARY = [
   },
   {
     name: 'provider-effective-html', title: 'effective-html', group: 'auxiliary', kind: 'presentation-provider', status: 'optional',
-    sourcePath: 'qa-run/references/GRAPHIFY-EFFECTIVE-HTML.md', vi: {
+    sourcePath: 'dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md', vi: {
       summary: 'Provider trình bày HTML tương tác từ dữ liệu đã được xác thực',
       advantages: ['Artifact tự chứa và dễ chia sẻ', 'Hỗ trợ dark mode, pan, zoom và tương tác'],
       limitations: ['Chỉ là lớp trình bày', 'Dữ liệu nguồn vẫn là chuẩn có thẩm quyền'],
@@ -618,11 +619,11 @@ const AUXILIARY = [
   {
     name: 'retired-jmeter-qa', title: 'jmeter-qa', group: 'auxiliary', kind: 'retired-surface', status: 'retired',
     sourcePath: 'scripts/setup_lib.sh', vi: {
-      summary: 'Thư mục tương thích cũ đã ngừng dùng và được hợp nhất vào performance-qa',
+      summary: 'Thư mục tương thích cũ đã ngừng dùng và được hợp nhất vào dynamic-performance',
       advantages: ['Giữ dấu vết tương thích cho cấu hình cũ'],
       limitations: ['Không còn SKILL.md hoặc workflow độc lập', 'Không nên chọn trực tiếp'],
     },
-    branches: ['Compatibility marker', 'Retired skill detection', 'Route sang performance-qa'],
+    branches: ['Compatibility marker', 'Retired skill detection', 'Route sang dynamic-performance'],
   },
 ].map((item) => ({
   ...item,
@@ -635,121 +636,121 @@ const AUXILIARY = [
 }));
 
 const VI_SKILL_TEXT = {
-  'accessibility-qa': 'Đánh giá khả năng truy cập web theo WCAG 2.2 bằng kiểm tra tự động kết hợp thao tác bàn phím, focus, zoom, contrast và screen reader',
-  'ai-quality-qa': 'Đánh giá chất lượng LLM, chatbot, RAG và agent theo golden dataset, tính đúng đắn, groundedness, safety, độ ổn định, latency và chi phí',
-  'api-contract-qa': 'Xác minh REST, OpenAPI, Postman, GraphQL, gRPC và webhook contract so với implementation quan sát được',
-  'business-analysis': 'Phân tích tài liệu nghiệp vụ như senior QA/QC, dựng business flow và tạo XMind cùng bộ Q&A đồng bộ',
-  'data-quality-qa': 'Kiểm tra database, ETL/ELT, reconciliation, lineage, freshness, schema drift và chất lượng dữ liệu theo ranh giới read-only',
-  'doc-to-md': 'Chuyển PDF, DOCX, PPTX, XLSX và các artifact local sang Markdown có cấu trúc để skill khác sử dụng',
-  'github-mcp-qa': 'Đọc và vận hành repository, PR, Issue và GitHub Actions qua GitHub MCP với ranh giới xác thực rõ ràng',
-  'ego-browser': 'Trình duyệt Chromium tách biệt cho AI agents kế thừa trạng thái đăng nhập thực tế',
-  'google-drive-qa': 'Đọc và thực hiện CRUD trên Drive, Docs, Sheets, Slides, permissions, report và evidence qua Google Drive MCP',
-  'mobile-qa': 'Lập kế hoạch, thực thi và chẩn đoán QA Android/iOS bằng Appium, emulator, real device và network capture được ủy quyền',
-  'pentest-run': 'Điều phối pentest được ủy quyền từ engagement contract, reconnaissance đến validation, evidence và reporting',
-  'performance-qa': 'Điều phối performance test an toàn bằng JMeter hoặc k6 với workload chung, smoke gate, threshold và báo cáo bottleneck',
-  'plane-qa': 'Đọc và quản lý ticket Plane, bug, comment, evidence và trạng thái QA trên nhiều workspace',
-  'playwright-pom-automation': 'Build và chạy testcase Playwright POM với browser evidence, verdict, Sheet projection và CI',
-  'postman': 'Cấu hình và vận hành Postman MCP, Postman CLI và Newman cho collection, environment, spec, mock và monitor',
-  'qa-run': 'Thực thi browser QA theo rủi ro từ business logic, source, requirement và runtime evidence với quan sát network/console cùng session',
-  'testcase-template': 'Tạo, chỉnh sửa và review testcase Markdown/Excel đồng bộ từ một nguồn JSON đã xác thực',
-  'whitebox-qa': 'Phân tích source code xác định cho function, branch, path, call graph, NestJS DI, test generation và runtime coverage',
-  'ui-ux-design-qa': 'Đối chiếu design-to-code, visual hierarchy, responsive states, UX interaction và screenshot/video evidence',
-  'release-governance-qa': 'Đánh giá release theo risk, test summary, defect, evidence, approval và exit criteria',
-  'appsec-supply-chain-qa': 'Quét local redacted cho secret, dependency manifest, lockfile, SBOM readiness và secure CI controls',
-  'reliability-resilience-qa': 'Validate bounded fault-injection, recovery, observability, rollback và RTO/RPO plan',
-  'compatibility-localization-qa': 'Validate browser/device/locale/timezone/currency/i18n và RTL coverage matrix',
+  'hybrid-accessibility': 'Đánh giá khả năng truy cập web theo WCAG 2.2 bằng kiểm tra tự động kết hợp thao tác bàn phím, focus, zoom, contrast và screen reader',
+  'dynamic-ai-evaluation': 'Đánh giá chất lượng LLM, chatbot, RAG và agent theo golden dataset, tính đúng đắn, groundedness, safety, độ ổn định, latency và chi phí',
+  'hybrid-api-contract': 'Xác minh REST, OpenAPI, Postman, GraphQL, gRPC và webhook contract so với implementation quan sát được',
+  'static-requirements-analysis': 'Phân tích tài liệu nghiệp vụ như senior QA/QC, dựng business flow và tạo XMind cùng bộ Q&A đồng bộ',
+  'dynamic-data-quality': 'Kiểm tra database, ETL/ELT, reconciliation, lineage, freshness, schema drift và chất lượng dữ liệu theo ranh giới read-only',
+  'support-document-conversion': 'Chuyển PDF, DOCX, PPTX, XLSX và các artifact local sang Markdown có cấu trúc để skill khác sử dụng',
+  'integration-github': 'Đọc và vận hành repository, PR, Issue và GitHub Actions qua GitHub MCP với ranh giới xác thực rõ ràng',
+  'adapter-browser-session': 'Trình duyệt Chromium tách biệt cho AI agents kế thừa trạng thái đăng nhập thực tế',
+  'integration-google-drive': 'Đọc và thực hiện CRUD trên Drive, Docs, Sheets, Slides, permissions, report và evidence qua Google Drive MCP',
+  'dynamic-mobile': 'Lập kế hoạch, thực thi và chẩn đoán QA Android/iOS bằng Appium, emulator, real device và network capture được ủy quyền',
+  'dynamic-security-pentest': 'Điều phối pentest được ủy quyền từ engagement contract, reconnaissance đến validation, evidence và reporting',
+  'dynamic-performance': 'Điều phối performance test an toàn bằng JMeter hoặc k6 với workload chung, smoke gate, threshold và báo cáo bottleneck',
+  'integration-plane': 'Đọc và quản lý ticket Plane, bug, comment, evidence và trạng thái QA trên nhiều workspace',
+  'dynamic-web-automation': 'Build và chạy testcase Playwright POM với browser evidence, verdict, Sheet projection và CI',
+  'integration-postman': 'Cấu hình và vận hành Postman MCP, Postman CLI và Newman cho collection, environment, spec, mock và monitor',
+  'dynamic-web-exploratory': 'Thực thi browser QA theo rủi ro từ business logic, source, requirement và runtime evidence với quan sát network/console cùng session',
+  'support-testcase-authoring': 'Tạo, chỉnh sửa và review testcase Markdown/Excel đồng bộ từ một nguồn JSON đã xác thực',
+  'hybrid-source-coverage': 'Phân tích source code xác định cho function, branch, path, call graph, NestJS DI, test generation và runtime coverage',
+  'hybrid-ui-ux-review': 'Đối chiếu design-to-code, visual hierarchy, responsive states, UX interaction và screenshot/video evidence',
+  'governance-release-quality': 'Đánh giá release theo risk, test summary, defect, evidence, approval và exit criteria',
+  'static-supply-chain-security': 'Quét local redacted cho secret, dependency manifest, lockfile, SBOM readiness và secure CI controls',
+  'dynamic-resilience': 'Validate bounded fault-injection, recovery, observability, rollback và RTO/RPO plan',
+  'dynamic-compatibility': 'Validate browser/device/locale/timezone/currency/i18n và RTL coverage matrix',
 };
 
 const VI_SKILL_INSIGHTS = {
-  'accessibility-qa': {
+  'hybrid-accessibility': {
     advantages: ['Kết hợp axe/WCAG với kiểm tra bàn phím và screen reader', 'Bao phủ focus, contrast, zoom, reflow và semantic'],
     limitations: ['Không thể kết luận screen reader PASS nếu chưa chạy thiết bị thật', 'Một số lỗi trải nghiệm vẫn cần đánh giá thủ công'],
   },
-  'ai-quality-qa': {
+  'dynamic-ai-evaluation': {
     advantages: ['Đánh giá được correctness, groundedness, safety, latency và cost', 'Hỗ trợ golden dataset và regression có thể lặp lại'],
     limitations: ['Chất lượng kết quả phụ thuộc mạnh vào golden dataset', 'Không thay thế đánh giá domain của con người'],
   },
-  'api-contract-qa': {
+  'hybrid-api-contract': {
     advantages: ['Đối chiếu schema, status, header, auth và negative behavior', 'Hỗ trợ nhiều loại contract như REST, GraphQL, gRPC và webhook'],
     limitations: ['Cần specification hoặc contract đủ rõ', 'Không tự thay thế performance test hay pentest chuyên sâu'],
   },
-  'business-analysis': {
+  'static-requirements-analysis': {
     advantages: ['Khôi phục business flow và phát hiện ambiguity có hệ thống', 'Tạo XMind và Q&A đồng bộ từ một nguồn dữ liệu'],
     limitations: ['Cần tài liệu hoặc nguồn nghiệp vụ đáng tin cậy', 'Không sinh testcase khi câu hỏi nghiệp vụ quan trọng chưa được giải đáp'],
   },
-  'data-quality-qa': {
+  'dynamic-data-quality': {
     advantages: ['Bao phủ reconciliation, lineage, freshness và schema drift', 'Giữ ranh giới truy vấn read-only rõ ràng'],
     limitations: ['Cần quyền database read-only đã được chứng minh', 'Không sửa dữ liệu hoặc pipeline thay người vận hành'],
   },
-  'doc-to-md': {
+  'support-document-conversion': {
     advantages: ['Chuyển nhiều định dạng sang Markdown có cấu trúc', 'Xử lý local để giảm rủi ro lộ dữ liệu'],
     limitations: ['Chỉ dùng cho file local hoặc upload đã materialize', 'OCR và bảng phức tạp có thể cần kiểm tra lại'],
   },
-  'github-mcp-qa': {
+  'integration-github': {
     advantages: ['Đọc repository, PR, Issue và Actions qua API chính thức', 'Tách GitHub MCP auth khỏi Git SSH'],
     limitations: ['Phụ thuộc OAuth/PAT và quyền repository', 'Mutation cần xác định đúng account, repo và branch'],
   },
-  'ego-browser': {
+  'adapter-browser-session': {
     advantages: ['Cách ly không gian làm việc', 'Không cần thiết lập lại quá trình xác thực'],
     limitations: ['Không hỗ trợ Windows/Linux', 'Không chặn được body/headers mạng đầy đủ'],
   },
-  'google-drive-qa': {
+  'integration-google-drive': {
     advantages: ['CRUD native cho Drive, Docs, Sheets và Slides', 'Có exact-target check và read-back sau mutation'],
     limitations: ['Phụ thuộc MCP/OAuth và permission của đối tượng', 'Không dùng web search thay cho nội dung Drive riêng tư'],
   },
-  'mobile-qa': {
+  'dynamic-mobile': {
     advantages: ['Bao phủ Android/iOS, emulator, real device và network capture', 'Kết hợp Appium với tooling native'],
     limitations: ['Cần device matrix và môi trường chạy phù hợp', 'Network interception phải có phạm vi được ủy quyền'],
   },
-  'pentest-run': {
+  'dynamic-security-pentest': {
     advantages: ['Có engagement contract, doctor, evidence và control comparison', 'Điều phối nhiều lớp kiểm tra bảo mật có kiểm soát'],
     limitations: ['Chỉ chạy khi có ủy quyền và phạm vi rõ ràng', 'Scanner alert chưa phải finding nếu chưa tái hiện'],
   },
-  'performance-qa': {
+  'dynamic-performance': {
     advantages: ['Một workflow chung cho JMeter và k6', 'Có smoke gate, threshold và chuẩn hóa report'],
     limitations: ['Load test cần stop condition và phê duyệt phạm vi', 'Kết quả phụ thuộc workload model và môi trường ổn định'],
   },
-  'plane-qa': {
+  'integration-plane': {
     advantages: ['Đọc/ghi ticket, comment, evidence và state theo workflow QA', 'Tự áp dụng state mapping PASS/FAILED/BLOCKED'],
     limitations: ['Phụ thuộc API key và quyền workspace', 'Write phải xác định đúng ticket rồi read-back'],
   },
-  'playwright-pom-automation': {
+  'dynamic-web-automation': {
     advantages: ['Một workflow từ manifest đến POM, browser evidence và verdict', 'Tách selector qua Page Object và hỗ trợ Sheet/CI/Allure'],
     limitations: ['Không dùng cho exploratory hoặc retest ad-hoc', 'Cần target, selector evidence và test data đủ để thực thi'],
   },
-  'postman': {
+  'integration-postman': {
     advantages: ['Quản lý workspace, collection, environment, spec, mock và monitor', 'Hỗ trợ Postman CLI và Newman fallback có điều kiện'],
-    limitations: ['Phụ thuộc account, OAuth và runtime Postman', 'Contract validation live được chuyển sang api-contract-qa'],
+    limitations: ['Phụ thuộc account, OAuth và runtime Postman', 'Contract validation live được chuyển sang hybrid-api-contract'],
   },
-  'qa-run': {
+  'dynamic-web-exploratory': {
     advantages: ['Thực thi QA theo rủi ro từ requirement, source và runtime', 'Quan sát network, console và page error trong cùng session'],
     limitations: ['Cần Business Execution Brief đủ trạng thái READY', 'Không dùng để viết automation hoặc testcase document'],
   },
-  'testcase-template': {
+  'support-testcase-authoring': {
     advantages: ['Tạo Markdown trước Excel từ một JSON nguồn', 'Giữ ID và nội dung đồng bộ theo schema cố định'],
     limitations: ['Cần expected behavior và requirement mapping rõ', 'Không phù hợp cho ghi chú exploratory hoặc bug report'],
   },
-  'whitebox-qa': {
+  'hybrid-source-coverage': {
     advantages: ['Phân tích branch, path, call graph và NestJS DI xác định', 'Phân biệt static candidate với measured coverage'],
-    limitations: ['Static analysis không chứng minh runtime coverage', 'Testcase document phải bàn giao qua testcase-template'],
+    limitations: ['Static analysis không chứng minh runtime coverage', 'Testcase document phải bàn giao qua support-testcase-authoring'],
   },
-  'ui-ux-design-qa': {
+  'hybrid-ui-ux-review': {
     advantages: ['Gắn visual review với requirement, viewport, state và evidence', 'Tách rõ design mismatch, implementation mismatch và accessibility handoff'],
-    limitations: ['Không thay thế human visual review hoặc live browser observation', 'Không tự kết luận WCAG nếu chưa qua accessibility-qa'],
+    limitations: ['Không thay thế human visual review hoặc live browser observation', 'Không tự kết luận WCAG nếu chưa qua hybrid-accessibility'],
   },
-  'release-governance-qa': {
+  'governance-release-quality': {
     advantages: ['Tạo go/no-go decision có gate ledger và provenance', 'Phân biệt defect risk, thiếu proof và approved exception'],
     limitations: ['Không thay thế test chuyên môn hoặc CI verification', 'Không tự deploy, đổi ticket state hoặc chấp thuận exception'],
   },
-  'appsec-supply-chain-qa': {
+  'static-supply-chain-security': {
     advantages: ['Local redacted scan an toàn cho manifest và candidate secret', 'Làm rõ giới hạn giữa preflight, SAST/SCA và pentest'],
     limitations: ['Không query CVE/registry hoặc chứng minh exploitability', 'Regex sạch không đồng nghĩa repo sạch hoàn toàn'],
   },
-  'reliability-resilience-qa': {
+  'dynamic-resilience': {
     advantages: ['Buộc plan có SLO, stop, rollback, cleanup, observability và RTO/RPO', 'Ngăn active fault injection thiếu approval'],
     limitations: ['Plan READY chưa phải measured recovery', 'Cần staging/device/service owner thật cho execution'],
   },
-  'compatibility-localization-qa': {
+  'dynamic-compatibility': {
     advantages: ['Kiểm coverage dimensions và executable case trước live run', 'Bao phủ locale, timezone, currency, Unicode và RTL rõ ràng'],
     limitations: ['Matrix không thay thế browser/device execution', 'Expected translation và supported-platform policy cần owner xác nhận'],
   },
@@ -900,7 +901,7 @@ function scanSkillFiles(root) {
 
   visit(root);
   recordKnownVendorSkills(path.join(root, 'vendor', 'chrome-devtools-mcp', 'skills'));
-  recordKnownVendorSkills(path.join(root, 'qa-run', 'vendor', 'Understand-Anything', 'understand-anything-plugin', 'skills'));
+  recordKnownVendorSkills(path.join(root, 'dynamic-testing', 'web-exploratory', 'vendor', 'Understand-Anything', 'understand-anything-plugin', 'skills'));
   included.sort((left, right) => left.relativePath.localeCompare(right.relativePath));
   excluded.sort((left, right) => left.path.localeCompare(right.path));
   return { included, excluded };
@@ -1025,12 +1026,18 @@ function deriveOperationalBranches(name, body, headings) {
 
 function collectSkills(root) {
   const inventory = scanSkillFiles(root);
+  const registry = loadSkillRegistry(root);
+  const publicEntries = new Map(registry.skills.map((entry) => [entry.id, entry]));
   const parsed = inventory.included.map(({ file, relativePath }) => {
     const markdown = readText(file);
     const { frontmatter, body } = parseFrontmatter(markdown, relativePath);
     const folder = path.basename(path.dirname(file));
-    if (folder !== frontmatter.name) {
-      throw new Error(`Skill folder/name mismatch: ${folder} != ${frontmatter.name}`);
+    const registryEntry = publicEntries.get(frontmatter.name);
+    if (registryEntry && relativePath !== `${registryEntry.path}/SKILL.md`) {
+      throw new Error(`Skill registry/path mismatch: ${frontmatter.name} != ${relativePath}`);
+    }
+    if (!registryEntry && folder !== frontmatter.name) {
+      throw new Error(`Nested skill folder/name mismatch: ${folder} != ${frontmatter.name}`);
     }
     return { file, relativePath, markdown, body, frontmatter, folder };
   });
@@ -1039,6 +1046,7 @@ function collectSkills(root) {
   );
 
   const skills = parsed.map(({ file, relativePath, markdown, body, frontmatter, folder }) => {
+    const registryEntry = publicEntries.get(frontmatter.name);
     const parent = findParentSkill(relativePath, directoryToSkill);
     const group = GROUPS.find((candidate) => candidate.skills.includes(frontmatter.name))
       || (parent && GROUPS.find((candidate) => candidate.id === parent.group))
@@ -1051,7 +1059,7 @@ function collectSkills(root) {
       title,
       folder,
       group: group.id,
-      scope: relativePath.includes('/_bundled_plugin/') ? 'bundled' : parent ? 'nested' : 'public-root',
+      scope: relativePath.includes('/_bundled_plugin/') ? 'bundled' : registryEntry ? 'public-root' : parent ? 'nested' : 'public-root',
       parent: parent?.frontmatter?.name || null,
       description: frontmatter.description,
       principle: firstPrinciple(body),
@@ -1737,9 +1745,9 @@ function openSkill(name, trigger) {
       ? '<section class="branches operations">' +
           '<h3>Nhánh thực thi</h3>' +
           '<p class="branch-count">' + skill.operationalBranches.length + ' workflow nội bộ · ' +
-            (skill.name === 'qa-run'
-              ? 'qa-run tự thao tác browser và dùng observer cùng session'
-              : skill.name === 'mobile-qa'
+            (skill.name === 'dynamic-web-exploratory'
+              ? 'dynamic-web-exploratory tự thao tác browser và dùng observer cùng session'
+              : skill.name === 'dynamic-mobile'
                 ? 'Appium MCP thực thi UI; proxy engine được ủy quyền bắt traffic mobile'
                 : 'được mô hình hóa từ workflow của skill') +
           '</p>' +

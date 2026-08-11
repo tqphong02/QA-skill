@@ -11,7 +11,8 @@ vendor/chrome-devtools-mcp/
 .Trashes
 
 # Editor
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo
@@ -46,14 +47,14 @@ __pycache__/
 *.orig
 
 # OmniParser Model Weights
-qa-run/vendor/OmniParser/weights/
+dynamic-testing/web-exploratory/vendor/OmniParser/weights/
 *.pt
 *.onnx
 *.safetensors
 
 # Understand-Anything Build & Lock Files
-qa-run/vendor/Understand-Anything/node_modules/
-qa-run/vendor/Understand-Anything/dist/
+dynamic-testing/web-exploratory/vendor/Understand-Anything/node_modules/
+dynamic-testing/web-exploratory/vendor/Understand-Anything/dist/
 
 # Generated Knowledge Outputs (Contains local machine paths)
 qa-knowledge/

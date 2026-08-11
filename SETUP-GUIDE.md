@@ -55,7 +55,7 @@ Target global của Antigravity IDE là `~/.gemini/config/skills`. Mở phiên m
 
 Repository có `.agents/mcp_config.json` làm workspace MCP template. Postman remote MCP được bật để khởi tạo OAuth; các server khác mặc định `disabled` và template không chứa credential
 
-Khi profile có `postman`, installer tự merge và bật Postman remote MCP trong `~/.gemini/config/mcp_config.json`, giữ nguyên các server khác và backup config cũ. Restart Antigravity, chạy `/mcp` rồi hoàn tất OAuth bằng account Postman
+Khi profile có `integration-postman`, installer tự merge và bật Postman remote MCP trong `~/.gemini/config/mcp_config.json`, giữ nguyên các server khác và backup config cũ. Restart Antigravity, chạy `/mcp` rồi hoàn tất OAuth bằng account Postman
 
 ### Windows PowerShell
 
@@ -72,9 +72,9 @@ PowerShell wrapper dùng Git Bash từ Git for Windows
 .\scripts\setup.ps1 -Agent claude -Profile core -Yes
 ```
 
-Profile `core` gồm `qa-run`, `testcase-template`, `playwright-pom-automation`, `doc-to-md`, `business-analysis`, `pentest-run`, `plane-qa`, `google-drive-qa`, `github-mcp-qa` và `postman`
+Profile `core` gồm `dynamic-web-exploratory`, `support-testcase-authoring`, `dynamic-web-automation`, `support-document-conversion`, `static-requirements-analysis`, `dynamic-security-pentest`, `integration-plane`, `integration-google-drive`, `integration-github` và `integration-postman`
 
-Profile `full` thêm `data-quality-qa`, `ai-quality-qa`, `accessibility-qa`, `performance-qa`, `api-contract-qa`, `mobile-qa`, `whitebox-qa`, `ego-browser`, `ui-ux-design-qa`, `release-governance-qa`, `appsec-supply-chain-qa`, `reliability-resilience-qa` và `compatibility-localization-qa`
+Profile `full` thêm `dynamic-data-quality`, `dynamic-ai-evaluation`, `hybrid-accessibility`, `dynamic-performance`, `hybrid-api-contract`, `dynamic-mobile`, `hybrid-source-coverage`, `adapter-browser-session`, `hybrid-ui-ux-review`, `governance-release-quality`, `static-supply-chain-security`, `dynamic-resilience` và `dynamic-compatibility`
 
 ```powershell
 # Cài đủ 23 skill cho Codex
@@ -96,25 +96,25 @@ Xem `WINDOWS-SETUP.md` khi cần WSL hoặc xử lý PATH
 ```bash
 ./scripts/setup.sh \
   --agent=codex \
-  --only=qa-run,testcase-template,performance-qa \
+  --only=dynamic-web-exploratory,support-testcase-authoring,dynamic-performance \
   --yes
 ```
 
 Để intern chỉ nhận đúng một skill:
 
 ```bash
-./scripts/setup.sh --agent=codex --only=qa-run --skip-deps --yes
+./scripts/setup.sh --agent=codex --only=dynamic-web-exploratory --skip-deps --yes
 ```
 
 Cài riêng Postman cho Antigravity:
 
 ```bash
-./scripts/setup.sh --agent=antigravity --only=postman --yes
+./scripts/setup.sh --agent=antigravity --only=integration-postman --yes
 ```
 
 Sau lệnh này installer cài local Postman CLI và Newman, rồi người dùng chỉ cần restart Antigravity, chạy `/mcp` và đăng nhập Postman. Dùng `--skip-mcp-setup` nếu không muốn thay đổi MCP config; dùng `--skip-deps` nếu không muốn cài hai CLI
 
-Installer chỉ expose `qa-run/SKILL.md`. `vendor`, `tests` và mọi nested `SKILL.md` không được đưa vào thư mục discovery, nên chọn `qa-run` không làm xuất hiện thêm các skill `understand-*`.
+Installer chỉ expose `dynamic-testing/web-exploratory/SKILL.md`. `vendor`, `tests` và mọi nested `SKILL.md` không được đưa vào thư mục discovery, nên chọn `dynamic-web-exploratory` không làm xuất hiện thêm các skill `understand-*`.
 
 ### Dry-run
 
@@ -144,27 +144,27 @@ MCP credential luôn thuộc máy và account người dùng, không thuộc rep
 
 ### Google Drive
 
-Lần đầu, làm theo `google-drive-qa/references/GOOGLE_CLOUD_OAUTH_SETUP.md` để tạo Google Cloud project, bật API, chọn Audience, thêm scope và tạo OAuth Desktop client
+Lần đầu, làm theo `integration/google-drive/references/GOOGLE_CLOUD_OAUTH_SETUP.md` để tạo Google Cloud project, bật API, chọn Audience, thêm scope và tạo OAuth Desktop client
 
-Khi credential đã tồn tại nhưng auth lỗi, làm theo `google-drive-qa/references/AUTH.md`, sau đó chạy Drive doctor và một read-only smoke test
+Khi credential đã tồn tại nhưng auth lỗi, làm theo `integration/google-drive/references/AUTH.md`, sau đó chạy Drive doctor và một read-only smoke test
 
 ### GitHub, Chrome DevTools, k6, Postman và Database read-only
 
-Đọc `github-mcp-qa/references/qa-mcp-stack-vi.md`, sau đó chạy:
+Đọc `integration/github/references/qa-mcp-stack-vi.md`, sau đó chạy:
 
 ```bash
-bash github-mcp-qa/scripts/doctor-stack.sh --agent=codex
-bash github-mcp-qa/scripts/doctor-stack.sh --agent=antigravity
+bash integration/github/scripts/doctor-stack.sh --agent=codex
+bash integration/github/scripts/doctor-stack.sh --agent=antigravity
 ```
 
 Hướng dẫn chi tiết:
 
-- GitHub Codex: `github-mcp-qa/references/codex-github-mcp-vi.md`
-- GitHub Antigravity: `github-mcp-qa/references/antigravity-github-mcp-vi.md`
-- Chrome DevTools và k6: `performance-qa/references/MCP_SETUP.md`
-- Postman bootstrap và operations: `postman/SKILL.md`
-- Postman contract validation: `api-contract-qa/references/POSTMAN_MCP.md`
-- Database read-only: `data-quality-qa/references/DATABASE_MCP.md`
+- GitHub Codex: `integration/github/references/codex-github-mcp-vi.md`
+- GitHub Antigravity: `integration/github/references/antigravity-github-mcp-vi.md`
+- Chrome DevTools và k6: `dynamic-testing/performance/references/MCP_SETUP.md`
+- Postman bootstrap và operations: `integration/postman/SKILL.md`
+- Postman contract validation: `hybrid-testing/api-contract/references/POSTMAN_MCP.md`
+- Database read-only: `dynamic-testing/data-quality/references/DATABASE_MCP.md`
 
 Sau khi thêm hoặc đổi MCP, mở phiên agent mới. Codex kiểm tra bằng `codex mcp list`; Antigravity kiểm tra bằng `/mcp`. Trạng thái `configured` không tự chứng minh auth, permission hoặc tool loading đã thành công
 
@@ -196,9 +196,9 @@ done
 
 Các smoke test theo capability:
 
-- `doc-to-md`: chạy không input phải in usage thay vì `$1: unbound variable`
-- `performance-qa`: k6 mặc định chỉ một user; load lớn hơn một user phải bị chặn khi thiếu contract hoặc approval
-- `accessibility-qa`: template package phải có `@axe-core/playwright`
+- `support-document-conversion`: chạy không input phải in usage thay vì `$1: unbound variable`
+- `dynamic-performance`: k6 mặc định chỉ một user; load lớn hơn một user phải bị chặn khi thiếu contract hoặc approval
+- `hybrid-accessibility`: template package phải có `@axe-core/playwright`
 - MCP: doctor rồi smoke test read-only trong phiên agent mới
 
 ## 8. Cập nhật skill

@@ -1,0 +1,216 @@
+{
+  "version": 1,
+  "description": "Canonical public skill IDs, repository paths, taxonomy and migration aliases",
+  "skills": [
+    {
+      "id": "dynamic-web-exploratory",
+      "path": "dynamic-testing/web-exploratory",
+      "mode": "dynamic",
+      "surface": "web",
+      "role": "executor",
+      "profile": "core",
+      "legacy_aliases": ["qa-run"]
+    },
+    {
+      "id": "support-testcase-authoring",
+      "path": "support/testcase-authoring",
+      "mode": "support",
+      "surface": "test-design",
+      "role": "authoring",
+      "profile": "core",
+      "legacy_aliases": ["testcase-template"]
+    },
+    {
+      "id": "dynamic-web-automation",
+      "path": "dynamic-testing/web-automation",
+      "mode": "dynamic",
+      "surface": "web",
+      "role": "executor",
+      "profile": "core",
+      "legacy_aliases": ["playwright-pom-automation"]
+    },
+    {
+      "id": "support-document-conversion",
+      "path": "support/document-conversion",
+      "mode": "support",
+      "surface": "documents",
+      "role": "conversion",
+      "profile": "core",
+      "legacy_aliases": ["doc-to-md"]
+    },
+    {
+      "id": "static-requirements-analysis",
+      "path": "static-testing/requirements-analysis",
+      "mode": "static",
+      "surface": "requirements",
+      "role": "analysis",
+      "profile": "core",
+      "legacy_aliases": ["business-analysis"]
+    },
+    {
+      "id": "dynamic-security-pentest",
+      "path": "dynamic-testing/security-pentest",
+      "mode": "dynamic",
+      "surface": "security",
+      "role": "orchestrator",
+      "profile": "core",
+      "legacy_aliases": ["pentest-run"]
+    },
+    {
+      "id": "integration-plane",
+      "path": "integration/plane",
+      "mode": "integration",
+      "surface": "project-management",
+      "role": "connector",
+      "profile": "core",
+      "legacy_aliases": ["plane-qa"]
+    },
+    {
+      "id": "integration-google-drive",
+      "path": "integration/google-drive",
+      "mode": "integration",
+      "surface": "documents",
+      "role": "connector",
+      "profile": "core",
+      "legacy_aliases": ["google-drive-qa"]
+    },
+    {
+      "id": "dynamic-data-quality",
+      "path": "dynamic-testing/data-quality",
+      "mode": "dynamic",
+      "surface": "data",
+      "role": "validator",
+      "profile": "specialized",
+      "legacy_aliases": ["data-quality-qa"]
+    },
+    {
+      "id": "dynamic-ai-evaluation",
+      "path": "dynamic-testing/ai-evaluation",
+      "mode": "dynamic",
+      "surface": "ai",
+      "role": "evaluator",
+      "profile": "specialized",
+      "legacy_aliases": ["ai-quality-qa"]
+    },
+    {
+      "id": "hybrid-accessibility",
+      "path": "hybrid-testing/accessibility",
+      "mode": "hybrid",
+      "surface": "web",
+      "role": "auditor",
+      "profile": "specialized",
+      "legacy_aliases": ["accessibility-qa"]
+    },
+    {
+      "id": "dynamic-performance",
+      "path": "dynamic-testing/performance",
+      "mode": "dynamic",
+      "surface": "performance",
+      "role": "orchestrator",
+      "profile": "specialized",
+      "legacy_aliases": ["performance-qa"]
+    },
+    {
+      "id": "hybrid-api-contract",
+      "path": "hybrid-testing/api-contract",
+      "mode": "hybrid",
+      "surface": "api",
+      "role": "validator",
+      "profile": "specialized",
+      "legacy_aliases": ["api-contract-qa"]
+    },
+    {
+      "id": "integration-postman",
+      "path": "integration/postman",
+      "mode": "integration",
+      "surface": "api",
+      "role": "connector",
+      "profile": "core",
+      "legacy_aliases": ["postman"]
+    },
+    {
+      "id": "dynamic-mobile",
+      "path": "dynamic-testing/mobile",
+      "mode": "dynamic",
+      "surface": "mobile",
+      "role": "executor",
+      "profile": "specialized",
+      "legacy_aliases": ["mobile-qa"]
+    },
+    {
+      "id": "hybrid-source-coverage",
+      "path": "hybrid-testing/source-coverage",
+      "mode": "hybrid",
+      "surface": "source",
+      "role": "analyzer",
+      "profile": "specialized",
+      "legacy_aliases": ["whitebox-qa"]
+    },
+    {
+      "id": "integration-github",
+      "path": "integration/github",
+      "mode": "integration",
+      "surface": "source-control",
+      "role": "connector",
+      "profile": "core",
+      "legacy_aliases": ["github-mcp-qa"]
+    },
+    {
+      "id": "adapter-browser-session",
+      "path": "adapter/browser-session",
+      "mode": "adapter",
+      "surface": "web",
+      "role": "driver",
+      "profile": "specialized",
+      "legacy_aliases": ["ego-browser"]
+    },
+    {
+      "id": "hybrid-ui-ux-review",
+      "path": "hybrid-testing/ui-ux-review",
+      "mode": "hybrid",
+      "surface": "ui-ux",
+      "role": "reviewer",
+      "profile": "specialized",
+      "legacy_aliases": ["ui-ux-design-qa"]
+    },
+    {
+      "id": "governance-release-quality",
+      "path": "governance/release-quality",
+      "mode": "governance",
+      "surface": "release",
+      "role": "gate",
+      "profile": "specialized",
+      "legacy_aliases": ["release-governance-qa"]
+    },
+    {
+      "id": "static-supply-chain-security",
+      "path": "static-testing/supply-chain-security",
+      "mode": "static",
+      "surface": "security",
+      "role": "reviewer",
+      "profile": "specialized",
+      "legacy_aliases": ["appsec-supply-chain-qa"]
+    },
+    {
+      "id": "dynamic-resilience",
+      "path": "dynamic-testing/resilience",
+      "mode": "dynamic",
+      "surface": "reliability",
+      "role": "planner",
+      "profile": "specialized",
+      "legacy_aliases": ["reliability-resilience-qa"]
+    },
+    {
+      "id": "dynamic-compatibility",
+      "path": "dynamic-testing/compatibility",
+      "mode": "dynamic",
+      "surface": "compatibility",
+      "role": "validator",
+      "profile": "specialized",
+      "legacy_aliases": ["compatibility-localization-qa"]
+    }
+  ],
+  "retired_aliases": {
+    "jmeter-qa": "dynamic-performance"
+  }
+}

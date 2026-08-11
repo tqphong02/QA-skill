@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plane QA"
+  short_description: "Quản lý bug, comment và ảnh inline trên Plane bằng browser"
+  default_prompt: "Use $integration-plane for this Plane URL or ticket ID. Read QUICK_REF.md. For Description or Comment images, validate and run scripts/browser-inline-evidence.mjs with exact placeholders, reuse ignored browser auth, never call /issue-attachments/, and accept success only after read-back proves rendered inline images and Attachments 0."

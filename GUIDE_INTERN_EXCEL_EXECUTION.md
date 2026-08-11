@@ -1,6 +1,6 @@
 # Hướng Dẫn Sử Dụng Skill Thực Thi Test Case Excel Local (Cho Intern QA)
 
-Chào mừng bạn đến với bộ công cụ tự động hóa kiểm thử **QA Excel Execution**. Skill `qa-run` đã tích hợp đầy đủ công cụ để tự động đọc, thực thi và cập nhật kết quả kiểm thử trực tiếp từ **file Excel (.xlsx) local** trên máy cá nhân của bạn.
+Chào mừng bạn đến với bộ công cụ tự động hóa kiểm thử **QA Excel Execution**. Skill `dynamic-web-exploratory` đã tích hợp đầy đủ công cụ để tự động đọc, thực thi và cập nhật kết quả kiểm thử trực tiếp từ **file Excel (.xlsx) local** trên máy cá nhân của bạn.
 
 ---
 
@@ -20,12 +20,12 @@ Chào mừng bạn đến với bộ công cụ tự động hóa kiểm thử *
 
 ---
 
-## 📂 2. Cấu trúc Thư mục Skill `qa-run`
+## 📂 2. Cấu trúc Thư mục Skill `dynamic-web-exploratory`
 
-Skill `qa-run` hoạt động độc lập 100%, chứa sẵn tất cả các script thực thi:
+Skill `dynamic-web-exploratory` hoạt động độc lập 100%, chứa sẵn tất cả các script thực thi:
 
 ```text
-qa-run/
+dynamic-testing/web-exploratory/
 ├── SKILL.md                          # Thông tin quy chuẩn skill
 └── scripts/
     └── helpers/
@@ -43,24 +43,24 @@ Bạn có thể truyền **bất kỳ đường dẫn file Excel `.xlsx` nào tr
 ### 🔹 Ví dụ 1: File Excel nằm ở bất kỳ đâu trên máy cá nhân
 ```bash
 # Đường dẫn tuyệt đối trên macOS / Linux:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "/Users/intern/Downloads/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs --excel-file "/Users/intern/Downloads/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 
 # Đường dẫn tuyệt đối trên Windows:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs --excel-file "D:/Testing/KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 ```
 
 ### 🔹 Ví dụ 2: File Excel nằm ngay trong thư mục làm việc (Đường dẫn tương đối)
 ```bash
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --sheet-name "Test cases_App" --plan-only
 ```
 
 ### 🔹 Ví dụ 3: Chạy Lọc theo Module Cụ Thể
 ```bash
 # Chỉ chạy duy nhất Module LOGIN:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN" --parallel --plan-only
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "LOGIN" --parallel --plan-only
 
 # Chỉ chạy duy nhất Module ORDER:
-node qa-run/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER" --parallel --plan-only
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs --excel-file "./KichBanKiemThu.xlsx" --module "ORDER" --parallel --plan-only
 ```
 
 ---
@@ -71,13 +71,13 @@ Khi file Excel có nhiều Module (ví dụ: `LOGIN`, `PRODUCT`, `CART`, `CHECKO
 
 ```bash
 # Bước 1: tạo worker plan, chưa chạy và chưa sửa Excel
-node qa-run/scripts/helpers/execute-sheet.mjs \
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs \
   --excel-file "./KichBanKiemThu.xlsx" \
   --parallel \
   --plan-only
 
 # Bước 2: xác nhận module, nhập số worker đã chọn và import kết quả có ảnh/video
-node qa-run/scripts/helpers/execute-sheet.mjs \
+node dynamic-testing/web-exploratory/scripts/helpers/execute-sheet.mjs \
   --excel-file "./KichBanKiemThu.xlsx" \
   --module "LOGIN" \
   --confirmed-module "LOGIN" \

@@ -1,0 +1,4 @@
+interface:
+  display_name: "QA Run"
+  short_description: "Token-efficient agentic browser QA với evidence cùng session"
+  default_prompt: "Use $dynamic-web-exploratory to run token-efficient UI-first exploratory QA or a fast browser task with compact-first live observation, deterministic state-delta planning, scoped extraction, same-session runtime evidence, independent completion judging, and only PASS, FAILED, N/A or UNTEST results."
