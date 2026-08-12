@@ -1,7 +1,4 @@
-<!--
-Mirror of ./<skill>/SKILL.md — keep in sync.
-23 skills; xem router bên dưới và README.md để biết danh sách đầy đủ
--->
+<!-- Router cross-model gọn cho 23 skill. Contract chi tiết nằm trong SKILL.md đã route. -->
 
 # QA-skill — Hướng dẫn cho AI coding agent
 
@@ -41,7 +38,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 |---|---|---|
 | Plane URL (`projects.metasolutions.ai`, path có `/issues/` hoặc `/work-items/`), ticket ID, log bug, comment PASS/FAILED/BLOCKED | `integration/plane/SKILL.md` | Parse URL rồi chạy Plane doctor; bare URL/ID thì đọc ticket |
 | Retest, re-test, verify bug/ticket | `integration/plane/SKILL.md` + `dynamic-testing/web-exploratory/SKILL.md` | Plane doctor/read → RETEST_PLUS |
-| App baseline discovery, sanity, regression, exploratory, ad-hoc hoặc UI/UX không có deterministic testcase suite | `dynamic-testing/web-exploratory/SKILL.md` | Khởi động từ URL + objective; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
+| Generic browser task, open/read/extract/search/scroll/click/fill/download một trang đơn giản | `dynamic-testing/web-exploratory/SKILL.md` (`FAST`) | Validate URL/domain rồi dùng quick-start; không cần business brief |
+| App baseline discovery, sanity, regression, exploratory, ad-hoc hoặc UI/UX không có deterministic testcase suite | `dynamic-testing/web-exploratory/SKILL.md` | Bắt đầu UI-first từ URL + objective; tài liệu, source, role/data và brief chỉ là enrichment; baseline map flow tổng thể, retest chỉ chạy scope ảnh hưởng |
 | Phân tích repo, học business flow từ source code, quét logic hệ thống, tạo business guide từ code | `dynamic-testing/web-exploratory/SKILL.md` (REPO_BUSINESS_DISCOVERY) | Chạy `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode full`; Phần 2+3 sẽ merge vào `qa-knowledge/merged/system-business-guide.md` dùng chung bởi dynamic-web-exploratory và static-requirements-analysis |
 | Từ UI suy ra flow, đối chiếu Source Code + Docs + Runtime, tìm mâu thuẫn UI vs Backend/BRD, sinh câu hỏi BA/PO/Dev | `dynamic-testing/web-exploratory/SKILL.md` (UI_BUSINESS_RECONCILIATION) | Chạy `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; map từng UI item với requirement theo 7 trạng thái, kiểm tra 10 ambiguity patterns, xuất traceability JSON và guide 12 sections |
 | Figma, design token, design-to-code fidelity, responsive visual review, interaction state hoặc UX spec | `hybrid-testing/ui-ux-review/SKILL.md` | Validate review packet requirement/viewport/state/media trước; live browser execution chuyển sang `dynamic-web-exploratory`, accessibility chuyển sang `hybrid-accessibility` |
@@ -78,8 +76,8 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 7. Với pentest, phải có `.pentest/engagement.md`, target, authorization, exclusions và rate limit trước request mạng; Level 2 hoặc Level 3 phải xin duyệt ngay trước khi chạy
 8. Source pentest đã clone chỉ là `source_available`; chỉ chạy tool khi doctor xác nhận executable và dependency là `available`
 9. Skill Markdown không thay thế MCP runtime; trước khi báo integration lỗi phải phân biệt `mcp_not_configured`, `auth_required`, `runtime_missing`, `mcp_not_loaded` và `permission_denied`
-10. Với dynamic-web-exploratory, chạy `scripts/helpers/context-builder.mjs` theo feature scope trước normal browser action; chỉ tiếp tục khi Business Execution Brief là `READY`, `NEEDS_DISCOVERY` chỉ cho scoped discovery và `BLOCKED` phải dừng đúng trường thiếu
-11. Với adapter-browser-session: chạy `node adapter/browser-session/scripts/detect.mjs` trước task; không dùng `drainEvents()` để claim request/response body; không thực hiện action phá huỷ với session thật khi chưa được user xác nhận; `browser-driver` và `network-observer` phải resolve độc lập theo [BROWSER-DRIVER-RESOLUTION.md](dynamic-testing/web-exploratory/references/BROWSER-DRIVER-RESOLUTION.md)
+10. Với exploratory/ad-hoc và app baseline, bắt đầu UI-first từ URL + objective; document/source/role/data/brief là optional enrichment. Chỉ retest và source-driven route mới chạy context-builder và yêu cầu Business Execution Brief `READY`; deterministic Sheet/testcase chuyển sang `dynamic-web-automation`
+11. Với adapter-browser-session: chạy `node adapter/browser-session/scripts/detect.mjs` trước task; không dùng `drainEvents()` để claim request/response body; không thực hiện action phá huỷ với session thật khi chưa được user xác nhận; `browser-driver` và `network-observer` phải resolve độc lập theo [BROWSER-DRIVER-RESOLUTION.md](dynamic-testing/web-exploratory/references/BROWSER-DRIVER-RESOLUTION.md). Gemini/Antigravity là host model, không phải browser override: phải gọi `playwright-runtime` của skill từ terminal project; chỉ dùng `antigravity-native` khi được chọn explicit sau khi đường Playwright unavailable
 12. Với `pentest-security` trên Antigravity không API key: chạy `detect --engine antigravity-host` → `prepare` → active host agent hoàn thành exact assignment result → `status` → `finalize`; không đọc token/keychain, không gọi Gemini API và không tuyên bố OpenAI `codex-security` CLI đang chạy bằng Gemini
 13. Với interactive companion HTML: chỉ render từ canonical JSON đã validate bằng `dynamic-testing/web-exploratory/scripts/writers/render-intelligence-html.mjs`; output phải dùng layout `catalog-v2` đồng bộ `QA-skill.html`, cuộn 2 ngón để pan, pinch/`Ctrl`/`Cmd`+wheel để zoom, có route chip làm nổi bật tuyến end-to-end, edge label dạng pill chỉ hiện khi hover/active và click node phải highlight đường vào/ra kèm detail drawer có `Làm được gì`, thông tin flow và đường liên quan, rồi pass `--check`; không bàn giao template legacy
 14. UI business reconciliation phải có URL/snapshot thật và requirement registry có stable ID/source_ref; thiếu input thì fail closed, không dùng fixture ngầm; runtime click phải có `--verify-runtime` và exact selector được user duyệt
@@ -95,7 +93,7 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - `dynamic-performance` là public skill duy nhất cho performance; JMeter và k6 là engine nội bộ dùng chung config, smoke gate và result schema
 - Retest ticket = Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`; vẫn giữ ledger RETEST_PLUS 6 dòng riêng
 - Deterministic Sheet execution = unified POM BUILD_AND_RUN với Testcase ID chính xác, browser evidence và verdict projection; chỉ chạy `DISCOVERY_CORE` riêng khi user yêu cầu exploratory coverage, còn row có ticket/previous failure dùng RETEST_PLUS
-- Không được tự thay business flow thiếu bằng flow generic; test contract phải copy từ Business Execution Brief `READY` cùng source hash
+- Không được tự thay business flow thiếu bằng flow generic; retest và source-driven execution phải copy test contract từ Business Execution Brief `READY` cùng source hash, còn exploratory/ad-hoc có thể dùng oracle `UI_DERIVED`
 - Retest ticket luôn chạy đủ Retest, Sanity, Impacted regression, Exploratory, Ad-hoc và UI/UX
 - PASS → `Done`
 - FAILED → `In Progress`
@@ -115,202 +113,18 @@ Sau khi route, bắt đầu action read-only hoặc canonical doctor phù hợp.
 - Không bật `/yolo` ngoài isolated lab được cho phép rõ ràng
 - Không xem `source_available` là tool đã cài hoặc được phép chạy
 
-## Testcase Execution and Playwright POM
+## Progressive disclosure
 
-### Khi nào áp dụng
-- Scaffold dự án Playwright mới
-- Viết test UI / API / Performance
-- Chạy deterministic testcase từ Markdown, Excel, Sheet hoặc `.automation.json`
-- Setup CI cho QA project
+Sau khi route, phải đọc đầy đủ `SKILL.md` đã chọn trước khi hành động và chỉ đọc reference cần cho mode hiện tại
 
-### Không dùng
-- Click exploratory ad-hoc (dùng `dynamic-web-exploratory` thay thế)
-- Debug app production
+- Browser exploratory và browser task đơn giản: `dynamic-testing/web-exploratory/SKILL.md`
+- Deterministic testcase, Excel, Sheet và POM: `dynamic-testing/web-automation/SKILL.md`
+- Tài liệu testcase: `support/testcase-authoring/SKILL.md`
+- Input không phải Markdown: đọc `support/document-conversion/SKILL.md` trước skill phân tích chính
+- Plane, Drive, GitHub và Postman: đọc integration skill tương ứng và chạy doctor trước khi kết luận lỗi runtime
 
-### Phải làm
-- Dùng Page Object Model — không viết `page.locator()` trực tiếp trong spec
-- Tách selector khỏi spec, đặt trong `selectors/`
-- Gắn tag cho test (`@ui`, `@api`, `@functional`)
-- Wire Allure + CI
-- Mặc định dùng `BUILD_AND_RUN`: build POM → traceability PASS → browser run → screenshot/video + same-session trace → `PASS`, `FAILED`, `N/A` hoặc `UNTEST`
-- Không dùng `dynamic-web-exploratory` để chạy lại cùng deterministic testcase suite
+Routing oracle có version nằm tại `config/core-routing-contract.json`. Mọi thay đổi router phải qua `node scripts/core-skill-router.mjs --self-test`
 
-### Nguyên tắc cốt lõi
-> Một manifest, một POM, một browser run và một verdict có evidence
+## Publication
 
-Đọc chi tiết: [`dynamic-testing/web-automation/SKILL.md`](dynamic-testing/web-automation/SKILL.md)
-
-## QA Run
-
-### Khi nào áp dụng
-- Lên kế hoạch / thực thi chu trình QA
-- Chọn kỹ thuật test
-- Chạy sanity / regression
-- Sign-off release
-
-### Không dùng
-- Viết script automation mới (→ `dynamic-web-automation`)
-- Chạy deterministic testcase/Excel/Sheet hoặc POM (→ `dynamic-web-automation`)
-- Tạo test case document (→ `support-testcase-authoring`)
-
-### Phải làm
-- Phân tầng Sanity → Smoke → Regression (không full regression mỗi cycle)
-- Mọi yêu cầu retest ticket tự chạy RETEST_PLUS gồm retest flow gốc, sanity, impacted regression, exploratory, ad-hoc và UI/UX
-- Tối ưu token (scope snapshot, batch fill, deterministic wait)
-- Fallback sang Antigravity nếu Claude Code + Playwright không khả dụng
-- Đọc `qa-knowledge/app-business-guide.md` rồi `<feature>-business-guide.md` trước browser action nếu có
-- Sau mọi run, ghi và validate business guide bằng `scripts/writers/write-business-guide.mjs`
-- Dùng `APP_BASELINE_DISCOVERY` khi khám phá tổng thể hoặc bootstrap app; ghi `coverage_map`; không chạy lại full-app baseline trong retest
-
-### Senior QA operating layer
-- Khi lập kế hoạch, release gate, triage, RCA, metrics hoặc post-release verification, đọc `dynamic-testing/web-exploratory/references/SENIOR-QA-OPERATING-MODEL.md`
-- Mọi cycle phải ghi scope/risk, build/environment/data readiness, entry/exit criteria, executed/blocked counts, evidence completeness, defect decision và owner post-release khi áp dụng
-- Dùng `dynamic-testing/web-exploratory/references/RELEASE-QUALITY-METRICS.md` để giữ numerator/denominator, source run ID và limitation; không dùng test count thay cho risk coverage
-- Defect phải phân biệt severity/priority, giữ actual/expected/evidence/repro và ghi root-cause/prevention cho defect escaped hoặc reopened
-
-### Nguyên tắc cốt lõi
-> Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
-
-Đọc chi tiết: [`dynamic-testing/web-exploratory/SKILL.md`](dynamic-testing/web-exploratory/SKILL.md)
-
-## Automation quality gates
-
-- Đọc `dynamic-testing/web-automation/references/AUTOMATION-QUALITY-GATES.md` và `FLAKY-TEST-MANAGEMENT.md` trước khi tạo CI automation
-- Retry-pass phải được phân loại `flaky`, giữ first-attempt và retry evidence, không tự biến thành PASS sạch
-- CI phải kiểm tra compile/lint, placeholder/secret, failed test, flaky rate, evidence, duration, declared coverage và supported browser matrix
-- Dùng component/contract/API ở lower test level; UI chỉ giữ critical business journeys; service virtualization phải có ít nhất một real-dependency check
-- Visual baseline phải gắn commit/browser/viewport/locale/theme; axe không thay thế keyboard/focus/manual evidence
-
-## Test Case Template
-
-### Khi nào áp dụng
-- Sinh test case document (Excel / CSV / MD)
-- Cần cột nhất quán + key dùng chung
-- Sinh testcase API khi user yêu cầu rõ viết testcase API hoặc viết testcase cho endpoint, OpenAPI/Swagger, Postman hay curl
-
-### Không dùng
-- Ghi chú exploratory
-- Viết bug report
-
-### Phải làm
-- Dùng schema cột cố định (xem template `assets/Template.xlsx`)
-- Key dùng chung giữa 3 skill (config từ `../config/api_keys.json`)
-- Cleanup output tự động trước khi giao
-- Không đặt dấu `.` cuối nội dung testcase và không chèn emoji/icon
-- Giữ flow hiện tại làm mặc định; chỉ đọc `references/api-testcases.md` và tạo object `api` khi user yêu cầu viết testcase API rõ ràng; chỉ nhắc tới artifact API thì không đổi mode
-- Với API file, luôn chạy `scripts/import-api-spec.py`; chỉ chạy Excel khi `review_required` trống
-- Generator phải tạo testcase Markdown đầy đủ trước Excel; lần sau đọc Markdown thay vì parse Excel
-
-### Nguyên tắc cốt lõi
-> Cùng một bộ cột — không sáng tạo cột mới.
-
-Đọc chi tiết: [`support/testcase-authoring/SKILL.md`](support/testcase-authoring/SKILL.md)
-
-## Doc to MD
-
-### Khi nào áp dụng
-- Convert PDF / DOCX / PPTX / HTML sang Markdown
-- Để nạp vào skill khác (support-testcase-authoring, dynamic-web-exploratory)
-
-### Không dùng
-- Edit file Markdown có sẵn
-- Scrape trang web
-
-### Phải làm
-- Giữ cấu trúc heading / bảng
-- Dùng tool convert phù hợp với từng format (MarkItDown)
-- Trên macOS: dùng `--only-binary=:all:` để tránh build cryptography wheel
-
-### Nguyên tắc cốt lõi
-> Convert đúng cấu trúc — không retype thủ công từ PDF.
-
-Đọc chi tiết: [`support/document-conversion/SKILL.md`](support/document-conversion/SKILL.md)
-
-## Business Analysis
-
-### Khi nào áp dụng
-- Đọc BRD/SRS/FRS hoặc business document để dựng flow hệ thống
-- Tạo file XMind editable và Q&A Markdown/Excel
-- Tìm ambiguity, contradiction, missing rule hoặc expected result khó kiểm thử
-
-### Phải làm
-- Chạy `support-document-conversion` trước nếu nguồn chưa là Markdown
-- Review đủ 18 vùng trong senior fullstack QA/QC checklist
-- Tạo một analysis JSON rồi chạy `static-testing/requirements-analysis/scripts/generate.sh`
-- Read-back `.xmind`, Q&A Markdown và Q&A Excel trước khi bàn giao
-
-Đọc chi tiết: [`static-testing/requirements-analysis/SKILL.md`](static-testing/requirements-analysis/SKILL.md)
-
-## Pentest Run
-
-### Khi nào áp dụng
-- Pentest hoặc bug bounty có ủy quyền rõ ràng
-- Recon, kiểm tra phân quyền, injection, race condition hoặc container security
-- Phân tích Burp traffic hoặc binary được cung cấp
-
-### Phải làm
-- Tạo hoặc đọc `.pentest/engagement.md`
-- Chạy `dynamic-testing/security-pentest/scripts/doctor.sh` trước request mạng
-- Phân biệt source `source_available` với executable `available`
-- Bắt đầu từ passive hoặc low-impact discovery
-- Xin duyệt ngay trước state-changing, exploit validation, concurrency hoặc high-volume action
-- Chỉ xác nhận finding khi có evidence tái hiện và control comparison
-
-Đọc chi tiết: [`dynamic-testing/security-pentest/SKILL.md`](dynamic-testing/security-pentest/SKILL.md)
-
-## Plane QA
-
-### Khi nào áp dụng
-- Đọc hoặc CRUD ticket Plane ở một hay nhiều workspace
-- Log bug theo format chuẩn, comment PASS/FAILED/BLOCKED và upload evidence inline
-- Viết daily report hoặc test report trên Plane
-- Đổi trạng thái và đính evidence theo kết quả retest
-
-### Phải làm
-- Parse workspace/project/ticket từ URL trước khi dùng cấu hình mặc định
-- Chạy `scripts/doctor.sh` trước live read/write
-- Dùng `post-result.py` cho PASS/FAILED/BLOCKED rồi read-back comment và state
-- Dùng `browser-inline-evidence.mjs` với placeholder chính xác cho Description hoặc Comment có ảnh; không tự chế cách đặt con trỏ editor
-- Giữ `Attachments 0` và fail nếu có request `/issue-attachments/`
-- Credential chỉ nằm trong `.env` ignored; bản publish dùng `PLANE_LOCAL_CONFIG_DIR` rõ ràng để trỏ tới một config local dùng chung, không copy secret
-- PASS → `Done`; FAILED → `In Progress`; BLOCKED giữ nguyên; bug mới → `Todo`
-- API dùng Personal API Key; password chỉ dùng cho browser auto-login đã được user cho phép và không bao giờ in ra
-
-Đọc chi tiết: [`integration/plane/SKILL.md`](integration/plane/SKILL.md)
-
-## Google Drive QA
-
-### Khi nào áp dụng
-- CRUD file/folder Drive, Docs, Sheets, Slides hoặc permissions
-- Đọc, lưu hoặc archive report/evidence QA trên Google Drive
-- Khôi phục luồng khi OAuth/MCP hết quyền hoặc không được load
-
-### Phải làm
-- Ưu tiên `google-drive` MCP và native tool theo loại file
-- Resolve chính xác file/folder trước write; xác nhận thao tác destructive theo `references/CRUD.md`
-- Read-back ID, name, parent/location và changed content/permission sau write
-- Không dùng web search thay cho private Drive
-- Không commit OAuth client secret, access token hoặc refresh token
-
-Đọc chi tiết: [`integration/google-drive/SKILL.md`](integration/google-drive/SKILL.md)
-
-## GitHub MCP QA
-
-### Khi nào áp dụng
-- Cài hoặc chẩn đoán GitHub MCP cho Antigravity
-- Quản lý repository, PR, Issues hoặc Actions CI/CD qua GitHub API
-- Đổi account MCP cá nhân/công ty mà vẫn giữ Git SSH riêng
-
-### Phải làm
-- Dùng endpoint chính chủ `https://api.githubcopilot.com/mcp/x/all`
-- Không commit OAuth credential hoặc PAT
-- Phân biệt Git SSH với MCP OAuth/PAT
-- Xác nhận account, repository và branch trước write; read-back sau mutation
-
-Đọc chi tiết: [`integration/github/SKILL.md`](integration/github/SKILL.md)
-
-## Cài đặt & cấu hình chung
-
-- **API key**: 1 file config chung `config/api_keys.json` (gitignored) cho helper AI. Plane và Drive dùng environment/MCP credential riêng; không commit secret. Xem [`README.md`](README.md) mục "API Keys" và `scripts/ai_provider.py`.
-- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git` rồi chạy `./scripts/setup.sh --agent=antigravity --yes`
-- **Setup chi tiết**: xem [`SETUP-GUIDE.md`](SETUP-GUIDE.md).
+Tên skill cài đặt chuẩn lấy từ `config/skill-registry.json`. Setup phải chuyển legacy alias đang active vào backup có timestamp, cài đúng một canonical copy và verify source parity

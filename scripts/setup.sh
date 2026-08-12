@@ -132,11 +132,20 @@ else
 fi
 
 # ==== Step 5: Copy skills ====
-retire_legacy_skills
+LEGACY_MIGRATION_SKILLS=("${SKILLS[@]}")
+if [[ -z "$ONLY_SKILLS" ]]; then
+  # A profile install is also a taxonomy migration. Retire every old public
+  # alias so core/full discovery cannot contain stale duplicate skill bodies.
+  LEGACY_MIGRATION_SKILLS=("${FULL_SKILLS[@]}")
+fi
+retire_legacy_skills "${LEGACY_MIGRATION_SKILLS[@]}"
 sync_profile_visibility "$PROFILE" "$ONLY_SKILLS"
 log_step "Copying ${#SKILLS[@]} QA skills"
 for skill in "${SKILLS[@]}"; do
-  copy_skill "$skill" || log_warn "Skill $skill bị skip hoặc fail"
+  if ! copy_skill "$skill"; then
+    log_err "Skill $skill không được cài đầy đủ"
+    exit 1
+  fi
 done
 
 # ==== Step 6: Install Node deps ====

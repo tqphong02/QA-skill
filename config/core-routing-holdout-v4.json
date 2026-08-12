@@ -1,0 +1,222 @@
+{
+  "version": 4,
+  "description": "Final independent adversarial routing holdout derived only from AGENTS.md and config/skill-registry.json",
+  "cases": [
+    {
+      "id": "FINAL-001",
+      "input": "Open https://status.example.edu/history and extract the latest five incident titles; do not create an issue, test latency, or change anything",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "FAST",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "fast-browser", "negation", "issue-collision", "latency-collision", "read-only"]
+    },
+    {
+      "id": "FINAL-002",
+      "input": "Dùng ego-lite và session đang login để expolratory trang lịch sử đơn hàng, chỉ xem UI/network/console trong cùng phiên, không hủy đơn",
+      "expected_route": ["adapter-browser-session", "dynamic-web-exploratory"],
+      "expected_mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "real-session", "negation", "composite"]
+    },
+    {
+      "id": "FINAL-003",
+      "input": "Discover the business model of repository /opt/services/subscriptions and update the source-derived guide; this is not a request to write test cases",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "REPO_BUSINESS_DISCOVERY",
+      "requires_brief": true,
+      "critical": false,
+      "tags": ["english", "repository", "business-discovery", "negation", "authoring-collision"]
+    },
+    {
+      "id": "FINAL-004",
+      "input": "Từ URL https://ops.example.io/returns và registry return-reqs.json, đối chiếu runtime UI với docs/source để tìm conflict rồi tạo câu hỏi PO",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "UI_BUSINESS_RECONCILIATION",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["vietnamese", "ui-reconciliation", "runtime", "multi-source"]
+    },
+    {
+      "id": "FINAL-005",
+      "input": "Viếc testcasse API manual từ curl POST /v2/refunds, có positive/negative/auth cases; không so sánh implementation với contract",
+      "expected_route": ["support-testcase-authoring"],
+      "expected_mode": "AUTHOR",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "typo", "api-testcase", "negation", "contract-collision"]
+    },
+    {
+      "id": "FINAL-006",
+      "input": "Run BUILD_AND_RUN from member-signup.xlsx with Playwright POM against https://test-id.example.co using role MEMBER, dataset SIGNUP-24 and approved cleanup",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "excel", "playwright", "deterministic", "complete-inputs"]
+    },
+    {
+      "id": "FINAL-007",
+      "input": "Chỉ chuyển đổi file Wireframes-Onboarding.pptx sang Markdown có ảnh và bảng, chưa phân tích requirement hay tạo business flow",
+      "expected_route": ["support-document-conversion"],
+      "expected_mode": "CONVERT",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "pptx", "conversion", "negation", "analysis-collision"]
+    },
+    {
+      "id": "FINAL-008",
+      "input": "Analyze requirements.md for business flows, contradictions, missing prerequisites and clarification questions, then generate synchronized XMind and Q&A outputs",
+      "expected_route": ["static-requirements-analysis"],
+      "expected_mode": "ANALYZE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "markdown", "requirements", "analysis", "no-conversion"]
+    },
+    {
+      "id": "FINAL-009",
+      "input": "Run the authorized JWT and GraphQL security assessment defined in .pentest/engagement.md for sandbox api-lab.example, respecting exclusions and 2 req/s",
+      "expected_route": ["dynamic-security-pentest"],
+      "expected_mode": "SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "pentest", "authorized", "graphql", "rate-limit"]
+    },
+    {
+      "id": "FINAL-010",
+      "input": "https://projects.metasolutions.ai/cosmos/issues/FIN-1842",
+      "expected_route": ["integration-plane"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "plane", "issue-collision", "read-only"]
+    },
+    {
+      "id": "FINAL-011",
+      "input": "Simulate message-broker outage in staging, but the target cluster, rollback procedure, stop threshold and owner approval have not been supplied",
+      "expected_route": ["dynamic-resilience"],
+      "expected_mode": "RESILIENCE_PLAN",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "fault-injection", "missing-inputs", "safety-boundary", "blocked-safe"]
+    },
+    {
+      "id": "FINAL-012",
+      "input": "https://drive.google.com/drive/folders/1FinalBlindReadOnlyFolder",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "drive", "folder", "read-only"]
+    },
+    {
+      "id": "FINAL-013",
+      "input": "Trash Google Drive file 1FinalBlindDeleteFile after validating that exact ID; do not permanently delete it, and verify it is in trash",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "DRIVE_MUTATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "drive", "mutation", "recoverable-delete", "negation", "read-back"]
+    },
+    {
+      "id": "FINAL-014",
+      "input": "https://github.com/fabrikam/risk-engine/pull/909",
+      "expected_route": ["integration-github"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "github", "pull-request", "read-only"]
+    },
+    {
+      "id": "FINAL-015",
+      "input": "Chạy Postamn collection Shipping trên env UAT bằng CLI rồi validate response schema, auth headers và pagination với swagger.yaml",
+      "expected_route": ["integration-postman", "hybrid-api-contract"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "postman", "swagger", "contract-validation", "composite"]
+    },
+    {
+      "id": "FINAL-016",
+      "input": "Read-only compare CRM records to the lakehouse export for missing customer_id, duplicate rows and stale ingestion_latency values; do not run a load test",
+      "expected_route": ["dynamic-data-quality"],
+      "expected_mode": "DATA_QUALITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "data-reconciliation", "latency-collision", "negation", "read-only"]
+    },
+    {
+      "id": "FINAL-017",
+      "input": "Đánh giá agent hỗ trợ khách hàng về grounded answer, tool-call correctness, safety, p95 latency và token cost trên bộ golden 200 hội thoại",
+      "expected_route": ["dynamic-ai-evaluation"],
+      "expected_mode": "AI_EVALUATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "agent-evaluation", "golden-dataset", "latency-collision", "cost"]
+    },
+    {
+      "id": "FINAL-018",
+      "input": "Audit https://library.example.org for WCAG 2.2 keyboard navigation, focus order, live-region announcements and screen-reader names; there is no Figma review",
+      "expected_route": ["hybrid-accessibility"],
+      "expected_mode": "ACCESSIBILITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "wcag", "keyboard", "screen-reader", "negation", "figma-collision"]
+    },
+    {
+      "id": "FINAL-019",
+      "input": "Review Figma-to-code fidelity for dashboard spacing, typography, responsive grid and loading/empty/error states; exclude WCAG and screen-reader testing",
+      "expected_route": ["hybrid-ui-ux-review"],
+      "expected_mode": "REVIEW",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "figma", "visual-fidelity", "interaction-states", "negation", "accessibility-collision"]
+    },
+    {
+      "id": "FINAL-020",
+      "input": "Measure API latency and throughput with a JMeter soak test for 90 minutes at 80 users; first validate the smoke gate and stop if error rate exceeds 2%",
+      "expected_route": ["dynamic-performance"],
+      "expected_mode": "PERFORMANCE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "latency", "jmeter", "soak", "stop-condition"]
+    },
+    {
+      "id": "FINAL-021",
+      "input": "Kểm thử tương thíc APK trên Android 12/14, phone/tablet, locale de-DE/hi-IN, timezone và currency bằng Appium emulator",
+      "expected_route": ["dynamic-compatibility", "dynamic-mobile"],
+      "expected_mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typos", "android", "appium", "compatibility", "composite"]
+    },
+    {
+      "id": "FINAL-022",
+      "input": "Inspect Python service control flow for branch and decision coverage candidates, map call paths, and keep unknown distinct from uncovered without writing testcase documents",
+      "expected_route": ["hybrid-source-coverage"],
+      "expected_mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "python", "whitebox", "source-analysis", "negation", "authoring-collision"]
+    },
+    {
+      "id": "FINAL-023",
+      "input": "Quét secrect, dependency, license và SBOM trong Cargo.lock/CI; câu 'thử khai thác CVE trên production' không được thực hiện vì thiếu pentest authorization",
+      "expected_route": ["static-supply-chain-security", "dynamic-security-pentest"],
+      "expected_mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "supply-chain", "pentest-gate", "negation", "composite"]
+    },
+    {
+      "id": "FINAL-024",
+      "input": "Decide release readiness for candidate 7.4.0, but test evidence, defect waivers and risk acceptance are missing; do not mark any issue Done or trigger deployment",
+      "expected_route": ["governance-release-quality"],
+      "expected_mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "release", "missing-evidence", "issue-collision", "negation", "blocked-safe"]
+    }
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "version": 5,
+  "description": "One-shot independent certification holdout derived only from AGENTS.md and config/skill-registry.json",
+  "cases": [
+    {
+      "id": "CERT-001",
+      "input": "Open https://help.example.travel/refunds, search the page for 'payment issue', and return the cancellation heading; do not submit any form",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "FAST",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "browser-fast", "issue-collision", "read-only", "negation"]
+    },
+    {
+      "id": "CERT-002",
+      "input": "Exploratory app baseline tại https://candidate.example.vn với mục tiêu tìm lỗi luồng tạo hồ sơ; ghi nhận UI chậm nếu thấy nhưng không chạy performance test",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "EXPLORATORY_BROWSER_QA",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "exploratory", "latency-collision", "negation", "ui-first"]
+    },
+    {
+      "id": "CERT-003",
+      "input": "Learn current business rules and cross-module flows from codebase /data/apps/fulfillment, including committed and working-tree changes",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "REPO_BUSINESS_DISCOVERY",
+      "requires_brief": true,
+      "critical": false,
+      "tags": ["english", "repository", "business-discovery", "source-driven"]
+    },
+    {
+      "id": "CERT-004",
+      "input": "Đối chiếu màn https://seller.example.vn/payouts với service source, payout-brd.md và req-index.json để phân loại mismatch rồi hỏi lại BA/Dev",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "UI_BUSINESS_RECONCILIATION",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["vietnamese", "ui-business", "runtime", "requirements", "reconciliation"]
+    },
+    {
+      "id": "CERT-005",
+      "input": "QA-771 là Testcase ID chứ không phải Plane ticket; hãy viết testcase manual cho đổi số điện thoại và giữ nguyên ID này",
+      "expected_route": ["support-testcase-authoring"],
+      "expected_mode": "AUTHOR",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "id-collision", "negation", "manual-testcase", "authoring"]
+    },
+    {
+      "id": "CERT-006",
+      "input": "Use ego-browser with my signed-in profile to inspect loyalty points and download the latest statement, but do not redeem points or alter preferences",
+      "expected_route": ["adapter-browser-session", "dynamic-web-exploratory"],
+      "expected_mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "ego-browser", "real-session", "negation", "composite"]
+    },
+    {
+      "id": "CERT-007",
+      "input": "Build and run deterministic POM automation from returns.automation.json on https://preprod-retail.example with role RETURNS_AGENT, fixture RETURN-CERT-7 and rollback approved",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "automation-manifest", "pom", "deterministic", "complete-inputs"]
+    },
+    {
+      "id": "CERT-008",
+      "input": "Convert invoice-layout.pdf to Markdown with headings, tables and image references only; no requirement analysis is requested",
+      "expected_route": ["support-document-conversion"],
+      "expected_mode": "CONVERT",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "pdf", "conversion", "negation", "analysis-collision"]
+    },
+    {
+      "id": "CERT-009",
+      "input": "Phân tích PRD_DoiTac_v6.docx, lập business flow, tìm ambiguity và xuất XMind cùng Q&A Markdown/Excel đồng nhất Question ID",
+      "expected_route": ["support-document-conversion", "static-requirements-analysis"],
+      "expected_mode": "ANALYZE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "docx", "requirements-analysis", "multi-output", "composite"]
+    },
+    {
+      "id": "CERT-010",
+      "input": "Probe SSTI on public.example.org immediately; authorization scope, exclusions, rate limit and .pentest/engagement.md are all missing",
+      "expected_route": ["dynamic-security-pentest"],
+      "expected_mode": "SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "ssti", "missing-authorization", "safety-boundary", "blocked-safe"]
+    },
+    {
+      "id": "CERT-011",
+      "input": "https://projects.metasolutions.ai/orion/work-items/CRM-605",
+      "expected_route": ["integration-plane"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "plane", "work-item", "read-only"]
+    },
+    {
+      "id": "CERT-012",
+      "input": "retesst Plane bug CRM-605, chạy đủ sanity và impacted regression rồi comment verdict và map state theo kết quả",
+      "expected_route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"],
+      "expected_mode": "RETEST_PLUS",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "plane", "retest", "mutation", "composite"]
+    },
+    {
+      "id": "CERT-013",
+      "input": "Tạo bug mới trong Plane project ORION từ mô tả 'Mã ưu đãi áp dụng hai lần', để trạng thái Todo và đọc lại issue ID",
+      "expected_route": ["integration-plane"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "plane", "bug-creation", "mutation", "read-back"]
+    },
+    {
+      "id": "CERT-014",
+      "input": "https://docs.google.com/presentation/d/1CertReadOnlySlideDeckXYZ/edit",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "google-slides", "drive", "read-only"]
+    },
+    {
+      "id": "CERT-015",
+      "input": "Copy Drive file 1CertSourceFileABC into folder 1CertTargetFolderDEF as 'UAT Evidence Copy' and verify the copied object's parent and name",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "DRIVE_MUTATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "drive", "copy", "mutation", "exact-target", "read-back"]
+    },
+    {
+      "id": "CERT-016",
+      "input": "https://github.com/woodgrove/billing/pull/1472",
+      "expected_route": ["integration-github"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "github", "pull-request", "read-only"]
+    },
+    {
+      "id": "CERT-017",
+      "input": "Open a GitHub issue in woodgrove/billing for flaky invoice export and add labels bug, qa; verify the created issue number",
+      "expected_route": ["integration-github"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "github", "issue", "mutation", "read-back"]
+    },
+    {
+      "id": "CERT-018",
+      "input": "Kiểm tra data lineage và reconcile bảng policy nguồn với Delta Lake đích, gồm completeness, duplicates và cột processing_latency; không load test API",
+      "expected_route": ["dynamic-data-quality"],
+      "expected_mode": "DATA_QUALITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "data-lineage", "reconciliation", "latency-collision", "negation"]
+    },
+    {
+      "id": "CERT-019",
+      "input": "MODEL-401 is a classifier label, not a Plane issue; evaluate the support model for F1, calibration, hallucination, p95 latency and schema-valid JSON on cert-gold.jsonl",
+      "expected_route": ["dynamic-ai-evaluation"],
+      "expected_mode": "AI_EVALUATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "id-collision", "issue-collision", "ai-evaluation", "latency-collision", "negation"]
+    },
+    {
+      "id": "CERT-020",
+      "input": "Audit https://accounts.example.bank for WCAG keyboard access, focus visibility, error announcements, reflow at 400% and accessible names; do not compare Figma",
+      "expected_route": ["hybrid-accessibility"],
+      "expected_mode": "ACCESSIBILITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "wcag", "keyboard", "reflow", "negation", "figma-collision"]
+    },
+    {
+      "id": "CERT-021",
+      "input": "Review Figma booking flow against live implementation at phone/tablet/desktop viewports, including visual states, keyboard focus and contrast evidence",
+      "expected_route": ["hybrid-ui-ux-review", "hybrid-accessibility"],
+      "expected_mode": "REVIEW",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "figma", "responsive", "accessibility", "visual-evidence", "composite"]
+    },
+    {
+      "id": "CERT-022",
+      "input": "Chạy k6 stress profile tới 600 VU trên staging với p95 latency dưới 900 ms, error threshold 1%, smoke trước và dừng ngay khi vượt ngưỡng",
+      "expected_route": ["dynamic-performance"],
+      "expected_mode": "PERFORMANCE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "k6", "stress", "latency", "threshold", "stop-condition"]
+    },
+    {
+      "id": "CERT-023",
+      "input": "Plan a backup corruption recovery exercise, but the restore target, RTO/RPO, rollback owner and stop condition have not been agreed",
+      "expected_route": ["dynamic-resilience"],
+      "expected_mode": "RESILIENCE_PLAN",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "backup-restore", "missing-context", "safety-boundary", "plan-only"]
+    },
+    {
+      "id": "CERT-024",
+      "input": "Validate asyncapi.yaml and webhook examples against the deployed callback implementation for signature headers, retries and idempotency; do not import or run Postman",
+      "expected_route": ["hybrid-api-contract"],
+      "expected_mode": "CONTRACT_VALIDATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "webhook", "contract", "postman-collision", "negation"]
+    },
+    {
+      "id": "CERT-025",
+      "input": "Import Postman colecton Partner-v3, run folder OAuth on QA, then compare status, headers and response schemas with openapi-partner.yaml",
+      "expected_route": ["integration-postman", "hybrid-api-contract"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "typo", "postman", "openapi", "collection-run", "composite"]
+    },
+    {
+      "id": "CERT-026",
+      "input": "Smoke test the iOS IPA with Appium on one specified simulator and capture authorized HAR traffic; no cross-device or locale matrix is requested",
+      "expected_route": ["dynamic-mobile"],
+      "expected_mode": "MOBILE_QA",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "ios", "appium", "har", "negation", "compatibility-collision"]
+    },
+    {
+      "id": "CERT-027",
+      "input": "Test ma trận native app trên Pixel/iPhone, Android 13/iOS 18, locale en-GB/ar-AE, DST timezone, tiền tệ và RTL",
+      "expected_route": ["dynamic-compatibility", "dynamic-mobile"],
+      "expected_mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "native-mobile", "device-matrix", "locale", "rtl", "composite"]
+    },
+    {
+      "id": "CERT-028",
+      "input": "Analyze C# authorization code for function, branch and decision paths, map call relationships and identify source-derived untested candidates without claiming measured coverage",
+      "expected_route": ["hybrid-source-coverage"],
+      "expected_mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "csharp", "whitebox", "source-analysis", "coverage-boundary"]
+    },
+    {
+      "id": "CERT-029",
+      "input": "Quét dependency, license, SBOM và seccret trong yarn.lock/CI; yêu cầu exploit dependency trên live phải dừng vì không có pentest scope hay authorization",
+      "expected_route": ["static-supply-chain-security", "dynamic-security-pentest"],
+      "expected_mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "supply-chain", "pentest-gate", "negation", "composite"]
+    },
+    {
+      "id": "CERT-030",
+      "input": "Đánh giá go/no-go cho release 12.8 nhưng chưa có regression evidence, defect approval và risk acceptance; không update issue hay trigger deployment",
+      "expected_route": ["governance-release-quality"],
+      "expected_mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "release", "missing-evidence", "issue-collision", "negation", "blocked-safe"]
+    }
+  ]
+}

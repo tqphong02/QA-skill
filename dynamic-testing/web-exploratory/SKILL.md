@@ -9,7 +9,7 @@ legacy_aliases: qa-run
 
 # QA Run
 
-**Core principle:** Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.
+**Core principle:** Không full regression mỗi cycle
 
 ## Senior QA operating layer
 
@@ -19,16 +19,11 @@ Before execution, establish a versioned plan containing scope, risk, build, envi
 
 Use [references/RELEASE-QUALITY-METRICS.md](references/RELEASE-QUALITY-METRICS.md) when handing aggregated evidence to `governance-release-quality`. Preserve numerator, denominator, source run ID and limitations for every metric
 
-## Optional agentmemory context layer
+## Optional memory
 
-When the agentmemory MCP is available, use `recall` or `memory_smart_search` before optional `prepare-test-intelligence` with the project and feature terms. Treat returned memories as historical context only; for UI-first exploratory work the live UI is the primary oracle, while current source, requirements and a `READY` Business Execution Brief are optional enrichment or route-specific contracts
-
-After a run, use `remember` or `memory_save` only for verified business decisions, unresolved ambiguity, environment/data constraints and pointers to `qa-knowledge/` artifacts. Never save credentials, cookies, tokens, raw response bodies, screenshots, personal data or unverified guesses. If agentmemory is unavailable, continue the normal QA flow and do not mark the run `BLOCKED`
+When agentmemory is available, recall only project/feature context and treat it as historical. Save only verified decisions, constraints and `qa-knowledge/` pointers; never save secrets, raw responses, media, personal data or guesses. Memory is optional and never blocks execution
 
 Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. **Data is fetched based on the working directory** (cwd or `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` are in the tested project folder — DO NOT mutate the skill folder. When loading knowledge, prioritize `qa-knowledge/knowledge-index.json` before reading specific scope files.
-
-> **When to use**: discovering new bugs, verifying bugs, ad-hoc UI/API poking on a web app, sanity/risk-based recurring runs, regression (fixed testcases) placed in the project instance.
-> **API key**: shared from `../config/api_keys.json` (see scripts/ai_provider.py) — NO key needed if using Copilot Pro/Antigravity/Claude Code CLI.
 
 ## Workflow composition router
 
@@ -127,87 +122,38 @@ Load optional references only when their condition occurs:
 - Business-flow intelligence comparison or model-quality measurement is in scope → [references/BUSINESS-INTELLIGENCE-EVAL.md](references/BUSINESS-INTELLIGENCE-EVAL.md)
 - Repository-wide graph, cross-file impact, call-flow diagram or interactive intelligence report is requested → [references/GRAPHIFY-EFFECTIVE-HTML.md](references/GRAPHIFY-EFFECTIVE-HTML.md)
 
-Treat `dynamic-web-exploratory` as one public skill. Never load or expose `vendor/**/SKILL.md`; vendor code is an optional development dependency, not a user-selectable QA skill.
+Never load or expose `vendor/**/SKILL.md`; vendor code is not a public QA skill
 
 ## Cross-model hard gates
 
-Apply the following exact order for all models, especially fast or small-context models:
+Apply this order for every host and model
 
-1. Select the user entrypoint, expand its complete workflow stack, and initialize a ledger row for every required layer before opening the browser. If the route exits to another skill, stop `dynamic-web-exploratory`.
-2. **[BEFORE BROWSER — UI-FIRST DISCOVERY]** Validate the target URL/browser target, allowed domain and testing objective. For `EXPLORATORY_BROWSER_QA` and `EXPLORATORY_ADHOC`, requirements, source code, saved guides, role and test data are optional. Open the page and derive the initial flow from the live UI: entry point, navigation, controls, forms, visible states, validation, feedback and reachable next steps
-   - If optional source/requirements/knowledge exist, `prepare-test-intelligence.mjs` may be run to enrich risk ranking; its absence or `NEEDS_DISCOVERY` status must not stop UI-first exploratory execution
-   - Do not invent a business expectation that is not visible or otherwise provided. When the UI does not expose a clear oracle, record the charter/run as `UNTEST` with the exact missing signal
-   - Use the `business-execution-card.json` and full brief only when they already exist or when source/requirements reconciliation is explicitly requested. They are enrichment and audit context for exploratory work, not a prerequisite
-   - For `RETEST_TICKET`, `SANITY_REGRESSION` and source-driven routes, keep the existing preparation command and READY/NEEDS_DISCOVERY gates
-   - For these contract-driven routes, run `context-builder.mjs`; when the Business Execution Brief is not `READY`, stop normal execution and report the exact missing field
-   - If the repository is available for optional enrichment, pass `--repo`; dirty/staged/untracked source remains candidate context until the browser confirms it
-3. **Initialize Run Manifest** after the target/domain gate:
-   ```bash
-   node scripts/helpers/run-manifest.mjs start \
-     --mode <MODE> \
-     --profile <FAST|EXPLORATORY|FULL> \
-     --business-context <optional-existing-context-json> \
-     --browser-driver <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable> \
-     --browser-observer <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|unavailable> \
-     --network-observer <auto|chrome-devtools-mcp|playwright-mcp|playwright-runtime|ego-browser|unavailable>
-   ```
-   `run-manifest.mjs` records the canonical route as `EXPLORATORY_BROWSER_QA` and the selected `execution_profile`. UI-first `EXPLORATORY_ADHOC` may start without `--business-context`; the runner creates a UI-derived charter. `--mode BROWSER_TASK_FAST` remains an accepted compatibility alias and is normalized to `EXPLORATORY_BROWSER_QA` + `FAST`
-   - `run-manifest.mjs` must reject a contract-driven run whose required READY context is missing or stale
-   When an optional context card exists, it should match the full brief hash; a stale optional card is ignored for UI-first exploratory execution and does not replace live UI observation
-   - `browser-driver` and `network-observer` are resolved **independently**; read [references/BROWSER-DRIVER-RESOLUTION.md](references/BROWSER-DRIVER-RESOLUTION.md) for the full flowchart and combination rules
-   - `EXPLORATORY_BROWSER_QA` (including its `FAST` profile and `EXPLORATORY_ADHOC` alias) and `APP_BASELINE_DISCOVERY` default `browser-driver`, `browser-observer` and `network-observer` to `playwright-runtime`, which uses the bundled Playwright-managed browser and avoids system Chrome
-   - Explicit `--browser-driver auto` (or `QA_BROWSER_DRIVER=auto`) resolves fallback priority: `chrome-devtools-mcp → playwright-mcp → playwright-runtime → ego-browser → antigravity-native → unavailable`
-   - `auto` binds the network observer to the resolved driver first: `chrome-devtools-mcp → playwright-mcp → playwright-runtime → ego-browser → unavailable`; Chrome DevTools is used as a secondary observer only after same-page/session attach is verified
-   - ego-browser provides basic network events via `drainEvents()` only (no request/response body); mark network assertions `reduced_confidence` when `network-observer: ego-browser`
-   - ego-browser as driver requires macOS; on other platforms resolve to next available driver
-   - Prefer Chrome DevTools tools when Chrome DevTools drives the UI; prefer Playwright tools when Playwright is the fallback driver; a cross-tool observer is valid only after attachment to that exact page/session is verified
-   - Never use an isolated Chrome DevTools browser to claim network evidence for an ego-browser or Playwright session, or the reverse
-   - Start observation before the first critical action. After each submit, save, delete, calculation, navigation, upload, retry, permission change, or other business transition, inspect matching XHR/fetch/document requests and console/page errors
-   - Inspect response bodies only for failed or contract-relevant requests, including GraphQL HTTP 200 responses with `errors`; redact secrets and personal data before persistence
-   - If browser observability is unavailable, record the technical layer as unavailable and finish the user-facing run as `UNTEST` when that observer is needed for the requested oracle
-   - For the full `EXPLORATORY_BROWSER_QA` profile, `EXPLORATORY_ADHOC` alias and `APP_BASELINE_DISCOVERY`, start `scripts/helpers/exploratory-runner.mjs` with the same `RUN_ID` after the manifest; use `rule-plan`, `page`, `task-plan`, compact `agent-context`, `decision`, `action`, `task-judge`, `rule-probe`, `coverage`, `charter` and `finish` as the runtime boundary. For unknown paths derive decisions from the latest live observation plus `agent-context`, not the full ledger. Use resolved driver/observer values, not `auto`, before a final `PASS`
-   - For `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST` (human label `BROWSER_TASK_FAST`), do not start `exploratory-runner.mjs` or create a full QA ledger. Use `native-browser-runtime.mjs quick-start [RUN_ID] --url <URL> --objective <TASK> --allowed-domain <ORIGIN>` when the native runtime is selected; it creates the manifest and first live observation and generates a run ID when omitted. Use `batch` only for bounded read-only actions, then `quick-finish` with `PASS|FAILED|N/A|UNTEST`. FAST `PASS` means the task objective completed, not release-quality QA
-   - When MCP drivers are unavailable, start `scripts/helpers/native-browser-runtime.mjs` with the same `RUN_ID`; use compact `observe → agent-context → decision → action → observe → native-action`. Escalate observation detail only on truncation/missing target or oracle. Keep `session_id`, `page_id`, `decision_id`, runtime cursor and media references attached to the ledger. Read [references/NATIVE-BROWSER-RUNTIME.md](references/NATIVE-BROWSER-RUNTIME.md) before non-default session/profile/CDP attach, workers, recovery or troubleshooting
-4. With deterministic testcase, Sheet execution, POM BUILD, RUN or BUILD_AND_RUN, exit `dynamic-web-exploratory` before browser action and route to `dynamic-web-automation`; do not load Sheet/POM contracts here
-5. **[BEFORE TEST — VERIFY intelligence provenance]** The preparation command must resolve `<project-root>/qa-knowledge/knowledge-index.json` and current source artifacts before UI execution:
-   - If index exists: load only the shard(s) matching the feature/ticket scope — DO NOT load the full guide
-   - For the prepared run, read `business-execution-card.json` before any full brief or Markdown; do not load both projections simultaneously
-   - If index missing: read `app-business-guide.md` as fallback; then read `<feature-slug>-business-guide.md` if it exists
-   - Read `permission-matrix.json` (machine-readable, NOT `rbac-matrix.md`) when preparing role-based or security tests
-   - Extract and reuse: routes, roles, state transitions, validation rules, API contracts, side effects, compact business-model nodes/relations/invariants, reusable assets, source file/line and confidence
-   - When source or UI is available only for reading, use it to form candidate oracles and impacted areas; do not mutate code, app data or permissions and do not upgrade a static claim to runtime truth
-   - When a hidden rule is applicable, schedule a safe runtime probe for uniqueness, authorization, side effects and oracle clarity. Every applicable plan entry needs a `safe_strategy`; every `not_applicable` entry needs a reason and applicability basis. If duplicate data, comparison role, before/after read-back or an explicit expected result is unavailable, preserve the claim as `CANDIDATE`, `INCONCLUSIVE` or `UNTEST` at the user-facing result boundary
-   - If guide is older than current sprint or environment has changed: flag fields as `unresolved` and re-verify during test
-   - If NO guide exists at all: run scoped discovery for a retest; use `APP_BASELINE_DISCOVERY` only for an explicit full-app/bootstrap request
-   - If a discovery scanner exits non-zero or a canonical artifact is missing, keep the run `BLOCKED`; do not reuse an older artifact as a fresh oracle
-6. With `RETEST_TICKET` -> read ticket via `integration-plane`, record scoped Business Discovery as the shared foundation, then create the mandatory RETEST_PLUS ledger with all 6 items: **Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX**. Full workflow: [references/RETEST-PLUS.md](references/RETEST-PLUS.md).
-7. Copy the test contract from the `READY` brief. Do not rewrite it from memory or replace missing fields with generic steps.
-8. Run CLI/scripts for clear and repetitive flows; only use browser agent/MCP for interactive branches not yet understood.
-9. Update verdict/evidence into the ledger immediately after each layer; every user-facing result must be `PASS`, `FAILED`, `N/A` or `UNTEST` with a reason when it is not `PASS`
-   - In exploratory mode, create `rule-plan` before browser action. For a natural-language/non-deterministic objective, observe the live page, create `task-plan`, load compact `agent-context`, write one `decision` and link its `decision_id` to the verified action; after every action re-observe, evaluate `state_delta` and update bounded memory. After `COMPLETE`, record `task-judge` for every success signal. Complete applicable `rule-probe`, `coverage` and high-priority `charter` records before finish. A budget stop, missing target/data/authority/oracle or unresolved truncation is `UNTEST`; retry-derived `RECOVERED`/`FLAKY` is not a clean `PASS`
-10. Separate the original ticket verdict from new bugs, then apply the fixed state map via `integration-plane`.
-    Plane state map: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
-11. After every QA run, run `node scripts/analysis/finding-reconciler.mjs --findings evidence/<run-res>.json --permission-matrix <pm.json>` to close the feedback loop, bundle evidence via `scripts/helpers/collect-evidence.mjs`, and finalize via `scripts/helpers/run-manifest.mjs finish <RUN_ID>`. The `FAST` profile finishes with its task result and evidence packet instead
-12. **[AFTER EVERY QA RUN — WRITE knowledge]** Update the business guide before closing the session — this is mandatory for full QA profiles and does not apply to `EXPLORATORY_BROWSER_QA` with `execution_profile: FAST`:
-    ```bash
-    # Step 1: write/merge the knowledge update
-    node scripts/writers/write-business-guide.mjs guide-update.json <project-root>
-    # Step 2: validate the written guide reads back correctly
-    node scripts/writers/write-business-guide.mjs --check <project-root>/qa-knowledge/<feature-slug>-business-guide.md
-    ```
-    Minimum facts to record after each run:
-    - Confirmed happy flow steps (with routes and roles)
-    - Business rules verified or disproved
-    - State transitions observed
-    - API/network contracts confirmed
-    - Known issues found (new or persistent)
-    - Reusable assets (locators, data setups, routes, test accounts)
-    - `latest_run` block: scope, verdict, key notes
-    - Mark any previously `inferred` facts as `verified` if run confirmed them
-13. Complete the senior operating ledger before sign-off: record environment/data readiness, executed versus untested counts, evidence completeness, flaky or infrastructure failures, defect triage decisions, risk coverage, unresolved limitations and the post-release owner when deployment is in scope. Do not report only a browser verdict
-    If guide already exists: set `previous_guide` path and `merge_confirmed: true` in JSON update; do not delete any fact the current run did not touch
+1. Route and scope
+   - Select one entrypoint, expand its stack and create a ledger row for each required layer
+   - If deterministic testcase, Sheet, Excel, POM, BUILD, RUN or BUILD_AND_RUN is requested, exit before browser action and route to `dynamic-web-automation`
+   - Validate the exact target, allowed domain, objective, authority and stop conditions
+2. Resolve the oracle
+   - Full exploratory/ad-hoc and app baseline are UI-first. Start from the live page; requirements, source, guides, role/data and a Business Execution Brief are optional enrichment
+   - Never invent expected behavior. If neither visible UI nor supplied context gives a reliable oracle, return `UNTEST` with the missing signal
+   - Retest, supplied-oracle sanity/regression and source-driven routes run `context-builder.mjs`; normal execution requires a current Business Execution Brief `READY` and must stop on named missing fields
+   - When optional source or knowledge exists, use `prepare-test-intelligence.mjs` only to rank risks. Static evidence remains candidate context until runtime confirmation
+3. Start one observable session
+   - Initialize `run-manifest.mjs` after the target gate with the selected mode/profile and independently resolved browser driver, browser observer and network observer
+   - Default exploratory, FAST and app-baseline execution to `playwright-runtime`; only explicit `auto` enables the documented fallback chain. The host model does not select a different browser
+   - Start network, console and page-error observation before critical actions in the same page/session. Cross-session evidence cannot support `PASS`; missing required observation produces `UNTEST`
+   - For full exploratory and app baseline, start `exploratory-runner.mjs` with the same `RUN_ID`, create `rule-plan`, then use compact observe/agent-context → plan/decision → one action → state delta → replan/complete → independent task judge
+   - For FAST, use `native-browser-runtime.mjs quick-start`, target-scoped `extract`, at most five read-only `batch` actions and `quick-finish`; do not create the full QA ledger. FAST `PASS` proves task completion only
+4. Execute and verify
+   - Record expected/actual/basis, evidence pointer and verdict immediately after each layer. Applicable hidden-rule probes require safe strategies and same-session before/after evidence
+   - RETEST_PLUS always has six distinct rows: Retest, Sanity, Impacted regression, Exploratory, Ad-hoc and UI/UX
+   - A full QA `PASS` requires resolved target/oracle/observer, screenshot or video, applicable rule probes, coverage, complete high-priority charters and a `SATISFIED` independent judge
+   - Timeout, budget stop, unresolved truncation, missing data/role/authority/oracle/evidence, retry-only recovery or flaky behavior cannot become a clean `PASS`
+5. Finish and hand off
+   - Reconcile findings, collect evidence and finish the manifest. Full QA profiles update and validate `qa-knowledge/<feature>-business-guide.md`; FAST does not write business knowledge
+   - Complete the senior operating ledger when planning, release, triage, metrics or post-release ownership is in scope
+   - Keep the exploratory result exactly `PASS`, `FAILED`, `N/A` or `UNTEST`. Plane applies its separate mapping: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
 
-Exploratory result map: `PASS`, `FAILED`, `N/A`, `UNTEST`. Plane state transitions remain integration-specific and must not add a fifth exploratory result value
+Read detailed references only when the matching condition in the workflow router or optional-reference list occurs
 
 ## Knowledge scope decision
 

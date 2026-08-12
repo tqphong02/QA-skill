@@ -7,6 +7,8 @@
     "test": "node scripts/test-suite.mjs",
     "test:skills": "node scripts/skill-readiness-suite.mjs",
     "test:skills:strict-live": "node scripts/skill-readiness-suite.mjs --strict-live",
+    "test:routing": "node scripts/benchmark-core-routing.mjs",
+    "test:routing:certify": "node scripts/benchmark-core-routing.mjs --certification --output evidence/ai-eval/core-routing-certification-latest.json",
     "security:detect": "node dynamic-testing/security-pentest/skills/pentest-security/scripts/detect.mjs",
     "security:preflight": "node dynamic-testing/security-pentest/skills/pentest-security/scripts/preflight.mjs",
     "security:scan": "node dynamic-testing/security-pentest/skills/pentest-security/scripts/run-scan.mjs",

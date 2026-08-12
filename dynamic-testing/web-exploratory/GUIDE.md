@@ -134,8 +134,9 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 ---
 
 ## 🔁 Fallback: Antigravity (nếu hết Claude Code + Playwright)
-Phần lớn asset portable (lib, scripts, methodology). Chỉ đổi "bộ não lái UI":
-- MCP Playwright → **Gemini-in-Chrome** (Antigravity)
+Antigravity/Gemini là host model; browser mặc định vẫn là browser của skill:
+- Antigravity/Gemini → **bundled `playwright-runtime`** từ terminal của project
+- Chỉ dùng **Gemini-in-Chrome** khi truyền explicit `--browser-driver antigravity-native` sau khi Playwright runtime/MCP thực sự unavailable
 - WebFetch → Antigravity web tool / curl
 - Script npm (`node scripts/x.mjs`) → chạy y hệt từ Antigravity terminal
 - Antigravity smoke PASS chỉ hợp lệ sau khi chạy host thật và validate `evidence/antigravity-smoke.json` bằng `scripts/helpers/validate-host-smoke.mjs`

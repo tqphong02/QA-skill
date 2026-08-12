@@ -1,0 +1,168 @@
+{
+  "version": 3,
+  "description": "Third independent blind routing holdout derived only from AGENTS.md and config/skill-registry.json",
+  "cases": [
+    {
+      "id": "FRESH-001",
+      "input": "Dùng ego-browser với phiên đăng nhập hiện tại để mở mục hóa đơn, liệt kê các hóa đơn chưa thanh toán nhưng tuyệt đối không bấm Pay",
+      "expected_route": ["adapter-browser-session", "dynamic-web-exploratory"],
+      "expected_mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "browser-adapter", "real-session", "read-only", "composite"]
+    },
+    {
+      "id": "FRESH-002",
+      "input": "Map business capabilities and end-to-end claim flows from repository /srv/products/claims, including current staged and untracked deltas",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "REPO_BUSINESS_DISCOVERY",
+      "requires_brief": true,
+      "critical": false,
+      "tags": ["english", "repository", "source-driven", "business-discovery"]
+    },
+    {
+      "id": "FRESH-003",
+      "input": "Reconcile trang https://finance.example.net/invoices với backend source và req-catalog.json, chỉ ra UI nào thiếu source_ref và soạn câu hỏi BA",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "UI_BUSINESS_RECONCILIATION",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["multilingual", "runtime-ui", "requirements-registry", "reconciliation"]
+    },
+    {
+      "id": "FRESH-004",
+      "input": "Rà soát file testcases/account-lock.md, sửa reproduce steps thành mỗi bước một hành động và giữ nguyên toàn bộ Scenario ID/Testcase ID",
+      "expected_route": ["support-testcase-authoring"],
+      "expected_mode": "AUTHOR",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "testcase-review", "stable-ids", "authoring"]
+    },
+    {
+      "id": "FRESH-005",
+      "input": "Build and execute the POM suite from checkout.automation.json on https://qa-store.example.net with buyer role and isolated dataset ORDER-FRESH-05",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "automation-manifest", "pom", "deterministic"]
+    },
+    {
+      "id": "FRESH-006",
+      "input": "Convert Tài-liệu-nghiệp-vụ-Hoàn-tiền.docx rồi phân tích prerequisite, related functions, ambiguity và sinh XMind cùng hai file Q&A đồng bộ",
+      "expected_route": ["support-document-conversion", "static-requirements-analysis"],
+      "expected_mode": "ANALYZE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "docx", "requirements-analysis", "composite"]
+    },
+    {
+      "id": "FRESH-007",
+      "input": "Read Plane item REL-992 and use its evidence packet to assess release go/no-go; do not comment, move state, or deploy anything",
+      "expected_route": ["integration-plane", "governance-release-quality"],
+      "expected_mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "plane", "release", "read-only", "composite"]
+    },
+    {
+      "id": "FRESH-008",
+      "input": "Move Google Drive file ID 1FileFreshRouting88 into folder ID 1FolderFreshRouting99 and confirm its new parent after the write",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "DRIVE_MUTATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "drive", "mutation", "exact-target", "read-back"]
+    },
+    {
+      "id": "FRESH-009",
+      "input": "https://github.com/northwind/warehouse/issues/2047",
+      "expected_route": ["integration-github"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "github", "issue", "read-only"]
+    },
+    {
+      "id": "FRESH-010",
+      "input": "Đối soát ETL Kafka sang Snowflake theo batch_id, kiểm tra completeness, uniqueness, lineage và late-arriving records; hiện chưa có source connection",
+      "expected_route": ["dynamic-data-quality"],
+      "expected_mode": "DATA_QUALITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "etl", "reconciliation", "missing-context", "read-only"]
+    },
+    {
+      "id": "FRESH-011",
+      "input": "Evaluate a multilingual ticket classifier for label accuracy, abstention safety, structured JSON reliability, p95 latency and cost using gold-labels-v3.csv",
+      "expected_route": ["dynamic-ai-evaluation"],
+      "expected_mode": "AI_EVALUATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "classification", "golden-dataset", "latency", "cost"]
+    },
+    {
+      "id": "FRESH-012",
+      "input": "Chạy k6 spkie lên 3000 req/s vào production ngay, dù chưa có threshold, stop condition hay phê duyệt của owner",
+      "expected_route": ["dynamic-performance"],
+      "expected_mode": "PERFORMANCE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "k6", "production", "safety-boundary"]
+    },
+    {
+      "id": "FRESH-013",
+      "input": "Draft a database failover and restore validation plan, but RTO, RPO, rollback owner and recovery environment are still unknown",
+      "expected_route": ["dynamic-resilience"],
+      "expected_mode": "RESILIENCE_PLAN",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "failover", "restore", "missing-context", "plan-only"]
+    },
+    {
+      "id": "FRESH-014",
+      "input": "Kểm tra native IPA trên simulator và máy iPhone thật với locale fr-CA, th-TH, DST timezone, text expansion và currency formatting",
+      "expected_route": ["dynamic-compatibility", "dynamic-mobile"],
+      "expected_mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "ios", "locale", "device-matrix", "composite"]
+    },
+    {
+      "id": "FRESH-015",
+      "input": "Compare the Figma modal states with the live component at 200% zoom and audit keyboard trap, focus restoration, labels and contrast",
+      "expected_route": ["hybrid-ui-ux-review", "hybrid-accessibility"],
+      "expected_mode": "REVIEW",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "figma", "zoom", "keyboard", "accessibility", "composite"]
+    },
+    {
+      "id": "FRESH-016",
+      "input": "Set up a Postmn mock for the Partner API, run the collection, and compare GraphQL error and pagination contracts with the published specification",
+      "expected_route": ["integration-postman", "hybrid-api-contract"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "typo", "postman", "graphql", "contract", "composite"]
+    },
+    {
+      "id": "FRESH-017",
+      "input": "Review go.mod and CI for dependency, license, secret and SBOM risk, then attempt an SSRF proof against the live service even though authorization and exclusions are absent",
+      "expected_route": ["static-supply-chain-security", "dynamic-security-pentest"],
+      "expected_mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "supply-chain", "ssrf", "authorization-gate", "composite"]
+    },
+    {
+      "id": "FRESH-018",
+      "input": "Phân tích white-box decision coverage của service Go, xác định nhánh unknown/uncovered rồi viết testcase manual cho các path rủi ro cao",
+      "expected_route": ["hybrid-source-coverage", "support-testcase-authoring"],
+      "expected_mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "go", "whitebox", "testcase-authoring", "composite"]
+    }
+  ]
+}

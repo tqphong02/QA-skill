@@ -60,6 +60,8 @@ python3 scripts/evaluate_jsonl.py cases.jsonl \
   --output evidence/ai-eval.json
 ```
 
+For QA-skill routing changes, run `node scripts/benchmark-core-routing.mjs` for accumulated regression and add `--certification` only for a frozen one-shot holdout that was not used for tuning. Treat its UTF-8/4 instruction count as a deterministic proxy only. A report with `provider_reported.status: NOT_MEASURED` validates routing speed and context bounds but does not certify real model token use, cost or end-to-end latency
+
 ### 4. Run and trace
 
 Capture one record per case containing input ID, configuration version, output, retrieved source IDs, tool calls, latency, tokens, cost, evaluator results, and redacted trace reference. Do not store raw secrets or unrestricted personal data.

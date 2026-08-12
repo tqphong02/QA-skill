@@ -1,7 +1,4 @@
-<!--
-Mirror of ./<skill>/SKILL.md — keep in sync.
-23 skills; use the router below and README.md for the complete list.
--->
+<!-- Compact cross-model router for 23 skills. Detailed contracts live in each matched SKILL.md. -->
 
 # QA-skill — Instructions for AI coding agents
 
@@ -87,7 +84,7 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 11. Live browser dynamic-web-exploratory must observe network, console and page errors in the exact session executing the UI; do not combine evidence from another browser MCP session
 12. Graphify is an optional static discovery provider: do not run installer/hook/AGENTS mutations; default to `--code-only`; retain all normalized project nodes/relations; separate token-limited `contextSlice`; preserve `EXTRACTED`/`INFERRED`/`AMBIGUOUS`; and never promote a relation to business truth, runtime evidence or measured coverage
 13. effective-html only affects companion HTML generated from validated JSON; every interactive companion must use `render-intelligence-html.mjs` with `catalog-v2` layout synchronized with `QA-skill.html`, two-finger pan, pinch/`Ctrl`/`Cmd`+wheel zoom, a route chip highlighting the end-to-end path, hover/active edge-label pills and node-click path highlighting with a detail drawer containing `Làm được gì`, flow information and related paths, then pass `--check`; JSON, Markdown, Excel, XMind and standard evidence remain the sources of truth
-14. For adapter-browser-session, run `node adapter/browser-session/scripts/detect.mjs` first; do not use `drainEvents()` to claim request/response bodies; do not perform destructive actions with a real session without user confirmation; resolve `browser-driver` and `network-observer` independently according to `BROWSER-DRIVER-RESOLUTION.md`. `EXPLORATORY_BROWSER_QA` (including FAST/`BROWSER_TASK_FAST` and `EXPLORATORY_ADHOC`) and `APP_BASELINE_DISCOVERY` default to native `playwright-runtime`; only an explicit `auto` enables Chrome DevTools/Playwright MCP fallback. Native runtime uses `native-browser-runtime.mjs`, AX/CDP in the same session, bounded stale-reference recovery and worker isolation; do not install or call Browser Use
+14. For adapter-browser-session, run `node adapter/browser-session/scripts/detect.mjs` first; do not use `drainEvents()` to claim request/response bodies; do not perform destructive actions with a real session without user confirmation; resolve `browser-driver` and `network-observer` independently according to `BROWSER-DRIVER-RESOLUTION.md`. `EXPLORATORY_BROWSER_QA` (including FAST/`BROWSER_TASK_FAST` and `EXPLORATORY_ADHOC`) and `APP_BASELINE_DISCOVERY` default to native `playwright-runtime`; only an explicit `auto` enables Chrome DevTools/Playwright MCP fallback. Gemini/Antigravity is the host model, not a browser override: invoke the skill's Playwright runtime from the project terminal and use `antigravity-native` only when explicitly selected. Native runtime uses `native-browser-runtime.mjs`, AX/CDP in the same session, bounded stale-reference recovery and worker isolation; do not install or call Browser Use
 15. For `pentest-security` on Antigravity without an API key, run `detect --engine antigravity-host` → `prepare` → let the active host agent complete the exact assignment result → `status` → `finalize`; do not read tokens/keychain, call the Gemini API or claim that the OpenAI `codex-security` CLI is running with Gemini
 16. UI business reconciliation requires a real URL/snapshot and a requirement registry with stable ID/source_ref; fail closed when either is missing, do not use hidden fixtures, and require `--verify-runtime` plus an exact user-approved selector for runtime clicks
 17. UI/UX review must keep design source, requirement, implementation and runtime provenance separate; screenshot/video is mandatory for visual `PASS`
@@ -132,261 +129,18 @@ After routing, start the appropriate read-only action or canonical doctor. Do no
 - Do not enable `/yolo` outside an explicitly permitted isolated lab
 - Do not treat `source_available` as an installed or authorized tool
 
-## Playwright POM Automation
+## Progressive disclosure
 
-### Use when
+After routing, read the matched `SKILL.md` completely before acting. Load only references required by that skill and the selected mode
 
-- Scaffold a new Playwright project
-- Write UI/API/performance tests
-- Execute testcase Markdown/Excel/Sheet or `.automation.json` through Playwright
-- Produce browser evidence and testcase verdicts
-- Set up CI for QA
+- Browser exploratory and simple browser tasks: `dynamic-testing/web-exploratory/SKILL.md`
+- Deterministic testcase, Excel, Sheet and POM execution: `dynamic-testing/web-automation/SKILL.md`
+- Testcase documents: `support/testcase-authoring/SKILL.md`
+- Non-Markdown document input: `support/document-conversion/SKILL.md` before the owning analysis skill
+- Plane, Drive, GitHub and Postman: read the matching integration skill and run its doctor before reporting a runtime failure
 
-### Do not use for
+The versioned high-frequency routing oracle is `config/core-routing-contract.json`. Validate changes with `node scripts/core-skill-router.mjs --self-test`
 
-- Exploratory/ad-hoc clicks (use `dynamic-web-exploratory`)
-- Production-app debugging
+## Publication
 
-### Must do
-
-- Use the Page Object Model; do not write `page.locator()` or `page.getBy*()` directly in specs
-- Separate selectors from specs under `selectors/`
-- Tag tests (`@ui`, `@api`, `@functional`)
-- For testcase-driven work, run a target-scoped `pom-plan` with `--group` or `--testcase-id`; the default batch guard is 20 cases
-- Map every step to `<action><PascalTargetKey>`, preserve value fingerprints and use assertion-kind-compatible matchers
-- Require selector evidence with `captured_at`, same-browser `run_id` and current `app_build`
-- Default testcase workflow is BUILD_AND_RUN: traceability → browser run → screenshot/video + same-session trace → `PASS|FAILED|N/A|UNTEST`
-- Retry-pass is `FAILED`/flaky; missing test, browser target, report, visual or trace is `UNTEST`
-- Sheet module, worker count 1–4 and worker selection require confirmation before execution/write-back
-- Wire Allure and CI only when pipeline/release delivery is in scope
-
-### Core principle
-
-> Every selector must go through a Page Object; do not write `page.locator()` or `page.getBy*()` directly in a spec.
-
-Read [`dynamic-testing/web-automation/SKILL.md`](dynamic-testing/web-automation/SKILL.md)
-
-## QA Run
-
-### Use when
-
-- Plan or execute a QA cycle
-- Select test techniques
-- Run sanity/regression
-- Perform release sign-off
-
-### Do not use for
-
-- Writing new automation scripts (→ `dynamic-web-automation`)
-- Executing deterministic testcase/POM suites (→ `dynamic-web-automation`)
-- Creating testcase documents (→ `support-testcase-authoring`)
-
-### Must do
-
-- Layer Sanity → Smoke → Regression; do not run full regression every cycle
-- Every retest-ticket request automatically runs RETEST_PLUS: original retest flow, sanity, impacted regression, exploratory, ad-hoc and UI/UX
-- Exploratory/ad-hoc browser actions must resolve semantic targets in the same session, prefer accessibility/DOM evidence, adaptive waits and bounded recovery; coordinates or XPath must not be automatically promoted to POM selectors
-- Human-facing reports must begin with a `Role/Data mapping` table and use concrete business-role names; do not display shortened account codes such as `U1`, `U2`, `U3` or `U4`. Keep aliases only in redacted evidence JSON when machine traceability requires them
-- The exploratory runner must record page/action/charter ledgers, enforce numeric action/time budgets and fail-closed `PASS` when a high-priority verdict, resolved observer, screenshot/video or clean retry quality is missing
-- The exploratory runner must block browser actions before a rule plan; applicable probes need `safe_strategy`, `not_applicable` needs a reason and applicability basis; uniqueness needs two attempts, authorization needs the same target with role comparison, side effects need before/after/read-back, and the oracle needs expected/actual/basis with runtime-verified `COMPLETE_FOR_SCOPE` for `PASS`
-- Every critical browser transition must check network, console and page errors in the same session; Playwright MCP uses Playwright tools, and Chrome DevTools MCP is used only when it controls or attaches to the exact tab
-- Every testcase `Pass`/`Fail` needs at least one existing screenshot or video; JSON/trace/network alone is insufficient evidence; append the media reference to Note before write-back
-- Evidence Sheets must use `evidence/sheet/<functional-group>/<YYYY-MM-DD>/<run-id>/worker-<id>/`; plan/result metadata goes to `evidence/sheet/_runs/<YYYY-MM-DD>/<run-id>/`; do not combine media from multiple functions in one folder
-- Optimize token/time through progressive disclosure: execution card, compact `observe` + `agent-context`, target-scoped extract, escalation to `standard/full` only when truncation hides target/oracle, context-budget telemetry, stat-fast cache, change-impact incremental mode, `run-mode auto|fast|scoped|deep` and adaptive same-session waits; never cut oracle/observer/evidence/verdict gates
-- Record provider-reported usage separately through `record-model-usage.mjs`/`QA_TOKEN_USAGE_FILE`; measure business-flow intelligence with a golden dataset, not test count
-- Fall back to Antigravity when Claude Code + Playwright is unavailable
-- Antigravity can PASS only after live same-session smoke and `validate-host-smoke.mjs`; missing evidence is `BLOCKED`
-- Read `qa-knowledge/<feature>-business-guide.md` before browser action when present
-- After every run, write and validate the business guide through `scripts/writers/write-business-guide.mjs`
-- For total exploration or app bootstrap, create `qa-knowledge/app-business-guide.md` with a module coverage map; retests do not repeat full-app baseline
-- When REPO_BUSINESS_DISCOVERY needs a cross-file graph, use `graphify-adapter.mjs` through the orchestrator with `--graphify auto|required|off`; never call `graphify codex install` or `graphify hook install`
-- When the user requests an HTML report/diagram, run `render-intelligence-html.mjs` only after canonical JSON validation and keep HTML as a companion output
-- `prepare-test-intelligence.mjs` must use cache when source inventory and invocation fingerprint are unchanged; stale/missing source must escalate and must not silently reuse an old oracle
-- `repo-business-discovery.mjs` may run independent scanners in parallel (`--parallel auto|on|off`) but must keep the reconciliation barrier, record timing/change-impact telemetry, never skip a dirty tree merely because `HEAD` is unchanged and fail closed on scanner/artifact errors
-- Adaptive wait may replace fixed sleep only with bounded document/XHR/fetch quiet-state; timeout is not PASS and must not remove same-session network/console/page-error/evidence gates
-
-### Senior QA operating layer
-
-- For planning, release gates, triage, RCA, metrics or post-release verification, read `dynamic-testing/web-exploratory/references/SENIOR-QA-OPERATING-MODEL.md`
-- Every cycle must record scope/risk, build/environment/data readiness, entry/exit criteria, executed versus blocked counts, evidence completeness, defect decision and post-release owner when applicable
-- Use `dynamic-testing/web-exploratory/references/RELEASE-QUALITY-METRICS.md` to preserve numerator/denominator, source run ID and limitations; do not use test count as risk coverage
-- Defects must distinguish severity/priority, retain actual/expected/evidence/repro and record root-cause/prevention for escaped or reopened defects
-
-### Core principle
-
-> Run the right scope at the right time — do not run full regression every cycle.
-
-Read [`dynamic-testing/web-exploratory/SKILL.md`](dynamic-testing/web-exploratory/SKILL.md)
-
-## Automation quality gates
-
-- Read `dynamic-testing/web-automation/references/AUTOMATION-QUALITY-GATES.md` and `FLAKY-TEST-MANAGEMENT.md` before creating CI automation
-- After generating POM, create a bounded deterministic plan from `.automation.json`, then run `scripts/verify-testcase-traceability.mjs` with Markdown plus manifest and current `--app-build`; archive `reports/testcase-automation-traceability.json` with source hash, action/value/assertion/RBAC markers, TestCase ID mapping, fresh selector evidence and staged token measurement
-- Unified POM BUILD_AND_RUN owns deterministic browser execution and verdict; it must not reconstruct testcase flow when the shared manifest exists
-- The fixed POM locator priority is `data-testid → id → stable CSS → role/label/placeholder/text → XPath`; use `data-testid` only when present in FE source/contract or verified live DOM; do not insert test IDs into the app
-- The skill repository keeps only reusable templates (`.env.example`, `fixtures/`, `test-data/`); project `.env`, credentials, auth state, live evidence and testcase/runtime data belong in the scaffolded automation project
-- Classify retry-pass as `flaky`, preserve first-attempt and retry evidence, and never turn it into a clean PASS automatically
-- CI must check compile/lint, placeholder/secret, failed test, flaky rate, evidence, duration, declared coverage and supported browser matrix
-- Use component/contract/API at lower levels; UI should contain only critical business journeys; service virtualization must include at least one real-dependency check
-- Visual baselines must include commit/browser/viewport/locale/theme; axe does not replace keyboard/focus/manual evidence
-
-## Test Case Template
-
-### Use when
-
-- Generate testcase documents (Excel / CSV / MD)
-- Consistent columns and shared keys are required
-- Explicitly generate API testcases for an endpoint, OpenAPI/Swagger, Postman or curl
-
-### Do not use for
-
-- Exploratory notes
-- Bug reports
-
-### Must do
-
-- Use the fixed column schema (see `assets/Template.xlsx`)
-- Share keys across the three skills (config from `../config/api_keys.json`)
-- Clean output automatically before handoff
-- Do not end testcase content with `.` or add emoji/icons
-- Keep the current flow as default; read `references/api-testcases.md` and create an `api` object only when the user explicitly requests API testcase writing; merely mentioning an API artifact does not change mode
-- Always run `scripts/import-api-spec.py` for API files; run Excel only when `review_required` is empty
-- Markdown trước Excel remains mandatory: generate complete Markdown first, then the lossless `.automation.json`, then Excel; use the manifest for unified POM BUILD_AND_RUN and Markdown for human/AI reading
-- New executable cases require a non-empty requirements registry, stable Scenario ID/Name, one matching AC per scenario, a valid type and `bb_technique`
-- Reuse genuinely identical flows through `execution_templates` plus `execution_ref`/`execution_overrides`; do not duplicate full entry/steps across cases
-
-### Core principle
-
-> Use one column set — do not invent new columns.
-
-Read [`support/testcase-authoring/SKILL.md`](support/testcase-authoring/SKILL.md)
-
-## Doc to MD
-
-### Use when
-
-- Convert PDF / DOCX / PPTX / HTML to Markdown
-- Feed converted content to another skill such as `support-testcase-authoring` or `dynamic-web-exploratory`
-
-### Do not use for
-
-- Editing an existing Markdown file
-- Scraping a web page
-
-### Must do
-
-- Preserve heading/table structure
-- Use the correct converter for each file type (MarkItDown)
-- On macOS, use `--only-binary=:all:` to avoid building the cryptography wheel
-
-### Core principle
-
-> Convert structure correctly — do not retype from a PDF.
-
-Read [`support/document-conversion/SKILL.md`](support/document-conversion/SKILL.md)
-
-## Business Analysis
-
-### Use when
-
-- Read BRD/SRS/FRS or business documents to model system flows
-- Create editable XMind and Q&A Markdown/Excel
-- Find ambiguity, contradiction, missing rules or hard-to-test expected results
-
-### Must do
-
-- Run `support-document-conversion` first when the source is not Markdown
-- Review all 18 areas in the senior fullstack QA/QC checklist
-- Create one analysis JSON and run `static-testing/requirements-analysis/scripts/generate.sh`
-- Read back `.xmind`, Q&A Markdown and Q&A Excel before handoff
-- If `graphify-discovery.json` exists, use it only to find related functions or missing Q&A; do not mark it `verified`
-- Generate HTML companion only when requested and only from validated analysis JSON
-
-Read [`static-testing/requirements-analysis/SKILL.md`](static-testing/requirements-analysis/SKILL.md)
-
-## Pentest Run
-
-### Use when
-
-- Authorized pentest or bug bounty work
-- Recon, permission testing, injection, race condition or container security
-- Burp traffic or supplied binary analysis
-
-### Must do
-
-- Create or read `.pentest/engagement.md`
-- Run `dynamic-testing/security-pentest/scripts/doctor.sh` before network requests
-- Distinguish `source_available` from executable `available`
-- Start with passive or low-impact discovery
-- Request approval immediately before state-changing, exploit-validation, concurrency or high-volume actions
-- Confirm a finding only with reproduction evidence and control comparison
-
-Read [`dynamic-testing/security-pentest/SKILL.md`](dynamic-testing/security-pentest/SKILL.md)
-
-## Plane QA
-
-### Use when
-
-- Read or CRUD Plane tickets in one or more workspaces
-- Log bugs, comment PASS/FAILED/BLOCKED and upload inline evidence
-- Write daily or test reports on Plane
-- Change state and attach evidence after a retest
-
-### Must do
-
-- Parse workspace/project/ticket from the URL before using defaults
-- Run `scripts/doctor.sh` before live read/write
-- Use `post-result.py` for PASS/FAILED/BLOCKED and read back the comment and state
-- Use the authenticated browser editor for every image in a Description or Comment; never click ticket-level `Attach` or call `/issue-attachments/`
-- Use `browser-inline-evidence.mjs` with exact placeholders for the final browser-inline write; do not improvise editor cursor placement
-- Keep `Attachments 0` for inline evidence; if browser authentication is unavailable, return `BLOCKED` and do not fall back to an attachment
-- If the browser shows the Plane login screen and the user explicitly authorizes auto-login, use `PLANE_EMAIL` and `PLANE_PASSWORD` only from the ignored Plane skill `.env`, never print them, save the authenticated browser state, then resume
-- PASS → `Done`; FAILED → `In Progress`; BLOCKED remains unchanged; new bug → `Todo`
-- Keep browser passwords only in the ignored local `.env`; never put passwords in tracked files, logs, Plane content, screenshots, reports, or shell arguments; API operations use only the Personal API Key
-
-Read [`integration/plane/SKILL.md`](integration/plane/SKILL.md)
-
-## Google Drive QA
-
-### Use when
-
-- CRUD Drive files/folders, Docs, Sheets, Slides or permissions
-- Read, store or archive QA reports/evidence on Drive
-- Recover when OAuth/MCP permission has expired or is not loaded
-
-### Must do
-
-- Prefer `google-drive` MCP and native tools by file type
-- Resolve the exact file/folder before writing; confirm destructive operations using `references/CRUD.md`
-- Read back ID, name, parent/location and changed content/permission after a write
-- Do not use web search instead of private Drive
-- Never commit OAuth client secrets, access tokens or refresh tokens
-
-Read [`integration/google-drive/SKILL.md`](integration/google-drive/SKILL.md)
-
-## GitHub MCP QA
-
-### Use when
-
-- Configure or diagnose GitHub MCP for the active host
-- Manage repositories, PRs, Issues or Actions CI/CD through the GitHub API
-- Switch the MCP account while keeping Git SSH separate
-
-### Must do
-
-- Use the official endpoint `https://api.githubcopilot.com/mcp/x/all`
-- Never commit OAuth credentials or PATs
-- Distinguish Git SSH from MCP OAuth/PAT
-- Confirm account, repository and branch before writes; read back after mutations
-
-Read [`integration/github/SKILL.md`](integration/github/SKILL.md)
-
-## General setup and configuration
-
-- **API key**: one shared `config/api_keys.json` (gitignored) for AI helpers. Plane and Drive use separate environment/MCP credentials; never commit secrets. See [`README.md`](README.md) section “API Keys” and `scripts/ai_provider.py`
-- **Canonical source**: edit skills only under this `QA-Skill` repository; project-local copies are not canonical
-- **Publish after every new or updated skill**: run `./scripts/setup.sh --agent=<host> --profile=full --skip-deps --skip-mcp-setup --yes`; `full` dynamically discovers every top-level folder containing `SKILL.md`
-- **Codex discovery**: publish QA skills to `$HOME/.agents/skills`; do not create another QA copy under `$HOME/.codex/skills`
-- **New skill catalog**: after publishing a newly named skill, start a new agent session if the host does not show it immediately
-- **Clone**: `git clone git@github.com:tqphong02/QA-skill.git`, then run `./scripts/setup.sh --agent=<host> --profile=full --yes`
-- **Detailed setup**: see [`SETUP-GUIDE.md`](SETUP-GUIDE.md)
+Canonical installed skill names come from `config/skill-registry.json`. Setup must migrate active legacy aliases into a timestamped backup, install one canonical copy and verify exact source parity

@@ -4,6 +4,8 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import {
   finishExploratoryRun,
   getExploratoryAgentContext,
@@ -19,6 +21,11 @@ import {
   setExploratoryTaskPlan,
   startExploratoryRun,
 } from '../../scripts/helpers/exploratory-runner.mjs';
+
+const runnerScript = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../scripts/helpers/exploratory-runner.mjs',
+);
 
 test('browser explorer mode has a clear canonical name and preserves the legacy alias', () => {
   assert.equal(normalizeExploratoryMode('EXPLORATORY_BROWSER_QA'), 'EXPLORATORY_BROWSER_QA');
@@ -53,6 +60,40 @@ test('UI-first exploratory run starts without documents or business context', ()
       reason: 'Browser target was not supplied for this dry-run fixture',
     });
     assert.equal(finished.run.status, 'UNTEST');
+  } finally {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+});
+
+test('exploratory runner defaults to the skill Playwright runtime', () => {
+  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-browser-default-'));
+  try {
+    const result = spawnSync(process.execPath, [
+      runnerScript,
+      'start',
+      '--run-id', 'browser-default',
+      '--mode', 'EXPLORATORY_BROWSER_QA',
+      '--scope', 'dashboard',
+      '--session-id', 'browser-default-session',
+    ], {
+      cwd: dataDir,
+      env: {
+        ...process.env,
+        QA_DATA_DIR: dataDir,
+        QA_BROWSER_DRIVER: '',
+        QA_BROWSER_OBSERVER: '',
+        QA_NETWORK_OBSERVER: '',
+      },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr || result.stdout);
+    const run = JSON.parse(fs.readFileSync(
+      path.join(dataDir, 'evidence', 'exploratory', 'browser-default', 'run.json'),
+      'utf8',
+    ));
+    assert.equal(run.browser.driver, 'playwright-runtime');
+    assert.equal(run.browser.observer, 'playwright-runtime');
+    assert.equal(run.browser.network_observer, 'playwright-runtime');
   } finally {
     fs.rmSync(dataDir, { recursive: true, force: true });
   }

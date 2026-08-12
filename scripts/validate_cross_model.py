@@ -5,6 +5,7 @@ from pathlib import Path
 import ast
 import json
 import re
+import subprocess
 import sys
 
 
@@ -57,11 +58,6 @@ REQUIRED = {
         "RETEST_PLUS",
         "integration/google-drive/SKILL.md",
         "integration/plane/SKILL.md",
-        "import-api-spec.py",
-        "review_required",
-        "write-business-guide.mjs",
-        "Markdown trước Excel",
-        "app-business-guide.md",
         "static-testing/requirements-analysis/SKILL.md",
         "dynamic-testing/security-pentest/SKILL.md",
         ".pentest/engagement.md",
@@ -70,9 +66,10 @@ REQUIRED = {
         "mcp_not_configured",
         "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
         "Deterministic Sheet execution = unified POM BUILD_AND_RUN",
-        "prepare-test-intelligence.mjs",
-        "Business Execution Brief là `READY`",
-        "Không được tự thay business flow thiếu bằng flow generic",
+        "Generic browser task",
+        "no business brief is required",
+        "deterministic Sheet/testcase routes exit to `dynamic-web-automation`",
+        "config/core-routing-contract.json",
         "`dynamic-performance` là public skill duy nhất cho performance",
     ],
     "GEMINI.md": [
@@ -89,11 +86,6 @@ REQUIRED = {
         "RETEST_PLUS",
         "integration/google-drive/SKILL.md",
         "integration/plane/SKILL.md",
-        "import-api-spec.py",
-        "review_required",
-        "write-business-guide.mjs",
-        "Markdown trước Excel",
-        "APP_BASELINE_DISCOVERY",
         "static-testing/requirements-analysis/SKILL.md",
         "dynamic-testing/security-pentest/SKILL.md",
         ".pentest/engagement.md",
@@ -102,9 +94,10 @@ REQUIRED = {
         "mcp_not_configured",
         "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
         "Deterministic Sheet execution = unified POM BUILD_AND_RUN",
-        "context-builder.mjs",
-        "Business Execution Brief là `READY`",
-        "Không được tự thay business flow thiếu bằng flow generic",
+        "Generic browser task",
+        "không cần business brief",
+        "deterministic Sheet/testcase chuyển sang `dynamic-web-automation`",
+        "config/core-routing-contract.json",
         "`dynamic-performance` là public skill duy nhất cho performance",
     ],
     ".github/copilot-instructions.md": [
@@ -126,7 +119,8 @@ REQUIRED = {
         "exact failing layer",
         "`DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
         "Deterministic Sheet/testcase execution uses the single `dynamic-web-automation` BUILD_AND_RUN workflow",
-        "context-builder.mjs",
+        "UI-first exploratory/ad-hoc",
+        "brief is optional enrichment",
         "READY` Business Execution Brief",
         "never replace missing business logic with a generic flow",
         "JMeter, `.jmx`, JTL and k6 all use the single public `dynamic-performance`",
@@ -190,20 +184,21 @@ REQUIRED = {
         "DISCOVERY_CORE =",
         "RETEST_PLUS =",
         "SHEET_EXECUTION_PLUS =",
-        "Create a ledger row for every expanded layer",
+        "create a ledger row for each required layer",
         "Never load or expose `vendor/**/SKILL.md`",
         "Plane ticket plus retest",
-        "Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, UI/UX",
+        "Retest, Sanity, Impacted regression, Exploratory, Ad-hoc and UI/UX",
         "PASS → Done",
         "FAILED → In Progress",
-        "scripts/writers/write-business-guide.mjs",
+        "qa-knowledge/<feature>-business-guide.md",
         "qa-knowledge/",
         "APP_BASELINE_DISCOVERY",
         "coverage_map",
         "Business Execution Brief",
         "context-builder.mjs",
-        "stop normal execution",
-        "run-manifest.mjs` must reject",
+        "UI-first",
+        "quick-start",
+        "dynamic-web-automation",
     ],
     "dynamic-testing/web-exploratory/references/RETEST-PLUS.md": [
         "RETEST_PLUS composes `Original Retest + Sanity + Impacted Regression + DISCOVERY_CORE`",
@@ -567,8 +562,11 @@ REQUIRED = {
         "--exclude='vendor'",
         "--exclude='tests'",
         "-mindepth 2 -type f -name 'SKILL.md' -delete",
-        'RETIRED_SKILLS=("jmeter-qa")',
+        "list_legacy_alias_mappings",
+        "legacy_aliases_for_skill",
         "retire_legacy_skills",
+        "verify_installed_skill",
+        "quarantine_nested_skill_manifests",
         '"integration-postman"',
         "setup_selected_integrations",
         "runner.py",
@@ -755,12 +753,39 @@ REQUIRED = {
     "scripts/doctor-codex.sh": [
         "$HOME/.agents/skills",
         "codex mcp list",
+        "FAILED legacy_skill_active=",
+        "FAILED skill_drift=",
+        "FAILED nested_skill_active=",
         "MANUAL",
     ],
     "scripts/doctor-antigravity.sh": [
         "$HOME/.gemini/config/skills",
         ".agents/mcp_config.json",
+        "FAILED legacy_skill_active=",
+        "FAILED skill_drift=",
+        "FAILED nested_skill_active=",
         "/skills rồi /mcp",
+    ],
+    "config/core-routing-contract.json": [
+        '"golden_cases"',
+        '"document_contracts"',
+        '"drive-testcase-execution"',
+        '"browser-fast"',
+        '"browser-exploratory"',
+    ],
+    "scripts/core-skill-router.mjs": [
+        "routeRequest",
+        "normalizeRoutingIntent",
+        "validateRoutingContract",
+        "CORE ROUTING CONTRACT PASS",
+    ],
+    "scripts/benchmark-core-routing.mjs": [
+        "holdout",
+        "p95_router_latency",
+        "instruction_token_proxy_utf8_div4",
+        "provider_reported",
+        "one_shot_certification",
+        "all_public_skills_covered",
     ],
     "integration/github/scripts/doctor-codex.sh": [
         "https://api.githubcopilot.com/mcp/",
@@ -885,6 +910,7 @@ def main():
         "integration/postman/package.json",
         "integration/postman/package-lock.json",
         ".agents/mcp_config.json",
+        "config/core-routing-contract.json",
         "dynamic-testing/web-exploratory/references/TESTCASE_SHEET_SCHEMA.json",
     ):
         path = ROOT / relative
@@ -916,6 +942,8 @@ def main():
             or ".pentest" in path.parts
             or "coverage" in path.parts
             or "dist" in path.parts
+            or "vendor" in path.parts
+            or path.name in {".env", "auth.json", ".DS_Store"}
         ):
             continue
         if path == Path(__file__).resolve():
@@ -937,6 +965,18 @@ def main():
             failures.append(
                 f"{SKILL_PATHS[skill]}/SKILL.md: description must say the user need not name the skill"
             )
+
+    routing = subprocess.run(
+        ["node", str(ROOT / "scripts/core-skill-router.mjs"), "--self-test"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if routing.returncode != 0:
+        detail = (routing.stdout + routing.stderr).strip().replace("\n", " | ")
+        failures.append(f"core routing semantic contract failed: {detail}")
 
     if failures:
         print("CROSS-MODEL CONTRACT FAILED")

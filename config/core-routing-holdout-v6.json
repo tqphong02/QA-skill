@@ -1,0 +1,366 @@
+{
+  "version": 6,
+  "description": "Final one-shot stable certification holdout derived only from AGENTS.md and config/skill-registry.json",
+  "cases": [
+    {
+      "id": "STABLE-001",
+      "input": "Open https://manual.example.camera/troubleshooting, find the section containing 'battery issue', and copy its three headings without submitting feedback",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "FAST",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "fast", "issue-collision", "read-only", "negation"]
+    },
+    {
+      "id": "STABLE-002",
+      "input": "Exploratry QA trang https://donation.example.vn với mục tiêu kiểm tra luồng quyên góp và lỗi UI/network/console, không benchmark latency",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "EXPLORATORY_BROWSER_QA",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "typo", "exploratory", "latency-collision", "negation"]
+    },
+    {
+      "id": "STABLE-003",
+      "input": "Derive an end-to-end business guide from repository /mnt/repos/vendor-portal and include staged, unstaged and untracked logic changes",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "REPO_BUSINESS_DISCOVERY",
+      "requires_brief": true,
+      "critical": false,
+      "tags": ["english", "repository", "business-guide", "source-driven"]
+    },
+    {
+      "id": "STABLE-004",
+      "input": "So khớp UI https://fleet.example.org/maintenance với source, maintenance-spec.md và stable-req-registry.json để phát hiện conflict và lập câu hỏi Product",
+      "expected_route": ["dynamic-web-exploratory"],
+      "expected_mode": "UI_BUSINESS_RECONCILIATION",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["vietnamese", "ui-reconciliation", "runtime", "source", "requirements"]
+    },
+    {
+      "id": "STABLE-005",
+      "input": "PAY-404 là Testcase ID trong bộ thanh toán, không phải HTTP status hay Plane issue; viết reproduce steps manual và giữ nguyên ID",
+      "expected_route": ["support-testcase-authoring"],
+      "expected_mode": "AUTHOR",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "testcase", "id-collision", "issue-collision", "negation"]
+    },
+    {
+      "id": "STABLE-006",
+      "input": "Viết testcase API từ swager cho PATCH /profiles/{id}, bao phủ auth, schema và concurrency; đừng validate implementation hay chạy collection",
+      "expected_route": ["support-testcase-authoring"],
+      "expected_mode": "AUTHOR",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "typo", "swagger", "api-testcase", "negation", "contract-collision"]
+    },
+    {
+      "id": "STABLE-007",
+      "input": "BUILD_AND_RUN warehouse-count.xlsx with Playwright POM on https://qa-inventory.example using AUDITOR role, COUNT-STABLE-07 data and approved cleanup",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "excel", "playwright", "deterministic", "complete-inputs"]
+    },
+    {
+      "id": "STABLE-008",
+      "input": "Execute testcase sheet PasswordPolicy with POM, but the Sheet link, application URL, user role, fixture and cleanup owner are not available",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "sheet", "testcase", "missing-inputs", "blocked-safe"]
+    },
+    {
+      "id": "STABLE-009",
+      "input": "Dùng task space ego-lite đã đăng nhập để đọc lịch sử yêu cầu bảo hành và chụp màn hình, không gửi claim hay đổi địa chỉ",
+      "expected_route": ["adapter-browser-session", "dynamic-web-exploratory"],
+      "expected_mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "ego-lite", "real-session", "read-only", "negation", "composite"]
+    },
+    {
+      "id": "STABLE-010",
+      "input": "Convert architecture-overview.pptx into Markdown preserving slide titles, speaker notes and diagrams; no business analysis",
+      "expected_route": ["support-document-conversion"],
+      "expected_mode": "CONVERT",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "pptx", "conversion", "negation", "analysis-collision"]
+    },
+    {
+      "id": "STABLE-011",
+      "input": "Phân tích requirements-loyalty.md theo 18 vùng review, dựng flow và sinh XMind cùng Q&A Markdown/Excel đồng bộ Question ID",
+      "expected_route": ["static-requirements-analysis"],
+      "expected_mode": "ANALYZE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "markdown", "requirements", "xmind", "qa-outputs"]
+    },
+    {
+      "id": "STABLE-012",
+      "input": "Đọc requrement file Phê-duyệt-hạn-mức.pdf, tìm missing rules và ambiguity rồi tạo business flow, XMind và hai bảng Q&A",
+      "expected_route": ["support-document-conversion", "static-requirements-analysis"],
+      "expected_mode": "ANALYZE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "pdf", "requirements", "composite"]
+    },
+    {
+      "id": "STABLE-013",
+      "input": "Perform the approved IDOR assessment for lab.partner-example.test under .pentest/engagement.md, excluding /admin and limiting requests to 1 per second",
+      "expected_route": ["dynamic-security-pentest"],
+      "expected_mode": "SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "idor", "authorized", "exclusion", "rate-limit"]
+    },
+    {
+      "id": "STABLE-014",
+      "input": "Try a race-condition exploit against production checkout now; there is no authorization, target owner, exclusion list or rate limit",
+      "expected_route": ["dynamic-security-pentest"],
+      "expected_mode": "SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "race-condition", "production", "missing-authorization", "safety-boundary"]
+    },
+    {
+      "id": "STABLE-015",
+      "input": "https://projects.metasolutions.ai/nebula/issues/OPS-2601",
+      "expected_route": ["integration-plane"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "plane", "issue", "read-only"]
+    },
+    {
+      "id": "STABLE-016",
+      "input": "re-tset OPS-2601 trên Plane, chạy original retest, sanity, impacted regression và discovery rồi comment PASS/FAILED cùng state phù hợp",
+      "expected_route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"],
+      "expected_mode": "RETEST_PLUS",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "plane", "retest", "mutation", "composite"]
+    },
+    {
+      "id": "STABLE-017",
+      "input": "Thêm comment 'Đã nhận log từ backend' vào Plane item OPS-2601, không đổi state, rồi verify đúng comment ID và content",
+      "expected_route": ["integration-plane"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "plane", "comment", "mutation", "negation", "read-back"]
+    },
+    {
+      "id": "STABLE-018",
+      "input": "https://docs.google.com/spreadsheets/d/1StableReadSheetOnly987/edit#gid=0",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "google-sheets", "drive", "read-only"]
+    },
+    {
+      "id": "STABLE-019",
+      "input": "Rename Drive folder 1StableFolderRename55 to 'Evidence Archive 2026' and read back its exact ID, name and parent",
+      "expected_route": ["integration-google-drive"],
+      "expected_mode": "DRIVE_MUTATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "drive", "rename", "mutation", "read-back"]
+    },
+    {
+      "id": "STABLE-020",
+      "input": "https://github.com/adventureworks/identity/actions/runs/77115522",
+      "expected_route": ["integration-github"],
+      "expected_mode": "READ_ONLY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["bare-url", "github", "actions", "read-only"]
+    },
+    {
+      "id": "STABLE-021",
+      "input": "Create GitHub issue in adventureworks/identity titled 'MFA retry counter resets', assign qa-owner and verify the resulting URL; do not merge code",
+      "expected_route": ["integration-github"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "github", "issue", "mutation", "negation", "read-back"]
+    },
+    {
+      "id": "STABLE-022",
+      "input": "Read-only reconcile SAP shipment rows to BigQuery, including freshness, null tracking_id, duplicates and transform_latency; this is not an API load test",
+      "expected_route": ["dynamic-data-quality"],
+      "expected_mode": "DATA_QUALITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "reconciliation", "bigquery", "latency-collision", "negation"]
+    },
+    {
+      "id": "STABLE-023",
+      "input": "BOT-503 là label trong golden set chứ không phải ticket; evalute chatbot về correctness, grounding, refusal safety, JSON format, p95 latency và cost",
+      "expected_route": ["dynamic-ai-evaluation"],
+      "expected_mode": "AI_EVALUATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "typo", "id-collision", "ticket-collision", "latency-collision", "ai-evaluation"]
+    },
+    {
+      "id": "STABLE-024",
+      "input": "Audit https://forms.example.gov for WCAG 2.2 labels, keyboard-only completion, focus after validation errors and screen-reader announcements; don't build Playwright POM tests",
+      "expected_route": ["hybrid-accessibility"],
+      "expected_mode": "ACCESSIBILITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "wcag", "forms", "keyboard", "playwright-collision", "negation"]
+    },
+    {
+      "id": "STABLE-025",
+      "input": "Review Figma versus implementation for visual hierarchy, spacing tokens, responsive cards and hover/loading/error states; exclude WCAG and screen-reader checks",
+      "expected_route": ["hybrid-ui-ux-review"],
+      "expected_mode": "REVIEW",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "figma", "visual-fidelity", "responsive", "negation", "accessibility-collision"]
+    },
+    {
+      "id": "STABLE-026",
+      "input": "Đối chiếu Figma flow nạp tiền với live UI ở 320px/768px/1440px, đồng thời audit contrast, focus trap và keyboard recovery có screenshot evidence",
+      "expected_route": ["hybrid-ui-ux-review", "hybrid-accessibility"],
+      "expected_mode": "REVIEW",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "figma", "responsive", "accessibility", "visual-evidence", "composite"]
+    },
+    {
+      "id": "STABLE-027",
+      "input": "Run a JMeter spike from 10 to 250 users on staging search with p95 under 700 ms, 0.5% error threshold, one-thread smoke and an approved stop condition",
+      "expected_route": ["dynamic-performance"],
+      "expected_mode": "PERFORMANCE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "jmeter", "spike", "latency", "smoke-gate", "stop-condition"]
+    },
+    {
+      "id": "STABLE-028",
+      "input": "Bắn stress 10000 VU vào production ngay dù chưa có workload config, threshold, rollback, owner approval hoặc stop condition",
+      "expected_route": ["dynamic-performance"],
+      "expected_mode": "PERFORMANCE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "stress", "production", "missing-inputs", "safety-boundary"]
+    },
+    {
+      "id": "STABLE-029",
+      "input": "Design a cache outage and retry-exhaustion recovery plan; target environment, rollback owner, observation window and stop signal are missing",
+      "expected_route": ["dynamic-resilience"],
+      "expected_mode": "RESILIENCE_PLAN",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "outage", "retry", "missing-context", "plan-only", "safety-boundary"]
+    },
+    {
+      "id": "STABLE-030",
+      "input": "Lập matrix hỗ trợ Chrome/Firefox/Safari, viewport, vi-VN/ko-KR, timezone và currency; chưa có URL nên chỉ lập kế hoạch, không tuyên bố runtime PASS",
+      "expected_route": ["dynamic-compatibility"],
+      "expected_mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "browser-matrix", "missing-target", "plan-only", "negation"]
+    },
+    {
+      "id": "STABLE-031",
+      "input": "Smoke test Andriod APK on the specified emulator with Appium and capture authorized mitmproxy traffic; no locale or cross-device matrix",
+      "expected_route": ["dynamic-mobile"],
+      "expected_mode": "MOBILE_QA",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "typo", "android", "appium", "traffic-capture", "negation"]
+    },
+    {
+      "id": "STABLE-032",
+      "input": "Kểm tra compatibility native app trên iOS/Android real devices, các OS version, locale es-MX/he-IL, RTL, timezone và currency",
+      "expected_route": ["dynamic-compatibility", "dynamic-mobile"],
+      "expected_mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "native-mobile", "device-matrix", "rtl", "composite"]
+    },
+    {
+      "id": "STABLE-033",
+      "input": "Analyze Java discount-engine functions, branches, decisions and call graph, distinguishing unknown from uncovered and avoiding any measured coverage claim",
+      "expected_route": ["hybrid-source-coverage"],
+      "expected_mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "java", "whitebox", "call-graph", "coverage-boundary"]
+    },
+    {
+      "id": "STABLE-034",
+      "input": "Phân tích branch/path source Dart cho coupon rules rồi viết testcase manual với stable IDs cho các source-derived high-risk path",
+      "expected_route": ["hybrid-source-coverage", "support-testcase-authoring"],
+      "expected_mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "dart", "source-analysis", "testcase", "composite"]
+    },
+    {
+      "id": "STABLE-035",
+      "input": "Postman MCP OAuth doctor, then run collection Account-Smoke with Postman CLI on Sandbox; do not compare it to any API specification or contract",
+      "expected_route": ["integration-postman"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "postman", "oauth", "collection-run", "negation", "contract-collision"]
+    },
+    {
+      "id": "STABLE-036",
+      "input": "Validate grpc proto definitions against the server implementation for field compatibility, status codes and breaking changes; do not configure Postman or Newman",
+      "expected_route": ["hybrid-api-contract"],
+      "expected_mode": "CONTRACT_VALIDATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "grpc", "contract", "implementation-comparison", "negation", "postman-collision"]
+    },
+    {
+      "id": "STABLE-037",
+      "input": "Import Postamn collection Claims-v5, execute it with Newmann on QA, then compare auth, pagination and schemas against claims-openapi.yaml",
+      "expected_route": ["integration-postman", "hybrid-api-contract"],
+      "expected_mode": "INTEGRATION",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "typos", "postman", "newman", "openapi", "composite"]
+    },
+    {
+      "id": "STABLE-038",
+      "input": "Run redacted SAST, SCA, license, secret and SBOM review for composer.lock and CI only; do not exploit or read registry credentials",
+      "expected_route": ["static-supply-chain-security"],
+      "expected_mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "sast", "sca", "sbom", "negation", "pentest-collision"]
+    },
+    {
+      "id": "STABLE-039",
+      "input": "Quét secrit và vulnerable dependency trong Gemfile.lock, nhưng yêu cầu RCE proof trên staging phải qua pentest gate vì thiếu engagement, exclusions và rate limit",
+      "expected_route": ["static-supply-chain-security", "dynamic-security-pentest"],
+      "expected_mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["vietnamese", "typo", "supply-chain", "rce", "missing-authorization", "composite"]
+    },
+    {
+      "id": "STABLE-040",
+      "input": "Assess go/no-go for release RC-2026.09; test summary, unresolved issue approvals and risk acceptance are missing, so do not change deployment or ticket state",
+      "expected_route": ["governance-release-quality"],
+      "expected_mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "critical": true,
+      "tags": ["english", "release", "issue-collision", "missing-evidence", "negation", "blocked-safe"]
+    }
+  ]
+}

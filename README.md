@@ -102,7 +102,23 @@ npm run test:skills
 npm run test:skills:strict-live
 ```
 
-Report dễ đọc nằm tại `evidence/skill-readiness/latest.md`, JSON pretty-print tại `evidence/skill-readiness/latest.json`. `PASS` là evidence đã chạy local, `BLOCKED` là integration cần credential/target/device/approval, còn `FAIL` là lỗi deterministic phải sửa. Strict-live chỉ PASS khi không còn integration BLOCKED
+Report dễ đọc nằm tại `<project-root>/evidence/skill-readiness/latest.md`, JSON pretty-print tại `<project-root>/evidence/skill-readiness/latest.json`. `<project-root>` được resolve theo thứ tự `QA_SKILL_PROJECT_ROOT` → `INIT_CWD` của npm → thư mục hiện tại. Có thể dùng `--output-dir` để chỉ định thư mục khác. Report tách ba tầng: local deterministic, adapter/fail-closed preflight và live target evidence. Vì vậy live `BLOCKED` do thiếu credential/target/device/approval không bị diễn giải thành lỗi lõi; strict-live vẫn chỉ PASS khi không còn integration BLOCKED
+
+Regression routing tích lũy, p95 router latency và instruction-token proxy:
+
+```bash
+npm run test:routing
+```
+
+Chạy riêng one-shot certification holdout chưa dùng để tune:
+
+```bash
+npm run test:routing:certify
+```
+
+Kết quả regression nằm tại `<project-root>/evidence/ai-eval/core-routing-latest.json`; certification nằm tại `core-routing-certification-latest.json`. Regression PASS không tự chứng nhận độ tổng quát. Certification chỉ PASS khi mọi critical case và toàn bộ holdout mới PASS. Lịch sử first-run được giữ trong `config/core-routing-eval-history.json` để không biến failed holdout thành số đẹp sau khi tune
+
+Proxy UTF-8/4 không thay thế token hoặc latency do provider báo; thêm `provider_usage` vào các case thực thi trên từng model để có p50/p95 model telemetry thật. Nếu `provider_reported.status` là `NOT_MEASURED`, chỉ được kết luận về deterministic route latency và context-size proxy
 
 ## Senior QA operating model
 

@@ -1,0 +1,474 @@
+{
+  "version": 2,
+  "description": "Deterministic routing contract for the highest-frequency QA-skill entrypoints",
+  "routes": [
+    {
+      "id": "plane-release-gate",
+      "priority": 5,
+      "match": {
+        "all": ["projects\\.metasolutions\\.ai|(?:^|\\s)[A-Z][A-Z0-9]+-\\d+\\b|plane (?:ticket|item|issue|work item)", "go/no-go|release readiness|release sign-off|deployment approval|exit criteria|risk acceptance|release gate"]
+      },
+      "route": ["integration-plane", "governance-release-quality"],
+      "mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "first_action": "Read the exact Plane evidence packet, then evaluate the release gate read-only"
+    },
+    {
+      "id": "plane-retest",
+      "priority": 10,
+      "match": {
+        "all": ["projects\\.metasolutions\\.ai|(?:^|\\s)[A-Z][A-Z0-9]+-\\d+\\b|plane (?:ticket|item|issue|work item|bug)", "retest|re-test|re-tset|retesst|verify|kiểm tra lại|xác minh lại"],
+        "none": ["build_and_run|playwright|automation manifest|\\bdataset\\b|test data|testcase id|classifier label"]
+      },
+      "route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"],
+      "mode": "RETEST_PLUS",
+      "requires_brief": true,
+      "first_action": "Plane doctor and exact ticket read"
+    },
+    {
+      "id": "plane-mutation",
+      "priority": 15,
+      "match": {
+        "all": ["projects\\.metasolutions\\.ai|(?:^|\\s)[A-Z][A-Z0-9]+-\\d+\\b|plane (?:project|ticket|item|issue|work item|bug)", "add|create|update|comment|change state|thêm|tạo|cập nhật|bình luận|chuyển (?:đúng )?trạng thái"],
+        "none": ["build_and_run|playwright|automation manifest|\\bdataset\\b|test data|testcase id|classifier label"]
+      },
+      "route": ["integration-plane"],
+      "mode": "INTEGRATION",
+      "requires_brief": false,
+      "first_action": "Plane doctor, exact ticket read and write/read-back contract"
+    },
+    {
+      "id": "plane-read",
+      "priority": 20,
+      "match": {
+        "any": ["projects\\.metasolutions\\.ai|(?:^|\\s)[A-Z][A-Z0-9]+-\\d+\\b|plane (?:ticket|item|issue|work item)"],
+        "none": ["build_and_run|playwright|automation manifest|\\bdataset\\b|test data|testcase id|classifier label"]
+      },
+      "route": ["integration-plane"],
+      "mode": "READ_ONLY",
+      "requires_brief": false,
+      "first_action": "Plane doctor and exact ticket read"
+    },
+    {
+      "id": "drive-testcase-execution",
+      "priority": 30,
+      "match": {
+        "all": ["drive\\.google\\.com|docs\\.google\\.com/(?:spreadsheets|document|presentation)", "chạy|execute|run|automation|build_and_run"],
+        "any": ["testcase|test case|kiểm thử|\\.automation\\.json"]
+      },
+      "route": ["integration-google-drive", "dynamic-web-automation", "integration-google-drive"],
+      "mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "first_action": "Resolve and read the exact Sheet before a target-scoped POM plan"
+    },
+    {
+      "id": "drive-mutation",
+      "priority": 35,
+      "match": {
+        "all": ["drive\\.google\\.com|docs\\.google\\.com/(?:spreadsheets|document|presentation)|google drive|drive file|file drive|drive id", "rename|update|move|copy|upload|share|delete|đổi tên|cập nhật|di chuyển|sao chép|tải lên|chia sẻ|xóa"]
+      },
+      "route": ["integration-google-drive"],
+      "mode": "DRIVE_MUTATION",
+      "requires_brief": false,
+      "first_action": "Resolve the exact Drive object and record a write/read-back contract"
+    },
+    {
+      "id": "github-mutation",
+      "priority": 45,
+      "match": {
+        "all": ["github", "create|add|update|edit|comment|close|reopen|merge|tạo|thêm|cập nhật|sửa|bình luận|đóng|mở lại|gộp"],
+        "any": ["repository|repo|pull request|\\bpr\\b|issue|actions?|workflow"]
+      },
+      "route": ["integration-github"],
+      "mode": "INTEGRATION",
+      "requires_brief": false,
+      "first_action": "Resolve the exact GitHub target and record a write/read-back contract"
+    },
+    {
+      "id": "drive-read",
+      "priority": 40,
+      "match": {
+        "any": ["drive\\.google\\.com|docs\\.google\\.com/(?:spreadsheets|document|presentation)"]
+      },
+      "route": ["integration-google-drive"],
+      "mode": "READ_ONLY",
+      "requires_brief": false,
+      "first_action": "Resolve the exact Drive object and read metadata or content"
+    },
+    {
+      "id": "github-read",
+      "priority": 50,
+      "match": {
+        "any": ["github\\.com/[^/\\s]+/[^/\\s]+", "github mcp"]
+      },
+      "route": ["integration-github"],
+      "mode": "READ_ONLY",
+      "requires_brief": false,
+      "first_action": "Inspect the exact GitHub resource read-only"
+    },
+    {
+      "id": "testcase-authoring",
+      "priority": 60,
+      "match": {
+        "all": ["viết|viếc|tạo|sửa|review|rà soát|write|draft", "testcase|testcasse|test case|scenario"],
+        "none": ["chạy|execute|run|automation|playwright|\\bpom\\b|build_and_run"]
+      },
+      "route": ["support-testcase-authoring"],
+      "mode": "AUTHOR",
+      "requires_brief": false,
+      "first_action": "Read existing testcase Markdown when present"
+    },
+    {
+      "id": "source-coverage-testcase-composite",
+      "priority": 55,
+      "match": {
+        "all": ["white-box|whitebox|glass-box|branch coverage|path coverage|decision coverage|call graph|runtime coverage|unknown/uncovered|untested function", "testcase|test case|scenario"]
+      },
+      "route": ["hybrid-source-coverage", "support-testcase-authoring"],
+      "mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "first_action": "Analyze source-derived paths, then hand stable candidates to testcase authoring"
+    },
+    {
+      "id": "deterministic-web-automation",
+      "priority": 70,
+      "match": {
+        "any": ["playwright|page object model|\\bpom\\b|\\.automation\\.json|chạy (?:testcase|test case)|execute (?:testcase|test case)|build_and_run|excel automation|sheet automation"]
+      },
+      "route": ["dynamic-web-automation"],
+      "mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "first_action": "Create a target-scoped deterministic POM plan"
+    },
+    {
+      "id": "repo-business-discovery",
+      "priority": 72,
+      "match": {"any": ["analy[sz]e (?:the )?repository|phân tích repo|learn (?:current |its |the )?business (?:rules?|flows?|model|capabilities).*(?:source|codebase|repository)|business guide from (?:current )?source|discover (?:the )?business (?:model|flows?|capabilities).*repository|map business (?:capabilities|flows?).*repository|end-to-end .*flows? from repository|quét logic hệ thống"]},
+      "route": ["dynamic-web-exploratory"],
+      "mode": "REPO_BUSINESS_DISCOVERY",
+      "requires_brief": true,
+      "first_action": "Run repository business discovery with source provenance"
+    },
+    {
+      "id": "ui-business-reconciliation",
+      "priority": 73,
+      "match": {"any": ["đối chiếu (?:màn|trang|page|runtime )?.*(?:source|docs|brd|backend|service|requirement|registry|req-index)|reconcile (?:ui|trang|page|https?://).*(?:source|docs|backend|runtime|requirement|req-catalog)|ui khác backend|ui vs backend|ui vs brd"]},
+      "route": ["dynamic-web-exploratory"],
+      "mode": "UI_BUSINESS_RECONCILIATION",
+      "requires_brief": true,
+      "first_action": "Validate a live UI target and stable requirement registry"
+    },
+    {
+      "id": "requirements-document-analysis",
+      "priority": 80,
+      "match": {
+        "all": ["brd|srs|frs|requirement|yêu cầu nghiệp vụ|business flow|xmind|q&a", "pdf|docx|pptx|xlsx|file|tài liệu"]
+      },
+      "route": ["support-document-conversion", "static-requirements-analysis"],
+      "mode": "ANALYZE",
+      "requires_brief": false,
+      "first_action": "Convert non-Markdown input, then analyze requirements"
+    },
+    {
+      "id": "requirements-markdown-analysis",
+      "priority": 82,
+      "match": {
+        "all": ["requirements?\\.md|brd\\.md|srs\\.md|frs\\.md|markdown requirements?", "business flow|contradiction|ambiguity|prerequisite|clarification|xmind|q&a"]
+      },
+      "route": ["static-requirements-analysis"],
+      "mode": "ANALYZE",
+      "requires_brief": false,
+      "first_action": "Analyze the Markdown requirements directly without conversion"
+    },
+    {
+      "id": "document-conversion",
+      "priority": 90,
+      "match": {
+        "all": ["convert|chuyển|đổi", "pdf|docx|pptx|xlsx|html|csv|json|xml|zip"],
+        "any": ["markdown|\\bmd\\b"]
+      },
+      "route": ["support-document-conversion"],
+      "mode": "CONVERT",
+      "requires_brief": false,
+      "first_action": "Select the local converter for the artifact type"
+    },
+    {
+      "id": "postman-contract-composite",
+      "priority": 95,
+      "match": {
+        "all": ["postman|postamn|newman|colection|collection", "openapi|swagger|schema|contract|breaking change"]
+      },
+      "route": ["integration-postman", "hybrid-api-contract"],
+      "mode": "INTEGRATION",
+      "requires_brief": false,
+      "first_action": "Validate Postman runtime input, then compare the contract"
+    },
+    {
+      "id": "postman-operation",
+      "priority": 100,
+      "match": {
+        "any": ["postman mcp|postman cli|newman|postman collection|postman workspace|postman monitor"]
+      },
+      "route": ["integration-postman"],
+      "mode": "INTEGRATION",
+      "requires_brief": false,
+      "first_action": "Run the Postman runtime doctor"
+    },
+    {
+      "id": "authorized-pentest",
+      "priority": 110,
+      "match": {
+        "any": ["pentest|bug bounty|idor|ssrf|ssti|jwt|burp|raccoon|dockerscan|ghidra"]
+      },
+      "route": ["dynamic-security-pentest"],
+      "mode": "SECURITY",
+      "requires_brief": false,
+      "first_action": "Validate the engagement contract and run the doctor"
+    },
+    {
+      "id": "supply-chain-pentest-composite",
+      "priority": 105,
+      "match": {
+        "all": ["sast|sca|sbom|secret scan|secret|secrect|dependency|license|supply chain", "exploit|pentest|validate vulnerab|attempt.{0,30}(?:ssrf|idor|proof)|\\bssrf\\b|\\bidor\\b|proof against|khai thác|\\bcve\\b"]
+      },
+      "route": ["static-supply-chain-security", "dynamic-security-pentest"],
+      "mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "first_action": "Run redacted static preflight, then enforce the pentest authorization gate"
+    },
+    {
+      "id": "browser-session-task-composite",
+      "priority": 115,
+      "match": {
+        "all": ["ego-browser|ego-lite|ego lite|task space|adapter-browser-session|phiên đăng nhập hiện tại|session đang login|reuse (?:the )?user(?:'s)? (?:real )?login", "mở|open|đọc|read|xem|liệt kê|list|extract|search|click|fill|download|exploratory|expolratory"]
+      },
+      "route": ["adapter-browser-session", "dynamic-web-exploratory"],
+      "mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "first_action": "Detect the real-session adapter, then execute the bounded browser task"
+    },
+    {
+      "id": "browser-session-adapter",
+      "priority": 120,
+      "match": {"any": ["ego-browser|ego-lite|ego lite|task space|adapter-browser-session|reuse (?:the )?user(?:'s)? (?:real )?login"]},
+      "route": ["adapter-browser-session"],
+      "mode": "BROWSER_ADAPTER",
+      "requires_brief": false,
+      "first_action": "Run the adapter browser-session detector"
+    },
+    {
+      "id": "ui-ux-review",
+      "priority": 130,
+      "match": {"any": ["figma|design token|design-to-code|visual hierarchy|responsive visual|usability|\\bsus\\b|ui/ux review|review ui"]},
+      "route": ["hybrid-ui-ux-review"],
+      "mode": "REVIEW",
+      "requires_brief": false,
+      "first_action": "Validate the design review packet and runtime evidence boundary"
+    },
+    {
+      "id": "ui-ux-accessibility-composite",
+      "priority": 125,
+      "match": {
+        "all": ["figma|figam|design-to-code|ui/ux|review ui", "wcag|accessibility|keyboard|tab order|focus order|screen reader"]
+      },
+      "route": ["hybrid-ui-ux-review", "hybrid-accessibility"],
+      "mode": "REVIEW",
+      "requires_brief": false,
+      "first_action": "Validate the design packet, then add the accessibility evidence matrix"
+    },
+    {
+      "id": "release-governance",
+      "priority": 140,
+      "match": {"any": ["go/no-go|release readiness|release sign-off|deployment approval|exit criteria|risk acceptance|quality gate"]},
+      "route": ["governance-release-quality"],
+      "mode": "RELEASE_GATE",
+      "requires_brief": false,
+      "first_action": "Evaluate the local release packet and evidence completeness"
+    },
+    {
+      "id": "supply-chain-security",
+      "priority": 150,
+      "match": {"any": ["\\bsast\\b|\\bsca\\b|\\bsbom\\b|secret scan|dependency risk|license risk|secure ci|supply chain"]},
+      "route": ["static-supply-chain-security"],
+      "mode": "STATIC_SECURITY",
+      "requires_brief": false,
+      "first_action": "Run a redacted local supply-chain preflight"
+    },
+    {
+      "id": "resilience-testing",
+      "priority": 160,
+      "match": {"any": ["resilience|chaos|fault injection|inject.{0,40}(?:latency|network|failure|fault)|simulate.{0,40}(?:outage|failure|fault)|(?:broker|service|database|cluster) outage|failover|backup/restore|disaster recovery|\\brto\\b|\\brpo\\b|graceful degradation"]},
+      "route": ["dynamic-resilience"],
+      "mode": "RESILIENCE_PLAN",
+      "requires_brief": false,
+      "first_action": "Validate target, rollback, stop condition and owner approval"
+    },
+    {
+      "id": "compatibility-localization",
+      "priority": 170,
+      "match": {"any": ["cross-browser|browser matrix|device matrix|i18n|l10n|localization|locale|timezone|currency|unicode|\\brtl\\b"]},
+      "route": ["dynamic-compatibility"],
+      "mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "first_action": "Validate the supported browser, device and locale matrix"
+    },
+    {
+      "id": "mobile-compatibility-composite",
+      "priority": 165,
+      "match": {
+        "all": ["android|ios|native app|mobile app|\\bapk\\b|\\bipa\\b|iphone|simulator|emulator", "compatibility|matrix|locale|timezone|\\bdst\\b|rtl|currency|i18n|l10n|text expansion"]
+      },
+      "route": ["dynamic-compatibility", "dynamic-mobile"],
+      "mode": "COMPATIBILITY",
+      "requires_brief": false,
+      "first_action": "Validate the compatibility matrix, then resolve the native device target"
+    },
+    {
+      "id": "data-quality",
+      "priority": 180,
+      "match": {"any": ["data quality|database mcp|\\betl\\b|\\belt\\b|reconciliation|schema drift|lineage|freshness|lakehouse|duplicate rows|ingestion[_ -]?latency|missing (?:records|customer|rows)|source-to-target"]},
+      "route": ["dynamic-data-quality"],
+      "mode": "DATA_QUALITY",
+      "requires_brief": false,
+      "first_action": "Confirm source, destination and read-only database boundary"
+    },
+    {
+      "id": "ai-quality-evaluation",
+      "priority": 190,
+      "match": {"any": ["llm eval|ai evaluation|evaluate (?:a |an )?(?:multilingual )?(?:classifier|chatbot|rag|agent|llm)|đánh giá (?:llm|chatbot|rag|agent)|hallucination|golden dataset|gold-label|prompt comparison|model comparison|rag quality|tool-calling quality|structured json reliability"]},
+      "route": ["dynamic-ai-evaluation"],
+      "mode": "AI_EVALUATION",
+      "requires_brief": false,
+      "first_action": "Freeze a versioned dataset and metric thresholds"
+    },
+    {
+      "id": "accessibility-audit",
+      "priority": 200,
+      "match": {"any": ["accessibility|\\ba11y\\b|\\bwcag\\b|\\baxe\\b|screen reader|keyboard-only|focus order|contrast audit"]},
+      "route": ["hybrid-accessibility"],
+      "mode": "ACCESSIBILITY",
+      "requires_brief": false,
+      "first_action": "Combine automated WCAG scans with manual interaction checks"
+    },
+    {
+      "id": "performance-testing",
+      "priority": 210,
+      "match": {"any": ["performance test|load test|stress test|spike test|soak test|\\blatency\\b|throughput|virtual users|request rate|\\bjmeter\\b|\\.jmx\\b|\\bk6\\b|\\bjtl\\b"]},
+      "route": ["dynamic-performance"],
+      "mode": "PERFORMANCE",
+      "requires_brief": false,
+      "first_action": "Confirm workload, stop conditions and smoke gate"
+    },
+    {
+      "id": "api-contract-validation",
+      "priority": 220,
+      "match": {"any": ["api contract|openapi|swagger|asyncapi|graphql schema|\\bgrpc\\b|proto file|webhook (?:contract|examples?).*(?:implementation|signature|retries|idempotency)|implementation-versus-spec|breaking change"]},
+      "route": ["hybrid-api-contract"],
+      "mode": "CONTRACT_VALIDATION",
+      "requires_brief": false,
+      "first_action": "Validate the specification and compare it with the implementation"
+    },
+    {
+      "id": "mobile-qa",
+      "priority": 230,
+      "match": {"any": ["android|ios|\\bapk\\b|\\bipa\\b|appium|emulator|simulator|scrcpy|proxyman|charles proxy|mitmproxy|mobile app"]},
+      "route": ["dynamic-mobile"],
+      "mode": "MOBILE_QA",
+      "requires_brief": false,
+      "first_action": "Run the mobile doctor and validate the device matrix"
+    },
+    {
+      "id": "source-coverage",
+      "priority": 240,
+      "match": {"any": ["white-box|whitebox|glass-box|branch coverage|path coverage|decision coverage|branch and decision paths|call graph|call relationships|nestjs di|runtime coverage|source-derived untested|untested (?:function|candidates?)"]},
+      "route": ["hybrid-source-coverage"],
+      "mode": "SOURCE_ANALYSIS",
+      "requires_brief": false,
+      "first_action": "Resolve the exact source target and run compact analysis"
+    },
+    {
+      "id": "browser-fast",
+      "priority": 300,
+      "match": {
+        "all": ["https?://", "mở|open|đọc|read|extract|trích xuất|search|tìm|scroll|cuộn|click|fill|điền|download|tải"],
+        "none": ["retest|regression|sanity|exploratory|ad-hoc|bug|business rule|expected|actual|pass|failed|qa verdict|kiểm thử"]
+      },
+      "route": ["dynamic-web-exploratory"],
+      "mode": "FAST",
+      "requires_brief": false,
+      "first_action": "Validate URL and domain, then quick-start"
+    },
+    {
+      "id": "browser-exploratory",
+      "priority": 310,
+      "match": {
+        "any": ["exploratory|ad-hoc|khám phá|sanity|regression|ui/ux|bug hunting|test feature|kiểm thử web|app baseline"]
+      },
+      "route": ["dynamic-web-exploratory"],
+      "mode": "EXPLORATORY_BROWSER_QA",
+      "requires_brief": false,
+      "first_action": "Start UI-first from the live target and objective"
+    }
+  ],
+  "golden_cases": [
+    {"id": "ROUTE-001", "input": "https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane"], "expected_mode": "READ_ONLY", "requires_brief": false},
+    {"id": "ROUTE-002", "input": "Retest https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"], "expected_mode": "RETEST_PLUS", "requires_brief": true},
+    {"id": "ROUTE-003", "input": "Mở https://example.com và đọc tiêu đề", "expected_route": ["dynamic-web-exploratory"], "expected_mode": "FAST", "requires_brief": false},
+    {"id": "ROUTE-004", "input": "Khám phá web app này không có doc hoặc testcase", "expected_route": ["dynamic-web-exploratory"], "expected_mode": "EXPLORATORY_BROWSER_QA", "requires_brief": false},
+    {"id": "ROUTE-005", "input": "Chạy testcase module LOGIN từ https://docs.google.com/spreadsheets/d/demo", "expected_route": ["integration-google-drive", "dynamic-web-automation", "integration-google-drive"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true},
+    {"id": "ROUTE-006", "input": "https://docs.google.com/document/d/demo", "expected_route": ["integration-google-drive"], "expected_mode": "READ_ONLY", "requires_brief": false},
+    {"id": "ROUTE-007", "input": "Viết testcase login", "expected_route": ["support-testcase-authoring"], "expected_mode": "AUTHOR", "requires_brief": false},
+    {"id": "ROUTE-008", "input": "Chạy testcase login bằng Playwright POM", "expected_route": ["dynamic-web-automation"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true},
+    {"id": "ROUTE-009", "input": "Convert file spec.docx sang Markdown", "expected_route": ["support-document-conversion"], "expected_mode": "CONVERT", "requires_brief": false},
+    {"id": "ROUTE-010", "input": "Đọc file FRS.docx rồi vẽ business flow XMind", "expected_route": ["support-document-conversion", "static-requirements-analysis"], "expected_mode": "ANALYZE", "requires_brief": false},
+    {"id": "ROUTE-011", "input": "Kết nối Postman MCP", "expected_route": ["integration-postman"], "expected_mode": "INTEGRATION", "requires_brief": false},
+    {"id": "ROUTE-012", "input": "Pentest target này, tôi có quyền kiểm tra", "expected_route": ["dynamic-security-pentest"], "expected_mode": "SECURITY", "requires_brief": false},
+    {"id": "ROUTE-013", "input": "https://github.com/acme/demo/pull/12", "expected_route": ["integration-github"], "expected_mode": "READ_ONLY", "requires_brief": false},
+    {"id": "ROUTE-014", "input": "Test feature checkout trên web theo flow UI", "expected_route": ["dynamic-web-exploratory"], "expected_mode": "EXPLORATORY_BROWSER_QA", "requires_brief": false},
+    {"id": "ROUTE-015", "input": "Dùng ego-browser mở task space đang đăng nhập", "expected_route": ["adapter-browser-session", "dynamic-web-exploratory"], "expected_mode": "BROWSER_ADAPTER", "requires_brief": false},
+    {"id": "ROUTE-016", "input": "Review UI login theo Figma và responsive visual", "expected_route": ["hybrid-ui-ux-review"], "expected_mode": "REVIEW", "requires_brief": false},
+    {"id": "ROUTE-017", "input": "Đánh giá release này có go/no-go không", "expected_route": ["governance-release-quality"], "expected_mode": "RELEASE_GATE", "requires_brief": false},
+    {"id": "ROUTE-018", "input": "Quét secret, dependency và SBOM readiness", "expected_route": ["static-supply-chain-security"], "expected_mode": "STATIC_SECURITY", "requires_brief": false},
+    {"id": "ROUTE-019", "input": "Thiết kế resilience test khi payment failover", "expected_route": ["dynamic-resilience"], "expected_mode": "RESILIENCE_PLAN", "requires_brief": false},
+    {"id": "ROUTE-020", "input": "Kiểm tra browser, locale vi-VN, timezone và RTL", "expected_route": ["dynamic-compatibility"], "expected_mode": "COMPATIBILITY", "requires_brief": false},
+    {"id": "ROUTE-021", "input": "Đối soát ETL và kiểm tra schema drift", "expected_route": ["dynamic-data-quality"], "expected_mode": "DATA_QUALITY", "requires_brief": false},
+    {"id": "ROUTE-022", "input": "Đánh giá chatbot RAG về hallucination", "expected_route": ["dynamic-ai-evaluation"], "expected_mode": "AI_EVALUATION", "requires_brief": false},
+    {"id": "ROUTE-023", "input": "Audit accessibility trang login theo WCAG", "expected_route": ["hybrid-accessibility"], "expected_mode": "ACCESSIBILITY", "requires_brief": false},
+    {"id": "ROUTE-024", "input": "Tạo JMeter JMX cho API load test", "expected_route": ["dynamic-performance"], "expected_mode": "PERFORMANCE", "requires_brief": false},
+    {"id": "ROUTE-025", "input": "Validate OpenAPI contract với implementation", "expected_route": ["hybrid-api-contract"], "expected_mode": "CONTRACT_VALIDATION", "requires_brief": false},
+    {"id": "ROUTE-026", "input": "Test mobile app trên Android và iOS bằng Appium", "expected_route": ["dynamic-mobile"], "expected_mode": "MOBILE_QA", "requires_brief": false},
+    {"id": "ROUTE-027", "input": "Phân tích white-box function processPayment và branch coverage", "expected_route": ["hybrid-source-coverage"], "expected_mode": "SOURCE_ANALYSIS", "requires_brief": false}
+  ],
+  "document_contracts": {
+    "AGENTS.md": {
+      "max_bytes": 27000,
+      "required": ["Generic browser task", "no business brief is required", "deterministic Sheet/testcase routes exit to `dynamic-web-automation`"],
+      "forbidden": ["Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE"]
+    },
+    "GEMINI.md": {
+      "max_bytes": 23000,
+      "required": ["Generic browser task", "không cần business brief", "deterministic Sheet/testcase chuyển sang `dynamic-web-automation`"],
+      "forbidden": ["chỉ tiếp tục khi Business Execution Brief là `READY`"]
+    },
+    ".github/copilot-instructions.md": {
+      "max_bytes": 6500,
+      "required": ["UI-first exploratory/ad-hoc", "brief is optional enrichment", "single `dynamic-web-automation` BUILD_AND_RUN workflow"],
+      "forbidden": ["requires a `READY` Business Execution Brief before normal browser action"]
+    },
+    ".cursor/rules/dynamic-web-exploratory.mdc": {
+      "max_bytes": 1800,
+      "required": ["UI-first", "dynamic-web-automation"],
+      "forbidden": ["SHEET_EXECUTION_PLUS add their required layers"]
+    },
+    ".windsurf/rules/dynamic-web-exploratory.md": {
+      "max_bytes": 1800,
+      "required": ["UI-first", "dynamic-web-automation"],
+      "forbidden": ["SHEET_EXECUTION_PLUS add their required layers"]
+    },
+    "dynamic-testing/web-exploratory/SKILL.md": {
+      "max_bytes": 24000,
+      "required": ["UI-first", "Compatibility label owned by dynamic-web-automation BUILD_AND_RUN"],
+      "forbidden": ["Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE"]
+    }
+  }
+}

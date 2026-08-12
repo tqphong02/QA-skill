@@ -83,6 +83,10 @@ Profile `full` thêm `dynamic-data-quality`, `dynamic-ai-evaluation`, `hybrid-ac
 
 Khi chuyển từ full về core, installer không xóa dữ liệu mà chuyển 13 skill chuyên sâu sang folder `qa-skill-disabled` nằm ngoài discovery. Backup khi cập nhật cũng nằm trong `qa-skill-backups` ngoài discovery. Chạy lại với `--profile=full` để cài bản mới khi cần
 
+Mỗi lần cài profile, installer chuyển toàn bộ legacy alias như `qa-run`, `plane-qa` và `playwright-pom-automation` ra `qa-skill-backups/<timestamp>/legacy-aliases/`, chỉ giữ canonical skill trong discovery, rồi verify `SKILL.md` đã cài khớp byte với source. Với `--only`, chỉ alias của skill được chọn được migrate
+
+Sau `npm install`, installer đổi tên mọi `SKILL.md` nằm sâu trong dependency thành `SKILL.dependency-resource.md`. Nội dung vendor vẫn được giữ để chẩn đoán, nhưng Codex/Gemini không discover nhầm chúng thành public skill. Doctor sẽ fail nếu nested manifest xuất hiện lại
+
 Kiểm tra trong Git Bash bằng cùng profile đã cài:
 
 ```bash

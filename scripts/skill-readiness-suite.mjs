@@ -26,15 +26,17 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveInvocationRoot, resolveReadinessOutputDir } from './invocation-paths.mjs'
 import { loadSkillRegistry, skillRepoPath } from './skill-registry.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const INVOCATION_ROOT = resolveInvocationRoot()
 const SKILL_REGISTRY = loadSkillRegistry(ROOT)
 const SKILL_ORDER = SKILL_REGISTRY.skills.map((entry) => entry.id)
 
 const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-senior-'))
 const RUN_ID = `${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}-${process.pid}`
-const DEFAULT_OUTPUT_DIR = path.join(ROOT, 'evidence', 'skill-readiness')
+const DEFAULT_OUTPUT_DIR = resolveReadinessOutputDir()
 
 function parseArgs(argv) {
   const args = { outputDir: DEFAULT_OUTPUT_DIR, strictLive: false }
@@ -43,7 +45,7 @@ function parseArgs(argv) {
     if (value === '--strict-live') {
       args.strictLive = true
     } else if (value === '--output-dir') {
-      args.outputDir = path.resolve(argv[index + 1] || DEFAULT_OUTPUT_DIR)
+      args.outputDir = path.resolve(INVOCATION_ROOT, argv[index + 1] || DEFAULT_OUTPUT_DIR)
       index += 1
     } else if (value === '--help' || value === '-h') {
       console.log('Usage: node scripts/skill-readiness-suite.mjs [--strict-live] [--output-dir <dir>]')
@@ -133,6 +135,18 @@ function addCheck(skill, name, status, detail, command = null) {
 
 function addIntegration(skill, status, detail) {
   skill.integration = { status, detail: redact(detail) }
+}
+
+function integrationBlockerCategories(detail) {
+  const text = String(detail || '').toLowerCase()
+  const categories = []
+  if (/oauth|api key|credential|auth|mcp|account|workspace|configuration/.test(text)) categories.push('AUTH_OR_MCP')
+  if (/target|url|application|implementation|endpoint|repository|release packet|design source|dataset/.test(text)) categories.push('TARGET_OR_ARTIFACT')
+  if (/device|appium|screen reader|browser session|browser\/device farm|proxy/.test(text)) categories.push('DEVICE_OR_SESSION')
+  if (/approval|authorization|engagement|owner|rate limit|stop condition|workload contract/.test(text)) categories.push('AUTHORITY_OR_SAFETY_CONTRACT')
+  if (/model|provider|cost\/latency budget/.test(text)) categories.push('MODEL_OR_BUDGET')
+  if (/cli_not_found|command not in path|runtime/.test(text)) categories.push('RUNTIME')
+  return categories.length ? [...new Set(categories)] : ['LIVE_EVIDENCE']
 }
 
 function parseSkillFrontmatter(content) {
@@ -597,6 +611,14 @@ function evaluateSkill(skill) {
   const localBlocked = skill.checks.some(check => check.status === 'BLOCKED')
   skill.localStatus = localFail ? 'FAIL' : localBlocked ? 'PARTIAL' : 'PASS'
   skill.status = localFail ? 'FAIL' : skill.integration.status === 'BLOCKED' ? 'PARTIAL' : 'PASS'
+  skill.certificationState = localFail
+    ? 'LOCAL_FAIL'
+    : skill.integration.status === 'BLOCKED'
+      ? 'LOCAL_PASS_LIVE_PENDING'
+      : 'CERTIFIED_FOR_DECLARED_SCOPE'
+  skill.liveRequiredInputs = skill.integration.status === 'BLOCKED'
+    ? integrationBlockerCategories(skill.integration.detail)
+    : []
   return skill
 }
 
@@ -615,7 +637,9 @@ function buildMarkdown(payload) {
     '## Kết luận',
     '',
     `- Kết quả local: **${summary.localCertification}**`,
-    `- Kết quả live integration: **${summary.liveCertification}**`,
+    `- Tầng 1 — local deterministic: **${summary.localCertification}**`,
+    `- Tầng 2 — adapter/fail-closed preflight: **${summary.preflightCertification}**`,
+    `- Tầng 3 — live target evidence: **${summary.liveCertification}**`,
     `- Chế độ chạy: local, read-only, không Docker, không Postgres, không load test`,
     `- Strict-live requested: **${strictLive ? 'yes' : 'no'}**`,
     '',
@@ -623,15 +647,15 @@ function buildMarkdown(payload) {
     '',
     `## Tổng quan ${skills.length} skill`,
     '',
-    '| # | Skill | Contract/runtime local | Live integration | Status |',
+    '| # | Skill | Contract/runtime local | Live integration | Certification state |',
     '|---:|---|---|---|---|',
   ]
   skills.forEach((skill, index) => {
-    lines.push(`| ${index + 1} | \`${skill.name}\` | ${skill.localStatus} | ${skill.integration.status} | **${skill.status}** |`)
+    lines.push(`| ${index + 1} | \`${skill.name}\` | ${skill.localStatus} | ${skill.integration.status} | **${skill.certificationState}** |`)
   })
-  lines.push('', '## Số liệu', '', `- ${skills.length}/${skills.length} skill được discover và có adapter`, `- ${summary.localPass}/${skills.length} skill đạt local contract/runtime`, `- ${summary.blockedIntegrations} live integration đang BLOCKED vì thiếu target, credential, device, MCP hoặc approval`, `- ${summary.failures} deterministic failure`, '', '## UI/UX và mapping BA → browser', '', `- Mapping contract: **${mapping.status}** — ${mapping.detail}`, '- dynamic-web-exploratory có riêng `DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`', '- hybrid-ui-ux-review có packet contract cho requirement, viewport, state và screenshot/video evidence', '- Browser observability yêu cầu Network + Console + Page Error trong cùng session', '- static-requirements-analysis export requirement IDs ổn định', '- ui-business-reconciliation đối chiếu UI snapshot/runtime với requirement registry và có fixture bắt conflict HTTP 500 nhưng UI hiển thị success', '- hybrid-accessibility có axe WCAG 2.2 template và manual matrix cho keyboard, focus, reflow, contrast, dynamic state và screen reader', '', '## Chi tiết evidence')
+  lines.push('', '## Số liệu', '', `- ${skills.length}/${skills.length} skill được discover và có adapter`, `- ${summary.localPass}/${skills.length} skill đạt local contract/runtime`, `- ${summary.preflightPass}/${summary.liveCandidates} workflow cần live input đã PASS adapter/fail-closed preflight`, `- ${summary.liveObserved}/${summary.liveCandidates} workflow có live evidence; ${summary.blockedIntegrations} workflow đang chờ input, không phải deterministic failure`, `- ${summary.failures} deterministic failure`, `- Nhóm input còn thiếu: ${Object.entries(summary.liveBlockerCategories).map(([name, count]) => `${name}=${count}`).join(', ') || 'none'}`, '', '## UI/UX và mapping BA → browser', '', `- Mapping contract: **${mapping.status}** — ${mapping.detail}`, '- dynamic-web-exploratory có riêng `DISCOVERY_CORE = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX`', '- hybrid-ui-ux-review có packet contract cho requirement, viewport, state và screenshot/video evidence', '- Browser observability yêu cầu Network + Console + Page Error trong cùng session', '- static-requirements-analysis export requirement IDs ổn định', '- ui-business-reconciliation đối chiếu UI snapshot/runtime với requirement registry và có fixture bắt conflict HTTP 500 nhưng UI hiển thị success', '- hybrid-accessibility có axe WCAG 2.2 template và manual matrix cho keyboard, focus, reflow, contrast, dynamic state và screen reader', '', '## Chi tiết evidence')
   for (const skill of skills) {
-    lines.push('', `### ${skill.name}`, '', `Local status: **${skill.localStatus}**  `, `Integration: **${skill.integration.status}** — ${skill.integration.detail}`, '', '| Check | Status | Evidence |', '|---|---|---|')
+    lines.push('', `### ${skill.name}`, '', `Certification: **${skill.certificationState}**  `, `Local status: **${skill.localStatus}**  `, `Integration: **${skill.integration.status}** — ${skill.integration.detail}`, `Required live inputs: **${skill.liveRequiredInputs.join(', ') || 'none'}**`, '', '| Check | Status | Evidence |', '|---|---|---|')
     for (const check of skill.checks) lines.push(`| ${mdCell(check.name)} | ${check.status} | ${mdCell(check.detail)} |`)
   }
   lines.push('', '## Cổng chứng nhận senior', '', '| Gate | Result | Meaning |', '|---|---|---|', `| ${skills.length} public skills discoverable | ${skills.length === SKILL_ORDER.length ? 'PASS' : 'FAIL'} | canonical public skill list is complete |`, `| Local deterministic contracts | ${summary.failures === 0 ? 'PASS' : 'FAIL'} | no fixture/unit/compile/doctor contract failed |`, `| UI/UX branch is explicit | ${mapping.status} | requirement-to-browser mapping and UI/UX are tested paths |`, `| Live external integrations | ${summary.blockedIntegrations === 0 ? 'PASS' : 'BLOCKED'} | requires real credentials/targets and must be run separately |`, `| Strict senior live sign-off | ${summary.blockedIntegrations === 0 && summary.failures === 0 ? 'PASS' : 'BLOCKED'} | cannot be claimed while a live integration gate is blocked |`, '', '## Cách đọc kết quả', '', '- `PASS`: evidence đã chạy thành công trong phạm vi local', '- `BLOCKED`: safety/doctor đã fail-closed hoặc live input chưa được cấp; đây không phải là lỗi deterministic', '- `FAIL`: lỗi phải sửa trước khi gọi local readiness đạt chuẩn', '', 'File JSON companion được pretty-print với indent 2 để không còn hiện thành một dòng')
@@ -654,8 +678,9 @@ function printSummary(payload, reports) {
   console.log('\nQA-skill senior readiness')
   console.log('=========================')
   console.log(`Local certification: ${payload.summary.localCertification}`)
+  console.log(`Adapter preflight certification: ${payload.summary.preflightCertification}`)
   console.log(`Live integration certification: ${payload.summary.liveCertification}`)
-  console.log(`Skills: ${payload.summary.localPass}/${payload.skills.length} local pass | ${payload.summary.blockedIntegrations} live blocked | ${payload.summary.failures} failures`)
+  console.log(`Skills: ${payload.summary.localPass}/${payload.skills.length} local pass | ${payload.summary.preflightPass}/${payload.summary.liveCandidates} preflight pass | ${payload.summary.liveObserved}/${payload.summary.liveCandidates} live observed | ${payload.summary.failures} failures`)
   console.log('')
   console.log('Skill                           Local       Integration  Status')
   console.log('------------------------------  ----------  -----------  ----------')
@@ -672,8 +697,18 @@ try {
   const failures = skills.reduce((total, skill) => total + skill.failures, 0) + (mapping.status === 'FAIL' ? 1 : 0)
   const localPass = skills.filter(skill => skill.localStatus === 'PASS').length
   const blockedIntegrations = skills.filter(skill => skill.integration.status === 'BLOCKED').length
+  const liveCandidateSkills = skills.filter(skill => skill.integration.status !== 'N/A')
+  const liveCandidates = liveCandidateSkills.length
+  const preflightPass = liveCandidateSkills.filter(skill => skill.localStatus === 'PASS').length
+  const liveObserved = liveCandidateSkills.filter(skill => skill.integration.status === 'PASS').length
+  const liveBlockerCategories = {}
+  for (const skill of liveCandidateSkills) {
+    for (const category of skill.liveRequiredInputs) {
+      liveBlockerCategories[category] = (liveBlockerCategories[category] || 0) + 1
+    }
+  }
   payload = {
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     runId: RUN_ID,
     generatedAt: new Date().toISOString(),
     scope: { skills: SKILL_ORDER, mode: 'local-read-only', excludes: ['Docker', 'Postgres', 'network targets', 'load tests', 'external mutations'] },
@@ -684,8 +719,13 @@ try {
       localPass,
       failures,
       blockedIntegrations,
+      liveCandidates,
+      preflightPass,
+      liveObserved,
+      liveBlockerCategories,
       localCertification: failures === 0 && localPass === skills.length ? 'PASS — SENIOR LOCAL CONTRACT' : 'FAIL',
-      liveCertification: failures > 0 ? 'FAIL' : blockedIntegrations > 0 ? 'BLOCKED — LIVE INPUTS REQUIRED' : 'PASS — LIVE CONTRACTS OBSERVED',
+      preflightCertification: failures === 0 && preflightPass === liveCandidates ? 'PASS — ADAPTER CONTRACTS READY' : 'FAIL',
+      liveCertification: failures > 0 ? 'FAIL' : blockedIntegrations > 0 ? `PENDING — ${blockedIntegrations} WORKFLOWS REQUIRE LIVE INPUTS` : 'PASS — LIVE CONTRACTS OBSERVED',
     },
   }
   const reports = writeReports(payload)

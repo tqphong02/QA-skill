@@ -41,13 +41,30 @@ else
 fi
 
 while IFS= read -r skill; do
-  if [[ -f "$SKILLS_DIR/$skill/SKILL.md" ]]; then
-    printf 'PASS skill=%s\n' "$skill"
-  else
+  if verify_installed_skill "$skill"; then
+    printf 'PASS skill=%s source_match=true\n' "$skill"
+  elif [[ ! -f "$SKILLS_DIR/$skill/SKILL.md" ]]; then
     printf 'FAILED skill_missing=%s expected=%s\n' "$skill" "$SKILLS_DIR/$skill/SKILL.md"
+    failures=$((failures + 1))
+  else
+    printf 'FAILED skill_drift=%s installed=%s\n' "$skill" "$SKILLS_DIR/$skill/SKILL.md"
     failures=$((failures + 1))
   fi
 done < <(print_profile_skills "$PROFILE")
+
+while IFS= read -r nested_manifest; do
+  [[ -n "$nested_manifest" ]] || continue
+  printf 'FAILED nested_skill_active=%s\n' "$nested_manifest"
+  failures=$((failures + 1))
+done < <(find "$SKILLS_DIR" -mindepth 3 -type f -name 'SKILL.md' -print 2>/dev/null)
+
+while IFS=$'\t' read -r alias canonical; do
+  [[ -n "$alias" ]] || continue
+  if [[ -e "$SKILLS_DIR/$alias" ]]; then
+    printf 'FAILED legacy_skill_active=%s canonical=%s\n' "$alias" "$canonical"
+    failures=$((failures + 1))
+  fi
+done < <(list_legacy_alias_mappings)
 
 config_found=0
 for config in "$WORKSPACE_CONFIG" "$GLOBAL_CONFIG"; do

@@ -360,7 +360,7 @@ sync_profile_visibility() {
       moved=$((moved + 1))
       continue
     fi
-    mkdir -p "$stash_dir"
+    mkdir -p "$(dirname "$dst")"
     if mv "$src" "$dst"; then
       log_ok "disabled $skill → $dst"
       moved=$((moved + 1))
@@ -376,21 +376,39 @@ sync_profile_visibility() {
   fi
 }
 
+legacy_aliases_for_skill() {
+  local requested="$1"
+  if command -v node >/dev/null 2>&1 && [[ -f "$REPO_DIR/scripts/skill-registry-cli.mjs" ]]; then
+    node "$REPO_DIR/scripts/skill-registry-cli.mjs" aliases "$requested" "$REPO_DIR"
+    return $?
+  fi
+  return 1
+}
+
+list_legacy_alias_mappings() {
+  if command -v node >/dev/null 2>&1 && [[ -f "$REPO_DIR/scripts/skill-registry-cli.mjs" ]]; then
+    node "$REPO_DIR/scripts/skill-registry-cli.mjs" list-aliases "" "$REPO_DIR"
+    return $?
+  fi
+  return 1
+}
+
 retire_legacy_skills() {
+  local canonical_skills=("$@")
   local stash_dir
-  stash_dir="$(dirname "$SKILLS_DIR")/qa-skill-disabled"
+  stash_dir="$(dirname "$SKILLS_DIR")/qa-skill-backups"
   local stamp
   stamp=$(date '+%Y%m%d%H%M%S')
 
   for skill in "${RETIRED_SKILLS[@]}"; do
     local src="$SKILLS_DIR/$skill"
     [[ -e "$src" ]] || continue
-    local dst="$stash_dir/${skill}-merged-into-dynamic-performance-${stamp}"
+    local dst="$stash_dir/$stamp/retired/${skill}-merged-into-dynamic-performance"
     if [[ "$DRY_RUN" -eq 1 ]]; then
       log_dry "retire $src → $dst"
       continue
     fi
-    mkdir -p "$stash_dir"
+    mkdir -p "$(dirname "$dst")"
     if mv "$src" "$dst"; then
       log_ok "retired $skill → $dst"
     else
@@ -398,6 +416,49 @@ retire_legacy_skills() {
       return 1
     fi
   done
+
+  local canonical
+  local alias
+  for canonical in "${canonical_skills[@]}"; do
+    while IFS= read -r alias; do
+      [[ -n "$alias" ]] || continue
+      local src="$SKILLS_DIR/$alias"
+      [[ -e "$src" ]] || continue
+      local dst="$stash_dir/$stamp/legacy-aliases/${alias}-to-${canonical}"
+      if [[ "$DRY_RUN" -eq 1 ]]; then
+        log_dry "migrate legacy alias $src → $dst"
+        continue
+      fi
+      mkdir -p "$(dirname "$dst")"
+      if mv "$src" "$dst"; then
+        log_ok "migrated legacy alias $alias → $canonical (backup: $dst)"
+      else
+        log_err "Không migrate được legacy alias $alias"
+        return 1
+      fi
+    done < <(legacy_aliases_for_skill "$canonical")
+  done
+}
+
+verify_installed_skill() {
+  local skill="$1"
+  local installed="$SKILLS_DIR/$skill/SKILL.md"
+  local source_root
+  source_root=$(skill_repo_path "$skill") || return 1
+  local source="$source_root/SKILL.md"
+  [[ -f "$installed" ]] || return 2
+  cmp -s "$source" "$installed"
+}
+
+dependency_manifests_match() {
+  local source_root="$1"
+  local installed_root="$2"
+  [[ -f "$source_root/package.json" && -f "$installed_root/package.json" ]] || return 1
+  cmp -s "$source_root/package.json" "$installed_root/package.json" || return 1
+  if [[ -f "$source_root/package-lock.json" || -f "$installed_root/package-lock.json" ]]; then
+    [[ -f "$source_root/package-lock.json" && -f "$installed_root/package-lock.json" ]] || return 1
+    cmp -s "$source_root/package-lock.json" "$installed_root/package-lock.json" || return 1
+  fi
 }
 
 # ==== Copy skill (with excludes) ====
@@ -416,8 +477,27 @@ copy_skill() {
     return 1
   fi
 
+  local dependency_cache=""
+  if [[ -d "$dst/node_modules" ]] && dependency_manifests_match "$src" "$dst"; then
+    local dependency_cache_root
+    dependency_cache_root="$(dirname "$SKILLS_DIR")/qa-skill-dependency-cache"
+    dependency_cache="$dependency_cache_root/${skill}-$$"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      log_dry "reuse unchanged node_modules for $skill"
+      dependency_cache=""
+    else
+      mkdir -p "$dependency_cache_root"
+      mv "$dst/node_modules" "$dependency_cache"
+    fi
+  fi
+
   if [[ -e "$dst" ]]; then
-    resolve_skill_conflict "$dst" || return 1
+    if ! resolve_skill_conflict "$dst"; then
+      if [[ -n "$dependency_cache" && -d "$dependency_cache" && -d "$dst" ]]; then
+        mv "$dependency_cache" "$dst/node_modules"
+      fi
+      return 1
+    fi
   fi
 
   if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
@@ -449,6 +529,13 @@ copy_skill() {
   # Only the selected top-level skill is public. Bundled examples, templates or
   # third-party sources must not register additional user-selectable skills.
   find "$dst" -mindepth 2 -type f -name 'SKILL.md' -delete 2>/dev/null || true
+  if [[ -n "$dependency_cache" && -d "$dependency_cache" ]]; then
+    mv "$dependency_cache" "$dst/node_modules"
+    quarantine_nested_skill_manifests "$dst" || return 1
+    if [[ "${SKIP_DEPS:-0}" -ne 1 ]]; then
+      : > "$dst/.qa-skill-deps-reused"
+    fi
+  fi
   log_ok "$skill → $dst"
 }
 
@@ -513,16 +600,45 @@ install_node_deps() {
     if [[ -f "$skill_path/package.json" ]] || { [[ "${DRY_RUN:-0}" -eq 1 ]] && [[ -f "$REPO_DIR/$skill/package.json" ]]; }; then
       if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         log_dry "cd $skill_path && npm install --no-audit --no-fund"
+      elif [[ -f "$skill_path/.qa-skill-deps-reused" && -d "$skill_path/node_modules" ]]; then
+        rm -f "$skill_path/.qa-skill-deps-reused"
+        log_ok "$skill: reused node_modules (dependency manifests unchanged)"
+        quarantine_nested_skill_manifests "$skill_path" || return 1
       else
         log_step "npm install trong $skill"
-        (cd "$skill_path" && npm install --no-audit --no-fund --loglevel=error) \
-          && log_ok "$skill: npm install OK" \
-          || log_warn "$skill: npm install fail (kiểm tra network)"
+        if (cd "$skill_path" && npm install --no-audit --no-fund --loglevel=error); then
+          log_ok "$skill: npm install OK"
+        else
+          log_err "$skill: npm install fail"
+          return 1
+        fi
+        quarantine_nested_skill_manifests "$skill_path" || return 1
       fi
     else
       log_info "$skill: không có package.json — skip npm"
     fi
   done
+}
+
+# Dependency packages such as playwright-core ship their own Agent Skill
+# documents. They are useful vendor resources but must not become public
+# QA-skill entrypoints when a host recursively scans the installed tree.
+quarantine_nested_skill_manifests() {
+  local skill_root="$1"
+  [[ -d "$skill_root" ]] || return 0
+  local manifest target count=0
+  while IFS= read -r -d '' manifest; do
+    target="${manifest%/SKILL.md}/SKILL.dependency-resource.md"
+    if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+      log_dry "quarantine nested dependency manifest $manifest → $target"
+    else
+      mv "$manifest" "$target" || return 1
+      count=$((count + 1))
+    fi
+  done < <(find "$skill_root" -mindepth 2 -type f -name 'SKILL.md' -print0)
+  if [[ "$count" -gt 0 ]]; then
+    log_ok "$count nested dependency skill manifest(s) quarantined in $(basename "$skill_root")"
+  fi
 }
 
 # ==== Install Python deps ====
@@ -757,6 +873,40 @@ setup_selected_integrations() {
 # ==== Verify ====
 verify_installation() {
   log_step "Verify"
+  # 0. Discovery integrity: one canonical copy, byte-identical SKILL contract,
+  # and no migrated alias left active.
+  local skill
+  if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
+    for skill in "${SKILLS[@]}"; do
+      log_dry "verify canonical source parity for $skill"
+    done
+  else
+    for skill in "${SKILLS[@]}"; do
+      if verify_installed_skill "$skill"; then
+        log_ok "$skill canonical source parity"
+      else
+        log_err "$skill install missing or drifted from repository source"
+        return 1
+      fi
+      local nested_manifest
+      nested_manifest=$(find "$SKILLS_DIR/$skill" -mindepth 2 -type f -name 'SKILL.md' -print -quit 2>/dev/null || true)
+      if [[ -n "$nested_manifest" ]]; then
+        log_err "$skill exposes nested dependency skill: $nested_manifest"
+        return 1
+      fi
+    done
+    local canonical alias
+    for canonical in "${LEGACY_MIGRATION_SKILLS[@]}"; do
+      while IFS= read -r alias; do
+        [[ -n "$alias" ]] || continue
+        if [[ -e "$SKILLS_DIR/$alias" ]]; then
+          log_err "Legacy alias vẫn active: $alias → $canonical"
+          return 1
+        fi
+      done < <(legacy_aliases_for_skill "$canonical")
+    done
+  fi
+
   # 1. AI provider status (works as long as python3 anywhere)
   local py_bin=""
   for py in python3.11 python3.12 python3.10 python3; do

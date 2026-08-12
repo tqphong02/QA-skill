@@ -39,6 +39,7 @@ const DEFAULT_MAX_MS = 300_000;
 const DEFAULT_MAX_ACTIONS_PER_CHARTER = 16;
 const DEFAULT_MAX_RETRIES_PER_ACTION = 1;
 const DEFAULT_MAX_AGENT_REPLANS = 3;
+  const DEFAULT_BROWSER_DRIVER = 'playwright-runtime';
 
 const EXPLORATORY_BROWSER_QA = 'EXPLORATORY_BROWSER_QA';
 const LEGACY_EXPLORATORY_ADHOC = 'EXPLORATORY_ADHOC';
@@ -890,9 +891,9 @@ export function startExploratoryRun({
   objective = '',
   briefPath = path.join(dataDir, 'qa-knowledge', 'context', 'business-execution-brief.json'),
   cardPath = '',
-  browserDriver = 'auto',
-  browserObserver = 'auto',
-  networkObserver = 'auto',
+  browserDriver = DEFAULT_BROWSER_DRIVER,
+  browserObserver = DEFAULT_BROWSER_DRIVER,
+  networkObserver = DEFAULT_BROWSER_DRIVER,
   sessionId = '',
   maxActions = positiveInt(process.env.QA_EXPLORATORY_MAX_ACTIONS, DEFAULT_MAX_ACTIONS),
   maxMs = positiveInt(process.env.QA_EXPLORATORY_MAX_MS, DEFAULT_MAX_MS),
@@ -1763,6 +1764,9 @@ export async function main(argv = process.argv.slice(2)) {
     return index === -1 ? fallback : (argv[index + 1] || fallback);
   };
   if (command === 'start') {
+    const configuredBrowserTrack = (envName) => (
+      String(process.env[envName] || '').trim() || DEFAULT_BROWSER_DRIVER
+    );
     const result = startExploratoryRun({
       dataDir: DATA_DIR,
       runId: localGetArg('--run-id', argv[1] && !argv[1].startsWith('-') ? argv[1] : ''),
@@ -1771,9 +1775,9 @@ export async function main(argv = process.argv.slice(2)) {
       objective: localGetArg('--objective', ''),
       briefPath: localGetArg('--business-context', path.join(DATA_DIR, 'qa-knowledge', 'context', 'business-execution-brief.json')),
       cardPath: localGetArg('--business-card', ''),
-      browserDriver: localGetArg('--browser-driver', 'auto'),
-      browserObserver: localGetArg('--browser-observer', 'auto'),
-      networkObserver: localGetArg('--network-observer', 'auto'),
+      browserDriver: localGetArg('--browser-driver', configuredBrowserTrack('QA_BROWSER_DRIVER')),
+      browserObserver: localGetArg('--browser-observer', configuredBrowserTrack('QA_BROWSER_OBSERVER')),
+      networkObserver: localGetArg('--network-observer', configuredBrowserTrack('QA_NETWORK_OBSERVER')),
       sessionId: localGetArg('--session-id', ''),
       maxActions: localGetArg('--max-actions', process.env.QA_EXPLORATORY_MAX_ACTIONS || DEFAULT_MAX_ACTIONS),
       maxMs: localGetArg('--max-ms', process.env.QA_EXPLORATORY_MAX_MS || DEFAULT_MAX_MS),
