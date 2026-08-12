@@ -17,10 +17,12 @@
 ## 1. POM layering rules
 
 - **Page Object** = a page or distinct component (LoginForm, Header, DataTable). One class per file.
+- **Generated testcase suites** = one business module per final spec/Page Object/selector file. Use the manifest `group` as the default module key. Internal plans may be batched, but final code must not be named or split by batch.
 - **Responsibilities:** hold locators, perform actions (click/fill/select), read & return data (text, count, state).
 - **NOT its job:** `expect()` assertions. Assertions belong in the spec so the page stays reusable across tests with different expectations.
 - **Component composition:** a page may expose child components as properties (`this.header = new Header(page)`), but avoid deep nesting — flatten if it hurts readability.
 - **Naming:** `<thing>.page.ts` → class `<Thing>Page`. Component: `<thing>.component.ts` → `<Thing>Component`.
+- **Forbidden layout:** one global `app.page.ts`/`aifa.page.ts` containing every module, or several `<module>.batch-NN.functional.spec.ts` files for one module.
 
 ## 2. Locator strategy (priority order)
 

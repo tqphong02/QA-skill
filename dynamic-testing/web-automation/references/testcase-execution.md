@@ -6,8 +6,9 @@ Use this reference when the request includes executing deterministic testcases, 
 
 ```text
 .automation.json
-  → bounded plan
-  → selectors + Page Objects + specs
+  → bounded plans
+  → consolidate plans by business module
+  → one selector + Page Object + spec file per module
   → traceability PASS
   → Playwright browser run
   → screenshot/video + trace from that run
@@ -32,6 +33,16 @@ npm run testcase-workflow -- \
   --group LOGIN \
   --max-cases 20
 ```
+
+The 20-case ceiling bounds each planning artifact, not the final source-file layout. When one module contains more than 20 testcases, create multiple `plans/<module>.batch-NN.pom-plan.json` inputs, then deterministically merge them into:
+
+```text
+selectors/<module>.selectors.ts
+pages/<module>.page.ts
+tests/<surface>/<module>.<surface>.spec.ts
+```
+
+Do not emit `tests/**/<module>.batch-NN.*.spec.ts`, one global Page Object, or one global selector registry. Validate that every module has exactly one final file of each kind and every Testcase ID appears in exactly one `test()`.
 
 After generating selectors, Page Objects and specs, execute the same IDs:
 
@@ -71,6 +82,7 @@ The same Testcase ID must resolve in the Sheet plan, automation manifest, POM sp
 
 - Do not execute production or destructive/mutating cases without exact target, data ownership, cleanup and approval
 - Run one bounded group/slice at a time
+- Consolidate bounded slices into one final code set per business module
 - Use current-build selector evidence from the same target state
 - Keep retry evidence and never promote flaky to clean PASS
 - Write runtime artifacts under the automation project, not this skill repository

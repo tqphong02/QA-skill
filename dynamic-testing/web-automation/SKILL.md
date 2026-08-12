@@ -15,7 +15,7 @@ Own the complete deterministic workflow from shared automation manifest to reusa
 
 1. Resolve `BUILD`, `RUN` or default `BUILD_AND_RUN`, plus target, environment, account/data, production boundary and cleanup
 2. Use `.automation.json` as the only execution/POM source and select at most 20 cases by group or Testcase ID
-3. Run the unified workflow with `--phase plan`; generate selectors → Page Objects → tagged specs from that plan
+3. Run the unified workflow with `--phase plan`; generate selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
 4. Verify UI locators in the live DOM and record current-build selector evidence
 5. Pass placeholder, TypeScript/lint and traceability gates
 6. Run the unified workflow with `--phase execute`; it executes Playwright with same-session visual and trace evidence
@@ -40,7 +40,19 @@ npm run testcase-workflow -- \
   --output testcases/login.pom-plan.json
 ```
 
-Use `--testcase-id TC-01,TC-02` for a smaller slice. The CLI blocks selections over 20 cases unless `--max-cases` is raised explicitly. Generate and verify one bounded group/slice at a time; do not reread the whole Markdown, manifest, repository or raw DOM after each case.
+Use `--testcase-id TC-01,TC-02` for a smaller slice. The CLI blocks selections over 20 cases unless `--max-cases` is raised explicitly. Generate and verify one bounded group/slice at a time; do not reread the whole Markdown, manifest, repository or raw DOM after each case. This limit applies to planning context only and must not create `batch-01`, `batch-02` final code files.
+
+## Module artifact contract
+
+Use `testcases[].group` as the business-module boundary unless the user supplies an explicit module map. For a full module/project BUILD:
+
+- Create exactly one `tests/<surface>/<module>.<surface>.spec.ts` containing every selected testcase in that module; keep one testcase ID per `test()`
+- Create exactly one `pages/<module>.page.ts` for module actions and one `selectors/<module>.selectors.ts` for that module's selector registry
+- Keep shared base classes, fixtures and cross-module components in clearly named shared files; never place actions or selectors from every module in one `aifa.page.ts`, `app.page.ts` or global selector file
+- Bounded plans may remain as multiple internal `plans/<module>.batch-NN.pom-plan.json` files, but merge their generated code into the module's single spec/Page Object/selector files
+- Final module code filenames must not contain `batch-NN`; reject both one global mega-file and multiple final spec files for the same module
+- Preserve manifest module order and testcase order inside each module; generation must be deterministic and rerunnable without duplicating IDs
+- Run `scripts/verify-module-artifact-layout.mjs` after BUILD and block delivery when the module/file mapping fails
 
 ## Testcase-to-code contract
 
@@ -93,6 +105,7 @@ Selector JSON is evidence, not proof by itself; the unified Playwright run must 
 ## POM invariants
 
 - `selectors/<feature>.selectors.ts` uses `as const`
+- One business module owns one final spec, Page Object and selector file; plan batching never leaks into final code filenames
 - Page Objects keep locator collections `private readonly` and expose getters/actions
 - Specs never import selector builders or call `page.locator()`/`page.getBy*()`
 - Page Object action methods contain no `expect()`

@@ -13,7 +13,8 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 
 ## 📄 Quy ước đặt tên file
 
-- `tests/ui/<feature>.ui.spec.ts` — 1 spec cho 1 page hoặc component
+- `tests/ui/<module>.ui.spec.ts` — đúng 1 spec cho 1 module chức năng; batch plan không được tách thành nhiều file spec
+- Mỗi module cũng có đúng 1 `pages/<module>.page.ts` và 1 `selectors/<module>.selectors.ts`; không gom toàn hệ thống vào một Page Object/selector file
 - `tests/api/<endpoint>.api.spec.ts` — 1 spec cho 1 endpoint hoặc resource (CRUD)
 - `tests/functional/<flow>.functional.spec.ts` — 1 spec cho 1 business flow spanning UI + API
 - `tests/performance/k6-*.js` — k6 script (Tier 2); Playwright `*.perf.spec.ts` cho Tier 1

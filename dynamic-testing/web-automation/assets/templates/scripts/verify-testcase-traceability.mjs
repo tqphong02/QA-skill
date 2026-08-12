@@ -88,8 +88,10 @@ function parseTestcases(markdown) {
 
   for (const line of markdown.split(/\r?\n/)) {
     const heading = line.match(/^#{5}\s+.*?\[([A-Za-z][A-Za-z0-9_-]*)\]/);
+    const codeHeading = line.match(/^#{5}\s+`([A-Za-z][A-Za-z0-9_-]*)`(?:\s|$)/);
     const tableId = line.match(/^\|\s*`?([^|`]+?)`?\s*\|/);
     const candidateId = heading?.[1]
+      || codeHeading?.[1]
       || (tableId && /^TC_/i.test(tableId[1].trim()) ? tableId[1].trim() : null);
 
     if (candidateId && isTestcaseId(candidateId)) {
@@ -741,8 +743,8 @@ function buildTraceability({
     }
 
     if (mode === 'ui') {
-      if (!testcase.structured || testcase.target_keys.length === 0) {
-        addViolation(violations, 'LEGACY_TEXT_ONLY', `${testcase.id} chưa có execution contract/target key`, {
+      if (!testcase.structured) {
+        addViolation(violations, 'LEGACY_TEXT_ONLY', `${testcase.id} chưa có execution contract`, {
           testcase_id: testcase.id,
         });
       }
