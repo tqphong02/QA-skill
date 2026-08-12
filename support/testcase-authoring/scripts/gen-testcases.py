@@ -25,8 +25,8 @@ Template structure:
 Logic:
   - Đọc template, tìm vị trí các group/section
   - Ghi test cases vào đúng vị trí row trống theo từng (section, group)
-  - Section UI có anchor_row cho công thức test case ID [BCP-UI-NN]
-  - Section Functional có anchor_row cho công thức test case ID [BCP-NN]
+  - Section UI có anchor_row cho công thức test case ID BCP-UI-NN
+  - Section Functional có anchor_row cho công thức test case ID BCP-NN
   - STT dòng liên tục trong toàn bộ file; Testcase ID explicit được giữ ổn định và có thể có khoảng trống
 """
 import sys, json, shutil, datetime, os, re, hashlib
@@ -37,7 +37,9 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
 from openpyxl.formatting.rule import CellIsRule
 
-# Canonical test-case type order — cases SORT theo thứ tự này trong mỗi scenario.
+# Canonical black-box display/execution order — cases are sorted in this order
+# within each scenario. Alternative is optional; when absent the visible order
+# starts with Happy Path, Validation, then Edge Case.
 TYPE_ORDER = ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional']
 BB_TECHNIQUES = {
     'EP', 'BVA', 'Decision Table', 'State Transition', 'Use Case Testing',
@@ -71,6 +73,14 @@ EXECUTION_ACTIONS = {
 EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
 TESTCASE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$')
 SCENARIO_ID_RE = re.compile(r'^SCN[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$')
+MACHINE_DATA_REF_RE = re.compile(
+    r'\bAIFA_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*(?:@[A-Za-z0-9.-]+)?(?:\.[A-Za-z0-9]+)?\b'
+)
+SAMPLE_VALUE_RE = re.compile(
+    r'(?:qa\.[A-Za-z0-9._%+-]+@example\.test|invalid-email|'
+    r'AifaSample@2026!|WrongSample@2026!|AIFA Sample [A-Za-z0-9 ]+|'
+    r'Golden Path question \d+ sample)'
+)
 RBAC_EXPECTATIONS = {'ALLOW', 'DENY', 'N/A', 'UNRESOLVED'}
 RBAC_VERIFICATION_STATUSES = {
     'REQUIREMENT_ONLY', 'STATIC_CONFIRMED', 'RUNTIME_CONFIRMED',
@@ -275,7 +285,11 @@ def _detected_manual_actions(instruction):
 def _validate_atomic_instruction(step, index):
     action = step['action']
     instruction = step['instruction']
-    detected = _detected_manual_actions(instruction)
+    manual_value = _manual_value_display(step.get('value'), step.get('target'), action)
+    action_text = instruction
+    for value_token in _manual_strings(manual_value):
+        action_text = action_text.replace(value_token, '')
+    detected = _detected_manual_actions(action_text)
     equivalent = {'observe', 'assert'} if action in {'observe', 'assert'} else {action}
     if not detected.intersection(equivalent):
         raise ValueError(
@@ -290,7 +304,11 @@ def _validate_atomic_instruction(step, index):
 
     target = step.get('target')
     if target is not None and action not in {'navigate'}:
-        target_name = str(target.get('name') or '').strip()
+        target_name = _replace_manual_data_refs(
+            target.get('name') or '',
+            target=target,
+            action=action,
+        )
         if target_name and target_name.casefold() not in instruction.casefold():
             raise ValueError(
                 f'execution.steps[{index}].instruction must name the visible target '
@@ -299,7 +317,7 @@ def _validate_atomic_instruction(step, index):
 
     if action in EXECUTION_VALUE_ACTIONS:
         value_tokens = [
-            token for token in _manual_strings(step.get('value'))
+            token for token in _manual_strings(manual_value)
             if len(token) >= 2 and (
                 target is None
                 or token.casefold() != str(target.get('name') or '').strip().casefold()
@@ -326,6 +344,166 @@ def _manual_label(value):
     return labels.get(key.casefold(), key.replace('_', ' ').strip().capitalize())
 
 
+def _is_machine_data_ref(value):
+    return isinstance(value, str) and bool(MACHINE_DATA_REF_RE.fullmatch(value.strip()))
+
+
+def _is_file_reference(value, target_name=''):
+    if not isinstance(value, str):
+        return False
+    if '@' in value:
+        return False
+    return bool(re.search(r'\.[A-Za-z0-9]{1,8}$', value.strip()))
+
+
+def _human_data_reference(data_ref, field='', actual_value=None):
+    """Return a safe sample value without leaking a machine data key or secret."""
+    ref = str(data_ref or '').strip()
+    field_text = str(field or '').strip().casefold()
+    if actual_value not in (None, '') and not _is_machine_data_ref(str(actual_value)):
+        return human_text(actual_value, 'execution data value')
+
+    ref_lower = ref.casefold()
+    if 'invalid' in ref_lower or 'sai' in ref_lower:
+        if field_text in {'password', 'mật khẩu'} or 'password' in ref_lower:
+            return 'WrongSample@2026!'
+        if '@' in ref or 'email' in field_text or 'email' in ref_lower:
+            return 'invalid-email'
+        return 'AIFA Sample Invalid 20260812'
+    if '@' in ref or 'email' in field_text or 'email' in ref_lower or 'invite' in ref_lower:
+        if 'guest' in ref_lower:
+            return 'qa.guest@example.test'
+        if 'invite' in ref_lower:
+            return 'qa.member@example.test'
+        return 'qa.owner@example.test'
+    if field_text in {'password', 'mật khẩu'} or 'password' in ref.casefold():
+        return 'AifaSample@2026!'
+    golden_match = re.search(r'GOLDEN_PROMPT_AI_(\d+)', ref, re.IGNORECASE)
+    if golden_match:
+        return f'Golden Path question {golden_match.group(1)} sample'
+    if 'prompt' in ref.casefold() or 'question' in ref.casefold():
+        return 'AIFA Sample Question 20260812'
+    if 'member_role' in ref_lower or 'member' in ref_lower:
+        return 'AIFA Sample Member 20260812'
+    if 'procedure' in ref_lower or 'dsl' in ref_lower:
+        return 'AIFA Sample Procedure 20260812'
+    if 'doctype' in ref_lower or 'doc_type' in ref_lower:
+        return 'AIFA Sample Document Type 20260812'
+    if 'field' in ref_lower:
+        return 'AIFA Sample Field 20260812'
+    if 'run' in ref_lower:
+        return 'AIFA Sample Run 20260812'
+    if 'chat' in ref_lower:
+        return 'AIFA Sample Conversation 20260812'
+    if 'sync' in ref_lower:
+        return 'AIFA Sample Sync 20260812'
+    return 'AIFA Sample Data 20260812'
+
+
+def _manual_value_display(value, target=None, action=''):
+    """Render an input for a manual tester while preserving machine values for automation."""
+    target_name = target.get('name') if isinstance(target, dict) else target
+    target_name = str(target_name or '').strip()
+    if isinstance(value, dict):
+        data_ref = value.get('data_ref') or value.get('reference')
+        actual_value = value.get('manual') or value.get('display') or value.get('value')
+        if data_ref:
+            if _is_file_reference(actual_value, target_name) and action in {'upload', 'click'}:
+                return human_text(actual_value, 'execution data value')
+            return _human_data_reference(data_ref, value.get('field') or target_name, actual_value)
+        if actual_value not in (None, ''):
+            return _manual_value_display(actual_value, target, action)
+        return _render_execution_value(value)
+    if value in (None, ''):
+        return ''
+    if _is_machine_data_ref(value) and not _is_file_reference(value, target_name):
+        return _human_data_reference(value, target_name)
+    return human_text(value, 'execution data value')
+
+
+def _replace_manual_data_refs(text, value=None, target=None, action=''):
+    """Replace data keys in manual prose; keep exact fixture filenames unchanged."""
+    rendered = human_text(text, 'manual instruction')
+    replacements = {}
+    target_name = target.get('name') if isinstance(target, dict) else target
+    target_name = str(target_name or '').strip()
+    if isinstance(value, dict):
+        data_ref = value.get('data_ref') or value.get('reference')
+        if data_ref:
+            replacements[str(data_ref)] = _manual_value_display(value, target, action)
+    elif _is_machine_data_ref(value) and not _is_file_reference(value, target_name):
+        replacements[str(value)] = _manual_value_display(value, target, action)
+
+    for data_ref in MACHINE_DATA_REF_RE.findall(rendered):
+        if _is_file_reference(data_ref, target_name):
+            continue
+        replacements.setdefault(data_ref, _human_data_reference(data_ref, target_name))
+    for data_ref, display in replacements.items():
+        search_start = 0
+        while True:
+            index = rendered.find(data_ref, search_start)
+            if index < 0:
+                break
+            contextual_display = _contextual_data_display(
+                rendered[:index],
+                display,
+            )
+            rendered = (
+                rendered[:index]
+                + contextual_display
+                + rendered[index + len(data_ref):]
+            )
+            search_start = index + len(contextual_display)
+    rendered = re.sub(
+        r'\bgiá trị từ bộ dữ liệu\s+(?=(?:email|mật khẩu|nội dung câu hỏi|giá trị)\b)',
+        '',
+        rendered,
+        flags=re.IGNORECASE,
+    )
+    rendered = re.sub(
+        r'\bbộ dữ liệu\s+(?=(?:email|mật khẩu|nội dung câu hỏi|giá trị)\b)',
+        '',
+        rendered,
+        flags=re.IGNORECASE,
+    )
+    rendered = re.sub(
+        rf'\b(?:giá trị từ\s+)?bộ dữ liệu\s+(?={SAMPLE_VALUE_RE.pattern})',
+        '',
+        rendered,
+        flags=re.IGNORECASE,
+    )
+    return rendered
+
+
+def _render_manual_instruction(step):
+    return _replace_manual_data_refs(
+        step.get('instruction') or '',
+        step.get('value'),
+        step.get('target'),
+        step.get('action') or '',
+    )
+
+
+def _contextual_data_display(prefix, display):
+    """Avoid repeating a noun already written immediately before a data key."""
+    words = str(display or '').split()
+    if not words:
+        return display
+    context = prefix[-120:].casefold()
+    max_words = min(4, len(words))
+    for size in range(max_words, 0, -1):
+        phrase = ' '.join(words[:size])
+        phrase_lower = phrase.casefold()
+        phrase_index = context.rfind(phrase_lower)
+        if phrase_index >= 0:
+            tail = context[phrase_index + len(phrase_lower):].strip()
+            if len(tail.split()) > 2:
+                continue
+            remainder = ' '.join(words[size:])
+            return remainder or display
+    return display
+
+
 def _render_manual_data(value):
     """Render structured entry data as readable Vietnamese lines, never raw JSON."""
     lines = []
@@ -333,7 +511,15 @@ def _render_manual_data(value):
         for item in value:
             if isinstance(item, dict) and item.get('name'):
                 name = human_text(item.get('name'), 'execution.entry.data.name')
-                item_value = human_text(item.get('value') or item.get('reference') or '', 'execution.entry.data.value')
+                raw_item_value = item.get('value') or item.get('reference') or ''
+                if isinstance(raw_item_value, str):
+                    item_value = _replace_manual_data_refs(
+                        raw_item_value,
+                        target=item.get('name'),
+                        action='entry',
+                    )
+                else:
+                    item_value = _manual_value_display(raw_item_value, item.get('name'), 'entry')
                 condition = human_text(item.get('condition') or '', 'execution.entry.data.condition')
                 text = f'{name}: {item_value}' if item_value else name
                 if condition:
@@ -348,9 +534,11 @@ def _render_manual_data(value):
                 nested = _render_manual_data(item)
                 lines.extend(f'{label} - {entry}' for entry in nested)
             else:
-                lines.append(f'{label}: {human_text(item, f"execution.entry.data.{key}")}')
+                lines.append(
+                    f'{label}: {_replace_manual_data_refs(item, target=label, action="entry")}'
+                )
     elif value not in (None, ''):
-        lines.append(human_text(value, 'execution.entry.data'))
+        lines.append(_replace_manual_data_refs(value, action='entry'))
     return lines
 
 
@@ -383,11 +571,28 @@ def iter_testcases(data):
         raise ValueError('review_required must be empty before testcase generation')
     for section in data.get('sections') or []:
         is_ui = str(section.get('kind') or '').lower() == 'ui'
+        is_function = str(section.get('kind') or '').lower() == 'function'
         for group in section.get('groups') or []:
             group_name = str(group.get('name') or '').strip()
             if execution_required and not group_name:
                 raise ValueError('New executable cases require group.name')
-            for scenario in group.get('scenarios') or []:
+            scenarios = ordered_scenarios(group)
+            group_case_types = [
+                str(case.get('type') or '').strip().lower()
+                for scenario in scenarios
+                for case in scenario.get('cases') or []
+            ]
+            if (
+                execution_required
+                and is_function
+                and group_case_types
+                and all(case_type in TYPE_ORDER for case_type in group_case_types)
+                and 'happy' not in group_case_types
+            ):
+                raise ValueError(
+                    f'FUNCTION group {group_name} requires at least one happy case before validation, edge, negative or error coverage'
+                )
+            for scenario in scenarios:
                 scenario_id = str(scenario.get('scenario_id') or '').strip()
                 scenario_name = str(scenario.get('scenario_name') or scenario.get('name') or '').strip()
                 scenario_requirement = str(scenario.get('requirement') or '').strip()
@@ -460,7 +665,10 @@ def iter_testcases(data):
                     if raw_test_id in seen_ids:
                         raise ValueError(f'Duplicate testcase_id: {raw_test_id}')
                     seen_ids.add(raw_test_id)
-                    test_id = f'[{raw_test_id}]'
+                    # Keep the stable testcase ID readable in every projection.
+                    # Brackets were previously added only for the legacy Excel
+                    # display and made the ID disagree with JSON/Markdown/POM.
+                    test_id = raw_test_id
                     yield {
                         'test_id': test_id,
                         'testcase_id': raw_test_id,
@@ -809,7 +1017,7 @@ def validate_execution_contract(case):
                 f'execution.steps[{index}].action must be one of '
                 f'{sorted(EXECUTION_ACTIONS)}'
             )
-        instruction = human_text(step.get('instruction') or '', f'execution step {step_id}')
+        instruction = _render_manual_instruction(step)
         if not instruction:
             raise ValueError(f'execution.steps[{index}].instruction is required')
         validate_manual_language(instruction, f'execution.steps[{index}].instruction')
@@ -966,19 +1174,43 @@ def _render_wait_for(wait_for):
     return ' '.join(part for part in (kind, value) if part).strip()
 
 
-def _render_manual_wait_for(wait_for):
+def _render_manual_wait_for(wait_for, step=None):
     if not wait_for:
         return ''
-    return human_text(wait_for.get('text') or '', 'wait_for.text')
+    if step is None:
+        return human_text(wait_for.get('text') or '', 'wait_for.text')
+    return _replace_manual_data_refs(
+        wait_for.get('text') or '',
+        step.get('value'),
+        step.get('target'),
+        step.get('action') or '',
+    )
 
 
-def _render_assertion(assertion):
+def _render_assertion(assertion, step=None):
     text = human_text(assertion.get('text') or '', 'assertion.text')
+    if step is not None:
+        text = _replace_manual_data_refs(
+            text,
+            step.get('value'),
+            step.get('target'),
+            step.get('action') or '',
+        )
+    else:
+        text = _replace_manual_data_refs(text, action='assert')
     if text:
         return text
     kind = str(assertion.get('kind') or '').strip().lower()
     target = assertion.get('target_name') or assertion.get('target') or ''
-    target = human_text(target, 'assertion.target')
+    if step is not None:
+        target = _replace_manual_data_refs(
+            target,
+            step.get('value'),
+            step.get('target'),
+            step.get('action') or '',
+        )
+    else:
+        target = human_text(target, 'assertion.target')
     value = _render_execution_value(assertion.get('value') or assertion.get('expected'))
     if kind == 'visible':
         return f'{target} hiển thị' if target else 'Đối tượng hiển thị'
@@ -1031,9 +1263,9 @@ def _render_execution_case(case, execution):
 
     procedure_lines = []
     for step in execution['steps']:
-        instruction = human_text(step.get('instruction'), f'execution step {step["id"]}')
+        instruction = _render_manual_instruction(step)
         procedure_lines.append(instruction)
-        wait_for = _render_manual_wait_for(step.get('wait_for'))
+        wait_for = _render_manual_wait_for(step.get('wait_for'), step)
         if wait_for and wait_for.casefold() not in instruction.casefold():
             procedure_lines.append(wait_for)
     cleanup = execution.get('cleanup')
@@ -1046,13 +1278,13 @@ def _render_execution_case(case, execution):
                 instruction = item
             if instruction:
                 procedure_lines.append(
-                    f'Thực hiện sau kiểm thử: {human_text(instruction, "cleanup")}'
+                    f'Thực hiện sau kiểm thử: {_replace_manual_data_refs(instruction, action="cleanup")}'
                 )
 
     expected_lines = []
     for step in execution['steps']:
         for assertion in step.get('assertions') or []:
-            expected_lines.append(_render_assertion(assertion))
+            expected_lines.append(_render_assertion(assertion, step))
     for assertion in execution['outcome'].get('assertions') or []:
         expected_lines.append(_render_assertion(assertion))
 
@@ -1371,7 +1603,7 @@ def write_testcase_markdown(data, output_path):
         for group in groups:
             group_name_value = human_text(group.get('name') or 'GROUP', 'group name')
             lines.extend([f'### {group_name_value}', ''])
-            scenarios = group.get('scenarios') or []
+            scenarios = ordered_scenarios(group)
             if not scenarios:
                 lines.append('- Không có testcase trong group này')
                 lines.append('')
@@ -1480,6 +1712,15 @@ def type_rank(t):
     t = (t or 'happy').lower().strip()
     return TYPE_ORDER.index(t) if t in TYPE_ORDER else len(TYPE_ORDER)
 
+def scenario_rank(scenario):
+    """Rank a scenario by its earliest black-box case type."""
+    cases = scenario.get('cases') or []
+    return min((type_rank(case.get('type')) for case in cases), default=len(TYPE_ORDER))
+
+def ordered_scenarios(group):
+    """Keep scenarios contiguous while putting happy-path scenarios first."""
+    return sorted(group.get('scenarios') or [], key=scenario_rank)
+
 def type_label(t):
     t = (t or 'happy').lower().strip()
     return TYPE_LABEL.get(t, t.capitalize())
@@ -1510,6 +1751,14 @@ def apply_style(cell, style, wrap_text=False):
         )
     cell.number_format = style['number_format']
 
+
+def apply_row_style(ws, row, start_col, end_col, style):
+    """Apply a captured header/group style across the visible row band."""
+    if not style:
+        return
+    for column in range(start_col, end_col + 1):
+        apply_style(ws.cell(row=row, column=column), style)
+
 def safe_set(ws, coord, value):
     try:
         ws[coord] = value
@@ -1526,8 +1775,8 @@ def d_formula(row, anchor_row, is_ui, project_code):
     Đếm số row đã có H (Expected) trong cùng section từ anchor_row đến row hiện tại.
     """
     prefix = f'{project_code}-UI-' if is_ui else f'{project_code}-'
-    return (f'=IF(H{row}="","","[{prefix}'
-            f'&TEXT(COUNTIF($H${anchor_row+1}:H{row},"<>"),"00")&"]")')
+    return (f'=IF(H{row}="","","{prefix}'
+            f'&TEXT(COUNTIF($H${anchor_row+1}:H{row},"<>"),"00"))')
 
 def parse_date(s):
     if not s: return None
@@ -1860,6 +2109,19 @@ def main():
             except AttributeError:
                 pass
 
+    # Make the section and function header fills span the complete visible
+    # testcase band. The template stores the title in column C, but readers
+    # perceive the whole B:M row as the header.
+    section_styles = {
+        '1.1. USER INTERFACE': sty_section,
+        '1.2. FUNCTION': sty_section2,
+        '1.3. PERFORMANCE': sty_section,
+    }
+    for r in range(10, ws.max_row + 1):
+        title = ws.cell(row=r, column=3).value
+        if title in section_styles:
+            apply_row_style(ws, r, 2, 13, section_styles[title])
+
     # Xoá data validation cũ
     ws.data_validations.dataValidation = []
 
@@ -1867,7 +2129,7 @@ def main():
     p = data.get('project', {})
     project_code = p.get('code', '')
     if not project_code:
-        print("  ⚠️  CẢNH BÁO: project.code chưa có trong JSON. Test case ID sẽ trống prefix (vd '[NN]' thay vì '[BCP-NN]').")
+        print("  ⚠️  CẢNH BÁO: project.code chưa có trong JSON. Test case ID sẽ trống prefix (vd 'NN' thay vì 'BCP-NN').")
     safe_set(cover, 'B3', human_text(p.get('name', ''), 'project.name'))
     safe_set(cover, 'C3', project_code)
     safe_set(cover, 'D3', human_text(p.get('device', ''), 'project.device'))
@@ -1911,8 +2173,11 @@ def main():
                 print(f"  ⚠️  Không tìm thấy vị trí cho section='{sec_title}', group='{grp_name}'. Bỏ qua.")
                 continue
             section_row, group_row, current_row = pos
+            # Group/function title rows must carry their fill across B:M, not
+            # only the cell containing the title.
+            apply_row_style(ws, group_row, 2, 13, sty_group)
             # Ghi từng scenario
-            for sc in grp.get('scenarios', []):
+            for sc in ordered_scenarios(grp):
                 sid = sc.get('scenario_id', '')
                 # Scenario name (shared cho tất cả case trong scenario này)
                 sc_name = human_text(sc.get('scenario_name') or sc.get('name') or grp_name, 'scenario_name')
@@ -2042,6 +2307,13 @@ def main():
                 for c in range(5, 9)
             )
             ws.row_dimensions[r].height = min(300.0, max(51.0, line_count * 15.0))
+
+        # Row deletion can shift a header. Reapply the full-band style after
+        # the final row layout is known.
+        if c3 in section_styles:
+            apply_row_style(ws, r, 2, 13, section_styles[c3])
+        elif c3 in declared_groups and not c2:
+            apply_row_style(ws, r, 2, 13, sty_group)
 
     # 8. Create the derived RBAC Matrix sheet from the same validated JSON source
     write_rbac_sheet(wb, rbac, case_registry)

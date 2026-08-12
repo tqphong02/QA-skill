@@ -4,7 +4,7 @@
 
 ## 8 loại test case (canonical type order)
 
-Script tự sort cases theo thứ tự này trong mỗi scenario:
+Script tự sort scenario theo type sớm nhất mà scenario chứa và sort cases trong từng scenario. Mỗi FUNCTION group bắt buộc phải có main success scenario, vì vậy testcase đầu tiên của mỗi chức năng luôn là `Happy Path`, sau đó `Alternative → Validation → Edge Case → Negative → Error Handling → UI → Additional`
 
 | # | Type | BB Technique | Test cái gì | Ví dụ |
 |---|---|---|---|---|
@@ -21,9 +21,10 @@ Script tự sort cases theo thứ tự này trong mỗi scenario:
 
 ## Rules
 
-- Every case **MUST have `req`** (trace to one AC) — if `additional` type, write `Ref: (out-of-spec)`
+- Every case **MUST have `req`** (trace to one AC) — if `additional` type, write `(out-of-spec)`
+- Every non-empty FUNCTION group **MUST contain at least one `happy` case**; add the complete successful business flow before field validation, edge, negative or error scenarios
 - `additional` cases (not in doc) → flag clearly, **DO NOT fabricate expected result** from spec
-- Script auto-sorts by type order; AI does not need to write in order
+- Script auto-sorts scenarios and cases by type order while preserving stable Scenario/Testcase IDs
 - Description format MANUAL: start with "Verify that..." (no technical prefix)
 - Before writing any case, identify the BB technique from the table above; `bb_technique` is mandatory for `execution_contract="required"`, validated by the generator and preserved in `.automation.json`
 - For `validation`/`edge`: always check if Decision Table applies first (≥2 combined conditions → build table, then derive cases)

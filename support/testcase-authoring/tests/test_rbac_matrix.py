@@ -33,8 +33,8 @@ class RbacMatrixTests(unittest.TestCase):
         rbac, registry = self.generator.validate_rbac_contract(self.data())
         rule = rbac['rules'][0]
 
-        self.assertEqual('[DEMO-01]', registry[rule['allow_case_refs'][0]]['test_id'])
-        self.assertEqual('[DEMO-02]', registry[rule['deny_case_refs'][0]]['test_id'])
+        self.assertEqual('DEMO-01', registry[rule['allow_case_refs'][0]]['test_id'])
+        self.assertEqual('DEMO-02', registry[rule['deny_case_refs'][0]]['test_id'])
         self.assertEqual('ĐỦ', self.generator._rbac_coverage_label(rule))
 
     def test_required_deny_coverage_is_rejected_when_missing(self):
@@ -95,8 +95,8 @@ class RbacMatrixTests(unittest.TestCase):
         self.assertEqual('RBAC-DASH-001', sheet['A6'].value)
         self.assertEqual('CHO PHÉP', sheet['H6'].value)
         self.assertEqual('TỪ CHỐI', sheet['I6'].value)
-        self.assertEqual('[DEMO-01]', sheet['J6'].value)
-        self.assertEqual('[DEMO-02]', sheet['K6'].value)
+        self.assertEqual('DEMO-01', sheet['J6'].value)
+        self.assertEqual('DEMO-02', sheet['K6'].value)
         self.assertEqual('ĐỦ', sheet['L6'].value)
 
     def test_no_rbac_scope_is_explicitly_na(self):

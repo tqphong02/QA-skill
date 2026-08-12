@@ -43,6 +43,84 @@ class ManualExecutionContractTests(unittest.TestCase):
             self.assertNotIn(machine_text, f'{precondition}\n{procedure}\n{expected}')
         self.assertIsNotNone(execution)
 
+    def test_manual_projection_resolves_data_refs_without_exposing_input_keys(self):
+        case = self.case()
+        case['execution']['entry']['data'] = [
+            {
+                'name': 'Email',
+                'value': 'AIFA_LOGIN_VALID_EMAIL_20260812',
+                'condition': 'Tài khoản đang hoạt động',
+            },
+            {
+                'name': 'Mật khẩu',
+                'value': 'AIFA_LOGIN_VALID_20260812',
+                'condition': 'Lấy từ kho dữ liệu kiểm thử bảo mật',
+            },
+        ]
+        email_step = case['execution']['steps'][2]
+        email_step['instruction'] = 'Nhập AIFA_LOGIN_VALID_EMAIL_20260812 vào Email'
+        email_step['value'] = {
+            'data_ref': 'AIFA_LOGIN_VALID_EMAIL_20260812',
+            'field': 'Email',
+        }
+        password_step = case['execution']['steps'][4]
+        password_step['instruction'] = (
+            'Nhập giá trị từ bộ dữ liệu AIFA_LOGIN_VALID_20260812 vào Mật khẩu'
+        )
+        password_step['value'] = {
+            'data_ref': 'AIFA_LOGIN_VALID_20260812',
+            'field': 'Mật khẩu',
+        }
+
+        precondition, procedure, _expected, _execution = self.generator.render_case(
+            case, execution_required=True
+        )
+        manual_text = f'{precondition}\n{procedure}'
+
+        self.assertNotIn('AIFA_LOGIN_VALID_EMAIL_20260812', manual_text)
+        self.assertNotIn('AIFA_LOGIN_VALID_20260812', manual_text)
+        self.assertNotIn('Bộ dữ liệu qa.owner@example.test', manual_text)
+        self.assertNotIn('giá trị từ bộ dữ liệu AifaSample@2026!', manual_text)
+        self.assertIn('qa.owner@example.test', manual_text)
+        self.assertIn('AifaSample@2026!', manual_text)
+
+        question_step = {
+            'action': 'fill',
+            'instruction': 'Nhập AIFA_GOLDEN_PROMPT_AI_1 vào trường câu hỏi',
+            'target': {'name': 'trường câu hỏi'},
+            'value': {
+                'data_ref': 'AIFA_GOLDEN_PROMPT_AI_1',
+                'value': 'Tổng phát sinh tài khoản 111 trong năm 2024 là bao nhiêu?',
+            },
+        }
+        rendered_question = self.generator._render_manual_instruction(question_step)
+        self.assertNotIn('AIFA_GOLDEN_PROMPT_AI_1', rendered_question)
+        self.assertIn('Tổng phát sinh tài khoản 111 trong năm 2024 là bao nhiêu?', rendered_question)
+
+    def test_manual_projection_keeps_real_fixture_filename(self):
+        upload_step = {
+            'action': 'upload',
+            'instruction': 'Tải lên AIFA_UPLOAD_VALID_20260812.xlsx tại vùng tải file',
+            'target': {'name': 'vùng tải file'},
+            'value': 'AIFA_UPLOAD_VALID_20260812.xlsx',
+        }
+
+        rendered = self.generator._render_manual_instruction(upload_step)
+
+        self.assertIn('AIFA_UPLOAD_VALID_20260812.xlsx', rendered)
+
+    def test_manual_projection_avoids_repeating_context_around_data_ref(self):
+        step = {
+            'action': 'click',
+            'instruction': 'Nhấp vào hội thoại AIFA_CHAT_20260812',
+            'target': {'name': 'hội thoại AIFA_CHAT_20260812'},
+        }
+
+        rendered = self.generator._render_manual_instruction(step)
+
+        self.assertNotIn('hội thoại hội thoại', rendered)
+        self.assertIn('Nhấp vào hội thoại AIFA Sample Conversation 20260812', rendered)
+
     def test_markdown_keeps_pom_contract_separate_from_manual_projection(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = pathlib.Path(temp_dir) / 'testcases.md'
@@ -54,7 +132,7 @@ class ManualExecutionContractTests(unittest.TestCase):
         self.assertIn('{"data_ref": "Login_Valid_01","field": "Mật khẩu"}', markdown)
         self.assertIn('## RBAC Matrix', markdown)
         self.assertIn('| RBAC-DASH-001 | LOGIN | Dashboard |', markdown)
-        self.assertIn('| [DEMO-01] | [DEMO-02] | ĐỦ |', markdown)
+        self.assertIn('| DEMO-01 | DEMO-02 | ĐỦ |', markdown)
 
     def test_combined_actions_are_rejected(self):
         case = self.case()

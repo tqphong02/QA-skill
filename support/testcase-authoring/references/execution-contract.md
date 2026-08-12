@@ -11,11 +11,13 @@ Set top-level `execution_contract="required"`. Every new UI/FUNCTION case has:
 3. `entry`: environment, visible screen, route, business role, starting state, permissions and named test data
 4. Ordered atomic `steps` with stable `S##`, `action`, Vietnamese `instruction` and semantic `target`
 5. Target `key`, `kind`, human-facing `name`; add role/label/test-id hints only when verified or supplied
-6. Exact `value` for `fill`, `select`, `press`, `upload`; `fill` and `clear` immediately follow a separate click/focus step for the same target
+6. Exact `value` for `fill`, `select`, `press`, `upload`; `fill` and `clear` immediately follow a separate click/focus step for the same target. A structured `data_ref` may remain in the machine value, but the manual projection must render a safe sample value; keep exact fixture filenames unchanged
 7. `wait_for` with machine kind plus Vietnamese text, or an observable step assertion
 8. Non-empty final `outcome.assertions`
 9. `cleanup` when `mutates=true`
 10. `entry.role_key` and `entry.rbac_refs` for RBAC-linked cases
+
+At group level, define the complete successful business flow as a `happy` case before validation, edge, negative or error coverage. Every non-empty FUNCTION group must have at least one `happy` case; the generator orders scenarios by their earliest case type so the first visible testcase under each function header is the happy path
 
 Use [../examples/structured-input.json](../examples/structured-input.json) only when a full JSON example is needed. Do not load it for routine generation.
 
@@ -63,6 +65,8 @@ For genuinely identical flows, define a full execution object once:
 | H Expected | step and outcome assertions | Numbered observable checks without assertion syntax |
 
 For every form field, write click/focus and input as separate manual lines. Keep exact visible target and value/data reference. Reject vague shortcuts and expected results.
+
+When a value uses `data_ref`, keep the reference for deterministic data resolution but do not expose the machine key in Excel/Markdown Procedure or Pre-condition. Use a safe sample value for credentials and business data, and retain exact filenames for upload fixtures
 
 ## Consumer rules
 

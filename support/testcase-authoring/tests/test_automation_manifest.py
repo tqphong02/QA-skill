@@ -82,6 +82,73 @@ class AutomationManifestTests(unittest.TestCase):
         records = list(self.generator.iter_testcases(data))
         self.assertEqual('DEMO-UI-01', records[0]['testcase_id'])
 
+    def test_cases_are_sorted_by_black_box_type_order(self):
+        data = self.data()
+        section = data['sections'][0]
+        group = section['groups'][0]
+        scenario = group['scenarios'][0]
+        base_case = copy.deepcopy(scenario['cases'][0])
+        technique_by_type = {
+            'happy': ['Use Case Testing'],
+            'alternative': ['Use Case Testing'],
+            'validation': ['EP'],
+            'edge': ['BVA'],
+            'negative': ['EP'],
+            'error': ['Error Guessing'],
+            'ui': ['Use Case Testing'],
+            'additional': ['Error Guessing'],
+        }
+        input_order = [
+            'additional',
+            'ui',
+            'error',
+            'negative',
+            'edge',
+            'validation',
+            'alternative',
+            'happy',
+        ]
+        scenario['cases'] = []
+        for index, case_type in enumerate(input_order, start=1):
+            case = copy.deepcopy(base_case)
+            case['testcase_id'] = f'DEMO-ORDER-{index:02d}'
+            case['case_ref'] = f'ORDER_{case_type.upper()}'
+            case['type'] = case_type
+            case['bb_technique'] = technique_by_type[case_type]
+            if case_type == 'additional':
+                case['req'] = '(out-of-spec)'
+            scenario['cases'].append(case)
+        group['scenarios'] = [scenario]
+        section['groups'] = [group]
+
+        records = list(self.generator.iter_testcases(data))
+
+        self.assertEqual(
+            ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional'],
+            [record['case']['type'] for record in records],
+        )
+
+    def test_function_group_sorts_happy_scenario_before_validation_scenario(self):
+        data = self.data()
+        group = data['sections'][0]['groups'][0]
+        group['scenarios'] = list(reversed(group['scenarios']))
+
+        records = list(self.generator.iter_testcases(data))
+
+        self.assertEqual('happy', records[0]['case']['type'])
+        self.assertEqual('SCN-LOG-001', records[0]['scenario']['scenario_id'])
+
+    def test_function_group_rejects_missing_happy_path(self):
+        data = self.data()
+        group = data['sections'][0]['groups'][0]
+        validation_scenario = copy.deepcopy(group['scenarios'][0])
+        validation_scenario['cases'][0]['type'] = 'validation'
+        validation_scenario['cases'][0]['bb_technique'] = ['EP']
+        group['scenarios'] = [validation_scenario]
+
+        with self.assertRaisesRegex(ValueError, 'requires at least one happy case'):
+            list(self.generator.iter_testcases(data))
+
     def test_required_contract_enforces_requirement_type_scenario_and_bb_technique(self):
         mutations = [
             ('case.req', lambda data: data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0].pop('req'), 'require case.req'),

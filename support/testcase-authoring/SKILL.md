@@ -15,7 +15,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 
 1. Resolve `UI`, `FUNCTION`, or explicit `API` mode
 2. Read the requirement/AC source and build top-level `requirements[]`; unresolved expected results stop generation
-3. Organize `section → group → scenario → cases`
+3. Organize `section → group → scenario → cases`; every FUNCTION group starts with its main successful business flow
 4. Keep one scenario to one field/behavior/AC; change both Scenario ID and Scenario Name when it changes
 5. Assign every new case a stable `testcase_id`, one valid `type`, matching `req`, and `bb_technique`
 6. For new UI/FUNCTION cases, use `execution_contract="required"` and the structured contract in [references/execution-contract.md](references/execution-contract.md)
@@ -48,9 +48,10 @@ The generator fails closed for a non-empty `review_required`, missing/unknown re
 - `scenario_name` is column C on each testcase row, shared only inside the same scenario
 - Split scenarios when field/input, behavior, or AC differs
 - Same feature may exist separately in UI and FUNCTION sections
-- Types sort as `happy → alternative → validation → edge → negative → error → ui → additional`
+- Every non-empty FUNCTION group must contain at least one `happy` case; validation-only or negative-only function groups fail generation until the main successful flow is added
+- Scenarios sort by the earliest case type they contain, and cases sort within each scenario, so every FUNCTION group starts with `Happy Path`, then `Alternative` (when applicable), `Validation`, `Edge Case`, `Negative`, `Error Handling`, `UI`, `Additional`; source array order and Scenario ID must not put validation before the main happy path
 - Default technique mapping: happy/alternative/ui → Use Case; validation → EP plus applicable BVA/Decision Table; edge → BVA+EP; negative → EP+Error Guessing; error → Error Guessing+State Transition; additional → Error Guessing
-- `additional` uses `Ref: (out-of-spec)` and is never presented as confirmed requirement coverage
+- `additional` uses `req=(out-of-spec)` and is never presented as confirmed requirement coverage
 
 ## Required JSON fields for new cases
 
@@ -77,6 +78,7 @@ Every new UI/FUNCTION Procedure must be executable by a manual tester:
 - state environment, screen/route, business role, state, permissions and named data
 - write one action per numbered line: route/screen → click/focus target → exact input → next action → observation/wait
 - keep click/focus separate from `fill` or `clear`
+- render `data_ref`/machine input keys only in the structured source or automation manifest; Excel/Markdown manual steps must show a safe sample value or the exact fixture filename
 - state observable intermediate and final results; reject vague results such as `Hệ thống xử lý đúng`
 - keep selectors, raw JSON, HTTP syntax and machine keys out of Excel F/G/H
 - never store real passwords, tokens, cookies or API keys
