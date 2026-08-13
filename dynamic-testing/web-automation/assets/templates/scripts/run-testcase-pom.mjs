@@ -4,7 +4,9 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { ensurePlaywrightRuntime } from './bootstrap-playwright.mjs';
 import { buildPomPlan } from './generate-pom-plan.mjs';
+import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 
 const VALID_PHASES = new Set(['plan', 'execute']);
@@ -283,6 +285,48 @@ async function main() {
   if (!getArg('--testcases') || !fs.existsSync(testcasePath)) throw new Error('--testcases Markdown is required for execute');
   if (['ui', 'functional'].includes(mode) && !appBuild) throw new Error('--app-build is required for UI/functional execute');
 
+  let runtimeBootstrap = null;
+  if (!process.argv.includes('--skip-bootstrap')) {
+    try {
+      runtimeBootstrap = ensurePlaywrightRuntime(projectRoot, {
+        browsers: getArg('--browsers', 'chromium').split(',').map(value => value.trim()).filter(Boolean),
+        checkTypes: !process.argv.includes('--skip-types'),
+        withDeps: process.argv.includes('--with-deps'),
+      });
+    } catch (error) {
+      const report = untestReport(plan, `Playwright runtime bootstrap không chạy được: ${error.message}`, runId, mode);
+      report.bootstrap = { status: 'BLOCKED', reason: error.message };
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, bootstrap: report.bootstrap }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+  }
+
+  let runtimeScaffold = null;
+  if (['ui', 'functional'].includes(mode)) {
+    const runtimeScaffoldPath = resolveFrom(
+      projectRoot,
+      getArg('--runtime-scaffold-output'),
+      'reports/runtime-scaffold.json',
+    );
+    runtimeScaffold = inspectRuntimeScaffold(projectRoot);
+    writeJson(runtimeScaffoldPath, runtimeScaffold);
+    if (runtimeScaffold.status !== 'PASS') {
+      const report = untestReport(plan, 'Runtime fixture/evidence scaffold BLOCKED trước browser execution', runId, mode);
+      report.bootstrap = runtimeBootstrap;
+      report.runtime_scaffold = runtimeScaffoldPath;
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({
+        verdict: report.verdict,
+        output: resultPath,
+        runtime_scaffold: runtimeScaffoldPath,
+      }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+  }
+
   const traceabilityPath = resolveFrom(projectRoot, getArg('--traceability-output'), 'reports/testcase-automation-traceability.json');
   let traceability;
   try {
@@ -346,6 +390,8 @@ async function main() {
   const report = normalizePlaywrightReport(readJson(playwrightReportPath), plan, { projectRoot, mode, runId });
   report.traceability = traceabilityPath;
   report.playwright_report = playwrightReportPath;
+  report.bootstrap = runtimeBootstrap;
+  report.runtime_scaffold = runtimeScaffold;
   report.runner_exit_code = execution.status;
   writeJson(resultPath, report);
   const sheetPlanArg = getArg('--sheet-plan');

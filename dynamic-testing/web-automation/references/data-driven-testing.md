@@ -9,7 +9,7 @@ Data-driven testing has two separate layers:
 | Layer | Location | Rule |
 |---|---|---|
 | Case data | `test-data/cases/*.cases.ts` | Typed, versioned, read-only, stable case ID |
-| Runtime data | `fixtures/data-driven.ts` | Unique per run/project/worker/test/retry/repeat |
+| Runtime data | `fixtures/pom.ts` + `fixtures/runtime-context.ts` | Manifest-bound account/data slot and unique run/project/worker/test/retry/repeat namespace |
 
 Case data describes **what to test**. Runtime data identifies **what this specific attempt owns**. Do not put generated emails, record IDs, tokens, or mutable objects in a module-level case array.
 
@@ -46,7 +46,7 @@ Requirements:
 
 ## 3. Namespace used by the fixture
 
-`fixtures/data-driven.ts` creates:
+`fixtures/runtime-context.ts` creates this namespace for manifest-generated POM tests; standalone typed DDT can keep using `fixtures/data-driven.ts` with the same shape:
 
 ```text
 <runId>-<project>-p<parallelIndex>-w<workerIndex>-t<testIdHash>-r<retry>-e<repeatEachIndex>
@@ -70,19 +70,23 @@ Use `parallelIndex` to allocate a stable account slot. Use the full test namespa
 
 A new browser context isolates cookies/local storage only. It does not isolate backend data owned by the same account.
 
-For tests that mutate account-owned state, provide one account per parallel slot:
+For manifest-generated UI/functional tests, provide one project-local storage state and one dataset per parallel slot. Keep the real JSON in an ignored `.env` or CI secret store:
 
 ```bash
-export TEST_ACCOUNTS_JSON='[
-  {"email":"qa-slot-0@example.com","password":"secret-0"},
-  {"email":"qa-slot-1@example.com","password":"secret-1"},
-  {"email":"qa-slot-2@example.com","password":"secret-2"},
-  {"email":"qa-slot-3@example.com","password":"secret-3"}
-]'
-PW_WORKERS=4 npx playwright test
+export QA_TEST_ACCOUNTS_JSON='{"owner":[
+  {"id":"owner-0","storageState":"sessions/owner-0.json"},
+  {"id":"owner-1","storageState":"sessions/owner-1.json"}
+]}'
+export QA_TEST_DATASETS_JSON='{"owner":[
+  {"id":"data-0","dataRoot":"testdata/slot-0","values":{"resource_name":"qa-{{namespace}}"}},
+  {"id":"data-1","dataRoot":"testdata/slot-1","values":{"resource_name":"qa-{{namespace}}"}}
+]}'
+PW_WORKERS=2 npx playwright test
 ```
 
-The auth fixture selects `accounts[parallelIndex]`. It intentionally fails if the configured pool is too small; never cycle accounts across live workers. If an isolated tenant/database/schema is available, apply the same allocation rule.
+`fixtures/pom` selects `accounts[parallelIndex]` and `datasets[parallelIndex]`. It intentionally returns `UNTEST` if a required role pool, storage-state file or mutating dataset slot is missing; it never cycles slots. The pool can be a role map (`owner`, `guest`, `auditor`) or an array whose rows declare `role`/`roles`. If an isolated tenant/database/schema is available, apply the same allocation rule.
+
+Without explicit `PW_WORKERS`, the template uses up to four workers only when both account and dataset pool capacity safely allow it; otherwise it defaults to one worker. Explicit `PW_WORKERS` is still checked at runtime and fails closed when a selected testcase lacks capacity.
 
 Read-only authentication scenarios may use one shared account. Document that the test does not change account/session state.
 
@@ -139,7 +143,8 @@ PW_WORKERS=2 npx playwright test --grep @data-driven --repeat-each=2
 - [ ] Each row becomes one independently reportable test
 - [ ] Runtime payload is built inside the test
 - [ ] Namespace includes run/project/parallel/worker/test/retry/repeat
-- [ ] Mutating account tests have enough accounts/tenants for all parallel slots
+- [ ] Generated specs import from `fixtures/pom`, not `@playwright/test`
+- [ ] Mutating account tests have enough storage-state accounts and dataset/tenant slots for all parallel workers
 - [ ] JSON/files/resources are namespace-scoped
 - [ ] Cleanup targets only resources owned by that attempt
 - [ ] Suite passes with at least two workers and `--repeat-each=2`

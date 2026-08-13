@@ -22,6 +22,8 @@ Modes:
 - `RUN`: execute an existing traced POM suite and produce evidence/verdict
 - `BUILD_AND_RUN`: default; complete BUILD then RUN without reinterpreting the manifest
 
+Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, runs `npm install` when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
+
 ## Commands
 
 Create the bounded plan before code generation:
@@ -44,6 +46,8 @@ tests/<surface>/<module>.<surface>.spec.ts
 
 Do not emit `tests/**/<module>.batch-NN.*.spec.ts`, one global Page Object, or one global selector registry. Validate that every module has exactly one final file of each kind and every Testcase ID appears in exactly one `test()`.
 
+BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts` and `scripts/verify-runtime-scaffold.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough slots.
+
 After generating selectors, Page Objects and specs, execute the same IDs:
 
 ```bash
@@ -57,7 +61,7 @@ npm run testcase-workflow -- \
   --browser-project chromium
 ```
 
-The runner sets `QA_UNIFIED_EVIDENCE=true`; Playwright records screenshot, video and trace for the selected tests. The runner blocks browser execution when traceability is not `PASS`.
+The runner sets `QA_UNIFIED_EVIDENCE=true`; Playwright records screenshot, video and trace for the selected tests. The template defaults this evidence on even for direct `npx playwright test` runs. Per-test media/trace/runtime-context attachments are under `evidence/test-results/`, HTML is under `evidence/html/`, and machine-readable execution output is under `reports/`. These folders appear only after a browser test starts; `fixtures/` is source code created during BUILD, not an evidence folder. The runner blocks browser execution when runtime scaffold or traceability is not `PASS`.
 
 ## Verdict gate
 

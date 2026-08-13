@@ -4,8 +4,8 @@
 # Idempotent: chạy 2 lần không lỗi.
 #
 # Công việc:
-#   1. Verify đã `npm install` (không thì exit với hint).
-#   2. Verify Playwright browsers đã cài (chạy playwright install nếu thiếu).
+#   1. Tự cài dependency Playwright/TypeScript và Chromium trong project-local.
+#   2. Kiểm tra TypeScript trước khi chạy test.
 #   3. Copy .env.example → .env nếu chưa có (giữ nguyên nếu đã có).
 #   4. In hướng dẫn fill 4 biến REQUIRED + gợi ý chạy test mẫu.
 #
@@ -26,38 +26,13 @@ warn() { echo -e "${YELLOW}⚠${NC} $*"; }
 fail() { echo -e "${RED}✗${NC} $*"; }
 
 # ─────────────────────────────────────────────────────────────
-# Step 1 — Verify node_modules
+# Step 1 — Bootstrap project-local Playwright runtime
 # ─────────────────────────────────────────────────────────────
-if [ ! -d "node_modules" ]; then
-  fail "node_modules/ chưa tồn tại."
-  echo ""
-  echo "  Chạy trước:"
-  echo "    npm install"
-  echo ""
-  echo "  (postinstall hook sẽ tự cài Playwright browsers sau npm install)"
-  exit 1
-fi
-ok "node_modules/ đã có."
+node scripts/bootstrap-playwright.mjs --project-root . --browsers chromium
+ok "Project-local Playwright runtime đã sẵn sàng."
 
 # ─────────────────────────────────────────────────────────────
-# Step 2 — Verify Playwright browsers (best-effort, skip nếu lỗi vì thiếu sudo)
-# ─────────────────────────────────────────────────────────────
-if command -v npx >/dev/null 2>&1 && [ -f "node_modules/.bin/playwright" ]; then
-  if ! npx playwright --version >/dev/null 2>&1; then
-    warn "Playwright chưa khả dụng — bỏ qua step này."
-  else
-    ok "Playwright CLI sẵn sàng."
-    # Không ép install browsers ở đây — postinstall hook đã lo. Chỉ check nhẹ.
-    if npx playwright install --dry-run chromium 2>/dev/null | grep -q "is already installed"; then
-      ok "Chromium browser đã cài."
-    else
-      warn "Chromium chưa cài. Chạy:  npm run install:browsers"
-    fi
-  fi
-fi
-
-# ─────────────────────────────────────────────────────────────
-# Step 3 — Copy .env.example → .env nếu chưa có
+# Step 2 — Copy .env.example → .env nếu chưa có
 # ─────────────────────────────────────────────────────────────
 if [ ! -f ".env" ]; then
   if [ -f ".env.example" ]; then
@@ -72,7 +47,7 @@ else
 fi
 
 # ─────────────────────────────────────────────────────────────
-# Step 4 — In hướng dẫn
+# Step 3 — In hướng dẫn
 # ─────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}═══ Bootstrap xong ═══${NC}"

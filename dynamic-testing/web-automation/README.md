@@ -13,11 +13,10 @@ Một workflow deterministic để build Page Object Model, chạy Playwright br
 ## 🚀 Quickstart
 
 ```bash
-# Bước 1: Copy template + cài đặt tự động
+# Bước 1: Copy template + bootstrap tự động
 cp -r assets/templates <your-project>/qa
 cd <your-project>/qa
-npm install                      # postinstall hook tự cài Chromium
-npm run bootstrap                # copy .env nếu thiếu + in hướng dẫn tiếp
+npm run bootstrap                # tự cài dependency, Chromium, typecheck và copy .env nếu thiếu
 
 # Bước 2: Sửa .env + chạy test
 #   Mở .env — fill 4 giá trị REQUIRED:
@@ -27,7 +26,7 @@ npm run test:ui                  # @ui          — browser-driven
 # npm run test:functional        # @functional  — E2E business flow
 ```
 
-> Tip: `npm run bootstrap` idempotent — chạy lại không lỗi. Nó check `node_modules/`, browser status, `.env` rồi hướng dẫn bước tiếp theo.
+> Tip: `npm run bootstrap` idempotent — chạy lại không lỗi. Nó kiểm tra/cài dependency trong project-local, chạy `npx --no-install playwright install chromium`, typecheck, rồi hướng dẫn bước tiếp theo.
 
 **Xem report:**
 ```bash
@@ -56,7 +55,7 @@ assets/templates/
 │   ├── login.selectors.ts            LoginLocators mẫu
 │   └── dashboard.selectors.ts        DashboardLocators mẫu
 ├── selector-evidence/              ← Runtime DOM verification per target.key
-├── fixtures/                      ← auth, test-data, session, env, global setup/teardown
+├── fixtures/                      ← mandatory POM runtime, account/data slots, auth and test-data helpers
 ├── test-data/                     ← typed, versioned, read-only DDT case rows
 ├── tests/
 │   ├── ui/                          @ui    — browser-driven, per-page
@@ -87,7 +86,8 @@ Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing
 - Khai báo case rows typed/read-only trong `test-data/cases/`
 - Tạo một test riêng cho mỗi row bằng `for...of`
 - Dùng `fixtures/data-driven.ts` để sinh email, resource key và namespace khác nhau theo run/project/worker/test/retry
-- Nếu test thay đổi dữ liệu gắn với account, cấu hình `TEST_ACCOUNTS_JSON` đủ ít nhất bằng số parallel slots
+- Spec sinh từ manifest phải import `test`/`expect` qua `fixtures/pom`; runtime chọn account + dataset theo `parallelIndex`
+- Nếu test thay đổi dữ liệu gắn với account, cấu hình `QA_TEST_ACCOUNTS_JSON` và `QA_TEST_DATASETS_JSON` đủ ít nhất bằng số workers; xem `.env.parallel.example`
 - Không dùng chung một JSON runtime, record, cart, tenant hoặc account giữa các worker
 
 Xem **[references/data-driven-testing.md](references/data-driven-testing.md)** và template `tests/ui/example.data-driven.ui.spec.ts`.
@@ -102,13 +102,16 @@ npm run quality-gate:config      # kiểm tra cấu hình quality gate
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
 npm run pom-plan -- --manifest testcases/<feature>.automation.json --group <group> --max-cases 20
 npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --app-build "$QA_APP_BUILD"
+npm run runtime-scaffold
 npm run testcase-workflow -- --phase plan --manifest testcases/<feature>.automation.json --group <group>
 npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD"
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.
 
-`testcase-workflow --phase execute` chỉ mở browser sau khi traceability PASS, bật screenshot/video/trace và tạo `reports/testcase-pom-execution.json` với `PASS|FAILED|N/A|UNTEST`. `traceability` kiểm tra source hash, Testcase ID, action/value/assertion, cleanup, role/RBAC và selector evidence theo build/freshness. Xem **[references/testcase-execution.md](references/testcase-execution.md)** và **[references/automation-audit.md](references/automation-audit.md)**
+`testcase-workflow --phase execute` chỉ mở browser sau khi runtime-scaffold và traceability PASS, bật screenshot/video/trace và tạo `reports/testcase-pom-execution.json` với `PASS|FAILED|N/A|UNTEST`. Evidence browser nằm trong `evidence/test-results/`, HTML ở `evidence/html/`; các folder này chỉ xuất hiện khi browser test bắt đầu. `fixtures/` là source code được tạo trong BUILD. `traceability` kiểm tra source hash, Testcase ID, action/value/assertion, cleanup, role/RBAC và selector evidence theo build/freshness. Xem **[references/testcase-execution.md](references/testcase-execution.md)** và **[references/automation-audit.md](references/automation-audit.md)**
+
+`testcase-workflow --phase execute` tự gọi `scripts/bootstrap-playwright.mjs` trước traceability/browser execution. Vì vậy project đích không được phụ thuộc vào Playwright cài global; dùng `--skip-bootstrap` chỉ khi runtime đã được kiểm tra độc lập
 
 ## 🔄 CI/CD
 

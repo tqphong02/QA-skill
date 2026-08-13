@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 // Set once in the config process; every worker inherits the same run ID.
 process.env.RUN_ID ??= `local-${Date.now()}-${process.pid}`;
-const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE === 'true';
+// Evidence is on by default for direct `npm test` as well as the unified runner.
+// Explicitly set QA_UNIFIED_EVIDENCE=false only for local debugging.
+const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE !== 'false';
 
 function resolveRetries(): number {
   if (!process.env.CI) return 0;
@@ -13,8 +15,38 @@ function resolveRetries(): number {
   return retries;
 }
 
+function poolCapacity(raw: string | undefined): number {
+  if (!raw) return 0;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) return parsed.length;
+    if (parsed && typeof parsed === 'object') {
+      const sizes = Object.values(parsed).filter(Array.isArray).map(items => items.length);
+      return sizes.length > 0 ? Math.min(...sizes) : 0;
+    }
+  } catch {
+    return 0;
+  }
+  return 0;
+}
+
+function configuredPool(kind: 'ACCOUNTS' | 'DATASETS'): string | undefined {
+  const projectKey = (process.env.QA_PROJECT_KEY ?? '')
+    .replace(/[^A-Za-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase();
+  return process.env[`QA_TEST_${kind}_JSON`]
+    ?? process.env[`TEST_${kind}_JSON`]
+    ?? (projectKey ? process.env[`${projectKey}_TEST_${kind}_JSON`] : undefined);
+}
+
 function resolveWorkers(): number {
-  if (!process.env.PW_WORKERS) return process.env.CI ? 4 : 1;
+  if (!process.env.PW_WORKERS) {
+    const accountCapacity = poolCapacity(configuredPool('ACCOUNTS'));
+    const datasetCapacity = poolCapacity(configuredPool('DATASETS'));
+    const safeCapacity = Math.min(accountCapacity, datasetCapacity, 4);
+    return safeCapacity >= 2 ? safeCapacity : 1;
+  }
   const workers = Number.parseInt(process.env.PW_WORKERS, 10);
   if (!Number.isInteger(workers) || workers < 1) {
     throw new Error(`PW_WORKERS must be a positive integer, received: ${process.env.PW_WORKERS}`);
@@ -28,19 +60,22 @@ function resolveWorkers(): number {
  */
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  // Test files can run concurrently. Keep each generated business module in
+  // declared order unless that module explicitly proves per-test isolation.
+  fullyParallel: false,
   forbidOnly: !!process.env.CI, // cấm test.only trên CI
   retries: resolveRetries(),
   // Override locally/CI with PW_WORKERS. Parallel mutating tests must have
   // isolated runtime data and, when needed, one account per parallel slot.
   workers: resolveWorkers(),
+  outputDir: 'evidence/test-results',
 
   // Reporter: list (console) + HTML + JUnit + Allure (bật allure-playwright khi đã cài).
   // Allure raw results → reports/allure-results; HTML generate bằng:
   //   allure generate reports/allure-results -o reports/allure-report --clean
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'reports/html', open: 'never' }],
+    ['html', { outputFolder: 'evidence/html', open: 'never' }],
     ['junit', { outputFile: 'reports/junit.xml' }],
     ['json', { outputFile: 'reports/playwright.json' }],
     ['allure-playwright', { outputFolder: 'reports/allure-results' }],

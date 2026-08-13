@@ -1,4 +1,6 @@
+import path from 'node:path';
 import { Page, Locator } from '@playwright/test';
+import { pomRuntimeFor } from '../fixtures/runtime-context';
 
 /**
  * BasePage — shared helpers cho mọi Page Object (POM).
@@ -37,5 +39,26 @@ export abstract class BasePage {
   /** Trích text gọn (trim) — dùng cho assertion trong spec. */
   async textOf(locator: Locator): Promise<string> {
     return (await locator.innerText()).trim();
+  }
+
+  /** Resolve manifest data through the testcase-bound account/dataset slot. */
+  expectedValue(value: unknown, targetKey?: string): string {
+    const runtime = pomRuntimeFor(this.page);
+    if (runtime) return runtime.resolveValue(value, targetKey);
+    if (value && typeof value === 'object' && 'data_ref' in value) {
+      throw new Error('UNTEST: data_ref requires the generated spec to import test from fixtures/pom');
+    }
+    if (value && typeof value === 'object' && 'value' in value) {
+      return String((value as { value: unknown }).value ?? '');
+    }
+    return String(value ?? '');
+  }
+
+  /** Resolve and isolate an upload file for this exact test attempt. */
+  protected filePath(value: unknown, targetKey?: string): string {
+    const runtime = pomRuntimeFor(this.page);
+    if (runtime) return runtime.resolveFile(value, targetKey);
+    const rendered = this.expectedValue(value, targetKey);
+    return path.isAbsolute(rendered) ? rendered : path.resolve(process.cwd(), 'testdata', rendered);
   }
 }

@@ -27,7 +27,10 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 4. **`expect()` chỉ ở spec** — không assert trong Page Object method.
 5. **Một intent / test** — split flow dài thành nhiều test nhỏ (login → create → delete = 3 test riêng).
 6. **Cleanup data tạo ra** — exact ID trong `finally`/fixture teardown; chỉ dùng `afterAll` cho serial worker-owned lifecycle.
-7. **Parallel data isolation** — import `test` từ `fixtures/data-driven`, không dùng chung account/record/file mutable.
+7. **Runtime fixture bắt buộc** — spec sinh từ `.automation.json` import `test`/`expect` từ `fixtures/pom`, không import thẳng `@playwright/test`.
+8. **Parallel data isolation** — `fixtures/pom` cấp account/data theo `parallelIndex`; không dùng chung account/record/file mutable.
+
+Evidence của cả PASS và FAILED nằm dưới `evidence/test-results/`; HTML ở `evidence/html/` và báo cáo máy đọc ở `reports/playwright.json`.
 
 Sau khi generate code, chạy `npm run pom-plan -- --manifest <generated-automation-manifest>` rồi `npm run traceability -- --testcases <generated-markdown> --manifest <generated-automation-manifest>` để kiểm tra source hash, behavior/RBAC markers, TestCase ID và selector evidence
 
