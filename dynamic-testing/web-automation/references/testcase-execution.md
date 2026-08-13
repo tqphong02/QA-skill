@@ -22,7 +22,7 @@ Modes:
 - `RUN`: execute an existing traced POM suite and produce evidence/verdict
 - `BUILD_AND_RUN`: default; complete BUILD then RUN without reinterpreting the manifest
 
-Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, runs `npm install` when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
+Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, installs all declared package dependencies when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. Generated targets also wire this bootstrap to direct typecheck, provisioning and test npm entrypoints so editor/test commands do not depend on a pre-existing global install. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
 
 ## Commands
 

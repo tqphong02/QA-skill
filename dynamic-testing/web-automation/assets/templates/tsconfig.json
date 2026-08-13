@@ -5,6 +5,7 @@
     "lib": ["ES2022", "DOM"],
     "moduleResolution": "node16",
     "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,

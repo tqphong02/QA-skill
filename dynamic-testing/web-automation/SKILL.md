@@ -18,7 +18,7 @@ Own the complete deterministic workflow from shared automation manifest to reusa
 3. Run the unified workflow with `--phase plan`; generate selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
 4. Emit `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and make every generated spec import `test`/`expect` from `fixtures/pom`
 5. Verify UI locators in the live DOM and record current-build selector evidence
-6. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; it installs declared dependencies when missing, runs `npx --no-install playwright install chromium`, and checks `tsc --noEmit`
+6. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; the generated project must carry that script and npm lifecycle prehooks so `npm run check:types`, provisioning and test commands self-install declared dependencies, run `npx --no-install playwright install chromium`, and then check `tsc --noEmit`
 7. Pass runtime-scaffold, placeholder, TypeScript/lint and traceability gates
 8. Run the unified workflow with `--phase execute`; it executes Playwright with same-session visual and trace evidence
 9. Read `reports/testcase-pom-execution.json` and report only `PASS`, `FAILED`, `N/A` or `UNTEST`
@@ -44,7 +44,7 @@ npm run testcase-workflow -- \
 
 Use `--testcase-id TC-01,TC-02` for a smaller slice. The CLI blocks selections over 20 cases unless `--max-cases` is raised explicitly. Generate and verify one bounded group/slice at a time; do not reread the whole Markdown, manifest, repository or raw DOM after each case. This limit applies to planning context only and must not create `batch-01`, `batch-02` final code files.
 
-The execute phase bootstraps the target project automatically. Run `node scripts/bootstrap-playwright.mjs --project-root <automation-root> --browsers chromium` directly when the editor must resolve generated imports immediately after BUILD. Use `--skip-bootstrap` only when the project-local runtime and typecheck have already passed
+The execute phase bootstraps the target project automatically. Run `node scripts/bootstrap-playwright.mjs --project-root <automation-root> --browsers chromium` directly when the editor must resolve generated imports immediately after BUILD. Generated targets must expose `npm run bootstrap:runtime` and call it from direct typecheck/provision/test entrypoints. Use `--skip-bootstrap` only when the project-local runtime and typecheck have already passed
 
 ## Module artifact contract
 

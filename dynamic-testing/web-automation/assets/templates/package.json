@@ -8,7 +8,7 @@
     "test:ui": "playwright test --grep @ui",
     "test:api": "playwright test --grep @api",
     "test:functional": "playwright test --grep @functional",
-    "test:functional:parallel": "playwright test --grep @functional --workers=2",
+    "test:functional:parallel": "playwright test --grep @functional",
     "test:perf": "playwright test --grep @perf",
     "test:smoke": "playwright test --grep @smoke",
     "test:regression": "playwright test --grep-invert @perf",
@@ -20,6 +20,7 @@
     "module-layout": "node scripts/verify-module-artifact-layout.mjs",
     "testcase-workflow": "node scripts/run-testcase-pom.mjs",
     "bootstrap:runtime": "node scripts/bootstrap-playwright.mjs --project-root . --browsers chromium",
+    "check:types": "tsc --noEmit",
 
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
@@ -40,7 +41,17 @@
     "bootstrap": "bash scripts/bootstrap.sh",
     "postinstall": "playwright install --with-deps chromium",
     "clean": "rm -rf reports test-results playwright-report node_modules/.cache",
-    "cleanup:sessions": "node -e \"require('./fixtures/session').cleanupOldSessions(7)\""
+    "cleanup:sessions": "node -e \"require('./fixtures/session').cleanupOldSessions(7)\"",
+    "pretest": "npm run bootstrap:runtime -- --skip-types",
+    "pretest:ui": "npm run bootstrap:runtime -- --skip-types",
+    "pretest:api": "npm run bootstrap:runtime -- --skip-types",
+    "pretest:functional": "npm run bootstrap:runtime",
+    "pretest:functional:parallel": "npm run bootstrap:runtime",
+    "pretest:perf": "npm run bootstrap:runtime -- --skip-types",
+    "pretest:smoke": "npm run bootstrap:runtime -- --skip-types",
+    "pretest:regression": "npm run bootstrap:runtime -- --skip-types",
+    "prelint": "npm run bootstrap:runtime -- --skip-types",
+    "precheck:types": "npm run bootstrap:runtime -- --skip-types"
   },
   "dependencies": {
     "dotenv": "^16.4.5"

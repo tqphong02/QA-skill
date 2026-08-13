@@ -25,6 +25,13 @@ function hasAnyDependency(packageJson, name) {
   ].some(section => section && typeof section[name] === 'string');
 }
 
+function declaredDependencies(packageJson) {
+  return [...new Set([
+    ...Object.keys(packageJson.dependencies || {}),
+    ...Object.keys(packageJson.devDependencies || {}),
+  ])];
+}
+
 function localBinary(projectRoot, name) {
   const binaryName = process.platform === 'win32' ? `${name}.cmd` : name;
   return path.join(projectRoot, 'node_modules', '.bin', binaryName);
@@ -63,15 +70,22 @@ export function inspectProjectRuntime(projectRoot) {
 
   const missingDependencies = Object.keys(REQUIRED_DEV_DEPENDENCIES)
     .filter(name => !hasAnyDependency(packageJson, name));
+  const missingDeclaredModules = declaredDependencies(packageJson)
+    .filter(name => !fs.existsSync(path.join(projectRoot, 'node_modules', name, 'package.json')));
   const playwrightModule = fs.existsSync(path.join(projectRoot, 'node_modules', '@playwright', 'test', 'package.json'));
   const playwrightCli = fs.existsSync(localBinary(projectRoot, 'playwright'));
   const typescriptCli = fs.existsSync(localBinary(projectRoot, 'tsc'));
-  const installRequired = missingDependencies.length > 0 || !playwrightModule || !playwrightCli || !typescriptCli;
+  const installRequired = missingDependencies.length > 0
+    || missingDeclaredModules.length > 0
+    || !playwrightModule
+    || !playwrightCli
+    || !typescriptCli;
 
   return {
     status: installRequired ? 'NEEDS_BOOTSTRAP' : 'READY',
     package_path: packagePath,
     missing_dependencies: missingDependencies,
+    missing_declared_modules: missingDeclaredModules,
     install_required: installRequired,
     playwright_module: playwrightModule,
     playwright_cli: playwrightCli,
@@ -165,8 +179,8 @@ export function ensurePlaywrightRuntime(projectRoot, {
     installedDependencies = true;
     runtime = inspectProjectRuntime(resolvedRoot);
   }
-  if (!runtime.playwright_module || !runtime.playwright_cli) {
-    throw new Error('BLOCKED: @playwright/test hoặc local Playwright CLI chưa được cài sau npm install');
+  if (runtime.install_required) {
+    throw new Error(`BLOCKED: project dependencies vẫn thiếu sau npm install: ${JSON.stringify(runtime)}`);
   }
 
   if (shouldInstallBrowsers && browsers.length > 0) {

@@ -18,12 +18,15 @@ function makeProject(packageJson) {
 }
 
 function fakeLocalRuntime(root) {
-  fs.mkdirSync(path.join(root, 'node_modules', '@playwright', 'test'), { recursive: true });
-  fs.writeFileSync(
-    path.join(root, 'node_modules', '@playwright', 'test', 'package.json'),
-    '{"name":"@playwright/test","version":"1.54.0"}\n',
-    'utf8',
-  );
+  for (const packageName of ['@playwright/test', '@types/node', 'typescript']) {
+    const packageDirectory = path.join(root, 'node_modules', packageName);
+    fs.mkdirSync(packageDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(packageDirectory, 'package.json'),
+      `${JSON.stringify({ name: packageName, version: '1.54.0' })}\n`,
+      'utf8',
+    );
+  }
   fs.mkdirSync(path.join(root, 'node_modules', '.bin'), { recursive: true });
   for (const binary of ['playwright', 'tsc']) fs.writeFileSync(path.join(root, 'node_modules', '.bin', binary), '', 'utf8');
 }
