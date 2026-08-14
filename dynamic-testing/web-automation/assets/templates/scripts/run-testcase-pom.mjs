@@ -372,6 +372,7 @@ async function main() {
     env: {
       ...process.env,
       QA_UNIFIED_EVIDENCE: 'true',
+      QA_SELECTOR_EVIDENCE_CAPTURE: process.env.QA_SELECTOR_EVIDENCE_CAPTURE ?? 'true',
       QA_RUN_ID: runId,
       RUN_ID: runId,
     },

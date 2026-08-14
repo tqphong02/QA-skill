@@ -240,7 +240,8 @@ function parseAutomationManifest(manifestPath) {
     for (const step of steps) {
       const action = String(step.action || '').trim().toLowerCase();
       const targetKey = step?.target?.key;
-      addTarget(targetKey, action, step.id, !['navigate', 'wait'].includes(action), currentRoute);
+      const targetRoute = step?.target?.route || currentRoute;
+      addTarget(targetKey, action, step.id, !['navigate', 'wait'].includes(action), targetRoute);
       if (targetKey && step?.target?.name) {
         targetNamesByKey[targetKey] = targetNamesByKey[targetKey] || [];
         if (!targetNamesByKey[targetKey].includes(step.target.name)) targetNamesByKey[targetKey].push(step.target.name);
@@ -642,19 +643,25 @@ function normalizedRoute(value) {
   const rendered = String(value || '').trim();
   if (!rendered) return '';
   try {
-    return new URL(rendered.replace('<BASE_URL>', 'https://qa.invalid')).pathname;
+    const pathname = new URL(rendered.replace('<BASE_URL>', 'https://qa.invalid')).pathname;
+    return pathname === '/' ? pathname : pathname.replace(/\/+$/, '');
   } catch {
     const placeholderRemoved = rendered.replace(/^<[^>]+>/, '');
-    return placeholderRemoved.startsWith('/') ? placeholderRemoved : rendered;
+    const route = placeholderRemoved.startsWith('/') ? placeholderRemoved : rendered;
+    return route === '/' ? route : route.replace(/\/+$/, '');
   }
 }
 
 function evidenceMatchesCase(record, testcase, targetKey) {
+  const evidenceTestcaseId = String(record.testcase_id || '').trim();
+  if (evidenceTestcaseId && evidenceTestcaseId !== testcase.id) return false;
   const expectedFeature = moduleSlug(testcase.group);
   const evidenceFeature = moduleSlug(record.feature || path.basename(record.evidence_file || '', '.json'));
+  const hasTargetSpecificRoute = Boolean(testcase.target_routes?.[targetKey]);
   if (expectedFeature && evidenceFeature
     && evidenceFeature !== expectedFeature
-    && evidenceFeature !== `${expectedFeature}-list`) return false;
+    && evidenceFeature !== `${expectedFeature}-list`
+    && !hasTargetSpecificRoute) return false;
   const expectedRoute = normalizedRoute(testcase.target_routes?.[targetKey] || testcase.entry?.route);
   const evidenceRoute = normalizedRoute(record.route);
   if (expectedRoute && evidenceRoute && expectedRoute !== evidenceRoute) {
@@ -686,11 +693,28 @@ function evidenceMatchesCase(record, testcase, targetKey) {
   ]
     .map(value => String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase())
     .filter(Boolean);
-  if (expectedNames.length > 0 && evidenceNames.length > 0
+  if (!evidenceTestcaseId && expectedNames.length > 0 && evidenceNames.length > 0
     && !expectedNames.some(expected => evidenceNames.some(actual => actual === expected || actual.includes(expected) || expected.includes(actual)))) {
     return false;
   }
   return true;
+}
+
+function uniqueSelectorRecords(records) {
+  const unique = new Map();
+  for (const record of records) {
+    const key = JSON.stringify([
+      record.testcase_id || '',
+      record.target_key || '',
+      normalizedRoute(record.route),
+      record.state || '',
+      record.run_id || '',
+      record.status || '',
+      record.locator || '',
+    ]);
+    if (!unique.has(key)) unique.set(key, record);
+  }
+  return [...unique.values()];
 }
 
 function relativeList(files, baseDir) {
@@ -901,9 +925,9 @@ function buildTraceability({
         const coverageKey = manifestCases ? `${testcase.id}::${targetKey}` : targetKey;
         if (selectorCoverage.has(coverageKey)) continue;
         const allRecords = selectorRecordsByKey.get(targetKey) || [];
-        const records = manifestCases
+        const records = uniqueSelectorRecords(manifestCases
           ? allRecords.filter(record => evidenceMatchesCase(record, testcase, targetKey))
-          : allRecords;
+          : allRecords);
         const record = records[0] || null;
         const action = testcase.actions_by_target[targetKey]?.[0]?.action || null;
         const requiresActionable = ACTIONABLE_ACTIONS.has(action);

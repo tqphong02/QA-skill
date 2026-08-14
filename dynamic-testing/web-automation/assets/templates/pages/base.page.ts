@@ -106,6 +106,48 @@ export abstract class BasePage {
     return (await locator.innerText()).trim();
   }
 
+  /** Record same-session evidence for a dynamic, data-bound locator. */
+  protected async captureDynamicSelectorEvidence(
+    targetKey: string,
+    locator: Locator,
+    operation: string,
+    locatorText: string,
+    options: {
+      strategy?: string;
+      state?: string;
+      targetName?: string;
+      actionable?: boolean;
+    } = {},
+  ): Promise<void> {
+    if (process.env.QA_SELECTOR_EVIDENCE_CAPTURE !== 'true') return;
+    const runtime = pomRuntimeFor(this.page);
+    if (!runtime) return;
+    const count = await locator.count().catch(() => 0);
+    const target = count === 1 ? locator : locator.nth(0);
+    const visible = count > 0 && await target.isVisible().catch(() => false);
+    const actionableExpected = options.actionable ?? [
+      'click', 'fill', 'check', 'selectOption', 'setInputFiles',
+    ].includes(operation);
+    const actionable = actionableExpected
+      ? visible && await target.isEnabled().catch(() => false)
+      : false;
+    let route = this.page.url();
+    try { route = new URL(route).pathname; } catch { /* retain raw URL */ }
+    runtime.recordSelectorEvidence({
+      target_key: targetKey,
+      target_names: options.targetName ? [options.targetName] : [],
+      status: count === 1 && visible && (!actionableExpected || actionable)
+        ? 'runtime_verified'
+        : 'unverified',
+      strategy: options.strategy ?? 'css',
+      locator: locatorText,
+      state: options.state ?? `${operation}:${route}`,
+      route,
+      captured_at: new Date().toISOString(),
+      verification: { count, visible, actionable, url: this.page.url() },
+    });
+  }
+
   /** Resolve manifest data through the testcase-bound account/dataset slot. */
   expectedValue(value: unknown, targetKey?: string): string {
     const runtime = pomRuntimeFor(this.page);
