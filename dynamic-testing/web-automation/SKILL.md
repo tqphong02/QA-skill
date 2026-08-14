@@ -60,6 +60,7 @@ Use `testcases[].group` as the business-module boundary unless the user supplies
 - Always copy the deterministic runtime scaffold into the target project: `fixtures/pom.ts`, `fixtures/runtime-context.ts` and `scripts/verify-runtime-scaffold.mjs`
 - Generated specs must import `test` and `expect` from the relative `fixtures/pom` entrypoint; importing them from `@playwright/test` bypasses account/data isolation and is a delivery blocker
 - Keep `test.describe.serial` for an ordered/mutating module unless every testcase in that module has independently owned data and cleanup; Playwright may still run separate module files concurrently
+- When a user explicitly requests a complete run with no skipped cases but module serial groups are not independently isolated, use a pinned queue runner: one testcase per Playwright invocation, one account/data slot per queue, and a maximum of one active mutation per slot. Do not mass-remove `test.describe.serial` as a shortcut for parallelism
 
 ## Testcase-to-code contract
 
@@ -89,6 +90,44 @@ Read [references/selector-discovery.md](references/selector-discovery.md) before
 - Evidence must include `captured_at`, same-browser `run_id`, current `app_build`, ordered candidates and verification
 - Commit only the selected runtime-verified locator to `selectors/`
 
+### Module-scoped selector capture
+
+Run selector discovery and promotion per business module. Do not run one broad
+project scan and copy a selector into another module: evidence must retain the
+route, role, state, browser `run_id` and current `app_build` where the DOM was
+observed
+
+For static route states, use the generated project's read-only discovery runner
+when it is present:
+
+```bash
+QA_SELECTOR_DISCOVERY_INCLUDE_VERIFIED=true \
+node scripts/discover-runtime-selectors.mjs --module <module>
+node scripts/promote-selector-discovery.mjs --module <module>
+```
+
+For stateful controls (dialogs, generated DSL, schema configuration, upload,
+Gate 1/Gate 2 and run results), execute the smallest testcase slice that
+reaches that state with one worker and capture the fixture attachment:
+
+```bash
+QA_SELECTOR_EVIDENCE_CAPTURE=true QA_UNIFIED_EVIDENCE=true \
+npx playwright test tests/functional/<module>.functional.spec.ts \
+  --grep '<Testcase-ID>' --workers=1
+node scripts/promote-runtime-evidence.mjs --feature <module>
+```
+
+The target project may expose `--module` instead of `--feature` for promotion.
+Promotion accepts only `runtime_verified` records with `count=1` and
+same-session visibility/actionability evidence. It never turns a target that
+is still unverified into a guessed locator
+
+Keep a redirect, missing role/data, duplicate accessible name or disabled
+control as `BLOCKED`/`UNTEST` for that module/state. A static `/dashboard`
+observation does not certify `/reports`, and a Gate 1 selector does not certify
+Gate 2. The per-module report is useful for the selected slice; the no-filter
+project traceability audit remains the authoritative completion gate
+
 Run traceability with the current build and freshness limit:
 
 ```bash
@@ -106,10 +145,24 @@ Selector JSON is evidence, not proof by itself; the unified Playwright run must 
 - Run through `scripts/run-testcase-pom.mjs`; it sets `QA_UNIFIED_EVIDENCE=true`
 - UI/functional `PASS` or `FAILED` requires an existing screenshot/video and Playwright trace from the same test run
 - Direct Playwright runs also record screenshot, video and trace by default; artifacts are written to `evidence/test-results/`, HTML to `evidence/html/`, and JSON to `reports/playwright.json`
+- When `QA_SELECTOR_EVIDENCE_CAPTURE=true`, `fixtures/pom.ts` attaches `selector-runtime-evidence` to the same Playwright/Allure result. Promote that attachment only after the testcase reaches the intended state with `scripts/promote-runtime-evidence.mjs`
 - Retry-pass is `FAILED` with `flaky=true`, never clean `PASS`
 - Missing test, traceability, target, data, report, visual, trace, timeout or interruption is `UNTEST`
 - Skipped by an applicable suite condition is `N/A`
+- A suite summary must preserve the strongest case verdict: any `FAILED` yields `FAILED`; otherwise any `UNTEST` yields `UNTEST`; otherwise any `N/A` yields `N/A`; only an all-`PASS` selection is suite `PASS`
 - Sheet write-back uses the exact verdict projection from the unified report; no second agent judgement
+
+### Runtime repair rules
+
+- Do not assert business outcomes by searching `body.textContent()` for prose copied from testcase descriptions. Map each observable outcome to a runtime-verified locator and the matcher stated by the execution contract; if the oracle is not observable in the captured state, return `UNTEST`.
+- For asynchronous UI actions such as file upload, Gate 1/Gate 2 validation, AI/DSL generation, procedure save and run execution, wait on the state transition that proves the action completed: route plus a runtime-verified heading/region, preview plus enabled save, or a changed run/result state. Use an environment-configurable bounded timeout and polling interval; a timeout is `UNTEST` with the route/state/evidence context.
+- `body` being attached is never a readiness signal. Do not use `locator('body').waitFor({ state: 'attached' })`, `networkidle`, or a fixed `waitForTimeout()` as a business wait. Shared BasePage helpers may poll for `domcontentloaded`, `document.readyState`, visible runtime locators, enabled controls and semantic busy-state removal; feature pages must add the stronger state signal for their mutation.
+- The generated fixture must extend the Playwright test budget beyond the largest configured async wait plus a safety buffer; a page wait must never be longer than the enclosing test timeout.
+- Dynamic targets must resolve from the testcase target name at runtime and pass a uniqueness guard (`count === 1`, visible, and actionable when required). A broad selector without target-name filtering is not evidence for every data variant.
+- Native `<select>` actions resolve the exact visible option label against the live DOM option value before `selectOption`; assertions compare the DOM value while testcase prose keeps the human label
+- A selector-evidence record is route/state/role scoped. Never reuse evidence captured on one route or state to certify a different route/state; missing or stale evidence is `UNTEST`.
+- If navigation redirects an access-controlled feature route, classify the case as `UNTEST` with the requested and final route in the reason. Do not convert the redirect into a URL assertion `FAILED`.
+- Upload fixtures must live under `testdata/fixtures/` (or the configured data root) with a stable readable name such as `<PROJECT>_<ENV>_SAMPLE_<NN>_<SCHEMA>_<PURPOSE>.<ext>`. Keep the worker namespace only in the isolated local copy; pass `{ name, mimeType, buffer }` to `setInputFiles` so the web UI never displays `input-<namespace>-...` temporary names.
 
 ## POM invariants
 
@@ -149,6 +202,7 @@ Use component/API/contract tests for deterministic lower-level rules and keep UI
 - TypeScript/lint and relevant tests pass
 - Testcase IDs, source hash, action methods, values, assertions, role/RBAC and cleanup pass traceability
 - All UI target keys have fresh current-build selector evidence and appear in selector code
+- A traceability result is scope-labelled: a selected-case audit may be `PASS` only for the requested testcase IDs, while the no-filter audit remains the authoritative full-project gate
 - The selected tests actually run in Playwright and every testcase receives `PASS`, `FAILED`, `N/A` or `UNTEST`
 - UI/functional PASS/FAILED has existing visual media plus same-session trace; missing evidence is UNTEST
 - Parallel mutation runs have one existing storage-state account plus one independently owned dataset/cleanup slot per worker; missing capacity is UNTEST

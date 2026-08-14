@@ -19,6 +19,24 @@ For each `execution.steps[].target.key`:
 5. Save the ordered candidates, selected strategy, locator and verification evidence in `selector-evidence/<feature>.json`
 6. Put the locator in `selectors/<feature>.selectors.ts` and expose it through the Page Object only
 
+For a multi-module application, repeat the process one module at a time. A
+route-level discovery pass is sufficient for static controls; dynamic controls
+must be captured from the smallest testcase that reaches the dialog or
+post-action state. The generated fixture can attach the same-session records
+with:
+
+```bash
+QA_SELECTOR_EVIDENCE_CAPTURE=true QA_UNIFIED_EVIDENCE=true \
+npx playwright test tests/functional/<module>.functional.spec.ts \
+  --grep '<Testcase-ID>' --workers=1
+node scripts/promote-runtime-evidence.mjs --feature <module>
+```
+
+The promotion script is evidence-only: it accepts a record only when the
+collector marked it `runtime_verified`, the locator count is exactly one, and
+the recorded state proves visibility or hidden-file actionability. It does not
+promote a target inferred from a testcase name or prose
+
 Do not use a guessed selector from a requirement sentence, screenshot coordinates, a generated CSS class or a full DOM path
 
 ## Verification gate

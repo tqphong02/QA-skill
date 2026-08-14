@@ -67,6 +67,16 @@ function displayPath(filePath, baseDir) {
   return path.relative(baseDir, filePath).replaceAll(path.sep, '/') || '.';
 }
 
+function moduleSlug(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' va ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
@@ -210,6 +220,7 @@ function parseAutomationManifest(manifestPath) {
     const allTargetKeys = [];
     const actionsByTarget = {};
     const targetRoutes = {};
+    const targetNamesByKey = {};
     const expectedVisibilityByTarget = {};
     const addTarget = (targetKey, action, stepId, selectorRequired, route, expectedVisible = true) => {
       const key = String(targetKey || '').trim();
@@ -230,6 +241,10 @@ function parseAutomationManifest(manifestPath) {
       const action = String(step.action || '').trim().toLowerCase();
       const targetKey = step?.target?.key;
       addTarget(targetKey, action, step.id, !['navigate', 'wait'].includes(action), currentRoute);
+      if (targetKey && step?.target?.name) {
+        targetNamesByKey[targetKey] = targetNamesByKey[targetKey] || [];
+        if (!targetNamesByKey[targetKey].includes(step.target.name)) targetNamesByKey[targetKey].push(step.target.name);
+      }
       const transitionRoute = String(step?.wait_for?.kind || '').toLowerCase() === 'url'
         ? step.wait_for.value || currentRoute
         : currentRoute;
@@ -273,6 +288,7 @@ function parseAutomationManifest(manifestPath) {
       all_target_keys: allTargetKeys,
       actions_by_target: actionsByTarget,
       target_routes: targetRoutes,
+      target_names_by_key: targetNamesByKey,
       expected_visibility_by_target: expectedVisibilityByTarget,
       structured: Boolean(execution && steps.length > 0),
       required_markers: {
@@ -349,6 +365,82 @@ function locatorAppearsInSource(locator, source) {
   return [...variants].some(candidate => compactSource.includes(candidate));
 }
 
+function selectorObjectBlock(targetKey, source) {
+  const keyPattern = new RegExp(`([\"'])${escapeRegExp(targetKey)}\\1\\s*:\\s*\\{`);
+  const match = keyPattern.exec(source);
+  if (!match) return '';
+  const openIndex = source.indexOf('{', match.index);
+  if (openIndex < 0) return '';
+
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let index = openIndex; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '\"' || character === "'") {
+      quote = character;
+    } else if (character === '{') {
+      depth += 1;
+    } else if (character === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(match.index, index + 1);
+    }
+  }
+  return '';
+}
+
+function quotedLocatorValues(locator) {
+  const values = [];
+  const source = String(locator || '');
+  const pattern = /(['\"])(.*?)\1/g;
+  let match;
+  while ((match = pattern.exec(source))) {
+    const value = match[2].replaceAll(String.fromCharCode(92), '').trim();
+    if (value) values.push(value);
+  }
+  return values;
+}
+
+function selectorDefinitionAppearsInSource(record, source) {
+  const block = selectorObjectBlock(record.target_key, source);
+  if (!block) return false;
+  const normalizedBlock = compactCode(block).replaceAll(String.fromCharCode(92), '').toLowerCase();
+  const strategy = normalizeStrategy(record.strategy);
+  if (strategy && !normalizedBlock.includes(`\"strategy\":\"${strategy}\"`)
+    && !normalizedBlock.includes(`'strategy':'${strategy}'`)) {
+    return false;
+  }
+
+  const locator = String(record.locator || '');
+  const directLocator = compactCode(locator).replaceAll(String.fromCharCode(92), '').toLowerCase();
+  if (directLocator && normalizedBlock.includes(directLocator)) return true;
+
+  const quotedValues = quotedLocatorValues(locator)
+    .map(value => compactCode(value).replaceAll(String.fromCharCode(92), '').toLowerCase())
+    .filter(value => value.length > 1);
+  if (quotedValues.length > 0 && quotedValues.every(value => normalizedBlock.includes(value))) return true;
+
+  const targetNames = Array.isArray(record.target_names)
+    ? record.target_names
+    : record.target_name
+      ? [record.target_name]
+      : [];
+  return targetNames.some(value => {
+    const normalized = compactCode(value).replaceAll(String.fromCharCode(92), '').toLowerCase();
+    return normalized.length > 1 && normalizedBlock.includes(normalized);
+  });
+}
+
 function parseSelectorEvidence(evidenceDir) {
   const files = walkFiles(evidenceDir, filePath => path.extname(filePath).toLowerCase() === '.json');
   const records = [];
@@ -363,9 +455,10 @@ function parseSelectorEvidence(evidenceDir) {
           ? [parsed]
           : [];
       for (const target of targets) {
-        if (target?.target_key) {
-          records.push({
-            ...target,
+          if (target?.target_key) {
+            records.push({
+              ...target,
+            feature: target.feature ?? parsed.feature ?? path.basename(filePath, path.extname(filePath)),
             route: target.route ?? parsed.route,
             role: target.role ?? parsed.role,
             locale: target.locale ?? parsed.locale,
@@ -496,26 +589,38 @@ function markerExecutionEvidence(implementationText, marker, nextMarkers = [], o
   if (!hasPomAction || !methodPattern.test(body)) return false;
   const value = options.step?.value;
   if (['string', 'number', 'boolean'].includes(typeof value)) {
-    return body.includes(String(value));
+    if (body.includes(String(value))) return true;
+    // Runtime data such as generated email addresses is intentionally passed
+    // through a fixture variable/helper. The testcase marker contains a
+    // fingerprint, so requiring that hash as a source literal rejects valid
+    // generated POM code.
+    const runtimeArgument = new RegExp(
+      `\\.${escapeRegExp(requiredMethod)}\\s*\\(\\s*`
+      + `[A-Za-z_$][\\w$]*(?:\\.[A-Za-z_$][\\w$]*)*(?:\\([^)]*\\))?`,
+    );
+    return runtimeArgument.test(body);
   }
   return true;
 }
 
 function pageMethodActionEvidence(files, methodName, action) {
   const primitivePatterns = {
-    navigate: /\.(?:goto|navigate|open|visit)\s*\(/,
+    navigate: /\.(?:goto|navigate|navigateTo|open|visit)\s*\(/,
     click: /\.click\s*\(/,
     fill: /\.(?:fill|type)\s*\(/,
     clear: /\.clear\s*\(/,
-    select: /\.(?:selectOption|select)\s*\(/,
-    select_option: /\.selectOption\s*\(/,
+    // A manual "select" step can target either a native <select> or a
+    // radio control represented by a checked option in the Page Object
+    // Model.
+    select: /\.(?:selectOption|selectOptionByLabel|select|check)\s*\(/,
+    select_option: /\.(?:selectOption|selectOptionByLabel)\s*\(/,
     check: /\.check\s*\(/,
     uncheck: /\.uncheck\s*\(/,
     press: /\.press\s*\(/,
     upload: /\.(?:setInputFiles|upload)\s*\(/,
     hover: /\.hover\s*\(/,
     drag: /\.dragTo\s*\(/,
-    wait: /\.(?:waitFor|waitForURL|waitForResponse)\s*\(/,
+    wait: /\.wait(?:For[A-Za-z0-9_]*)?\s*\(/,
     observe: /\.(?:textContent|inputValue|isVisible|count)\s*\(/,
     assert: /\bexpect\s*\(/,
   };
@@ -545,15 +650,47 @@ function normalizedRoute(value) {
 }
 
 function evidenceMatchesCase(record, testcase, targetKey) {
+  const expectedFeature = moduleSlug(testcase.group);
+  const evidenceFeature = moduleSlug(record.feature || path.basename(record.evidence_file || '', '.json'));
+  if (expectedFeature && evidenceFeature
+    && evidenceFeature !== expectedFeature
+    && evidenceFeature !== `${expectedFeature}-list`) return false;
   const expectedRoute = normalizedRoute(testcase.target_routes?.[targetKey] || testcase.entry?.route);
   const evidenceRoute = normalizedRoute(record.route);
-  if (expectedRoute && evidenceRoute && expectedRoute !== evidenceRoute) return false;
+  if (expectedRoute && evidenceRoute && expectedRoute !== evidenceRoute) {
+    const nestedState = String(record.state || '');
+    const nestedSegment = evidenceRoute.slice(`${expectedRoute}/`.length).split('/')[0] || '';
+    const resourceSegment = /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(nestedSegment)
+      || /^[0-9]{1,12}$/.test(nestedSegment)
+      || /^[a-z0-9_-]{20,}$/i.test(nestedSegment);
+    const isNestedRuntimeState = evidenceRoute.startsWith(`${expectedRoute}/`)
+      && nestedState.length > 0
+      && !nestedState.startsWith('route:')
+      && resourceSegment;
+    if (!isNestedRuntimeState) return false;
+  }
   const expectedRoles = new Set([
     String(testcase.entry?.role || '').trim().toLowerCase(),
     String(testcase.role_key || '').trim().toLowerCase(),
   ].filter(Boolean));
   const evidenceRole = String(record.role || '').trim().toLowerCase();
-  return !evidenceRole || expectedRoles.size === 0 || expectedRoles.has(evidenceRole);
+  const publicRoute = expectedRoute === '/login' || expectedRoute === '/register';
+  const unauthenticatedPublicEvidence = publicRoute && evidenceRole === 'unauthenticated';
+  if (evidenceRole && expectedRoles.size > 0 && !expectedRoles.has(evidenceRole) && !unauthenticatedPublicEvidence) return false;
+  const expectedNames = (testcase.target_names_by_key?.[targetKey] || [])
+    .map(value => String(value).normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase())
+    .filter(Boolean);
+  const evidenceNames = [
+    ...(Array.isArray(record.target_names) ? record.target_names : []),
+    record.target_name,
+  ]
+    .map(value => String(value || '').normalize('NFKC').replace(/\s+/g, ' ').trim().toLowerCase())
+    .filter(Boolean);
+  if (expectedNames.length > 0 && evidenceNames.length > 0
+    && !expectedNames.some(expected => evidenceNames.some(actual => actual === expected || actual.includes(expected) || expected.includes(actual)))) {
+    return false;
+  }
+  return true;
 }
 
 function relativeList(files, baseDir) {
@@ -568,6 +705,7 @@ function buildTraceability({
   tokenUsagePath,
   expectedAppBuild = '',
   maxEvidenceAgeHours = 168,
+  testcaseIds = [],
   mode = 'ui',
 }) {
   const markdown = readText(testcasePath);
@@ -590,7 +728,17 @@ function buildTraceability({
     );
   }
   const parsedCases = manifestCases || markdownCases;
-  const cases = parsedCases.cases;
+  const requestedTestcaseIds = [...new Set(testcaseIds.map(value => String(value).trim()).filter(Boolean))];
+  const knownTestcaseIds = new Set(parsedCases.cases.map(testcase => testcase.id));
+  const unknownTestcaseIds = requestedTestcaseIds.filter(testcaseId => !knownTestcaseIds.has(testcaseId));
+  for (const testcaseId of unknownTestcaseIds) {
+    addViolation(violations, 'TESTCASE_SCOPE_ID_UNKNOWN', `Không tìm thấy Testcase ID trong scope traceability: ${testcaseId}`, {
+      testcase_id: testcaseId,
+    });
+  }
+  const cases = requestedTestcaseIds.length > 0
+    ? parsedCases.cases.filter(testcase => requestedTestcaseIds.includes(testcase.id))
+    : parsedCases.cases;
   const specs = specFiles(automationRoot);
   const selectors = selectorFiles(automationRoot);
   const pages = pageFiles(automationRoot);
@@ -932,7 +1080,11 @@ function buildTraceability({
 
         if (record?.locator) {
           targetResult.selector_files = selectors
-            .filter(filePath => locatorAppearsInSource(record.locator, readText(filePath)))
+            .filter(filePath => {
+              const source = readText(filePath);
+              return locatorAppearsInSource(record.locator, source)
+                || selectorDefinitionAppearsInSource(record, source);
+            })
             .map(filePath => displayPath(filePath, automationRoot));
           if (targetResult.selector_files.length === 0) {
             addViolation(violations, 'SELECTOR_NOT_IN_CODE', `Locator evidence của ${targetKey} không xuất hiện trong selectors/`, {
@@ -997,6 +1149,8 @@ function buildTraceability({
       testcase_ids: cases.map(testcase => testcase.id),
       structured_execution_contract_count: cases.filter(testcase => testcase.structured).length,
       legacy_case_ids: cases.filter(testcase => !testcase.structured).map(testcase => testcase.id),
+      total_testcase_count: parsedCases.cases.length,
+      selected_testcase_ids: requestedTestcaseIds.length > 0 ? requestedTestcaseIds : null,
       source_context_estimate: {
         utf8_bytes: sourceBytes,
         estimated_tokens: Math.ceil(sourceBytes / 4),
@@ -1016,6 +1170,7 @@ function buildTraceability({
     token_usage: tokenUsage,
     summary: {
       testcase_count: cases.length,
+      total_testcase_count: parsedCases.cases.length,
       testcase_mapped_count: testcaseResults.filter(testcase => testcase.declaration_files.length > 0).length,
       target_key_count: selectorCoverage.size,
       unique_target_key_count: allTargetKeys.length,
@@ -1041,6 +1196,7 @@ Options:
   --token-usage <file>           Provider-reported usage JSON (or QA_TOKEN_USAGE_FILE)
   --app-build <id>               Current application build/commit expected in selector evidence
   --max-evidence-age-hours <n>   Freshness limit (default: 168)
+  --testcase-ids <csv>           Optional comma-separated testcase scope; omit for the full project
   --mode <ui|api>                UI checks selector evidence; API checks ID mapping only
   --output <file>                Audit JSON (default: reports/testcase-automation-traceability.json)
 `);
@@ -1101,6 +1257,10 @@ async function main() {
   const tokenUsagePath = tokenUsageArg ? path.resolve(automationRoot, tokenUsageArg) : '';
   const expectedAppBuild = getArg('--app-build', process.env.QA_APP_BUILD || '');
   const maxEvidenceAgeHours = Number(getArg('--max-evidence-age-hours', '168'));
+  const testcaseIds = getArg('--testcase-ids', process.env.QA_TRACEABILITY_TESTCASE_IDS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean);
   if (!Number.isFinite(maxEvidenceAgeHours) || maxEvidenceAgeHours <= 0) {
     throw new Error('BLOCKED: --max-evidence-age-hours must be a positive number');
   }
@@ -1114,6 +1274,7 @@ async function main() {
     tokenUsagePath,
     expectedAppBuild,
     maxEvidenceAgeHours,
+    testcaseIds,
     mode,
   });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -1124,6 +1285,7 @@ async function main() {
     source: report.source.path,
     source_sha256: report.source.sha256,
     testcases: `${report.summary.testcase_mapped_count}/${report.summary.testcase_count}`,
+    scope: report.source.selected_testcase_ids || 'full-project',
     selectors: `${report.summary.target_key_runtime_verified_count}/${report.summary.target_key_count}`,
     token_measurement: report.token_usage.measurement,
     total_tokens: report.token_usage.total_tokens ?? null,

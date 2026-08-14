@@ -25,6 +25,22 @@ npm run traceability -- \
   --output reports/testcase-automation-traceability.json
 ```
 
+For a run that intentionally executes only a deterministic slice, pass the exact
+Testcase IDs and keep the scope visible in the generated JSON:
+
+```bash
+npm run traceability -- \
+  --testcases testcases/AIFA_Function_Testcases_12-08-2026.md \
+  --manifest testcases/AIFA_Function_Testcases_12-08-2026.automation.json \
+  --testcase-ids AIFA-FILE-UPLOAD-01,AIFA-FILE-UPLOAD-02,AIFA-FILE-UPLOAD-03 \
+  --output reports/traceability-selected-flow.json
+```
+
+`--testcase-ids` prevents unrelated legacy cases from being mixed into a
+selected-flow result; it does not waive their evidence. The no-filter command
+remains the authoritative full-project audit and must stay `BLOCKED` until every
+in-scope target has fresh same-session runtime evidence
+
 The generated JSON answers:
 
 - which exact testcase file was consumed and its `sha256`

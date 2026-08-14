@@ -33,6 +33,8 @@ type DataReference = {
   field?: string;
 };
 
+export type SelectorEvidenceRecord = Record<string, unknown>;
+
 export type PomRuntimeContext = Readonly<{
   testcaseId: string;
   role: string;
@@ -46,6 +48,8 @@ export type PomRuntimeContext = Readonly<{
   manifestPath: string;
   resolveValue(value: unknown, targetKey?: string): string;
   resolveFile(value: unknown, targetKey?: string): string;
+  recordSelectorEvidence(record: SelectorEvidenceRecord): void;
+  selectorEvidenceSnapshot(): SelectorEvidenceRecord[];
 }>;
 
 const pageRuntime = new WeakMap<Page, PomRuntimeContext>();
@@ -330,6 +334,7 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
   const accountData = isObject(account?.data) ? account.data : {};
   const datasetValues = isObject(dataset?.values) ? dataset.values : {};
   const cache = new Map<string, string>();
+  const selectorEvidence = new Map<string, SelectorEvidenceRecord>();
   const tokenContext = {
     namespace,
     parallelIndex: testInfo.parallelIndex,
@@ -400,6 +405,29 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
     return isolatedPath;
   };
 
+  const recordSelectorEvidence = (record: SelectorEvidenceRecord): void => {
+    if (process.env.QA_SELECTOR_EVIDENCE_CAPTURE !== 'true') return;
+    const targetKey = typeof record.target_key === 'string' ? record.target_key.trim() : '';
+    if (!targetKey) return;
+    const key = [
+      targetKey,
+      String(record.route ?? ''),
+      String(record.state ?? ''),
+      JSON.stringify(record.locator ?? ''),
+    ].join('|');
+    const enriched: SelectorEvidenceRecord = {
+      ...record,
+      testcase_id: testcase.testcase_id,
+      role: record.role ?? role,
+      run_id: record.run_id ?? process.env.RUN_ID ?? process.env.QA_RUN_ID ?? null,
+      app_build: record.app_build ?? process.env.QA_APP_BUILD ?? 'unknown-build',
+    };
+    const existing = selectorEvidence.get(key);
+    if (!existing || (existing.status !== 'runtime_verified' && enriched.status === 'runtime_verified')) {
+      selectorEvidence.set(key, enriched);
+    }
+  };
+
   return Object.freeze({
     testcaseId: testcase.testcase_id,
     role,
@@ -413,6 +441,8 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
     manifestPath,
     resolveValue,
     resolveFile,
+    recordSelectorEvidence,
+    selectorEvidenceSnapshot: () => [...selectorEvidence.values()],
   });
 }
 

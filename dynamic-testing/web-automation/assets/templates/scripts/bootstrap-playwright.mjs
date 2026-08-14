@@ -2,8 +2,11 @@
 
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+const require = createRequire(import.meta.url);
 
 const REQUIRED_DEV_DEPENDENCIES = {
   '@playwright/test': '^1.54.0',
@@ -144,11 +147,26 @@ function installDependencies(projectRoot) {
   run('npm', ['install', '--no-audit', '--no-fund', '--ignore-scripts'], projectRoot, 'npm install');
 }
 
+function installedBrowserExecutable(browser) {
+  try {
+    const playwright = require('@playwright/test');
+    const browserType = playwright[browser];
+    if (!browserType || typeof browserType.executablePath !== 'function') return null;
+    const executable = browserType.executablePath();
+    return executable && fs.existsSync(executable) ? executable : null;
+  } catch {
+    return null;
+  }
+}
+
 function installBrowsers(projectRoot, browsers, withDeps) {
+  const missingBrowsers = browsers.filter(browser => !installedBrowserExecutable(browser));
+  if (missingBrowsers.length === 0) return { status: 'READY', installed: [], skipped: browsers };
   const args = ['--no-install', 'playwright', 'install'];
   if (withDeps) args.push('--with-deps');
-  args.push(...browsers);
-  run('npx', args, projectRoot, `npx playwright install ${browsers.join(', ')}`);
+  args.push(...missingBrowsers);
+  run('npx', args, projectRoot, `npx playwright install ${missingBrowsers.join(', ')}`);
+  return { status: 'READY', installed: missingBrowsers, skipped: browsers.filter(browser => !missingBrowsers.includes(browser)) };
 }
 
 function checkTypes(projectRoot) {
@@ -183,9 +201,9 @@ export function ensurePlaywrightRuntime(projectRoot, {
     throw new Error(`BLOCKED: project dependencies vẫn thiếu sau npm install: ${JSON.stringify(runtime)}`);
   }
 
-  if (shouldInstallBrowsers && browsers.length > 0) {
-    installBrowsers(resolvedRoot, browsers, withDeps);
-  }
+  const browserInstall = shouldInstallBrowsers && browsers.length > 0
+    ? installBrowsers(resolvedRoot, browsers, withDeps)
+    : { status: 'SKIPPED', installed: [], skipped: [] };
   if (shouldCheckTypes && fs.existsSync(path.join(resolvedRoot, 'tsconfig.json'))) {
     checkTypes(resolvedRoot);
   }
@@ -197,6 +215,7 @@ export function ensurePlaywrightRuntime(projectRoot, {
     installed_dependencies: installedDependencies,
     browsers: shouldInstallBrowsers ? browsers : [],
     typecheck: shouldCheckTypes && fs.existsSync(path.join(resolvedRoot, 'tsconfig.json')) ? 'PASS' : 'SKIPPED',
+    browser_install: browserInstall,
     runtime: inspectProjectRuntime(resolvedRoot),
   };
 }

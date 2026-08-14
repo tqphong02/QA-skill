@@ -51,7 +51,13 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
     const source = fs.readFileSync(configPath, 'utf8');
     requirePattern(source, /\bPW_WORKERS\b/, 'DYNAMIC_WORKERS_MISSING', 'playwright.config.ts', violations);
     requirePattern(source, /\bQA_UNIFIED_EVIDENCE\b/, 'EVIDENCE_SWITCH_MISSING', 'playwright.config.ts', violations);
-    requirePattern(source, /outputDir\s*:\s*['"]evidence\/test-results['"]/, 'EVIDENCE_OUTPUT_MISSING', 'playwright.config.ts', violations);
+    requirePattern(
+      source,
+      /outputDir\s*:\s*(?:process\.env\.[A-Z0-9_]+\s*\?\?\s*)?['"]evidence\/test-results['"]/,
+      'EVIDENCE_OUTPUT_MISSING',
+      'playwright.config.ts',
+      violations,
+    );
     requirePattern(source, /\btrace\s*:/, 'TRACE_POLICY_MISSING', 'playwright.config.ts', violations);
     requirePattern(source, /\bscreenshot\s*:/, 'SCREENSHOT_POLICY_MISSING', 'playwright.config.ts', violations);
     requirePattern(source, /\bvideo\s*:/, 'VIDEO_POLICY_MISSING', 'playwright.config.ts', violations);

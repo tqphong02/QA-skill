@@ -9,6 +9,19 @@ type PomFixtures = {
   pomRuntime: PomRuntimeContext;
 };
 
+function asyncUiTestTimeout(): number {
+  const configured = [
+    'UI_WAIT_TIMEOUT_MS',
+    'UPLOAD_WAIT_TIMEOUT_MS',
+    'PROCEDURE_WAIT_TIMEOUT_MS',
+    'DSL_GENERATION_TIMEOUT_MS',
+    'RUN_WAIT_TIMEOUT_MS',
+  ].map(name => Number.parseInt(process.env[name] ?? '0', 10))
+    .filter(value => Number.isInteger(value) && value > 0);
+  const bound = Math.max(120_000, ...configured);
+  return Math.min(bound + 30_000, 900_000);
+}
+
 /**
  * Mandatory fixture entrypoint for deterministic manifest-generated POM specs.
  * It assigns one account/data slot per parallelIndex, creates a fresh context,
@@ -51,11 +64,28 @@ export const test = base.extend<PomFixtures>({
     await use(pomRuntime.storageStatePath ?? { cookies: [], origins: [] });
   },
 
-  page: async ({ context, pomRuntime }, use) => {
+  page: async ({ context, pomRuntime }, use, testInfo) => {
     const page = await context.newPage();
     bindPomRuntime(page, pomRuntime);
     await use(page);
+    if (process.env.QA_SELECTOR_EVIDENCE_CAPTURE === 'true') {
+      await testInfo.attach('selector-runtime-evidence', {
+        body: Buffer.from(JSON.stringify({
+          schema_version: 1,
+          testcase_id: pomRuntime.testcaseId,
+          role: pomRuntime.role,
+          targets: pomRuntime.selectorEvidenceSnapshot(),
+        }, null, 2)),
+        contentType: 'application/json',
+      });
+    }
   },
+});
+
+// Keep generated specs with historical per-test timeouts compatible with
+// bounded upload/DSL/run waits configured by the target project.
+test.beforeEach(async ({}, testInfo) => {
+  testInfo.setTimeout(Math.max(testInfo.timeout, asyncUiTestTimeout()));
 });
 
 export { expect };

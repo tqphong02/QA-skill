@@ -58,9 +58,8 @@ export default defineConfig({
     ['list'],                          // console output
     ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['allure-playwright', {
-      outputFolder: 'reports/allure-results',
+      resultsDir: 'reports/allure-results',
       detail: true,                   // attach steps, screenshots, traces
-      output: 'allure',               // dùng 'allure' (v2) hoặc 'allure1'
       suiteTitle: false,
     }],
   ],

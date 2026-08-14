@@ -78,7 +78,7 @@ export default defineConfig({
     ['html', { outputFolder: 'evidence/html', open: 'never' }],
     ['junit', { outputFile: 'reports/junit.xml' }],
     ['json', { outputFile: 'reports/playwright.json' }],
-    ['allure-playwright', { outputFolder: 'reports/allure-results' }],
+    ['allure-playwright', { resultsDir: 'reports/allure-results' }],
   ],
 
   use: {

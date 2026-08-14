@@ -15,6 +15,7 @@
     "quality-gate": "node scripts/quality-gate.mjs --config quality-gates.json --report reports/playwright.json",
     "quality-gate:config": "node -e \"const c=require('./quality-gates.json'); if(!c.version||!c.thresholds) process.exit(1); console.log('quality-gates.json PASS')\"",
     "traceability": "node scripts/verify-testcase-traceability.mjs",
+    "promote:evidence": "node scripts/promote-runtime-evidence.mjs",
     "runtime-scaffold": "node scripts/verify-runtime-scaffold.mjs",
     "pom-plan": "node scripts/generate-pom-plan.mjs",
     "module-layout": "node scripts/verify-module-artifact-layout.mjs",
