@@ -20,6 +20,18 @@ function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function targetHints(target) {
+  if (!target || typeof target !== 'object' || Array.isArray(target)) return null;
+  const fields = ['key', 'kind', 'name', 'role', 'label', 'placeholder', 'test_id', 'id', 'route'];
+  const hints = {};
+  for (const field of fields) {
+    if (target[field] !== undefined && target[field] !== null && target[field] !== '') {
+      hints[field] = target[field];
+    }
+  }
+  return Object.keys(hints).length > 0 ? hints : null;
+}
+
 function buildPomPlan(manifestPath, options = {}) {
   const parsed = parseAutomationManifest(manifestPath);
   const sourceHash = sha256(manifestPath);
@@ -64,6 +76,7 @@ function buildPomPlan(manifestPath, options = {}) {
         action: step.action,
         required_method: stepMethodName(step),
         target_key: step?.target?.key || null,
+        target_hints: targetHints(step?.target),
         value: step.value ?? null,
         value_fingerprint: valueFingerprint(step.value),
         wait_for: step.wait_for ?? null,
@@ -130,7 +143,7 @@ async function main() {
   }, null, 2));
 }
 
-export { buildPomPlan };
+export { buildPomPlan, targetHints };
 
 const invokedAsScript = process.argv[1]
   && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;

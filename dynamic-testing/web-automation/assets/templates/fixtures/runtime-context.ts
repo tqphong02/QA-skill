@@ -215,12 +215,13 @@ function findTestcase(projectRoot: string, title: string): { testcase: Automatio
       }
     }
   }
-  if (matches.length !== 1) {
+  const match = matches[0];
+  if (!match || matches.length !== 1) {
     throw new Error(
       `UNTEST: test title must match exactly one testcase in .automation.json; title=${JSON.stringify(title)}, matches=${matches.length}`,
     );
   }
-  return matches[0];
+  return match;
 }
 
 function objectValue(source: JsonObject, key: string): unknown {
