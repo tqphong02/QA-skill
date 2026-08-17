@@ -6,6 +6,7 @@
     "moduleResolution": "node16",
     "esModuleInterop": true,
     "allowImportingTsExtensions": true,
+    "noEmit": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "skipLibCheck": true,
