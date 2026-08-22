@@ -9,255 +9,96 @@ legacy_aliases: playwright-pom-automation
 
 # Testcase Execution and Playwright POM
 
-Own the complete deterministic workflow from shared automation manifest to reusable POM code, browser execution, evidence and verdict. Keep every selector in `selectors/`, actions in Page Objects and assertions in specs; preserve `AUTOMATION_SOURCE`, IDs and RBAC markers.
+Own the deterministic path from the `.automation.json` automation manifest to a reusable POM, Playwright evidence and verdict. Keep selectors in `selectors/`, actions in Page Objects, assertions in specs, and preserve `AUTOMATION_SOURCE`, testcase IDs and RBAC markers
 
 ## Mandatory workflow
 
-1. Resolve `BUILD`, `RUN` or default `BUILD_AND_RUN`, plus target, environment, account/data, production boundary and cleanup
-2. Use `.automation.json` as the only execution/POM source and select at most 20 cases by group or Testcase ID
-3. Before POM generation, build a complete current-build Browser MCP UI function inventory for every allowed route/role/state. Read [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md) and block when inventory functions are absent from the manifest
-4. Run the unified workflow with `--phase plan --require-ui-coverage`; resolve selectors from the same-session Browser MCP evidence before generating selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
-5. Emit `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and make every generated spec import `test`/`expect` from `fixtures/pom`
-6. Use Browser MCP to inspect and verify every inventory target in the live DOM, then record current-build selector evidence
-7. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; the generated project must carry that script and npm lifecycle prehooks so `npm run check:types`, provisioning and test commands self-install declared dependencies, run `npx --no-install playwright install chromium`, and then check `tsc --noEmit`
-8. Pass UI-function coverage, runtime-scaffold, placeholder, TypeScript/lint and traceability gates
-9. Run the unified workflow with `--phase execute --require-ui-coverage`; it executes Playwright with same-session visual and trace evidence
-10. Read `reports/ui-function-coverage.json` and `reports/testcase-pom-execution.json` and report only `PASS`, `FAILED`, `N/A` or `UNTEST`
-11. For Sheet/Excel, project the same result to row IDs and perform write-back only after confirmation and validation
-12. Add CI/Allure/quality gates only when the request includes pipeline/release delivery
+1. Resolve `BUILD`, `RUN` or default `BUILD_AND_RUN`, target, environment, account/data, production boundary and cleanup
+2. Select at most 20 cases by group or testcase ID; use the manifest as the only execution/POM source
+3. Before planning UI work, build the current-build Browser MCP `UI_FUNCTION_INVENTORY` for every allowed route/role/state. Read [ui-coverage-discovery.md](references/ui-coverage-discovery.md); block when required functions are absent from the manifest
+4. Run `testcase-workflow --phase plan --require-ui-coverage`, resolve selectors from same-session Browser MCP evidence, then generate selectors → Page Objects → tagged specs and consolidate by business module
+5. Copy the runtime scaffold: `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and `scripts/verify-runtime-scaffold.mjs`. Generated specs import `test`/`expect` from `fixtures/pom`, never directly from `@playwright/test`
+6. Bootstrap project-local Playwright with `scripts/bootstrap-playwright.mjs`; install declared dependencies and Chromium before typecheck/provision/test
+7. Pass UI-function coverage, runtime scaffold, placeholder, TypeScript/lint and traceability gates
+8. Run `testcase-workflow --phase execute --require-ui-coverage`; read `reports/ui-function-coverage.json` and `reports/testcase-pom-execution.json`
+9. Report only `PASS`, `FAILED`, `N/A` or `UNTEST`. For Sheet/Excel, write back exact row verdicts only after confirmation and validation
 
-Do not run against production or create external state without explicit target, data ownership and cleanup.
+Do not run production or create external state without explicit target, data ownership and cleanup
 
-Read [references/testcase-execution.md](references/testcase-execution.md) for deterministic execution, verdict mapping and Sheet integration. Do not load `dynamic-testing/web-exploratory/SKILL.md` for this workflow.
+## Target-scoped planning
 
-For complete UI/POM coverage, also read [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md). A no-filter inventory gate is required before claiming full module/project coverage
+Never load a large manifest or raw DOM into model context. Let the deterministic script read it and emit a bounded `pom-plan`:
 
-## Token-efficient unified planning
-
-Never load a large manifest into model context. Let the deterministic script read it and emit a target-scoped plan:
-
-```bash
-npm run testcase-workflow -- \
-  --phase plan \
-  --mode ui \
+```text
+npm run testcase-workflow -- --phase plan --mode ui \
   --manifest testcases/<feature>.automation.json \
-  --group LOGIN \
-  --ui-inventory selector-evidence/<feature>.ui-function-inventory.json \
-  --require-ui-coverage \
-  --max-cases 20 \
-  --output testcases/login.pom-plan.json
+  --group LOGIN --ui-inventory selector-evidence/<feature>.ui-function-inventory.json \
+  --require-ui-coverage --max-cases 20 --output testcases/login.pom-plan.json
 ```
 
-Use `--testcase-id TC-01,TC-02` for a smaller slice. The CLI blocks selections over 20 cases unless `--max-cases` is raised explicitly. Generate and verify one bounded group/slice at a time; do not reread the whole Markdown, manifest, repository or raw DOM after each case. This limit applies to planning context only and must not create `batch-01`, `batch-02` final code files.
+Use `--testcase-id` for a smaller slice. Generate one bounded group at a time; batching is internal only and must not leak `batch-NN` into final code. Run `scripts/verify-module-artifact-layout.mjs` after BUILD
 
-The execute phase bootstraps the target project automatically. Run `node scripts/bootstrap-playwright.mjs --project-root <automation-root> --browsers chromium` directly when the editor must resolve generated imports immediately after BUILD. Generated targets must expose `npm run bootstrap:runtime` and call it from direct typecheck/provision/test entrypoints. Use `--skip-bootstrap` only when the project-local runtime and typecheck have already passed
+## Module and testcase contracts
 
-## Module artifact contract
+- One business module owns one final `tests/<surface>/<module>.<surface>.spec.ts`, one Page Object and one selector registry. Preserve manifest module/testcase order and make generation deterministic/idempotent
+- `testcase ID → one test()`; `entry` maps to fixtures; role/RBAC remain metadata; cleanup maps to `finally` or fixture teardown
+- Plan steps carry `action`, `target_key`, value fingerprint, marker, Page Object method and allowed assertion matcher. Use deterministic names such as `fillEmailInput` and `clickLoginSubmit`
+- Resolve runtime data by `target_key`; do not reconstruct values from prose. Legacy text-only cases are not automatable until normalized
+- Specs contain no raw locators or `expect()`-free Page Object violations; Page Object locators stay `private readonly`; selectors use `as const`
+- Ordered/mutating modules use `test.describe.serial` unless data and cleanup are independently owned. Do not remove serial grouping as a parallelism shortcut
+- Parallel mutation needs one storage-state account and one isolated data/cleanup slot per worker; shortage is `UNTEST`, never silent reuse
 
-Use `testcases[].group` as the business-module boundary unless the user supplies an explicit module map. For a full module/project BUILD:
+## Browser MCP selector contract
 
-- Create exactly one `tests/<surface>/<module>.<surface>.spec.ts` containing every selected testcase in that module; keep one testcase ID per `test()`
-- Create exactly one `pages/<module>.page.ts` for module actions and one `selectors/<module>.selectors.ts` for that module's selector registry
-- Keep shared base classes, fixtures and cross-module components in clearly named shared files; never place actions or selectors from every module in one `aifa.page.ts`, `app.page.ts` or global selector file
-- Bounded plans may remain as multiple internal `plans/<module>.batch-NN.pom-plan.json` files, but merge their generated code into the module's single spec/Page Object/selector files
-- Final module code filenames must not contain `batch-NN`; reject both one global mega-file and multiple final spec files for the same module
-- Preserve manifest module order and testcase order inside each module; generation must be deterministic and rerunnable without duplicating IDs
-- Run `scripts/verify-module-artifact-layout.mjs` after BUILD and block delivery when the module/file mapping fails
-- Always copy the deterministic runtime scaffold into the target project: `fixtures/pom.ts`, `fixtures/runtime-context.ts` and `scripts/verify-runtime-scaffold.mjs`
-- Generated specs must import `test` and `expect` from the relative `fixtures/pom` entrypoint; importing them from `@playwright/test` bypasses account/data isolation and is a delivery blocker
-- Keep `test.describe.serial` for an ordered/mutating module unless every testcase in that module has independently owned data and cleanup; Playwright may still run separate module files concurrently
-- When a user explicitly requests a complete run with no skipped cases but module serial groups are not independently isolated, use a pinned queue runner: one testcase per Playwright invocation, one account/data slot per queue, and a maximum of one active mutation per slot. Do not mass-remove `test.describe.serial` as a shortcut for parallelism
-
-## Testcase-to-code contract
-
-BUILD and RUN share the same `entry`, steps, values, assertions, cleanup and selected IDs. Never create a second runtime interpretation from Markdown/Excel prose.
-
-- One testcase ID maps to one `test()` unless the user explicitly requests another grouping
-- `entry` maps to fixtures/setup; role and RBAC refs remain metadata
-- Each plan step provides exact `action`, `target_key`, `value_fingerprint`, marker and required Page Object method
-- Name action methods deterministically as `<action><PascalTargetKey>`, for example `fillEmailInput`, `clickLoginSubmit`, `navigateLoginPage`
-- Each step assertion and outcome provides a marker and allowed matcher such as `toHaveValue`, `toBeVisible` or `toHaveURL`
-- Use the exact structured value/data reference from the plan; do not reconstruct it from prose
-- Page Object value/file methods pass `target_key` into the runtime resolver so a dataset can override an exact field without changing generated source
-- Map mutating cleanup to `finally` or fixture teardown
-- Legacy text-only cases are not automatable until normalized
-
-Traceability blocks generic `performStep()` mappings, wrong action method, missing value fingerprint, incompatible assertion matcher, stale source hash, incomplete role/RBAC/cleanup markers, and empty implementations.
-
-## UI selector gate
-
-Read [references/selector-discovery.md](references/selector-discovery.md) before UI selector work. Browser MCP is the selector-discovery source of truth. Use this priority:
+Browser MCP is the selector source of truth. Read [selector-discovery.md](references/selector-discovery.md) and [ui-coverage-discovery.md](references/ui-coverage-discovery.md) before UI/POM work. Use this priority:
 
 `existing testid → stable id → stable CSS → role/label/placeholder/text → short anchored XPath`
 
-- Never invent or inject `data-testid`
-- Verify count, visibility and actionability in the intended route/role/state
-- Never use `.first()`, `.last()`, positional CSS, generated classes or full XPath to hide ambiguity
-- Evidence must include `captured_at`, same-browser `run_id`, current `app_build`, ordered candidates and verification
-- Commit only the selected runtime-verified locator to `selectors/`
+Never invent `data-testid`; reject generated classes, positional CSS, `.first()`, `.last()`, full XPath and ambiguous targets. Verify count, visibility and actionability in the intended route/role/state. Promote only the selected runtime-verified locator into `selectors/`
 
-### Browser MCP selector discovery
+For every target, use the same Browser MCP page/session:
 
-For every selected UI target, use the same Browser MCP session to navigate to the
-declared route, inspect the accessibility snapshot and live DOM, and verify the
-candidate before generating POM code. The default provider is Playwright MCP;
-Chrome DevTools MCP is valid only when it drives or is attached to the exact page
-being inspected
+1. `browser_navigate` to the declared route
+2. `browser_snapshot` after the declared ready state
+3. `browser_evaluate` to inspect attributes, semantic relationships and a short anchored XPath when needed
+4. Prove `count=1`, visibility and actionability
+5. Export records to `scripts/discover-runtime-selectors.mjs --browser-mcp-evidence <file>`
 
-The Browser MCP sequence is mandatory:
+Evidence must retain `provider`, `browser_driver`, `browser_observer`, `tools_used`, `run_id`, `app_build`, route/state, ordered candidates, exact locator and verification. The default provider is Playwright MCP; Chrome DevTools MCP is valid only when attached to the exact inspected page
 
-1. `browser_navigate` (or the provider-equivalent navigation tool) to the target route
-2. `browser_snapshot` (or the provider-equivalent accessibility snapshot) after the declared ready state
-3. `browser_evaluate` (or the provider-equivalent DOM evaluation tool) to derive and test candidate attributes, semantic relationships and a short anchored XPath when needed
-4. Verify `count=1`, expected visibility and actionability in that same Browser MCP session
-5. Export the target records and pass them to `scripts/discover-runtime-selectors.mjs --browser-mcp-evidence <file>`
+If Browser MCP is unavailable, classify selector work `BLOCKED`/`UNTEST`. Use local discovery only with explicit `--provider playwright-runtime` and never label it Browser MCP. When XPath is required, it must be short, anchored to a stable attribute/semantic relationship and unique in the live DOM
 
-The MCP evidence must retain `provider`, `browser_driver`, `browser_observer`,
-`tools_used`, `run_id`, `app_build`, route/state, ordered candidates, the exact
-locator, and verification. The generated selector file is allowed to contain
-only a locator represented by that evidence
+Static route capture and stateful controls are module-scoped. Stateful dialogs/upload/Gate 1/Gate 2/run-result targets require the smallest one-worker testcase slice and runtime attachment; this supplements, never replaces, the Browser MCP record
 
-Do not derive an XPath from testcase prose, a screenshot, a stale trace, or a
-different browser session. If Browser MCP is unavailable, the selector target is
-`BLOCKED`/`UNTEST`; use the local Playwright discovery path only with the explicit
-`--provider playwright-runtime` fallback and never label that evidence as Browser MCP
+## Evidence and verdict contract
 
-The unified `testcase-workflow --phase execute` automatically enables the
-Browser MCP provenance gate for `ui` and `functional` POM runs
+Run through `scripts/run-testcase-pom.mjs`; it sets `QA_UNIFIED_EVIDENCE=true`. UI/functional `PASS` or `FAILED` requires screenshot/video and Playwright trace from the same run. Missing target, data, report, visual evidence, trace, timeout, interruption or stale selector evidence is `UNTEST`
 
-When XPath is required, Browser MCP must return a short XPath anchored to a
-stable attribute or semantic relationship and prove it unique in the live DOM
-Absolute DOM paths, generated classes, `:nth-child()`, `.first()` and `.last()`
-remain forbidden
+Retry-pass is `FAILED` with `flaky=true`, not clean `PASS`. A suite preserves the strongest selected verdict: `FAILED` > `UNTEST` > `N/A` > `PASS`. Sheet write-back uses the exact unified report projection; no second judgement
 
-### Module-scoped selector capture
+Use bounded state waits for async upload, validation, generation, save and run actions. Wait for a semantic route/region/state transition, not `body` attachment, `networkidle` or fixed `waitForTimeout()`. Preserve entity ID across redirects, rediscover generated forms after transitions, and retry only bounded timeout/`408`/`429`/`5xx` cases—not business `4xx` validation failures
 
-Run selector discovery and promotion per business module. Do not run one broad
-project scan and copy a selector into another module: evidence must retain the
-route, role, state, browser `run_id` and current `app_build` where the DOM was
-observed
+## Mode routing and references
 
-For static route states, use the generated project's read-only discovery runner
-after Browser MCP has exported the bounded selector records:
-
-```bash
-node scripts/discover-runtime-selectors.mjs \
-  --module <module> \
-  --browser-mcp-evidence selector-evidence/<module>.browser-mcp.json \
-  --app-build "$QA_APP_BUILD"
-node scripts/promote-selector-discovery.mjs --module <module>
-```
-
-For stateful controls (dialogs, generated DSL, schema configuration, upload,
-Gate 1/Gate 2 and run results), execute the smallest testcase slice that
-reaches that state with one worker and capture the fixture attachment:
-
-```bash
-QA_SELECTOR_EVIDENCE_CAPTURE=true QA_UNIFIED_EVIDENCE=true \
-npx playwright test tests/functional/<module>.functional.spec.ts \
-  --grep '<Testcase-ID>' --workers=1
-node scripts/promote-runtime-evidence.mjs --feature <module>
-```
-
-The capture above verifies the selected locator during execution; it does not
-replace the Browser MCP discovery record required before POM generation
-
-The target project may expose `--module` instead of `--feature` for promotion.
-Promotion accepts only `runtime_verified` records with `count=1` and
-same-session visibility/actionability evidence. It never turns a target that
-is still unverified into a guessed locator
-
-Keep a redirect, missing role/data, duplicate accessible name or disabled
-control as `BLOCKED`/`UNTEST` for that module/state. A static `/dashboard`
-observation does not certify `/reports`, and a Gate 1 selector does not certify
-Gate 2. The per-module report is useful for the selected slice; the no-filter
-project traceability audit remains the authoritative completion gate
-
-Run traceability with the current build and freshness limit:
-
-```bash
-npm run traceability -- \
-  --testcases testcases/<feature>.md \
-  --manifest testcases/<feature>.automation.json \
-  --require-browser-mcp \
-  --app-build "$QA_APP_BUILD" \
-  --max-evidence-age-hours 168
-```
-
-Selector JSON is evidence, not proof by itself; the unified Playwright run must reach the intended state and pass the business assertion.
-
-## Execution evidence and verdict
-
-- Run through `scripts/run-testcase-pom.mjs`; it sets `QA_UNIFIED_EVIDENCE=true`
-- UI/functional `PASS` or `FAILED` requires an existing screenshot/video and Playwright trace from the same test run
-- Direct Playwright runs also record screenshot, video and trace by default; artifacts are written to `evidence/test-results/`, HTML to `evidence/html/`, and JSON to `reports/playwright.json`
-- When `QA_SELECTOR_EVIDENCE_CAPTURE=true`, `fixtures/pom.ts` attaches `selector-runtime-evidence` to the same Playwright/Allure result. Promote that attachment only after the testcase reaches the intended state with `scripts/promote-runtime-evidence.mjs`
-- Retry-pass is `FAILED` with `flaky=true`, never clean `PASS`
-- Missing test, traceability, target, data, report, visual, trace, timeout or interruption is `UNTEST`
-- Skipped by an applicable suite condition is `N/A`
-- A suite summary must preserve the strongest case verdict: any `FAILED` yields `FAILED`; otherwise any `UNTEST` yields `UNTEST`; otherwise any `N/A` yields `N/A`; only an all-`PASS` selection is suite `PASS`
-- Sheet write-back uses the exact verdict projection from the unified report; no second agent judgement
-
-### Runtime repair rules
-
-- Do not assert business outcomes by searching `body.textContent()` for prose copied from testcase descriptions. Map each observable outcome to a runtime-verified locator and the matcher stated by the execution contract; if the oracle is not observable in the captured state, return `UNTEST`.
-- For asynchronous UI actions such as file upload, Gate 1/Gate 2 validation, AI/DSL generation, procedure save and run execution, wait on the state transition that proves the action completed: route plus a runtime-verified heading/region, preview plus enabled save, or a changed run/result state. Use an environment-configurable bounded timeout and polling interval; a timeout is `UNTEST` with the route/state/evidence context.
-- Preserve the exact entity ID before a stateful redirect. If Gate/reclassification returns to a list while processing continues, wait for the exact entity state and reopen the same ID; never recover with a duplicate filename, a broad row selector or `.first()`.
-- Upload completion may retry only a bounded, environment-configurable number of times for timeout, `408`, `429` or `5xx`. Capture the completion response before `setInputFiles`, retain every attempt's evidence and return `UNTEST` with endpoint/status when recovery is exhausted; never retry a business `4xx` validation failure.
-- Generated forms must be rediscovered after the async state transition. Fill every newly required field observed in the current DOM (for example procedure name), then use the current runtime button label (for example `Lưu nháp`) and verify the saved entity by its unique name/ID before opening a downstream selector.
-- `body` being attached is never a readiness signal. Do not use `locator('body').waitFor({ state: 'attached' })`, `networkidle`, or a fixed `waitForTimeout()` as a business wait. Shared BasePage helpers may poll for `domcontentloaded`, `document.readyState`, visible runtime locators, enabled controls and semantic busy-state removal; feature pages must add the stronger state signal for their mutation.
-- The generated fixture must extend the Playwright test budget beyond the largest configured async wait plus a safety buffer; a page wait must never be longer than the enclosing test timeout.
-- Dynamic targets must resolve from the testcase target name at runtime and pass a uniqueness guard (`count === 1`, visible, and actionable when required). A broad selector without target-name filtering is not evidence for every data variant.
-- Native `<select>` actions resolve the exact visible option label against the live DOM option value before `selectOption`; assertions compare the DOM value while testcase prose keeps the human label
-- A selector-evidence record is route/state/role scoped. Never reuse evidence captured on one route or state to certify a different route/state; missing or stale evidence is `UNTEST`.
-- If navigation redirects an access-controlled feature route, classify the case as `UNTEST` with the requested and final route in the reason. Do not convert the redirect into a URL assertion `FAILED`.
-- Upload fixtures must live under `testdata/fixtures/` (or the configured data root) with a stable readable name such as `<PROJECT>_<ENV>_SAMPLE_<NN>_<SCHEMA>_<PURPOSE>.<ext>`. Keep the worker namespace only in the isolated local copy; pass `{ name, mimeType, buffer }` to `setInputFiles` so the web UI never displays `input-<namespace>-...` temporary names.
-
-## POM invariants
-
-- `selectors/<feature>.selectors.ts` uses `as const`
-- One business module owns one final spec, Page Object and selector file; plan batching never leaks into final code filenames
-- Page Objects keep locator collections `private readonly` and expose getters/actions
-- Specs never import selector builders or call `page.locator()`/`page.getBy*()`
-- Page Object action methods contain no `expect()`
-- Every test has an appropriate tag such as `@ui`, `@api`, `@functional`, `@smoke`
-- Manifest-generated specs import from `fixtures/pom`; `scripts/verify-runtime-scaffold.mjs` rejects direct `@playwright/test` imports
-- Runtime data is unique by run/project/parallel/worker/test/retry/repeat; browser isolation alone does not isolate backend state
-- `parallelIndex` selects one non-cycling storage-state account and one dataset slot; pool shortage is `UNTEST`, never silent account reuse
-- Retries use new data, preserve first-attempt evidence and are classified flaky rather than clean PASS
-- Secrets stay in environment/CI credentials; project data, auth state and live evidence stay outside this skill repository
-
-## Mode routing
-
-Read only the selected references:
-
-| Need | Read | Templates |
-|---|---|---|
-| Testcase execution, BUILD_AND_RUN or Sheet/Excel | [references/testcase-execution.md](references/testcase-execution.md) | `scripts/run-testcase-pom.mjs` |
-| UI/POM | [references/ui-testing.md](references/ui-testing.md) + [references/selector-discovery.md](references/selector-discovery.md) + [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md) | `pages/`, `selectors/`, `tests/ui/` |
-| API | [references/api-testing.md](references/api-testing.md) | `fixtures/api-client.ts`, `tests/api/` |
-| UI+API functional flow | UI + API references | `tests/functional/` |
-| Data-driven/parallel | [references/data-driven-testing.md](references/data-driven-testing.md) | `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/data-driven.ts`, `test-data/` |
-| Testcase traceability/token telemetry | [references/automation-audit.md](references/automation-audit.md) | `scripts/generate-pom-plan.mjs`, `scripts/verify-testcase-traceability.mjs`, `scripts/verify-ui-coverage.mjs` |
-| CI/CD | [references/cicd.md](references/cicd.md) + [references/AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md) + [references/FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) | selected platform template |
-| Performance | [references/performance-testing.md](references/performance-testing.md) | k6/Playwright perf template |
-
-Use component/API/contract tests for deterministic lower-level rules and keep UI suites focused on critical journeys. Run k6 separately when concurrency or p95/p99 is required.
+| Need | Read |
+|---|---|
+| BUILD/RUN/BUILD_AND_RUN or Sheet/Excel | [testcase-execution.md](references/testcase-execution.md) |
+| UI/POM and complete UI coverage | [ui-testing.md](references/ui-testing.md), [selector-discovery.md](references/selector-discovery.md), [ui-coverage-discovery.md](references/ui-coverage-discovery.md) |
+| API | [api-testing.md](references/api-testing.md) |
+| Data-driven/parallel | [data-driven-testing.md](references/data-driven-testing.md) |
+| Traceability/token telemetry | [automation-audit.md](references/automation-audit.md) |
+| CI/Allure/flaky management | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) |
+| Performance | [performance-testing.md](references/performance-testing.md) |
 
 ## Hard gates
 
-- `pom-plan` succeeds for every selected testcase slice
-- Runtime scaffold verification passes and every generated spec is wired through `fixtures/pom`
-- TypeScript/lint and relevant tests pass
-- A current Browser MCP `UI_FUNCTION_INVENTORY` covers every allowed route/role/state; no-filter full runs must reach 100% required-function coverage
-- Every required inventory function maps to at least one testcase/POM action, and every actionable testcase target appears in the inventory
-- Testcase IDs, source hash, action methods, values, assertions, role/RBAC and cleanup pass traceability
-- All UI target keys have fresh current-build selector evidence and appear in selector code
-- Browser MCP provenance is present for every UI selector evidence record when the POM workflow runs `--require-browser-mcp`
-- A traceability result is scope-labelled: a selected-case audit may be `PASS` only for the requested testcase IDs, while the no-filter audit remains the authoritative full-project gate
-- The selected tests actually run in Playwright and every testcase receives `PASS`, `FAILED`, `N/A` or `UNTEST`
-- UI/functional PASS/FAILED has existing visual media plus same-session trace; missing evidence is UNTEST
-- Parallel mutation runs have one existing storage-state account plus one independently owned dataset/cleanup slot per worker; missing capacity is UNTEST
-- No raw selector in specs, placeholder, secret, `test.only()`, unowned mutable data or shared runtime JSON
-- CI delivery additionally preserves retry evidence, flaky classification, duration/coverage/browser gates and selected platform credentials
-- Provider usage is recorded by stage when available: `testcase_generation`, `selector_discovery`, `pom_generation`, `repair`; never report a source-size estimate as actual model usage
+- `pom-plan`, runtime scaffold and module layout pass before delivery
+- A current Browser MCP UI function inventory covers every allowed route/role/state; no-filter full runs reach 100% required-function coverage
+- Every inventory function maps to a testcase/POM action and every actionable testcase target appears in the inventory
+- Testcase IDs, source hash, action methods, values, assertions, RBAC, cleanup and `AUTOMATION_SOURCE` pass traceability
+- All UI targets have fresh current-build selector evidence with Browser MCP provenance when `--require-browser-mcp` is enabled
+- Selected tests actually run in Playwright and receive `PASS`, `FAILED`, `N/A` or `UNTEST`; UI/functional results retain same-session visual media and trace
+- No placeholder, secret, `test.only()`, raw selector in specs, unowned mutable data or shared runtime JSON
+- Record provider usage by stage when available: `testcase_generation`, `selector_discovery`, `pom_generation`, `repair`; do not report a source-size estimate as model usage
+
+Read [testcase-execution.md](references/testcase-execution.md) for deterministic execution and Sheet integration. Do not load `dynamic-testing/web-exploratory/SKILL.md` for this deterministic workflow

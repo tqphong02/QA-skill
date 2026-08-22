@@ -150,7 +150,7 @@ function integrationBlockerCategories(detail) {
 }
 
 function parseSkillFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!match) return null
   const frontmatter = {}
   for (const line of match[1].split('\n')) {

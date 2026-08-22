@@ -441,12 +441,12 @@
   ],
   "document_contracts": {
     "AGENTS.md": {
-      "max_bytes": 27000,
+      "max_bytes": 14000,
       "required": ["Generic browser task", "no business brief is required", "deterministic Sheet/testcase routes exit to `dynamic-web-automation`"],
       "forbidden": ["Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE"]
     },
     "GEMINI.md": {
-      "max_bytes": 23000,
+      "max_bytes": 7000,
       "required": ["Generic browser task", "không cần business brief", "deterministic Sheet/testcase chuyển sang `dynamic-web-automation`"],
       "forbidden": ["chỉ tiếp tục khi Business Execution Brief là `READY`"]
     },
@@ -466,9 +466,14 @@
       "forbidden": ["SHEET_EXECUTION_PLUS add their required layers"]
     },
     "dynamic-testing/web-exploratory/SKILL.md": {
-      "max_bytes": 24000,
+      "max_bytes": 14000,
       "required": ["UI-first", "Compatibility label owned by dynamic-web-automation BUILD_AND_RUN"],
       "forbidden": ["Sheet Testcase Execution + Sanity + Impacted Regression + DISCOVERY_CORE"]
+    },
+    "dynamic-testing/web-automation/SKILL.md": {
+      "max_bytes": 16000,
+      "required": ["automation manifest", "Browser MCP", "UI_FUNCTION_INVENTORY"],
+      "forbidden": ["Gemini-in-Chrome", "antigravity-native"]
     }
   }
 }

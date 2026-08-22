@@ -9,208 +9,77 @@ legacy_aliases: whitebox-qa
 
 # Whitebox QA
 
-Use the local AST CLI as the parser. Use AI only to select scope, reconcile requirements, create explicit mappings, and interpret verified output.
+Use the local AST CLI for parsing. AI selects bounded scope, reconciles requirements and interprets verified output; it does not turn static candidates into runtime claims
 
 ## Hard gates
 
-1. Resolve an exact repository and named function or method
-2. Run `find` when file or class is unknown
-3. Stop on multiple matches; require exact `--file` and optionally `--class`
-4. Keep `sourceHash`, language, parser, branch IDs, path IDs, limits, and warnings with every result
-5. Label static output and every generated candidate `source-derived-candidate`
-6. Say `covered`, `uncovered`, or report a percentage only after a runtime report is imported
-   Before import, preserve the exact state `No runtime coverage evidence supplied`
-7. Do not modify application source unless the user separately requests implementation
-8. Generate Jest/Vitest only from an explicit mapping with executable body lines; never emit `TODO` tests
-9. Do not create a testcase workbook directly; use [testcase handoff](references/testcase-handoff.md)
-10. Stop testcase document generation when expected behavior or requirement mapping is unresolved
+- Resolve an exact repository and function/method; run `find` when unknown and stop on multiple matches until `--file`/`--class` is exact
+- Keep `sourceHash`, language, parser, branch/path IDs, limits and warnings with every result
+- Label static output and generated candidates `source-derived-candidate`
+- Before importing a runtime report preserve exactly `No runtime coverage evidence supplied`; claim `covered`, `uncovered` or percentages only after matching runtime evidence
+- Do not modify application source unless separately requested; generated tests require explicit mappings and executable bodies, never `TODO`
+- Do not create a testcase workbook here; use [testcase-handoff.md](references/testcase-handoff.md) and `support/testcase-authoring/scripts/gen-testcases.py`
+- Stop handoff when expected behavior or requirement mapping is unresolved
 
-## Runtime doctor
+## Runtime doctor and bounded analysis
 
 From this skill directory:
 
-```bash
+```text
 npm install
 npm run build
 npm run test:coverage
 npm run benchmark
 ```
 
-Node.js 20 or newer is required. MCP is not required. Report missing dependencies as `runtime_missing` and build failures with the exact compiler error.
+Node 20+ is required; MCP is not. Missing tools are `runtime_missing`. Use compact JSON by default:
 
-## Resolve and analyze
-
-Find every exact match:
-
-```bash
-npm run cli -- find processPayment --repo /absolute/repository
+```text
+npm run cli -- find processPayment --repo <repo>
+npm run cli -- analyze --repo <repo> --file src/payment/payment.service.ts --class PaymentService --function processPayment
+npm run cli -- graph --repo <repo> --file <file> --class <class> --function <function> --max-depth 5 --max-nodes 100
 ```
 
-Analyze one resolved target:
+Read [analysis-schema.md](references/analysis-schema.md) for full JSON and [token-budget.md](references/token-budget.md) before expanding scope. Use full JSON only for generation, coverage or handoff
 
-```bash
-npm run cli -- analyze \
-  --repo /absolute/repository \
-  --file src/payment/payment.service.ts \
-  --class PaymentService \
-  --function processPayment
+For NestJS routes/providers/constructor DI use:
+
+```text
+npm run cli -- nestjs --repo <repo> --output <repo>/reports/nestjs-graph.json
 ```
 
-The default is compact JSON to limit context usage. Use full JSON only for test generation, runtime coverage, or testcase handoff:
+`NestJS`/Graphify relations remain bounded candidates; run local exact function analysis afterward. Read [graphs-and-nestjs.md](references/graphs-and-nestjs.md)
 
-```bash
-npm run cli -- analyze \
-  --repo /absolute/repository \
-  --file src/payment/payment.service.ts \
-  --class PaymentService \
-  --function processPayment \
-  --format json \
-  --output /absolute/repository/reports/process-payment
+## Generate and run tests
+
+Create an explicit mapping, then:
+
+```text
+npm run cli -- generate-test --analysis reports/<name>.json --mapping reports/<name>.unit-test-mapping.json --output tests/<name>.whitebox.test.ts
+npm run cli -- run-coverage --runner vitest --cwd <repo> --analysis reports/<name>.json --test tests/<name>.whitebox.test.ts --output reports/<name>.runtime.json
+npm run cli -- coverage --analysis reports/<name>.json --report coverage/coverage-final.json --output reports/<name>.runtime.json
 ```
 
-Read [analysis schema](references/analysis-schema.md) before interpreting full output and [token budget](references/token-budget.md) before expanding repository scope.
+Use `--runner jest` and `--config` when required. Runtime results distinguish `covered`, `partial`, `uncovered` and `unknown`; approval remains `source-derived-candidate` until business expectations are confirmed
 
-## Build a bounded call graph
+## Testcase handoff
 
-```bash
-npm run cli -- graph \
-  --repo /absolute/repository \
-  --file src/payment/payment.service.ts \
-  --class PaymentService \
-  --function processPayment \
-  --max-depth 5 \
-  --max-nodes 100
+```text
+npm run cli -- handoff --analysis reports/<name>.runtime.json --mapping reports/<name>.mapping.json --output-json reports/<name>.testcases.json --xlsx reports/<name>-testcases.xlsx
 ```
 
-The graph works for every supported language. Resolved edges may be traversed; ambiguous, external, reflective, or dynamic calls remain explicit unresolved edges. Read [graphs and NestJS](references/graphs-and-nestjs.md).
+The handoff validates AC or `(out-of-spec)` mappings and invokes `support/testcase-authoring/scripts/gen-testcases.py` to generate Markdown before Excel
 
-For NestJS module, controller, route, provider, and constructor-DI extraction:
+## Supported scope and evidence
 
-```bash
-npm run cli -- nestjs \
-  --repo /absolute/repository \
-  --output /absolute/repository/reports/nestjs-graph.json
-```
-
-For a large, cross-language or unfamiliar repository, use the optional Graphify adapter only to select the exact bounded scope:
-
-```bash
-node ../../dynamic-testing/web-exploratory/scripts/discovery/graphify-adapter.mjs --doctor
-node ../../dynamic-testing/web-exploratory/scripts/discovery/graphify-adapter.mjs \
-  --repo /absolute/repository \
-  --output /absolute/repository/reports/graphify-discovery.json \
-  --mode auto
-```
-
-Read [Graphify and effective HTML integration](../../dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md) before using this layer. Preserve every Graphify relation as `source-derived-candidate`. Then run the local `whitebox graph` command for the named function; Graphify never replaces exact function resolution, branch/path analysis or coverage import
-
-Render an optional interactive companion only after the graph JSON validates:
-
-```bash
-node ../../dynamic-testing/web-exploratory/scripts/writers/render-intelligence-html.mjs \
-  --input reports/process-payment-call-graph.json \
-  --output reports/process-payment-call-graph.html
-
-node ../../dynamic-testing/web-exploratory/scripts/writers/render-intelligence-html.mjs \
-  --check reports/process-payment-call-graph.html
-```
-
-The HTML is a derived view and cannot change evidence level
-
-## Generate executable Jest or Vitest
-
-Analyze with `--format json`, then create an explicit unit-test mapping:
-
-```bash
-npm run cli -- generate-test \
-  --analysis reports/process-payment.json \
-  --mapping reports/process-payment.unit-test-mapping.json \
-  --output tests/process-payment.whitebox.test.ts
-```
-
-The generated file contains real imports, setup, hooks, assertions supplied by the mapping, and trace comments for candidate/path/branch IDs. The command rejects unknown or duplicate candidate IDs. Read [unit tests and runtime coverage](references/unit-tests-and-coverage.md).
-
-## Run and import runtime coverage
-
-Run the local project binary without invoking a shell:
-
-```bash
-npm run cli -- run-coverage \
-  --runner vitest \
-  --cwd /absolute/repository \
-  --analysis reports/process-payment.json \
-  --test tests/process-payment.whitebox.test.ts \
-  --output reports/process-payment.runtime.json
-```
-
-Use `--runner jest` for Jest and `--config <path>` when the repository requires an explicit config. The command fails when tests fail, the local runner is missing, or `coverage-final.json` is absent.
-
-If tests were run separately, import an existing Istanbul report:
-
-```bash
-npm run cli -- coverage \
-  --analysis reports/process-payment.json \
-  --report coverage/coverage-final.json \
-  --output reports/process-payment.runtime.json
-```
-
-Runtime evidence changes each candidate's `runtimeCoverage` to `covered`, `partial`, `uncovered`, or `unknown`. The approval state remains `source-derived-candidate` until business expectations are confirmed.
-
-## Generate testcase documents
-
-Use the existing template generator only:
-
-```bash
-npm run cli -- handoff \
-  --analysis reports/process-payment.runtime.json \
-  --mapping reports/process-payment.mapping.json \
-  --output-json reports/process-payment.testcases.json \
-  --xlsx reports/process-payment-testcases.xlsx
-```
-
-The handoff validates explicit AC or `(out-of-spec)` mappings, creates canonical `support-testcase-authoring` JSON, and invokes `support/testcase-authoring/scripts/gen-testcases.py` to generate Markdown before Excel.
-
-## Supported scope
-
-| Language | Files | Parser |
+| Language | Extensions | Parser |
 |---|---|---|
-| TypeScript | `.ts`, `.tsx` | ts-morph |
-| JavaScript | `.js`, `.jsx` | ts-morph |
+| TypeScript/JavaScript | `.ts`, `.tsx`, `.js`, `.jsx` | ts-morph |
 | Python | `.py` | ast-grep/tree-sitter |
-| Java | `.java` | ast-grep/tree-sitter |
-| Go | `.go` | ast-grep/tree-sitter |
-| C# | `.cs` | ast-grep/tree-sitter |
-| Dart | `.dart` | ast-grep/tree-sitter |
+| Java/Go/C#/Dart | `.java`, `.go`, `.cs`, `.dart` | ast-grep/tree-sitter |
 
-Static adapters normalize functions/methods, `if/else`, switch or match cases, `try/catch/finally`, loops, return, throw, path limits, and cyclomatic estimates. Read [language adapters](references/language-adapters.md) for language-specific behavior.
+Evidence levels are: static AST possibility → generated test artifact → passing Jest/Vitest run → imported runtime coverage → requirement-mapped testcase. Never collapse them
 
-## Evidence levels
+## Known limits and references
 
-1. Static AST result: source-derived possibility
-2. Generated executable test: code artifact, not proof it passed
-3. Passing Jest/Vitest run: execution evidence for that run
-4. Imported coverage counts: measured branch/statement evidence for the matching target revision
-5. Requirement-mapped testcase: approved business expectation only after requirement review
-
-Never collapse these levels into one claim.
-
-## Known limits
-
-- Compound boolean expressions are one decision unless their AST contains nested control-flow statements
-- Call graphs are bounded and best-effort; reflection, runtime registration, generated code, interface dispatch, and external libraries can remain unresolved
-- NestJS resolution covers decorators, module arrays, imports, constructor types, and `@Inject` tokens visible in source; custom provider factories and runtime tokens may remain unresolved
-- Automatic runtime execution currently supports local Jest/Vitest with Istanbul JSON; other language runners need a compatible adapter or externally produced evidence
-- Static reachability is not runtime proof, even when a path looks complete
-- Repository-wide Graphify relations are supplemental candidates and may not expand a bounded function graph without exact local resolution
-
-## Resources
-
-- [analysis schema](references/analysis-schema.md)
-- [language adapters](references/language-adapters.md)
-- [graphs and NestJS](references/graphs-and-nestjs.md)
-- [unit tests and runtime coverage](references/unit-tests-and-coverage.md)
-- [token budget](references/token-budget.md)
-- [Windows and PowerShell](references/windows.md)
-- [testcase handoff](references/testcase-handoff.md)
-- [Graphify and effective HTML integration](../../dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md)
-- [CLI entrypoint](src/cli.ts)
+Compound booleans, reflection, generated code, dynamic registration, interface dispatch and external libraries can remain unresolved; static reachability is not runtime proof. Read [language-adapters.md](references/language-adapters.md), [unit-tests-and-coverage.md](references/unit-tests-and-coverage.md), [windows.md](references/windows.md), [testcase-handoff.md](references/testcase-handoff.md) or [GRAPHIFY-EFFECTIVE-HTML.md](../../dynamic-testing/web-exploratory/references/GRAPHIFY-EFFECTIVE-HTML.md) only when needed. HTML is a derived view and cannot change evidence level
