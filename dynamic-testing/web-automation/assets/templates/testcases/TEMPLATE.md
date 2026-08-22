@@ -22,7 +22,7 @@ When the testcase is a browser flow, use the shared `execution` contract from `s
 - `outcome.assertions`: final business oracle
 - `cleanup`: required when the flow mutates data
 
-The `target.key` is not an XPath. The POM agent must inspect the live DOM, verify the selected locator and record `selector-evidence/<feature>.json` before generating selector code
+The `target.key` is not an XPath. The POM agent must use the same-session Browser MCP to inspect the live DOM, verify the selected locator and record Browser MCP-backed `selector-evidence/<feature>.json` before generating selector code
 
 ---
 
@@ -111,9 +111,9 @@ grep -c "^| \`TC_" <resource>.md
 grep -c "test('TC_<RESOURCE>_" tests/api/<resource>.api.spec.ts
 # → phải khớp N+M+K+P+Q+R
 
-# UI/functional suite: verify the exact Markdown source and selector evidence
+# UI/functional suite: verify the exact Markdown source and Browser MCP selector evidence
 npm run pom-plan -- --manifest testcases/<resource>.automation.json
-npm run traceability -- --testcases testcases/<resource>.md --manifest testcases/<resource>.automation.json
+npm run traceability -- --testcases testcases/<resource>.md --manifest testcases/<resource>.automation.json --require-browser-mcp
 ```
 
 ---

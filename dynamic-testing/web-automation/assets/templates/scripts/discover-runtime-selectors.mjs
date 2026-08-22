@@ -5,18 +5,23 @@
  *
  * This runner is deliberately evidence-first: testcase prose supplies semantic
  * hints, but a locator is promoted only after the target is unique and verified
- * in the requested route/role/state. XPath is generated only as a short,
- * attribute- or semantic-anchored last resort; absolute DOM paths are never
- * emitted.
+ * in the requested route/role/state. Browser MCP is the default discovery source
+ * so the agent can inspect the same live page it is reasoning about. XPath is
+ * generated only as a short, attribute- or semantic-anchored last resort;
+ * absolute DOM paths are never emitted.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { chromium } from '@playwright/test';
 import { parseAutomationManifest } from './verify-testcase-traceability.mjs';
 
 const STRATEGY_ORDER = ['testid', 'id', 'css', 'role', 'label', 'placeholder', 'text', 'xpath'];
+const BROWSER_MCP_PROVIDERS = new Set(['playwright-mcp', 'chrome-devtools-mcp']);
+const BROWSER_MCP_TOOLS = Object.freeze({
+  'playwright-mcp': ['browser_navigate', 'browser_snapshot', 'browser_evaluate'],
+  'chrome-devtools-mcp': ['navigate_page', 'take_snapshot', 'evaluate_script'],
+});
 const ACTIONABLE_ACTIONS = new Set([
   'click', 'fill', 'clear', 'select', 'check', 'uncheck', 'press', 'upload',
 ]);
@@ -52,6 +57,27 @@ function clean(value, max = 500) {
 
 function normalize(value) {
   return clean(value, 300).normalize('NFKC').toLocaleLowerCase('en-US');
+}
+
+function normalizeProvider(value) {
+  const normalized = normalize(value).replace(/[^a-z0-9-]/g, '');
+  if (normalized === 'playwright' || normalized === 'playwrightmcp') return 'playwright-mcp';
+  if (normalized === 'chromedevtools' || normalized === 'chromedevtoolsmcp') return 'chrome-devtools-mcp';
+  if (normalized === 'playwright-runtime' || normalized === 'playwrightruntime') return 'playwright-runtime';
+  return normalized;
+}
+
+function normalizeStrategy(value) {
+  const normalized = normalize(value).replace(/[^a-z0-9]/g, '');
+  if (normalized.includes('testid') || normalized.includes('datatest')) return 'testid';
+  if (normalized === 'id' || normalized.includes('stableid')) return 'id';
+  if (normalized.includes('css')) return 'css';
+  if (normalized.includes('role')) return 'role';
+  if (normalized.includes('label')) return 'label';
+  if (normalized.includes('placeholder')) return 'placeholder';
+  if (normalized.includes('text')) return 'text';
+  if (normalized.includes('xpath')) return 'xpath';
+  return normalized;
 }
 
 function unique(values) {
@@ -90,6 +116,231 @@ function readJson(filePath) {
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+
+function targetEvidenceKey(target) {
+  return `${clean(target?.testcase_id, 180)}::${clean(target?.target_key, 180)}`;
+}
+
+function inheritedEvidence(source, target) {
+  return {
+    ...target,
+    feature: target?.feature ?? source?.feature,
+    route: target?.route ?? source?.route,
+    role: target?.role ?? source?.role,
+    locale: target?.locale ?? source?.locale,
+    state: target?.state ?? source?.state,
+    captured_at: target?.captured_at ?? source?.captured_at,
+    run_id: target?.run_id ?? source?.run_id,
+    app_build: target?.app_build ?? source?.app_build,
+    provider: target?.provider ?? source?.provider,
+    browser_driver: target?.browser_driver ?? source?.browser_driver,
+    browser_observer: target?.browser_observer ?? source?.browser_observer,
+    tools_used: target?.tools_used ?? source?.tools_used,
+    mcp: target?.mcp ?? source?.mcp,
+  };
+}
+
+function sourceTargets(source) {
+  const targets = Array.isArray(source?.targets)
+    ? source.targets
+    : source?.target_key
+      ? [source]
+      : [];
+  return targets.filter(target => target && typeof target === 'object');
+}
+
+function toolsUsedForEvidence(source, target) {
+  return unique([
+    ...(Array.isArray(source?.tools_used) ? source.tools_used : []),
+    ...(Array.isArray(source?.mcp?.tools_used) ? source.mcp.tools_used : []),
+    ...(Array.isArray(target?.tools_used) ? target.tools_used : []),
+    ...(Array.isArray(target?.mcp?.tools_used) ? target.mcp.tools_used : []),
+  ].map(value => clean(value, 120)).filter(Boolean));
+}
+
+function browserMcpProviderFor(source, target) {
+  return normalizeProvider(target?.provider ?? source?.provider ?? target?.browser_driver ?? source?.browser_driver);
+}
+
+function browserMcpValidationError(source, target, context, expectedProvider) {
+  const provider = browserMcpProviderFor(source, target);
+  if (provider !== expectedProvider || !BROWSER_MCP_PROVIDERS.has(provider)) {
+    return `selector evidence provider must be ${expectedProvider}; received ${provider || 'missing'}`;
+  }
+  const requiredTools = BROWSER_MCP_TOOLS[provider] || [];
+  const usedTools = toolsUsedForEvidence(source, target);
+  const missingTools = requiredTools.filter(tool => !usedTools.includes(tool));
+  if (missingTools.length > 0) {
+    return `Browser MCP evidence is missing required tools: ${missingTools.join(', ')}`;
+  }
+  if (!clean(target?.run_id ?? source?.run_id) || !clean(target?.app_build ?? source?.app_build)) {
+    return 'Browser MCP evidence must include the same-session run_id and current app_build';
+  }
+  const capturedAt = target?.captured_at ?? source?.captured_at;
+  if (!clean(capturedAt) || !Number.isFinite(Date.parse(capturedAt))) {
+    return 'Browser MCP evidence must include a valid captured_at timestamp';
+  }
+  if (!clean(target?.mcp?.session_id ?? source?.mcp?.session_id)) {
+    return 'Browser MCP evidence must include mcp.session_id for same-session provenance';
+  }
+  if (!target?.verification || Number(target.verification.count) !== 1) {
+    return 'Browser MCP evidence must prove verification.count=1';
+  }
+  const expectedVisible = context.expected_visible !== false;
+  if (target.verification.visible !== expectedVisible) {
+    return `Browser MCP evidence visibility does not match expected_visible=${expectedVisible}`;
+  }
+  if (ACTIONABLE_ACTIONS.has(actionForContext(context)) && target.verification.actionable !== true) {
+    return 'Browser MCP evidence must prove actionable=true for the requested action';
+  }
+  if (!clean(target.route) || !clean(target.verification.url)) {
+    return 'Browser MCP evidence must include the verified route and final URL';
+  }
+  if (!routeMatches(context.route, target.route) && !routeMatches(context.route, target.verification.url)) {
+    return `Browser MCP evidence route does not match ${context.route}`;
+  }
+  if (!clean(target.locator) || !clean(target.strategy)) {
+    return 'Browser MCP evidence must include the selected strategy and locator';
+  }
+  const locatorText = `${target.strategy} ${target.locator} ${target.xpath || ''}`;
+  if (/\/html\//i.test(locatorText) || /:nth-child\(|\.first\(\)|\.last\(\)/i.test(locatorText)) {
+    return 'Browser MCP evidence contains a forbidden absolute or positional selector';
+  }
+  if (normalizeStrategy(target.strategy) === 'xpath') {
+    if (!clean(target.xpath) || !/xpath\s*=|\/\//i.test(target.locator)) {
+      return 'XPath evidence must include the exact short XPath returned by Browser MCP';
+    }
+    if (!clean(target.reason)) return 'XPath evidence must explain why higher-priority locators were unavailable or ambiguous';
+  }
+  const candidates = Array.isArray(target.candidates) ? target.candidates : [];
+  if (candidates.length === 0 || normalizeStrategy(candidates[0]?.strategy) !== 'testid') {
+    return 'Browser MCP evidence must keep the ordered candidates beginning with testid';
+  }
+  const selectedCandidate = candidates.find(candidate => (
+    normalizeStrategy(candidate?.strategy) === normalizeStrategy(target.strategy)
+  ));
+  if (!selectedCandidate || selectedCandidate.available !== true) {
+    return 'Browser MCP evidence must mark the selected candidate available=true';
+  }
+  return '';
+}
+
+function normalizeBrowserMcpEvidence(source, contexts, {
+  expectedProvider,
+  appBuild,
+  runId,
+  feature,
+}) {
+  const sourceProvider = browserMcpProviderFor(source, {});
+  const effectiveProvider = normalizeProvider(expectedProvider || sourceProvider);
+  if (!BROWSER_MCP_PROVIDERS.has(effectiveProvider)) {
+    return {
+      status: 'blocked',
+      reason: `Browser MCP evidence must use playwright-mcp or chrome-devtools-mcp; received ${effectiveProvider || 'missing'}`,
+      evidence: null,
+    };
+  }
+  if (sourceProvider && sourceProvider !== effectiveProvider) {
+    return {
+      status: 'blocked',
+      reason: `Browser MCP evidence provider mismatch: expected ${effectiveProvider}, received ${sourceProvider}`,
+      evidence: null,
+    };
+  }
+  if (appBuild && clean(source.app_build) && clean(source.app_build) !== appBuild) {
+    return {
+      status: 'blocked',
+      reason: `Browser MCP evidence app_build mismatch: expected ${appBuild}, received ${source.app_build}`,
+      evidence: null,
+    };
+  }
+  if (runId && clean(source.run_id) && clean(source.run_id) !== runId) {
+    return {
+      status: 'blocked',
+      reason: `Browser MCP evidence run_id mismatch: expected ${runId}, received ${source.run_id}`,
+      evidence: null,
+    };
+  }
+
+  const records = sourceTargets(source).map(target => inheritedEvidence(source, target));
+  const byKey = new Map();
+  for (const target of records) {
+    const key = targetEvidenceKey(target);
+    if (!target.target_key) continue;
+    const list = byKey.get(key) || [];
+    list.push(target);
+    byKey.set(key, list);
+  }
+
+  const targets = [];
+  for (const context of contexts) {
+    const exact = byKey.get(targetEvidenceKey(context)) || [];
+    const fallback = records.filter(target => (
+      !target.testcase_id
+      && clean(target.target_key) === context.target_key
+    ));
+    const matches = exact.length > 0 ? exact : fallback;
+    if (matches.length !== 1) {
+      targets.push({
+        testcase_id: context.testcase_id,
+        target_key: context.target_key,
+        route: context.route || null,
+        role: context.role,
+        state: context.state,
+        status: 'blocked',
+        reason: matches.length > 1
+          ? 'Browser MCP evidence has duplicate target records for the testcase/target key'
+          : 'Browser MCP evidence is missing this testcase/target key',
+        verification: { count: 0, visible: false, actionable: false, url: '' },
+        candidates: [],
+        captured_at: source.captured_at || null,
+        run_id: source.run_id || runId || null,
+        app_build: source.app_build || appBuild || null,
+        provider: effectiveProvider,
+        browser_driver: source.browser_driver || effectiveProvider,
+        browser_observer: source.browser_observer || effectiveProvider,
+        tools_used: toolsUsedForEvidence(source, {}),
+        mcp: source.mcp || null,
+      });
+      continue;
+    }
+    const target = matches[0];
+    const error = browserMcpValidationError(source, target, context, effectiveProvider);
+    targets.push({
+      ...target,
+      testcase_id: context.testcase_id,
+      target_key: context.target_key,
+      provider: effectiveProvider,
+      browser_driver: target.browser_driver || source.browser_driver || effectiveProvider,
+      browser_observer: target.browser_observer || source.browser_observer || effectiveProvider,
+      tools_used: toolsUsedForEvidence(source, target),
+      status: error ? 'blocked' : 'runtime_verified',
+      reason: error || target.reason || null,
+    });
+  }
+
+  const evidence = {
+    schema_version: 2,
+    feature: feature || slug(source.feature || 'selectors'),
+    provider: effectiveProvider,
+    browser: source.browser || 'chromium',
+    browser_driver: source.browser_driver || effectiveProvider,
+    browser_observer: source.browser_observer || effectiveProvider,
+    tools_used: toolsUsedForEvidence(source, {}),
+    mcp: source.mcp || null,
+    captured_at: source.captured_at || new Date().toISOString(),
+    run_id: source.run_id || runId || null,
+    app_build: source.app_build || appBuild || null,
+    targets,
+  };
+  evidence.status = targets.length > 0 && targets.every(target => target.status === 'runtime_verified')
+    ? 'runtime_verified'
+    : 'blocked';
+  evidence.reason = evidence.status === 'blocked'
+    ? targets.find(target => target.status !== 'runtime_verified')?.reason || 'Browser MCP selector evidence was blocked'
+    : null;
+  return { status: evidence.status, reason: evidence.reason, evidence };
 }
 
 function resolveBaseUrl(projectRoot) {
@@ -576,6 +827,9 @@ Options:
   --project-root <dir>     Automation project root (default: cwd)
   --base-url <url>         Base URL for relative routes (or UI_BASE_URL)
   --storage-state <file>   Project-local Playwright storage state
+  --provider <name>        playwright-mcp (default) or explicit playwright-runtime fallback
+  --browser-mcp-evidence <file>
+                           JSON exported from the same Browser MCP discovery session
   --run-id <id>            Browser discovery run id
   --output <file>          Evidence output (default: selector-evidence/<module>.json)
   --headed                 Show the browser window
@@ -605,18 +859,66 @@ async function main() {
   if (uniqueCases.size > 20) throw new Error(`BLOCKED: selector discovery selection contains ${uniqueCases.size} cases; keep it at 20 or fewer`);
 
   const runId = clean(arg('--run-id', process.env.RUN_ID || process.env.QA_RUN_ID || `selector-discovery-${Date.now()}`), 120);
+  const requestedRunId = hasArg('--run-id') ? runId : '';
   const outputPath = path.resolve(projectRoot, arg('--output', path.join('selector-evidence', `${slug(group || contexts[0].feature)}.json`)));
+  const providerArg = normalizeProvider(arg('--provider', process.env.QA_SELECTOR_PROVIDER || ''));
+  const browserMcpEvidenceArg = arg('--browser-mcp-evidence', process.env.QA_BROWSER_MCP_SELECTOR_EVIDENCE || '');
+  const browserMcpEvidencePath = browserMcpEvidenceArg
+    ? path.resolve(projectRoot, browserMcpEvidenceArg)
+    : '';
   const storageStateArg = arg('--storage-state', process.env.QA_STORAGE_STATE || '');
   const storageStatePath = storageStateArg
     ? path.resolve(projectRoot, storageStateArg)
     : undefined;
   if (storageStatePath && !fs.existsSync(storageStatePath)) throw new Error(`BLOCKED: storage state does not exist: ${storageStatePath}`);
 
+  if (browserMcpEvidencePath) {
+    if (!fs.existsSync(browserMcpEvidencePath)) {
+      throw new Error(`BLOCKED: Browser MCP selector evidence does not exist: ${browserMcpEvidencePath}`);
+    }
+    const source = readJson(browserMcpEvidencePath);
+    const sourceProvider = browserMcpProviderFor(source, {});
+    const expectedProvider = providerArg || sourceProvider;
+    const normalized = normalizeBrowserMcpEvidence(source, contexts, {
+      expectedProvider,
+      appBuild,
+      runId: requestedRunId,
+      feature: slug(group || contexts[0].feature),
+    });
+    if (normalized.evidence) writeJson(outputPath, normalized.evidence);
+    const evidence = normalized.evidence || {
+      status: 'blocked',
+      provider: expectedProvider || 'browser-mcp',
+      run_id: source.run_id || requestedRunId || null,
+      targets: [],
+    };
+    const summary = {
+      status: normalized.status === 'runtime_verified' ? 'PASS' : 'BLOCKED',
+      output: outputPath,
+      provider: evidence.provider,
+      run_id: evidence.run_id,
+      targets: evidence.targets.length,
+      runtime_verified: evidence.targets.filter(target => target.status === 'runtime_verified').length,
+      blocked: evidence.targets.filter(target => target.status === 'blocked').length,
+      reason: normalized.reason || null,
+    };
+    console.log(JSON.stringify(summary, null, 2));
+    if (normalized.status !== 'runtime_verified') process.exitCode = 2;
+    return;
+  }
+
+  const provider = providerArg || 'playwright-mcp';
+  if (provider !== 'playwright-runtime') {
+    throw new Error('BLOCKED: Browser MCP selector evidence is required; pass --browser-mcp-evidence <file>, or explicitly opt into --provider playwright-runtime for an offline fallback');
+  }
+
+  const { chromium } = await import('@playwright/test');
+
   const capturedAt = new Date().toISOString();
   const evidence = {
     schema_version: 1,
     feature: slug(group || contexts[0].feature),
-    provider: 'playwright-runtime',
+    provider,
     browser: 'chromium',
     captured_at: capturedAt,
     run_id: runId,
@@ -702,5 +1004,7 @@ export {
   buildTargetContexts,
   candidateSpecs,
   discoverTarget,
+  normalizeBrowserMcpEvidence,
+  normalizeProvider,
   roleForKind,
 };

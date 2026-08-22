@@ -180,12 +180,16 @@ export const loginSelectors = {
 } as const;
 ```
 
-Selector selection is a verification task, not a text-generation task:
+Selector selection is a verification task, not a text-generation task. Browser
+MCP (Playwright MCP by default) is the discovery source of truth for the live
+accessibility snapshot and DOM. Use `browser_navigate` → `browser_snapshot` →
+`browser_evaluate` or the provider-equivalent tools in the same session before
+generating selector code:
 
-1. Inspect existing FE-owned test-id, stable ID, stable CSS attributes/classes, role/name, label, placeholder, text and DOM scope
-2. Verify the candidate has `count=1`, its visibility matches the expected state, and it is actionable for the requested action
+1. Inspect existing FE-owned test-id, stable ID, stable CSS attributes/classes, role/name, label, placeholder, text and DOM scope through Browser MCP
+2. Verify in that same Browser MCP session that the candidate has `count=1`, its visibility matches the expected state, and it is actionable for the requested action
 3. Select by `data-testid → id → CSS → role/label/placeholder/text → XPath`; if no FE source/contract exists, do not create a test-id and continue at the next candidate
-4. Record `target_key`, ordered candidates, selected strategy, locator, route/state and verification in `selector-evidence/<feature>.json`
+4. Record `target_key`, ordered candidates, selected strategy, locator, Browser MCP provider/tools, route/state and verification in `selector-evidence/<feature>.json`
 5. If the target is ambiguous, block and request a stable test-id/id/CSS/semantic scope; never add `.first()` or a full XPath to make the test compile
 
 Read [selector-discovery.md](selector-discovery.md) for the complete gate and evidence format

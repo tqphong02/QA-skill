@@ -128,7 +128,7 @@ if (command === 'start') {
   // Allowed values per track:
   const ALLOWED_DRIVER = new Set([
     'auto', 'playwright-mcp', 'ego-browser', 'chrome-devtools-mcp',
-    'antigravity-native', 'playwright-runtime', 'unavailable',
+    'playwright-runtime', 'unavailable',
   ]);
   const ALLOWED_OBSERVER = new Set([
     'auto', 'playwright-mcp', 'ego-browser', 'chrome-devtools-mcp',
@@ -167,7 +167,7 @@ if (command === 'start') {
     } else {
       console.error(`[run-manifest] BLOCKED: unknown legacy --browser-observer value: ${legacyObserverRaw}`);
       console.error('  --browser-observer has been replaced by 3 separate flags:');
-      console.error('    --browser-driver <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable>');
+      console.error('    --browser-driver <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|unavailable>');
       console.error('    --browser-observer <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|unavailable>');
       console.error('    --network-observer <auto|chrome-devtools-mcp|playwright-mcp|playwright-runtime|ego-browser|unavailable>');
       console.error('  See dynamic-testing/web-exploratory/references/BROWSER-DRIVER-RESOLUTION.md');

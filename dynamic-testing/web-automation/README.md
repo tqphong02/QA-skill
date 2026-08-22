@@ -71,13 +71,14 @@ assets/templates/
 
 `assets/templates/` là phần reusable của skill và được copy sang project automation thật. Không đặt `.env` thật, credential, auth/storage state, live selector evidence, testcase hay runtime data của bất kỳ project nào vào repository skill; các file đó thuộc project đích. Template đã có sẵn `.env.example`, `fixtures/`, `test-data/` và `testdata/` để project đích tiếp tục dùng
 
-## ➕ Thêm page mới (4 bước)
+## ➕ Thêm page mới (6 bước)
 
-1. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then run selector discovery for every selected target key
-2. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
-3. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
-4. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
-5. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
+1. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then use the same-session Browser MCP to discover every selected target key
+2. Export Browser MCP selector evidence and pass it to `npm run discover:selectors -- --browser-mcp-evidence <file>`; the command blocks guessed XPath and non-MCP discovery by default
+3. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
+4. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
+5. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
+6. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
 
 Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing.md)**.
 
@@ -101,7 +102,7 @@ npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
 npm run pom-plan -- --manifest testcases/<feature>.automation.json --group <group> --max-cases 20
-npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --app-build "$QA_APP_BUILD"
+npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --require-browser-mcp --app-build "$QA_APP_BUILD"
 npm run runtime-scaffold
 npm run testcase-workflow -- --phase plan --manifest testcases/<feature>.automation.json --group <group>
 npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD"

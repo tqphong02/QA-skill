@@ -330,6 +330,7 @@ async function main() {
   const traceabilityPath = resolveFrom(projectRoot, getArg('--traceability-output'), 'reports/testcase-automation-traceability.json');
   let traceability;
   try {
+    const traceabilityMode = ['ui', 'functional'].includes(mode) ? 'ui' : mode;
     traceability = buildTraceability({
       testcasePath,
       manifestPath,
@@ -340,7 +341,8 @@ async function main() {
         : '',
       expectedAppBuild: appBuild,
       maxEvidenceAgeHours: Number(getArg('--max-evidence-age-hours', '168')),
-      mode,
+      requireBrowserMcp: ['ui', 'functional'].includes(mode),
+      mode: traceabilityMode,
     });
     writeJson(traceabilityPath, traceability);
   } catch (error) {

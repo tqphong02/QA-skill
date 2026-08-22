@@ -40,6 +40,11 @@ const ACTIONABLE_ACTIONS = new Set([
   'upload',
 ]);
 const SELECTOR_PRIORITY = ['testid', 'id', 'css', 'role', 'label', 'placeholder', 'text', 'xpath'];
+const BROWSER_MCP_PROVIDERS = new Set(['playwright-mcp', 'chrome-devtools-mcp']);
+const BROWSER_MCP_TOOLS = Object.freeze({
+  'playwright-mcp': ['browser_navigate', 'browser_snapshot', 'browser_evaluate'],
+  'chrome-devtools-mcp': ['navigate_page', 'take_snapshot', 'evaluate_script'],
+});
 
 function normalizeStrategy(value) {
   const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -52,6 +57,30 @@ function normalizeStrategy(value) {
   if (normalized.includes('text')) return 'text';
   if (normalized.includes('xpath')) return 'xpath';
   return normalized;
+}
+
+function normalizeProvider(value) {
+  const normalized = String(value || '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  if (normalized === 'playwright' || normalized === 'playwrightmcp') return 'playwright-mcp';
+  if (normalized === 'chromedevtools' || normalized === 'chromedevtoolsmcp') return 'chrome-devtools-mcp';
+  return normalized;
+}
+
+function browserMcpTools(record) {
+  return [...new Set([
+    ...(Array.isArray(record.tools_used) ? record.tools_used : []),
+    ...(Array.isArray(record.mcp?.tools_used) ? record.mcp.tools_used : []),
+  ].map(value => String(value || '').trim()).filter(Boolean))];
+}
+
+function hasBrowserMcpProvenance(record) {
+  const provider = normalizeProvider(record.provider);
+  const required = BROWSER_MCP_TOOLS[provider] || [];
+  const tools = browserMcpTools(record);
+  return BROWSER_MCP_PROVIDERS.has(provider)
+    && required.every(tool => tools.includes(tool))
+    && Boolean(record.run_id)
+    && Boolean(record.mcp?.session_id);
 }
 
 function selectorPriorityIndex(value) {
@@ -467,6 +496,11 @@ function parseSelectorEvidence(evidenceDir) {
             captured_at: target.captured_at ?? parsed.captured_at,
             run_id: target.run_id ?? parsed.run_id,
             app_build: target.app_build ?? parsed.app_build,
+            provider: target.provider ?? parsed.provider,
+            browser_driver: target.browser_driver ?? parsed.browser_driver,
+            browser_observer: target.browser_observer ?? parsed.browser_observer,
+            tools_used: target.tools_used ?? parsed.tools_used,
+            mcp: target.mcp ?? parsed.mcp,
             evidence_file: filePath,
           });
         }
@@ -730,6 +764,7 @@ function buildTraceability({
   expectedAppBuild = '',
   maxEvidenceAgeHours = 168,
   testcaseIds = [],
+  requireBrowserMcp = false,
   mode = 'ui',
 }) {
   const markdown = readText(testcasePath);
@@ -948,6 +983,11 @@ function buildTraceability({
           captured_at: record?.captured_at || null,
           run_id: record?.run_id || null,
           app_build: record?.app_build || null,
+          provider: record?.provider || null,
+          browser_driver: record?.browser_driver || null,
+          browser_observer: record?.browser_observer || null,
+          tools_used: record?.tools_used || null,
+          mcp: record?.mcp || null,
           selector_files: [],
         };
 
@@ -1056,6 +1096,14 @@ function buildTraceability({
             addViolation(violations, 'SELECTOR_ROUTE_MISSING', `Evidence của ${targetKey} chưa ghi route đã verify`, {
               testcase_id: testcase.id,
               target_key: targetKey,
+            });
+          }
+          if (requireBrowserMcp && !hasBrowserMcpProvenance(record)) {
+            addViolation(violations, 'SELECTOR_BROWSER_MCP_PROVENANCE_MISSING', `Evidence của ${targetKey} thiếu Browser MCP provider/tool provenance`, {
+              testcase_id: testcase.id,
+              target_key: targetKey,
+              provider: record.provider || null,
+              tools_used: browserMcpTools(record),
             });
           }
           if (record.status === 'runtime_verified') {
@@ -1185,6 +1233,7 @@ function buildTraceability({
     automation: {
       root: '.',
       selector_priority: SELECTOR_PRIORITY,
+      require_browser_mcp: requireBrowserMcp,
       spec_files: relativeList(specs, automationRoot),
       selector_files: relativeList(selectors, automationRoot),
       page_files: relativeList(pages, automationRoot),
@@ -1221,6 +1270,7 @@ Options:
   --app-build <id>               Current application build/commit expected in selector evidence
   --max-evidence-age-hours <n>   Freshness limit (default: 168)
   --testcase-ids <csv>           Optional comma-separated testcase scope; omit for the full project
+  --require-browser-mcp          Require Browser MCP provider, session and tool provenance for UI selector evidence
   --mode <ui|api>                UI checks selector evidence; API checks ID mapping only
   --output <file>                Audit JSON (default: reports/testcase-automation-traceability.json)
 `);
@@ -1288,6 +1338,8 @@ async function main() {
   if (!Number.isFinite(maxEvidenceAgeHours) || maxEvidenceAgeHours <= 0) {
     throw new Error('BLOCKED: --max-evidence-age-hours must be a positive number');
   }
+  const requireBrowserMcp = process.argv.includes('--require-browser-mcp')
+    || String(process.env.QA_REQUIRE_BROWSER_MCP || '').toLowerCase() === 'true';
   const outputPath = path.resolve(automationRoot, getArg('--output', 'reports/testcase-automation-traceability.json'));
 
   const report = buildTraceability({
@@ -1299,6 +1351,7 @@ async function main() {
     expectedAppBuild,
     maxEvidenceAgeHours,
     testcaseIds,
+    requireBrowserMcp,
     mode,
   });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });

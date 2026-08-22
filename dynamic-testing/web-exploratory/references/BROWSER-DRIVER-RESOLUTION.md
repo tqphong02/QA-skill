@@ -32,7 +32,7 @@ Có thể kết hợp bất kỳ combination hợp lệ:
 | ego-browser | playwright-mcp | Không nên — khác session |
 | playwright-mcp | chrome-devtools-mcp | Playwright UI + CDP deep network |
 | chrome-devtools-mcp | chrome-devtools-mcp | Tab đang chạy, attach mode |
-| antigravity-native | unavailable | Last resort |
+| antigravity host | playwright-runtime / playwright-mcp | Never use a host-provided browser |
 
 ## browser_driver — Resolution flow
 
@@ -52,10 +52,9 @@ Bundled playwright-runtime available and native session is allowed?
 macOS AND ego-browser ready (detect.mjs exit 0)?
   YES → Use ego-browser
   NO  ▼
-Antigravity native browser available?
-  YES → Use antigravity-native
-  NO  ▼
 Mark browser_driver: unavailable
+
+On Antigravity, stop at Playwright MCP/runtime; never use a host-provided browser
 ```
 
 **Lưu ý quan trọng:**

@@ -133,10 +133,10 @@ Exploratory · Error Guessing · Ad-hoc · Monkey · CRUD · Happy/Negative · B
 
 ---
 
-## 🔁 Fallback: Antigravity (nếu hết Claude Code + Playwright)
-Antigravity/Gemini là host model; browser mặc định vẫn là browser của skill:
-- Antigravity/Gemini → **bundled `playwright-runtime`** từ terminal của project
-- Chỉ dùng **Gemini-in-Chrome** khi truyền explicit `--browser-driver antigravity-native` sau khi Playwright runtime/MCP thực sự unavailable
+## 🔁 Antigravity Playwright policy
+Antigravity/Gemini chỉ là host model; mọi browser action phải chạy bằng Playwright:
+- Antigravity/Gemini → **bundled `playwright-runtime`** từ terminal của project, hoặc `playwright-mcp`
+- Không dùng **Gemini-in-Chrome** hoặc `antigravity-native`; nếu Playwright unavailable thì trả `UNTEST`
 - WebFetch → Antigravity web tool / curl
 - Script npm (`node scripts/x.mjs`) → chạy y hệt từ Antigravity terminal
 - Antigravity smoke PASS chỉ hợp lệ sau khi chạy host thật và validate `evidence/antigravity-smoke.json` bằng `scripts/helpers/validate-host-smoke.mjs`

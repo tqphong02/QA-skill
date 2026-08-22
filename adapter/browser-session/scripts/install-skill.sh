@@ -21,7 +21,7 @@ if [[ "$OS" != "Darwin" ]]; then
   echo "  Fallback options for this platform:"
   echo "    • Playwright MCP"
   echo "    • Chrome DevTools MCP"
-  echo "    • Antigravity native browser"
+  echo "    • Bundled Playwright runtime"
   echo ""
   exit 0
 fi

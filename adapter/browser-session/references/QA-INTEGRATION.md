@@ -13,7 +13,7 @@ browser_driver:
     1: playwright-mcp       # cross-platform, rich obs cùng session
     2: ego-browser          # macOS + real login state
     3: chrome-devtools-mcp  # khi tab đang chạy cần attach
-    4: antigravity-native   # Gemini-in-Chrome, last resort
+    4: playwright-runtime   # Required when the host is Antigravity/Gemini
     5: unavailable
 
 network_observer:
@@ -25,6 +25,8 @@ network_observer:
     4: unavailable
 ```
 
+When the host is Antigravity/Gemini, use only `playwright-mcp` or `playwright-runtime` for `browser_driver`; do not use `auto`, `ego-browser`, Gemini-in-Chrome or a host-native browser
+
 Đọc chi tiết flowchart và combination rules:
 [`../../dynamic-testing/web-exploratory/references/BROWSER-DRIVER-RESOLUTION.md`](../../../dynamic-testing/web-exploratory/references/BROWSER-DRIVER-RESOLUTION.md)
 
@@ -34,7 +36,7 @@ network_observer:
 node scripts/helpers/run-manifest.mjs start \
   --mode <MODE> \
   --business-context qa-knowledge/context/business-execution-brief.json \
-  --browser-driver <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|antigravity-native|unavailable> \
+  --browser-driver <auto|playwright-mcp|playwright-runtime|ego-browser|chrome-devtools-mcp|unavailable> \
   --browser-observer <auto|playwright-mcp|ego-browser|chrome-devtools-mcp|unavailable> \
   --network-observer <auto|chrome-devtools-mcp|playwright-mcp|ego-browser|unavailable>
 ```

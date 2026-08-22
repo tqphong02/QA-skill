@@ -18,7 +18,34 @@ function fileSha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
-test('structured testcase generates a lossless POM plan and passes strict fixture traceability', () => {
+function resolvePythonCommand() {
+  const configured = process.env.PYTHON || process.env.PYTHON3;
+  const candidates = configured
+    ? [{ command: configured, prefix: [] }]
+    : process.platform === 'win32'
+      ? [
+        { command: 'py', prefix: ['-3'] },
+        { command: 'python', prefix: [] },
+        { command: 'python3', prefix: [] },
+      ]
+      : [
+        { command: 'python3', prefix: [] },
+        { command: 'python', prefix: [] },
+      ];
+
+  return candidates.find(({ command, prefix }) => {
+    const probe = spawnSync(command, [...prefix, '--version'], { stdio: 'ignore' });
+    return probe.status === 0;
+  }) || null;
+}
+
+test('structured testcase generates a lossless POM plan and passes strict fixture traceability', (t) => {
+  const python = resolvePythonCommand();
+  if (!python) {
+    t.skip('Python 3 runtime is unavailable; testcase-authoring generator is Python-based');
+    return;
+  }
+
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testcase-pom-flow-'));
   try {
     const testcaseDir = path.join(root, 'testcases');
@@ -31,7 +58,8 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
     }
 
     const excelPath = path.join(testcaseDir, 'demo.xlsx');
-    const generated = spawnSync('python3', [
+    const generated = spawnSync(python.command, [
+      ...python.prefix,
       path.join(REPO_ROOT, 'support/testcase-authoring/scripts/gen-testcases.py'),
       path.join(REPO_ROOT, 'support/testcase-authoring/examples/structured-input.json'),
       excelPath,

@@ -80,7 +80,7 @@ For `EXPLORATORY_BROWSER_QA` (including its `FAST` profile, labeled `BROWSER_TAS
 | Chrome DevTools and Playwright MCP unavailable | playwright-runtime |
 | macOS + cần login state thật | ego-browser |
 | Playwright MCP unavailable, macOS | ego-browser |
-| Chrome DevTools and Playwright unavailable | antigravity-native |
+| Chrome DevTools and Playwright unavailable | unavailable (`UNTEST` on Antigravity) |
 
 ### network_observer
 

@@ -52,7 +52,7 @@ test('golden business-flow evaluation reports missing intelligence', () => {
 test('Antigravity smoke gate never passes without same-session evidence', () => {
   const blocked = validateHostSmoke({
     host: 'antigravity',
-    browser_driver: 'antigravity-native',
+    browser_driver: 'playwright-runtime',
     same_session: false,
     screenshot_paths: [],
     network_observed: false,

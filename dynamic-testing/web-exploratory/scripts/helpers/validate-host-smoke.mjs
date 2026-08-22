@@ -18,7 +18,9 @@ export function validateHostSmoke(result, expectedHost = 'antigravity', { baseDi
   const missing = [];
   if (!result || typeof result !== 'object') return { verdict: 'BLOCKED', missing: ['result'] };
   if (String(result.host || '').toLowerCase() !== expectedHost) missing.push(`host=${expectedHost}`);
-  if (result.browser_driver !== 'antigravity-native') missing.push('browser_driver=antigravity-native');
+  if (!['playwright-runtime', 'playwright-mcp'].includes(result.browser_driver)) {
+    missing.push('browser_driver=playwright-runtime|playwright-mcp');
+  }
   if (result.same_session !== true) missing.push('same_session=true');
   if (!Array.isArray(result.screenshot_paths) || result.screenshot_paths.length === 0) {
     missing.push('screenshot_paths');

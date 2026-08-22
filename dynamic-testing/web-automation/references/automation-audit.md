@@ -64,13 +64,19 @@ The audit is a consistency gate; it is not a substitute for a live browser check
 1. The testcase has a semantic `target.key`, not an XPath guessed from prose
 2. The POM agent inspected the target DOM in the declared route, role, locale and state
 3. The evidence records the selected locator, strategy, route/state and verification result
-4. Playwright proves `count=1`, visibility and actionability for click/fill/select actions
-5. The same locator expression is present in `selectors/` and is used through a Page Object
-6. The generated test reaches the intended state and passes its business assertion
+4. Browser MCP provenance records the provider, same-session `run_id`, navigation/snapshot/DOM-evaluation tools and the live target observation
+5. Browser MCP proves `count=1`, visibility and actionability for click/fill/select actions
+6. Playwright re-checks the same locator expression during the generated test
+7. The same locator expression is present in `selectors/` and is used through a Page Object
+8. The generated test reaches the intended state and passes its business assertion
 
 The audit expects the selected strategy to follow `testid → id → CSS → role/label/placeholder/text → XPath`. Evidence should record every ordered candidate, including unavailable test-id when no FE source/contract exists. XPath is a last resort and must include a reason in evidence. Absolute XPath, generated CSS classes and positional selectors are blocked by the audit
 
 After audit PASS, run [testcase-execution.md](testcase-execution.md). Traceability PASS authorizes the selected implementation to execute but is not the testcase verdict; only the evidence-gated Playwright run returns `PASS`, `FAILED`, `N/A` or `UNTEST`.
+
+Use `--require-browser-mcp` for the POM workflow. It fails closed when selector
+evidence is missing Browser MCP provenance or does not contain the provider's
+navigation, snapshot and DOM-evaluation tools
 
 ## Token usage
 

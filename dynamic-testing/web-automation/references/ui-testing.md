@@ -26,7 +26,9 @@
 
 ## 2. Locator strategy (priority order)
 
-Prefer locators selected from observed FE/live DOM evidence. Use this exact order:
+Prefer locators selected from observed FE/live DOM evidence. Browser MCP
+(Playwright MCP by default) must provide the live accessibility/DOM observation
+before POM generation. Use this exact order:
 
 1. `getByTestId('login-submit')` — first only when an existing FE-owned test-id is present in the FE source/contract or live DOM and is runtime-verified
 2. Stable `id` — only after runtime uniqueness verification
@@ -38,9 +40,12 @@ If no FE repository or contract is available, do not invent or inject `data-test
 
 **`data-testid` convention:** an existing FE-owned `<component>-<element>` value (e.g. `login-email`, `cart-total`). Adding a new test-id is a separate FE change, not an automation fallback
 
-**Verification gate:** Before committing a selector, prove `count=1`, visibility and actionability for the requested operation in the same route/role/state. Do not use `.first()` or `.last()` to hide multiple matches
+**Verification gate:** Before committing a selector, Browser MCP must prove
+`count=1`, visibility and actionability for the requested operation in the same
+route/role/state. The generated Playwright run re-checks the same locator. Do not
+use `.first()` or `.last()` to hide multiple matches
 
-**Avoid:** `:nth-child()`, auto-generated classes (`css-1abc2d`), full XPath trees, selectors copied from screenshots without DOM evidence and guessed test-ids
+**Avoid:** `:nth-child()`, auto-generated classes (`css-1abc2d`), full XPath trees, selectors copied from screenshots without DOM evidence and guessed test-ids. If Browser MCP cannot inspect the target page, leave the target `blocked`/`UNTEST` rather than guessing
 
 See [selector-discovery.md](selector-discovery.md) for candidate generation, XPath policy and the evidence manifest
 

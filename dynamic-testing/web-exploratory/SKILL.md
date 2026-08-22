@@ -17,11 +17,11 @@ Load [references/SENIOR-QA-OPERATING-MODEL.md](references/SENIOR-QA-OPERATING-MO
 
 Before execution, establish a versioned plan containing scope, risk, build, environment, role, data, dependencies, entry/exit criteria and stop conditions. After execution, reconcile evidence into defect decisions, quality metrics and a release or post-release owner
 
-Use [references/RELEASE-QUALITY-METRICS.md](references/RELEASE-QUALITY-METRICS.md) when handing aggregated evidence to `governance-release-quality`. Preserve numerator, denominator, source run ID and limitations for every metric
+Use [references/RELEASE-QUALITY-METRICS.md](references/RELEASE-QUALITY-METRICS.md) for aggregated handoff; preserve numerator, denominator, source run ID and limitations
 
 ## Optional memory
 
-When agentmemory is available, recall only project/feature context and treat it as historical. Save only verified decisions, constraints and `qa-knowledge/` pointers; never save secrets, raw responses, media, personal data or guesses. Memory is optional and never blocks execution
+Use agentmemory only for historical project context; save verified decisions, constraints and `qa-knowledge/` pointers only, never secrets or raw data. It never blocks execution
 
 Resolve `<skill-root>` from the directory containing the loaded `SKILL.md`. **Data is fetched based on the working directory** (cwd or `QA_DATA_DIR`): `.env`, `auth.json`, `evidence/` are in the tested project folder — DO NOT mutate the skill folder. When loading knowledge, prioritize `qa-knowledge/knowledge-index.json` before reading specific scope files.
 
@@ -139,7 +139,7 @@ Apply this order for every host and model
    - When optional source or knowledge exists, use `prepare-test-intelligence.mjs` only to rank risks. Static evidence remains candidate context until runtime confirmation
 3. Start one observable session
    - Initialize `run-manifest.mjs` after the target gate with the selected mode/profile and independently resolved browser driver, browser observer and network observer
-   - Default exploratory, FAST and app-baseline execution to `playwright-runtime`; only explicit `auto` enables the documented fallback chain. The host model does not select a different browser
+   - Default to `playwright-runtime`; Antigravity must use Playwright runtime/MCP. Never use Gemini-in-Chrome or `antigravity-native`; `auto` is for non-Antigravity routes, otherwise return `UNTEST`
    - Start network, console and page-error observation before critical actions in the same page/session. Cross-session evidence cannot support `PASS`; missing required observation produces `UNTEST`
    - For full exploratory and app baseline, start `exploratory-runner.mjs` with the same `RUN_ID`, create `rule-plan`, then use compact observe/agent-context → plan/decision → one action → state delta → replan/complete → independent task judge
    - For FAST, use `native-browser-runtime.mjs quick-start`, target-scoped `extract`, at most five read-only `batch` actions and `quick-finish`; do not create the full QA ledger. FAST `PASS` proves task completion only
@@ -153,7 +153,7 @@ Apply this order for every host and model
    - Complete the senior operating ledger when planning, release, triage, metrics or post-release ownership is in scope
    - Keep the exploratory result exactly `PASS`, `FAILED`, `N/A` or `UNTEST`. Plane applies its separate mapping: `PASS → Done`, `FAILED → In Progress`, `BLOCKED → unchanged`, `new bug → Todo`
 
-Read detailed references only when the matching condition in the workflow router or optional-reference list occurs
+Read detailed references only when the router or optional-reference list requires them
 
 ## Knowledge scope decision
 
@@ -166,12 +166,12 @@ Read detailed references only when the matching condition in the workflow router
 
 ## Critical red flags (hard stop)
 
-These must be observed at all times, even before reading any reference file:
+Hard stops:
 
 - **DO NOT run destructive tests** (delete, drop, wipe data) without explicit user authorization
 - **DO NOT skip any hard gate** — all gates above are mandatory regardless of context or time pressure
 - **DO NOT conclude PASS when lacking evidence** — absence of visible error is not evidence of passing
-- **DO NOT use fallback (Antigravity/CLI) as a substitute for MCP** without first confirming MCP is genuinely unavailable
+- **DO NOT use Gemini-in-Chrome or `antigravity-native`**; Antigravity browser execution must use Playwright
 - **DO NOT overwrite existing artifacts** (`auth.json`, `evidence/`, `qa-knowledge/`) without reading the existing content first
 - **DO NOT mix browser sessions** — network and console evidence must come from the same page/session that executed the UI action
 - **DO NOT treat every 4xx/5xx as a confirmed bug** — correlate the request with the triggering action, expected negative behavior, response body and visible outcome

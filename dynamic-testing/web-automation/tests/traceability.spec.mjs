@@ -190,7 +190,7 @@ export const loginSelectors = {
   return { root, testcasePath, manifestPath, tokenUsagePath };
 }
 
-function audit(fixture) {
+function audit(fixture, options = {}) {
   return buildTraceability({
     testcasePath: fixture.testcasePath,
     manifestPath: fixture.manifestPath,
@@ -198,6 +198,7 @@ function audit(fixture) {
     evidenceDir: path.join(fixture.root, 'selector-evidence'),
     tokenUsagePath: fixture.tokenUsagePath,
     mode: 'ui',
+    ...options,
   });
 }
 
@@ -214,6 +215,20 @@ test('traceability audit links lossless manifest, behavior markers, RBAC and sel
     assert.equal(report.token_usage.total_tokens, 123);
     assert.deepEqual(report.cases[0].rbac_refs, ['RBAC-LOGIN-001']);
     assert.ok(report.cases[0].implementation_markers.every(item => item.present));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('traceability audit requires Browser MCP provenance when explicitly enabled', () => {
+  const fixture = writeFixture();
+  try {
+    const report = audit(fixture, { requireBrowserMcp: true });
+    assert.equal(report.status, 'BLOCKED');
+    assert.equal(
+      report.violations.filter(item => item.code === 'SELECTOR_BROWSER_MCP_PROVENANCE_MISSING').length,
+      3,
+    );
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

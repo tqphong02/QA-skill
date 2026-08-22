@@ -121,5 +121,5 @@ ego_browser:
 unsupported_platform_fallback:
   - playwright-mcp
   - chrome-devtools-mcp
-  - antigravity-native
+  - playwright-runtime
 ```

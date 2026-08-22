@@ -28,7 +28,10 @@ function fakeLocalRuntime(root) {
     );
   }
   fs.mkdirSync(path.join(root, 'node_modules', '.bin'), { recursive: true });
-  for (const binary of ['playwright', 'tsc']) fs.writeFileSync(path.join(root, 'node_modules', '.bin', binary), '', 'utf8');
+  for (const binary of ['playwright', 'tsc']) {
+    const binaryName = process.platform === 'win32' ? `${binary}.cmd` : binary;
+    fs.writeFileSync(path.join(root, 'node_modules', '.bin', binaryName), '', 'utf8');
+  }
 }
 
 test('runtime inspection reports a generated project with no install as needing bootstrap', () => {

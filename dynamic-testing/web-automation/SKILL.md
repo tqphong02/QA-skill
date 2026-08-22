@@ -15,9 +15,9 @@ Own the complete deterministic workflow from shared automation manifest to reusa
 
 1. Resolve `BUILD`, `RUN` or default `BUILD_AND_RUN`, plus target, environment, account/data, production boundary and cleanup
 2. Use `.automation.json` as the only execution/POM source and select at most 20 cases by group or Testcase ID
-3. Run the unified workflow with `--phase plan`; generate selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
+3. Run the unified workflow with `--phase plan`; resolve selectors from the same-session Browser MCP evidence before generating selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
 4. Emit `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and make every generated spec import `test`/`expect` from `fixtures/pom`
-5. Verify UI locators in the live DOM and record current-build selector evidence
+5. Use Browser MCP to inspect and verify UI locators in the live DOM, then record current-build selector evidence
 6. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; the generated project must carry that script and npm lifecycle prehooks so `npm run check:types`, provisioning and test commands self-install declared dependencies, run `npx --no-install playwright install chromium`, and then check `tsc --noEmit`
 7. Pass runtime-scaffold, placeholder, TypeScript/lint and traceability gates
 8. Run the unified workflow with `--phase execute`; it executes Playwright with same-session visual and trace evidence
@@ -80,7 +80,7 @@ Traceability blocks generic `performStep()` mappings, wrong action method, missi
 
 ## UI selector gate
 
-Read [references/selector-discovery.md](references/selector-discovery.md) before UI selector work. Use this priority:
+Read [references/selector-discovery.md](references/selector-discovery.md) before UI selector work. Browser MCP is the selector-discovery source of truth. Use this priority:
 
 `existing testid → stable id → stable CSS → role/label/placeholder/text → short anchored XPath`
 
@@ -90,6 +90,40 @@ Read [references/selector-discovery.md](references/selector-discovery.md) before
 - Evidence must include `captured_at`, same-browser `run_id`, current `app_build`, ordered candidates and verification
 - Commit only the selected runtime-verified locator to `selectors/`
 
+### Browser MCP selector discovery
+
+For every selected UI target, use the same Browser MCP session to navigate to the
+declared route, inspect the accessibility snapshot and live DOM, and verify the
+candidate before generating POM code. The default provider is Playwright MCP;
+Chrome DevTools MCP is valid only when it drives or is attached to the exact page
+being inspected
+
+The Browser MCP sequence is mandatory:
+
+1. `browser_navigate` (or the provider-equivalent navigation tool) to the target route
+2. `browser_snapshot` (or the provider-equivalent accessibility snapshot) after the declared ready state
+3. `browser_evaluate` (or the provider-equivalent DOM evaluation tool) to derive and test candidate attributes, semantic relationships and a short anchored XPath when needed
+4. Verify `count=1`, expected visibility and actionability in that same Browser MCP session
+5. Export the target records and pass them to `scripts/discover-runtime-selectors.mjs --browser-mcp-evidence <file>`
+
+The MCP evidence must retain `provider`, `browser_driver`, `browser_observer`,
+`tools_used`, `run_id`, `app_build`, route/state, ordered candidates, the exact
+locator, and verification. The generated selector file is allowed to contain
+only a locator represented by that evidence
+
+Do not derive an XPath from testcase prose, a screenshot, a stale trace, or a
+different browser session. If Browser MCP is unavailable, the selector target is
+`BLOCKED`/`UNTEST`; use the local Playwright discovery path only with the explicit
+`--provider playwright-runtime` fallback and never label that evidence as Browser MCP
+
+The unified `testcase-workflow --phase execute` automatically enables the
+Browser MCP provenance gate for `ui` and `functional` POM runs
+
+When XPath is required, Browser MCP must return a short XPath anchored to a
+stable attribute or semantic relationship and prove it unique in the live DOM
+Absolute DOM paths, generated classes, `:nth-child()`, `.first()` and `.last()`
+remain forbidden
+
 ### Module-scoped selector capture
 
 Run selector discovery and promotion per business module. Do not run one broad
@@ -98,11 +132,13 @@ route, role, state, browser `run_id` and current `app_build` where the DOM was
 observed
 
 For static route states, use the generated project's read-only discovery runner
-when it is present:
+after Browser MCP has exported the bounded selector records:
 
 ```bash
-QA_SELECTOR_DISCOVERY_INCLUDE_VERIFIED=true \
-node scripts/discover-runtime-selectors.mjs --module <module>
+node scripts/discover-runtime-selectors.mjs \
+  --module <module> \
+  --browser-mcp-evidence selector-evidence/<module>.browser-mcp.json \
+  --app-build "$QA_APP_BUILD"
 node scripts/promote-selector-discovery.mjs --module <module>
 ```
 
@@ -116,6 +152,9 @@ npx playwright test tests/functional/<module>.functional.spec.ts \
   --grep '<Testcase-ID>' --workers=1
 node scripts/promote-runtime-evidence.mjs --feature <module>
 ```
+
+The capture above verifies the selected locator during execution; it does not
+replace the Browser MCP discovery record required before POM generation
 
 The target project may expose `--module` instead of `--feature` for promotion.
 Promotion accepts only `runtime_verified` records with `count=1` and
@@ -134,6 +173,7 @@ Run traceability with the current build and freshness limit:
 npm run traceability -- \
   --testcases testcases/<feature>.md \
   --manifest testcases/<feature>.automation.json \
+  --require-browser-mcp \
   --app-build "$QA_APP_BUILD" \
   --max-evidence-age-hours 168
 ```
@@ -205,6 +245,7 @@ Use component/API/contract tests for deterministic lower-level rules and keep UI
 - TypeScript/lint and relevant tests pass
 - Testcase IDs, source hash, action methods, values, assertions, role/RBAC and cleanup pass traceability
 - All UI target keys have fresh current-build selector evidence and appear in selector code
+- Browser MCP provenance is present for every UI selector evidence record when the POM workflow runs `--require-browser-mcp`
 - A traceability result is scope-labelled: a selected-case audit may be `PASS` only for the requested testcase IDs, while the no-filter audit remains the authoritative full-project gate
 - The selected tests actually run in Playwright and every testcase receives `PASS`, `FAILED`, `N/A` or `UNTEST`
 - UI/functional PASS/FAILED has existing visual media plus same-session trace; missing evidence is UNTEST

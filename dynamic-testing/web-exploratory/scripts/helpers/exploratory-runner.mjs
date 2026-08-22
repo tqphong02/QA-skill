@@ -123,7 +123,6 @@ const ALLOWED_BROWSER_VALUES = new Set([
   'playwright-mcp',
   'chrome-devtools-mcp',
   'ego-browser',
-  'antigravity-native',
   'playwright-runtime',
   'unavailable',
   'not-applicable',

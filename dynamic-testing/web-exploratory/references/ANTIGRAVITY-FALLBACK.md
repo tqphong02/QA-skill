@@ -1,6 +1,6 @@
-# QA Run — Antigravity Fallback & Common Mistakes
+# QA Run — Antigravity Playwright Policy & Common Mistakes
 
-> Read this file when: Chrome DevTools MCP and Playwright MCP are unavailable, or when debugging common workflow mistakes.
+> Read this file when running the skill from Antigravity or debugging browser workflow mistakes.
 
 ## 2-track browser capability model
 
@@ -8,17 +8,15 @@
 
 ### browser_driver priority
 
-Generic/exploratory routes default to the bundled `playwright-runtime` when no driver is specified. The priority below applies only to an explicit `--browser-driver auto` or an environment override
+Generic/exploratory routes default to the bundled `playwright-runtime`. On Antigravity, do not use `--browser-driver auto` or a host browser
 
 ```
-Chrome DevTools MCP → Playwright MCP → ego-browser → Antigravity native → unavailable
+Playwright MCP → bundled playwright-runtime → unavailable
 ```
 
 - **Playwright MCP**: fallback driver; cross-platform; rich obs cùng session
-- **ego-browser**: browser driver riêng, không phải chỉ fallback của Playwright; macOS only; kế thừa login state thật của user; đọc [`../../../adapter/browser-session/SKILL.md`](../../../adapter/browser-session/SKILL.md)
-- **Chrome DevTools MCP**: driver trong explicit `auto` policy; Chrome automation, network, console và performance evidence
-- **Antigravity native**: Gemini-in-Chrome; last resort
-- **unavailable**: mark BROWSER_DRIVER ledger BLOCKED
+- **bundled playwright-runtime**: local Playwright browser with same-session evidence
+- **unavailable**: mark BROWSER_DRIVER ledger BLOCKED and the user-facing result `UNTEST`
 
 ### network_observer priority
 
@@ -33,9 +31,9 @@ Resolved driver observer → verified same-session observer → ego-browser (bas
 
 Kết hợp tốt nhất khi cần login thật + full network: `ego-browser` driver + `chrome-devtools-mcp` observer
 
-## Google Antigravity Fallback
+## Google Antigravity Playwright policy
 
-Antigravity/Gemini is a host model, not the default browser driver. The skill still runs on Antigravity by invoking its bundled `playwright-runtime` from the project terminal. `Gemini-in-Chrome` is a last-resort browser driver only when `--browser-driver antigravity-native` is explicitly selected after the Playwright path is unavailable
+Antigravity/Gemini is a host model only. Every UI action, DOM/AX observation, screenshot and same-session event must use the bundled `playwright-runtime` or `playwright-mcp` from the project terminal. `Gemini-in-Chrome`, `antigravity-native` and other host browser tools are prohibited. If Playwright is unavailable, mark the browser driver `unavailable` and return `UNTEST`
 
 ### Portable assets (runs in any env with Node >= 18)
 
@@ -48,30 +46,29 @@ Antigravity/Gemini is a host model, not the default browser driver. The skill st
 | Principle #1 (understand context first), 5 testing techniques, retest/sanity workflow | **Methodology** — tool-independent |
 | `.env`, `auth.json`, `evidence/` | Located in project folder, DOES NOT depend on Claude Code |
 
-### Needs swapping (only "UI driving brain")
+### Required UI-driving path
 
-| Task | Skill Playwright runtime/MCP (default) | ego-browser (explicit fallback) | Antigravity native (explicit final fallback) |
-|---|---|---|---|
-| **UI interaction** | `native-browser-runtime.mjs` / `mcp__playwright__browser_*` | `ego-browser nodejs <<'EOF' ... EOF` | Gemini-in-Chrome |
-| **DOM snapshot** | runtime `observe` / `browser_snapshot` | `snapshotText()` | Gemini screenshot / read DOM |
-| **Screenshot** | runtime screenshot / `browser_take_screenshot` | `captureScreenshot()` | Gemini screenshot |
-| **Network events (basic)** | runtime observer / `browser_network_requests` | `drainEvents()` — basic, no body | Antigravity browser tools |
-| **Network body/headers** | runtime redacted preview / `browser_network_request` | ❌ — dùng Chrome DevTools MCP | Not available |
-| **Login state** | Playwright `auth.json` | Kế thừa từ user's ego lite browser | Re-login qua `login.mjs` |
-| Fetch ticket from URL | `WebFetch` | `serverFetch(url)` trong heredoc | Antigravity web tool / `curl` |
-| Run probe script | `node scripts/x.mjs` via Bash tool | `node scripts/x.mjs` via terminal | `node scripts/x.mjs` via terminal |
-| Log bug | Plane browser editor for images | Plane browser editor for images | Plane browser editor for images |
+| Task | Required Playwright path |
+|---|---|
+| **UI interaction** | `native-browser-runtime.mjs` / `playwright-mcp` |
+| **DOM/AX snapshot** | runtime `observe` / `browser_snapshot` |
+| **Screenshot** | runtime screenshot / `browser_take_screenshot` |
+| **Network events** | Same-session Playwright observer; use Chrome DevTools only as an attached observer when required |
+| **Login state** | Playwright `auth.json` or Playwright storage state |
+| Fetch ticket from URL | `WebFetch` or `node` helper; browser UI still uses Playwright |
+| Run probe script | `node scripts/x.mjs` via the project terminal |
+| Log bug | Plane browser editor driven by Playwright |
 
 ### Workflow on Antigravity
 1. Open Antigravity IDE -> open project folder (e.g. `MyProject/qa/`)
 2. Agent (Gemini) invokes the skill's `playwright-runtime` from the project terminal for UI actions, DOM/AX observation, screenshots and same-session evidence
-3. Do not open or use Gemini-in-Chrome for a normal skill run; use it only after an explicit `--browser-driver antigravity-native` selection
+3. Do not open or use Gemini-in-Chrome; resolve `playwright-runtime` or `playwright-mcp`, otherwise return `UNTEST`
 4. When needing batch/regression -> agent runs `node <skill-root>/scripts/sweep.mjs`
 5. When logging a bug with evidence -> agent opens the exact Plane ticket in the authenticated browser editor and pastes the image inline; the helper remains text-only by default
 6. Verdict + report in same format (`report/REPORT-TEMPLATE.md`)
 
 Before claiming an Antigravity smoke PASS, save a redacted JSON result with
-`host: "antigravity"`, `browser_driver: "antigravity-native"`,
+`host: "antigravity"`, `browser_driver: "playwright-runtime"`,
 `same_session: true`, `screenshot_paths` pointing to existing files, and true
 `network_observed`, `console_observed` and `page_errors_observed` fields, then
 validate it:
@@ -85,8 +82,8 @@ Antigravity; a host without a live smoke artifact remains `BLOCKED`
 
 ### Notes on fallback
 - `auth.json` must exist when the project Playwright runtime needs an authenticated session
-- The Gemini-in-Chrome note applies only to the explicit `antigravity-native` fallback; it does not replace the default Playwright session
-- Different model prompt: Gemini must be told to invoke the skill runtime from the terminal, not to open its own browser
+- Antigravity smoke evidence is valid only when the browser driver is `playwright-runtime` or `playwright-mcp`
+- Different model prompt: Gemini must be told to invoke the Playwright skill runtime from the terminal, not to open its own browser
 
 ## Common Mistakes
 

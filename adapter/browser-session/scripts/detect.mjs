@@ -149,7 +149,7 @@ function emit(r) {
     console.log();
     if (r.exitCode === 2) {
       console.log('  Fallback options:');
-      console.log('    playwright-mcp, chrome-devtools-mcp, antigravity-native');
+      console.log('    playwright-mcp, playwright-runtime, chrome-devtools-mcp');
     } else if (r.exitCode === 3) {
       console.log('  Fix: Open ego lite from Applications, then re-run detect.mjs');
       console.log('  Install guide: sh adapter/browser-session/scripts/install-skill.sh');
