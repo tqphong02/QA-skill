@@ -69,6 +69,7 @@ Use [examples/structured-input.json](examples/structured-input.json) only when t
 - Reuse identical flows through top-level `execution_templates` plus per-case `execution_ref`/`execution_overrides`; arrays replace template arrays and dictionaries merge recursively
 - Reuse only genuinely identical entry/steps; different behavior or AC still requires a separate scenario
 - Let scripts render Markdown, manifest and Excel; never ask the model to write those projections separately
+- For deterministic UI/POM completeness, optional `case.ui_function_keys`/`case.coverage_refs` are preserved in `.automation.json` and map the case to the Browser MCP UI function inventory
 - Read only the mode-specific references below
 
 ## Manual and automation contract

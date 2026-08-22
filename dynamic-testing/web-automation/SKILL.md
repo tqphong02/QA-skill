@@ -15,19 +15,22 @@ Own the complete deterministic workflow from shared automation manifest to reusa
 
 1. Resolve `BUILD`, `RUN` or default `BUILD_AND_RUN`, plus target, environment, account/data, production boundary and cleanup
 2. Use `.automation.json` as the only execution/POM source and select at most 20 cases by group or Testcase ID
-3. Run the unified workflow with `--phase plan`; resolve selectors from the same-session Browser MCP evidence before generating selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
-4. Emit `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and make every generated spec import `test`/`expect` from `fixtures/pom`
-5. Use Browser MCP to inspect and verify UI locators in the live DOM, then record current-build selector evidence
-6. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; the generated project must carry that script and npm lifecycle prehooks so `npm run check:types`, provisioning and test commands self-install declared dependencies, run `npx --no-install playwright install chromium`, and then check `tsc --noEmit`
-7. Pass runtime-scaffold, placeholder, TypeScript/lint and traceability gates
-8. Run the unified workflow with `--phase execute`; it executes Playwright with same-session visual and trace evidence
-9. Read `reports/testcase-pom-execution.json` and report only `PASS`, `FAILED`, `N/A` or `UNTEST`
-10. For Sheet/Excel, project the same result to row IDs and perform write-back only after confirmation and validation
-11. Add CI/Allure/quality gates only when the request includes pipeline/release delivery
+3. Before POM generation, build a complete current-build Browser MCP UI function inventory for every allowed route/role/state. Read [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md) and block when inventory functions are absent from the manifest
+4. Run the unified workflow with `--phase plan --require-ui-coverage`; resolve selectors from the same-session Browser MCP evidence before generating selectors → Page Objects → tagged specs from that plan and consolidate emitted code by business module
+5. Emit `fixtures/pom.ts`, `fixtures/runtime-context.ts`, dynamic `playwright.config.ts` and make every generated spec import `test`/`expect` from `fixtures/pom`
+6. Use Browser MCP to inspect and verify every inventory target in the live DOM, then record current-build selector evidence
+7. Bootstrap the target project-local Playwright runtime before typecheck/browser execution with `scripts/bootstrap-playwright.mjs`; the generated project must carry that script and npm lifecycle prehooks so `npm run check:types`, provisioning and test commands self-install declared dependencies, run `npx --no-install playwright install chromium`, and then check `tsc --noEmit`
+8. Pass UI-function coverage, runtime-scaffold, placeholder, TypeScript/lint and traceability gates
+9. Run the unified workflow with `--phase execute --require-ui-coverage`; it executes Playwright with same-session visual and trace evidence
+10. Read `reports/ui-function-coverage.json` and `reports/testcase-pom-execution.json` and report only `PASS`, `FAILED`, `N/A` or `UNTEST`
+11. For Sheet/Excel, project the same result to row IDs and perform write-back only after confirmation and validation
+12. Add CI/Allure/quality gates only when the request includes pipeline/release delivery
 
 Do not run against production or create external state without explicit target, data ownership and cleanup.
 
 Read [references/testcase-execution.md](references/testcase-execution.md) for deterministic execution, verdict mapping and Sheet integration. Do not load `dynamic-testing/web-exploratory/SKILL.md` for this workflow.
+
+For complete UI/POM coverage, also read [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md). A no-filter inventory gate is required before claiming full module/project coverage
 
 ## Token-efficient unified planning
 
@@ -36,8 +39,11 @@ Never load a large manifest into model context. Let the deterministic script rea
 ```bash
 npm run testcase-workflow -- \
   --phase plan \
+  --mode ui \
   --manifest testcases/<feature>.automation.json \
   --group LOGIN \
+  --ui-inventory selector-evidence/<feature>.ui-function-inventory.json \
+  --require-ui-coverage \
   --max-cases 20 \
   --output testcases/login.pom-plan.json
 ```
@@ -228,11 +234,11 @@ Read only the selected references:
 | Need | Read | Templates |
 |---|---|---|
 | Testcase execution, BUILD_AND_RUN or Sheet/Excel | [references/testcase-execution.md](references/testcase-execution.md) | `scripts/run-testcase-pom.mjs` |
-| UI/POM | [references/ui-testing.md](references/ui-testing.md) + [references/selector-discovery.md](references/selector-discovery.md) | `pages/`, `selectors/`, `tests/ui/` |
+| UI/POM | [references/ui-testing.md](references/ui-testing.md) + [references/selector-discovery.md](references/selector-discovery.md) + [references/ui-coverage-discovery.md](references/ui-coverage-discovery.md) | `pages/`, `selectors/`, `tests/ui/` |
 | API | [references/api-testing.md](references/api-testing.md) | `fixtures/api-client.ts`, `tests/api/` |
 | UI+API functional flow | UI + API references | `tests/functional/` |
 | Data-driven/parallel | [references/data-driven-testing.md](references/data-driven-testing.md) | `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/data-driven.ts`, `test-data/` |
-| Testcase traceability/token telemetry | [references/automation-audit.md](references/automation-audit.md) | `scripts/generate-pom-plan.mjs`, `scripts/verify-testcase-traceability.mjs` |
+| Testcase traceability/token telemetry | [references/automation-audit.md](references/automation-audit.md) | `scripts/generate-pom-plan.mjs`, `scripts/verify-testcase-traceability.mjs`, `scripts/verify-ui-coverage.mjs` |
 | CI/CD | [references/cicd.md](references/cicd.md) + [references/AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md) + [references/FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) | selected platform template |
 | Performance | [references/performance-testing.md](references/performance-testing.md) | k6/Playwright perf template |
 
@@ -243,6 +249,8 @@ Use component/API/contract tests for deterministic lower-level rules and keep UI
 - `pom-plan` succeeds for every selected testcase slice
 - Runtime scaffold verification passes and every generated spec is wired through `fixtures/pom`
 - TypeScript/lint and relevant tests pass
+- A current Browser MCP `UI_FUNCTION_INVENTORY` covers every allowed route/role/state; no-filter full runs must reach 100% required-function coverage
+- Every required inventory function maps to at least one testcase/POM action, and every actionable testcase target appears in the inventory
 - Testcase IDs, source hash, action methods, values, assertions, role/RBAC and cleanup pass traceability
 - All UI target keys have fresh current-build selector evidence and appear in selector code
 - Browser MCP provenance is present for every UI selector evidence record when the POM workflow runs `--require-browser-mcp`

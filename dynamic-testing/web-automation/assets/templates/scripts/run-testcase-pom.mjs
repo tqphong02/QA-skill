@@ -8,6 +8,7 @@ import { ensurePlaywrightRuntime } from './bootstrap-playwright.mjs';
 import { buildPomPlan } from './generate-pom-plan.mjs';
 import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
+import { buildUiCoverage } from './verify-ui-coverage.mjs';
 
 const VALID_PHASES = new Set(['plan', 'execute']);
 const VISUAL_RE = /\.(?:png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i;
@@ -264,6 +265,8 @@ function selectedPlan(manifestPath, maxCases) {
 async function main() {
   const phase = getArg('--phase', 'execute').toLowerCase();
   if (!VALID_PHASES.has(phase)) throw new Error('--phase must be plan or execute');
+  const mode = getArg('--mode', 'ui').toLowerCase();
+  const isUiMode = ['ui', 'functional'].includes(mode);
   const projectRoot = path.resolve(getArg('--project-root', process.cwd()));
   const manifestPath = resolveFrom(projectRoot, getArg('--manifest'), '');
   if (!getArg('--manifest') || !fs.existsSync(manifestPath)) throw new Error('--manifest is required and must exist');
@@ -271,17 +274,66 @@ async function main() {
   if (!Number.isInteger(maxCases) || maxCases < 1) throw new Error('--max-cases must be a positive integer');
   const plan = selectedPlan(manifestPath, maxCases);
   const planPath = resolveFrom(projectRoot, getArg('--plan-output'), 'reports/testcase-pom-plan.json');
+  const runId = getArg('--run-id', `pom-${Date.now()}`);
+  const resultPath = resolveFrom(projectRoot, getArg('--output'), 'reports/testcase-pom-execution.json');
   writeJson(planPath, plan);
+
+  const appBuild = getArg('--app-build');
+  const uiInventoryArg = getArg('--ui-inventory', process.env.QA_UI_FUNCTION_INVENTORY || '');
+  const requireUiCoverage = isUiMode && (
+    process.argv.includes('--require-ui-coverage')
+    || String(process.env.QA_REQUIRE_UI_COVERAGE || '').toLowerCase() === 'true'
+  );
+  const requireExplicitUiCoverage = process.argv.includes('--require-explicit-ui-coverage')
+    || String(process.env.QA_REQUIRE_EXPLICIT_UI_COVERAGE || '').toLowerCase() === 'true';
+  const uiCoveragePath = resolveFrom(
+    projectRoot,
+    getArg('--ui-coverage-output'),
+    'reports/ui-function-coverage.json',
+  );
+  let uiCoverage = null;
+  if (isUiMode && (requireUiCoverage || uiInventoryArg)) {
+    if (!uiInventoryArg) {
+      const reason = 'UI function inventory is required for complete UI/POM coverage';
+      if (phase === 'plan') throw new Error(`BLOCKED: --require-ui-coverage requires --ui-inventory <Browser MCP function inventory>`);
+      const report = untestReport(plan, reason, runId, mode);
+      report.ui_coverage = { status: 'BLOCKED', reason };
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, ui_coverage: report.ui_coverage }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+    uiCoverage = buildUiCoverage({
+      manifestPath,
+      inventoryPath: resolveFrom(projectRoot, uiInventoryArg, ''),
+      expectedAppBuild: appBuild,
+      maxAgeHours: Number(getArg('--max-inventory-age-hours', '168')),
+      testcaseIds: getArg('--testcase-id').split(',').map(value => value.trim()).filter(Boolean),
+      group: getArg('--group'),
+      requireExplicit: requireExplicitUiCoverage,
+    });
+    writeJson(uiCoveragePath, uiCoverage);
+    if (uiCoverage.status !== 'PASS') {
+      if (phase === 'plan') throw new Error(`BLOCKED: UI function coverage is incomplete; see ${uiCoveragePath}`);
+      const report = untestReport(plan, 'UI function coverage is incomplete before browser execution', runId, mode);
+      report.ui_coverage = uiCoveragePath;
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, ui_coverage: uiCoveragePath }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+  }
   if (phase === 'plan') {
-    console.log(JSON.stringify({ status: 'READY_FOR_CODE', plan: planPath, testcase_count: plan.testcases.length }, null, 2));
+    console.log(JSON.stringify({
+      status: 'READY_FOR_CODE',
+      plan: planPath,
+      testcase_count: plan.testcases.length,
+      ui_coverage: uiCoveragePath && uiCoverage ? uiCoveragePath : null,
+    }, null, 2));
     return;
   }
 
-  const mode = getArg('--mode', 'ui').toLowerCase();
-  const runId = getArg('--run-id', `pom-${Date.now()}`);
-  const resultPath = resolveFrom(projectRoot, getArg('--output'), 'reports/testcase-pom-execution.json');
   const testcasePath = resolveFrom(projectRoot, getArg('--testcases'), '');
-  const appBuild = getArg('--app-build');
   if (!getArg('--testcases') || !fs.existsSync(testcasePath)) throw new Error('--testcases Markdown is required for execute');
   if (['ui', 'functional'].includes(mode) && !appBuild) throw new Error('--app-build is required for UI/functional execute');
 
@@ -392,6 +444,7 @@ async function main() {
 
   const report = normalizePlaywrightReport(readJson(playwrightReportPath), plan, { projectRoot, mode, runId });
   report.traceability = traceabilityPath;
+  report.ui_coverage = uiCoveragePath && uiCoverage ? uiCoveragePath : null;
   report.playwright_report = playwrightReportPath;
   report.bootstrap = runtimeBootstrap;
   report.runtime_scaffold = runtimeScaffold;

@@ -2,6 +2,8 @@
 
 Store one JSON manifest per feature here after resolving the testcase target keys in the real environment
 
+For complete UI/POM coverage, store the Browser MCP route/state inventory beside the selector manifest as `<module>.ui-function-inventory.json` and run `scripts/verify-ui-coverage.mjs` before selector promotion. Selector evidence covers known targets; the inventory gate detects functions that were never added to the testcase manifest
+
 Each target record should include:
 
 - `target_key` from `support-testcase-authoring` `execution.steps[].target.key`

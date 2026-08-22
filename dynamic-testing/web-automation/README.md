@@ -9,6 +9,7 @@ Một workflow deterministic để build Page Object Model, chạy Playwright br
 - **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)** — danh sách placeholder cần fill
 - **[SKILL.md](SKILL.md)** — quy trình chi tiết (AI đọc khi kích hoạt; **human thường bỏ qua**)
 - **[references/](references/)** — UI/API/DDT/perf/CI patterns (đọc khi cần deep-dive)
+- **[references/ui-coverage-discovery.md](references/ui-coverage-discovery.md)** — Browser MCP inventory để không bỏ sót chức năng UI
 
 ## 🚀 Quickstart
 
@@ -73,12 +74,14 @@ assets/templates/
 
 ## ➕ Thêm page mới (6 bước)
 
-1. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then use the same-session Browser MCP to discover every selected target key
-2. Export Browser MCP selector evidence and pass it to `npm run discover:selectors -- --browser-mcp-evidence <file>`; the command blocks guessed XPath and non-MCP discovery by default
-3. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
-4. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
-5. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
-6. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
+1. Use Browser MCP to inventory every reachable route, role, state and UI function, then save `UI_FUNCTION_INVENTORY`
+2. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then use the same-session Browser MCP to discover every selected target key
+3. Run `node scripts/verify-ui-coverage.mjs --manifest <manifest> --inventory <inventory> --app-build "$QA_APP_BUILD" --require-explicit`; the gate blocks uncovered functions
+4. Export Browser MCP selector evidence and pass it to `npm run discover:selectors -- --browser-mcp-evidence <file>`; the command blocks guessed XPath and non-MCP discovery by default
+5. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
+6. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
+7. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
+8. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
 
 Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing.md)**.
 
@@ -102,10 +105,12 @@ npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
 npm run pom-plan -- --manifest testcases/<feature>.automation.json --group <group> --max-cases 20
+npm run testcase-workflow -- --phase plan --mode ui --manifest testcases/<feature>.automation.json --ui-inventory selector-evidence/<feature>.ui-function-inventory.json --require-ui-coverage --require-explicit-ui-coverage
+npm run ui-coverage -- --manifest testcases/<feature>.automation.json --inventory selector-evidence/<feature>.ui-function-inventory.json --app-build "$QA_APP_BUILD" --require-explicit
 npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --require-browser-mcp --app-build "$QA_APP_BUILD"
 npm run runtime-scaffold
-npm run testcase-workflow -- --phase plan --manifest testcases/<feature>.automation.json --group <group>
-npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD"
+npm run testcase-workflow -- --phase plan --mode ui --manifest testcases/<feature>.automation.json --group <group> --ui-inventory selector-evidence/<feature>.ui-function-inventory.json --require-ui-coverage
+npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD" --ui-inventory selector-evidence/<feature>.ui-function-inventory.json --require-ui-coverage
 ```
 
 Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets/templates/PLACEHOLDERS.md)**.

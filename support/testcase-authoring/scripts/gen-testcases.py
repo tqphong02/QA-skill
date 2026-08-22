@@ -553,6 +553,23 @@ def _normalized_testcase_id(value, field='testcase_id'):
     return rendered
 
 
+def _ui_function_keys(case):
+    """Keep optional Browser MCP UI-function coverage refs in the lossless manifest."""
+    raw = case.get('ui_function_keys', case.get('coverage_refs', []))
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raise ValueError('case.ui_function_keys must be an array of stable function keys')
+    keys = [str(value or '').strip() for value in raw]
+    if any(not key for key in keys):
+        raise ValueError('case.ui_function_keys cannot contain empty values')
+    if len(set(keys)) != len(keys):
+        raise ValueError('case.ui_function_keys cannot contain duplicates')
+    return keys
+
+
 def iter_testcases(data):
     """Yield cases in canonical order with stable explicit IDs for new contracts."""
     counter = 0
@@ -1681,6 +1698,7 @@ def build_automation_manifest(data, markdown_path):
             ).strip(),
             'priority': human_text(case.get('priority') or 'N/A', 'priority'),
             'description': human_text(case.get('description') or '', 'description'),
+            'ui_function_keys': _ui_function_keys(case),
             'execution': execution,
             'api': case.get('api'),
         })

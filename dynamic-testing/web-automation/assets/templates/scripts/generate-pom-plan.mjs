@@ -93,6 +93,7 @@ function buildPomPlan(manifestPath, options = {}) {
       })),
       cleanup: testcase.cleanup,
       mutates: testcase.mutates,
+      ui_function_keys: testcase.ui_function_keys,
       selector_target_keys: testcase.target_keys,
       selector_target_routes: testcase.target_routes,
     })),

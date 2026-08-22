@@ -185,6 +185,12 @@ function valueFingerprint(value) {
   return crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 12);
 }
 
+function referenceList(...values) {
+  return [...new Set(values.flatMap(value => (
+    Array.isArray(value) ? value : value === undefined || value === null || value === '' ? [] : [value]
+  )).map(value => String(value || '').trim()).filter(Boolean))];
+}
+
 function pascalCase(value) {
   return String(value || '')
     .split(/[^A-Za-z0-9]+/)
@@ -297,6 +303,12 @@ function parseAutomationManifest(manifestPath) {
     }
 
     const rbacRefs = Array.isArray(entry.rbac_refs) ? entry.rbac_refs.map(String) : [];
+    const uiFunctionKeys = referenceList(
+      item.ui_function_keys,
+      item.coverage_refs,
+      execution?.ui_function_keys,
+      execution?.coverage_refs,
+    );
     return {
       id,
       group: item.group || null,
@@ -314,6 +326,7 @@ function parseAutomationManifest(manifestPath) {
       outcome_assertions: outcomeAssertions,
       cleanup: execution?.cleanup ?? null,
       mutates: execution?.mutates === true,
+      ui_function_keys: uiFunctionKeys,
       target_keys: targetKeys,
       all_target_keys: allTargetKeys,
       actions_by_target: actionsByTarget,
