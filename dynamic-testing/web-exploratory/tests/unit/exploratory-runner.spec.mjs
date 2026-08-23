@@ -782,3 +782,87 @@ test('agentic task ledger rejects raw chain-of-thought and requires replan after
     fs.rmSync(ctx.dataDir, { recursive: true, force: true });
   }
 });
+
+test('agentic trajectory uses recorded state deltas to stop repeated browser actions', () => {
+  const ctx = fixture();
+  try {
+    setExploratoryTaskPlan({ dataDir: ctx.dataDir, runId: ctx.runId, plan: agenticTaskPlan() });
+    const firstDecision = recordExploratoryTaskDecision({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      decision: agenticDecision(),
+    });
+    recordExploratoryAction({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      action: actionInput({
+        overrides: {
+          decision_id: firstDecision.decision.decision_id,
+          actual_signal: 'The order list remained unchanged',
+          state_delta: {
+            progress_classification: 'NO_PROGRESS',
+            progress_score: 0,
+            runtime_failure_count: 0,
+          },
+        },
+      }),
+    });
+
+    const secondDecision = recordExploratoryTaskDecision({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      decision: agenticDecision({
+        evaluation: 'NO_PROGRESS',
+        revision: 2,
+        overrides: { task_step_id: 'TASK-OPEN-ORDER' },
+      }),
+    });
+    recordExploratoryAction({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      action: actionInput({
+        overrides: {
+          decision_id: secondDecision.decision.decision_id,
+          actual_signal: 'The order list still remained unchanged',
+          state_delta: {
+            progress_classification: 'NO_PROGRESS',
+            progress_score: 0,
+            runtime_failure_count: 0,
+          },
+        },
+      }),
+    });
+
+    const agentContext = getExploratoryAgentContext({ dataDir: ctx.dataDir, runId: ctx.runId });
+    assert.equal(agentContext.task.requires_replan, true);
+    assert.equal(agentContext.task.trajectory.recovery_status, 'REPLAN_REQUIRED');
+    assert.ok(agentContext.task.trajectory.reason_codes.includes('REPEATED_ACTION'));
+    assert.match(agentContext.task.trajectory.avoid_actions[0], /Order details link/);
+    assert.throws(
+      () => recordExploratoryTaskDecision({
+        dataDir: ctx.dataDir,
+        runId: ctx.runId,
+        decision: agenticDecision({
+          evaluation: 'NO_PROGRESS',
+          revision: 3,
+          overrides: { task_step_id: 'TASK-OPEN-ORDER' },
+        }),
+      }),
+      error => error.code === 'REPLAN_REQUIRED',
+    );
+
+    const replanned = setExploratoryTaskPlan({
+      dataDir: ctx.dataDir,
+      runId: ctx.runId,
+      plan: agenticTaskPlan({
+        revision: 3,
+        replanReason: 'The same semantic click produced no deterministic state change twice',
+      }),
+    });
+    assert.equal(replanned.taskPlan.requires_replan, false);
+    assert.equal(replanned.taskPlan.trajectory.recovery.status, 'CLEAR');
+    assert.equal(replanned.taskPlan.trajectory.recovery.avoid_actions.length, 1);
+  } finally {
+    fs.rmSync(ctx.dataDir, { recursive: true, force: true });
+  }
+});

@@ -100,7 +100,7 @@ function byteSize(filePath) {
 }
 
 function relativeToData(filePath) {
-  return path.relative(DATA_DIR, filePath) || path.basename(filePath);
+  return (path.relative(DATA_DIR, filePath) || path.basename(filePath)).replace(/\\/g, '/');
 }
 
 function text(value) {

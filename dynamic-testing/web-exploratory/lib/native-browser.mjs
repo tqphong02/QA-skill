@@ -294,27 +294,52 @@ export function computeNativeStateDelta(before = {}, after = {}, runtime = {}) {
     && after.content_fingerprint
     && before.content_fingerprint !== after.content_fingerprint,
   );
+  const formStateChanged = Boolean(
+    before.form_fingerprint
+    && after.form_fingerprint
+    && before.form_fingerprint !== after.form_fingerprint,
+  );
   const controlCountChanged = Number(before.interactive_count || 0) !== Number(after.interactive_count || 0);
+  const dialogCountChanged = Number(before.dialog_count || 0) !== Number(after.dialog_count || 0);
   const failureCount = Array.isArray(runtime.failures) ? runtime.failures.length : 0;
   const rawScore = (urlChanged ? 0.35 : 0)
     + (titleChanged ? 0.1 : 0)
     + (newHeadings.length ? 0.2 : 0)
+    + (newAlerts.length ? 0.15 : 0)
     + (contentChanged ? 0.2 : 0)
+    + (formStateChanged ? 0.25 : 0)
     + (controlCountChanged ? 0.15 : 0)
+    + (dialogCountChanged ? 0.15 : 0)
     - (failureCount ? 0.25 : 0);
   const progressScore = Math.max(0, Math.min(1, Number(rawScore.toFixed(2))));
+  const meaningfulChangeCount = [
+    urlChanged,
+    titleChanged,
+    newHeadings.length > 0,
+    newAlerts.length > 0,
+    contentChanged,
+    formStateChanged,
+    controlCountChanged,
+    dialogCountChanged,
+  ].filter(Boolean).length;
+  const progressClassification = progressScore >= 0.5
+    ? (failureCount ? 'PROGRESS_WITH_RUNTIME_FAILURE' : 'STRONG_PROGRESS')
+    : progressScore > 0
+      ? (failureCount ? 'PROGRESS_WITH_RUNTIME_FAILURE' : 'PROGRESS')
+      : failureCount ? 'CONTRADICTED' : 'NO_PROGRESS';
   return {
     url_changed: urlChanged,
     title_changed: titleChanged,
     content_changed: contentChanged,
+    form_state_changed: formStateChanged,
     control_count_changed: controlCountChanged,
+    dialog_count_changed: dialogCountChanged,
     new_headings: newHeadings.slice(0, 12),
     new_alerts: newAlerts.slice(0, 12),
     runtime_failure_count: failureCount,
+    meaningful_change_count: meaningfulChangeCount,
     progress_score: progressScore,
-    progress_classification: progressScore >= 0.5 ? 'STRONG_PROGRESS'
-      : progressScore > 0 ? 'PROGRESS'
-        : failureCount ? 'CONTRADICTED' : 'NO_PROGRESS',
+    progress_classification: progressClassification,
   };
 }
 
@@ -1046,18 +1071,40 @@ export class NativeBrowserSession {
       };
       const clean = value => String(value || '').replace(/\s+/g, ' ').trim().slice(0, 500);
       const textOf = element => clean(element.innerText || element.getAttribute('aria-label') || element.getAttribute('placeholder'));
+      const fnv1a = value => {
+        let result = 2166136261;
+        const source = String(value || '');
+        for (let index = 0; index < source.length; index += 1) {
+          result ^= source.charCodeAt(index);
+          result = Math.imul(result, 16777619);
+        }
+        return `fnv1a-${(result >>> 0).toString(16)}`;
+      };
       const bodyText = clean(document.body?.innerText || '').slice(0, 20000);
-      let bodyHash = 2166136261;
-      for (let index = 0; index < bodyText.length; index += 1) {
-        bodyHash ^= bodyText.charCodeAt(index);
-        bodyHash = Math.imul(bodyHash, 16777619);
-      }
+      const formState = [...document.querySelectorAll('input,textarea,select,[contenteditable="true"]')]
+        .filter(visible)
+        .map((element, index) => {
+          const tag = element.tagName.toLowerCase();
+          const type = clean(element.getAttribute('type') || tag).toLowerCase();
+          const sensitive = type === 'password'
+            || element.matches('[data-sensitive="true"], [autocomplete*="cc-" i]');
+          let state = '';
+          if (sensitive) state = '<sensitive>';
+          else if (type === 'checkbox' || type === 'radio') state = element.checked ? 'checked' : 'unchecked';
+          else if (type === 'file') state = `files:${element.files?.length || 0}`;
+          else if (tag === 'select') state = [...element.selectedOptions].map(option => option.index).join(',');
+          else if (element.isContentEditable) state = clean(element.innerText);
+          else state = clean(element.value);
+          return [index, tag, type, clean(element.name || element.id || element.getAttribute('aria-label')), state].join('|');
+        })
+        .join('\n');
       return {
         url: location.href,
         title: document.title,
         headings: [...document.querySelectorAll('h1,h2,h3,[role="heading"]')].filter(visible).map(textOf).filter(Boolean).slice(0, 20),
         alerts: [...document.querySelectorAll('[role="alert"], [aria-live="assertive"], [class*="toast" i], [class*="error" i]')].filter(visible).map(textOf).filter(Boolean).slice(0, 20),
-        content_fingerprint: `fnv1a-${(bodyHash >>> 0).toString(16)}`,
+        content_fingerprint: fnv1a(bodyText),
+        form_fingerprint: fnv1a(formState),
         interactive_count: [...document.querySelectorAll('button,a[href],input,textarea,select,summary,[role],[contenteditable="true"]')].filter(visible).length,
         dialog_count: [...document.querySelectorAll('dialog,[role="dialog"],[role="alertdialog"]')].filter(visible).length,
         table_count: [...document.querySelectorAll('table')].filter(visible).length,
@@ -1224,12 +1271,13 @@ export class NativeBrowserSession {
             error.code = 'UPLOAD_FILE_NOT_FOUND';
             throw error;
           }
-          const relativeFilePath = path.relative(dataRoot, realFilePath);
-          if (!relativeFilePath || relativeFilePath.startsWith('..') || path.isAbsolute(relativeFilePath)) {
+          const localRelativeFilePath = path.relative(dataRoot, realFilePath);
+          if (!localRelativeFilePath || localRelativeFilePath.startsWith('..') || path.isAbsolute(localRelativeFilePath)) {
             const error = new Error('upload file must stay inside QA_DATA_DIR');
             error.code = 'UPLOAD_PATH_OUTSIDE_DATA_DIR';
             throw error;
           }
+          const relativeFilePath = localRelativeFilePath.replace(/\\/g, '/');
           const fileStat = fs.statSync(realFilePath);
           if (!fileStat.isFile()) {
             const error = new Error('upload target must be a regular file');

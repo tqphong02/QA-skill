@@ -6,11 +6,11 @@ import fs from 'fs';
  *
  * AI đọc skill này sẽ:
  *   1. Copy file này về project
- *   2. Dùng SessionManager để share state giữa các test
- *   3. Mỗi session có name → file riêng trong sessions/
+ *   2. Dùng SessionManager để share state trong cùng Playwright worker
+ *   3. Mỗi session có name + run/worker namespace → file riêng trong sessions/
  *
  * Use cases:
- *   - Lưu auth token share giữa UI và API test trong cùng run
+ *   - Lưu auth token share giữa các bước trong cùng worker
  *   - Persist state across multiple test runs (vd: load user đã tạo hôm qua)
  *   - Debug khi fail: xem sessions/<NAME>.json biết test chạy đến đâu
  */
@@ -19,14 +19,40 @@ const SESSIONS_DIR = path.resolve(__dirname, '../sessions');
 
 export type Session = Record<string, unknown>;
 
+function safeFileSegment(value: string, maxLength = 120): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLength) || 'default';
+}
+
+/** Stable inside one worker process and isolated from other runs/workers. */
+export function defaultSessionNamespace(): string {
+  const runId = process.env.QA_RUN_ID ?? process.env.RUN_ID ?? `local-${process.pid}`;
+  const project = process.env.QA_PROJECT_KEY ?? 'default';
+  const parallelIndex = process.env.TEST_PARALLEL_INDEX ?? `pid-${process.pid}`;
+  const workerIndex = process.env.TEST_WORKER_INDEX;
+  return [
+    safeFileSegment(runId),
+    safeFileSegment(project),
+    `p${safeFileSegment(parallelIndex)}`,
+    workerIndex === undefined ? null : `w${safeFileSegment(workerIndex)}`,
+  ].filter((value): value is string => Boolean(value)).join('-');
+}
+
 export class SessionManager {
   private readonly filePath: string;
 
-  constructor(name: string) {
+  constructor(name: string, namespace = defaultSessionNamespace()) {
     if (!fs.existsSync(SESSIONS_DIR)) {
       fs.mkdirSync(SESSIONS_DIR, { recursive: true });
     }
-    this.filePath = path.join(SESSIONS_DIR, `${name}.json`);
+    this.filePath = path.join(
+      SESSIONS_DIR,
+      `${safeFileSegment(name)}.${safeFileSegment(namespace)}.json`,
+    );
   }
 
   /** Load session từ file (return undefined nếu chưa có) */
@@ -91,15 +117,15 @@ export class SessionManager {
 // Common sessions — pattern cho project
 // ─────────────────────────────────────────────────────────────
 
-/** Auth session — share giữa UI và API tests */
+/** Auth session — scoped to the current run and Playwright worker */
 export const authSession = new SessionManager('auth');
 
-/** Last run session — lưu data test gần nhất (debug) */
+/** Last run session — worker-local debug snapshot */
 export const lastRunSession = new SessionManager('last-run');
 
-/** Resource sessions — mỗi resource 1 session riêng */
-export function resourceSession(resource: string): SessionManager {
-  return new SessionManager(`resource-${resource}`);
+/** Resource sessions — isolated by default; pass a namespace only for intentional sharing */
+export function resourceSession(resource: string, namespace?: string): SessionManager {
+  return new SessionManager(`resource-${resource}`, namespace);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -112,9 +138,10 @@ export function cleanupOldSessions(maxAgeDays = 7): number {
   let removed = 0;
 
   for (const file of fs.readdirSync(SESSIONS_DIR)) {
+    if (!file.endsWith('.json')) continue;
     const filePath = path.join(SESSIONS_DIR, file);
     const stat = fs.statSync(filePath);
-    if (now - stat.mtimeMs > maxAgeMs) {
+    if (stat.isFile() && now - stat.mtimeMs > maxAgeMs) {
       fs.unlinkSync(filePath);
       removed++;
     }

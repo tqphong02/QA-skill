@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { acquireExecutionLock } from './execution-lock.mjs';
 
 const SURFACE_TAGS = Object.freeze({
   ui: '@ui',
@@ -111,11 +112,24 @@ function qaEnvironment() {
   };
 }
 
-function runPlaywright(surface, extraArgs) {
+function runPlaywright(surface, extraArgs, env = qaEnvironment()) {
   return run(NPX, buildPlaywrightArgs(surface, extraArgs), {
-    env: qaEnvironment(),
+    env,
     label: `playwright ${surface}`,
   });
+}
+
+function withPlaywrightLock(surface, operation) {
+  const env = qaEnvironment();
+  const lock = acquireExecutionLock(process.cwd(), {
+    runId: env.RUN_ID,
+    operation: `qa:${surface}`,
+  });
+  try {
+    return operation(env);
+  } finally {
+    lock.release();
+  }
 }
 
 function runNodeScript(script, args = [], label = script) {
@@ -221,7 +235,10 @@ export function main(argv = process.argv.slice(2)) {
   }
   if (command === 'test') {
     const parsed = parseTestArgs(args);
-    return runPlaywright(parsed.surface, parsed.extraArgs);
+    return withPlaywrightLock(
+      parsed.surface,
+      env => runPlaywright(parsed.surface, parsed.extraArgs, env),
+    );
   }
   if (command === 'contract') {
     return runContract(optionValue(args, '--mode', 'mixed'), args);
@@ -235,10 +252,12 @@ export function main(argv = process.argv.slice(2)) {
   if (command === 'serve-allure') return runAllureCommand('serve', ['reports/allure-results']);
   if (command === 'ci') {
     const parsed = parseTestArgs(args);
-    const testCode = runPlaywright(parsed.surface, parsed.extraArgs);
-    const qualityCode = runQualityGate();
-    const reportCode = runReport(['--mode', parsed.surface === 'api' ? 'api' : 'mixed']);
-    return testCode || qualityCode || reportCode;
+    return withPlaywrightLock(parsed.surface, env => {
+      const testCode = runPlaywright(parsed.surface, parsed.extraArgs, env);
+      const qualityCode = runQualityGate();
+      const reportCode = runReport(['--mode', parsed.surface === 'api' ? 'api' : 'mixed']);
+      return testCode || qualityCode || reportCode;
+    });
   }
 
   console.error(`[qa] Unknown command: ${command}`);

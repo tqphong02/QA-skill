@@ -5,6 +5,12 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { findPlaceholders } from './check-placeholders.mjs';
+import {
+  allPoolSlots,
+  configuredPool,
+  packageProjectKey,
+  poolCapacity,
+} from '../fixtures/parallel-pool.js';
 
 const SURFACES = new Set(['ui', 'api', 'functional', 'all']);
 
@@ -56,22 +62,98 @@ function validateUrl(name, value, violations) {
   }
 }
 
-function validateAuth(env, violations) {
-  const hasSingleAccount = Boolean(env.TEST_USER && env.TEST_PASS);
-  if (hasSingleAccount) return;
+function validateWorkers(env, violations) {
+  const rawWorkers = env.PW_WORKERS?.trim();
+  const requestedWorkers = rawWorkers ? Number.parseInt(rawWorkers, 10) : 1;
+  if (rawWorkers && (
+    !Number.isInteger(requestedWorkers)
+    || requestedWorkers < 1
+    || String(requestedWorkers) !== rawWorkers
+  )) {
+    violations.push(violation('CI_WORKERS_INVALID', 'PW_WORKERS must be a positive integer'));
+    return null;
+  }
+  return requestedWorkers;
+}
 
-  if (env.TEST_ACCOUNTS_JSON) {
+function validateAuth(env, violations, projectRoot, requestedWorkers) {
+  const projectKey = packageProjectKey(projectRoot, env);
+  const accountEnvironment = configuredPool('ACCOUNTS', projectKey, env);
+  if (accountEnvironment) {
     try {
-      const accounts = JSON.parse(env.TEST_ACCOUNTS_JSON);
-      if (Array.isArray(accounts) && accounts.length > 0 && accounts.every(item => item && item.email && item.password)) return;
+      const slots = allPoolSlots(accountEnvironment.raw, accountEnvironment.name);
+      const invalid = slots.some(slot => {
+        const hasCredentials = typeof slot.email === 'string' && slot.email.trim()
+          && typeof slot.password === 'string' && slot.password;
+        const state = typeof slot.storageState === 'string'
+          ? slot.storageState
+          : typeof slot.storage_state === 'string' ? slot.storage_state : '';
+        const hasStorageState = state.trim()
+          && fs.existsSync(path.resolve(projectRoot, state));
+        return !hasCredentials && !hasStorageState;
+      });
+      if (slots.length === 0 || invalid) {
+        throw new Error('pool slot is missing credentials or a readable storage state');
+      }
+      if (requestedWorkers !== null) {
+        const capacity = poolCapacity(accountEnvironment.raw, 'ACCOUNTS', projectRoot);
+        if (capacity < requestedWorkers) {
+          violations.push(violation(
+            'CI_AUTH_POOL_CAPACITY',
+            `${accountEnvironment.name} safe capacity is ${capacity}; PW_WORKERS requests ${requestedWorkers}`,
+          ));
+        }
+      }
+      return;
     } catch {
-      // Report one typed violation below without echoing the secret value.
+      violations.push(violation(
+        'CI_AUTH_JSON_INVALID',
+        `${accountEnvironment.name} must contain non-empty, unique account slots with credentials or readable storageState`,
+      ));
+      return;
     }
-    violations.push(violation('CI_AUTH_JSON_INVALID', 'TEST_ACCOUNTS_JSON must be a non-empty array of { email, password } objects'));
+  }
+
+  const hasSingleAccount = Boolean(env.TEST_USER && env.TEST_PASS);
+  if (hasSingleAccount) {
+    if (requestedWorkers > 1) {
+      violations.push(violation(
+        'CI_AUTH_POOL_REQUIRED',
+        'Parallel authentication cannot reuse TEST_USER/TEST_PASS; configure one account slot per worker',
+      ));
+    }
     return;
   }
 
   violations.push(violation('CI_AUTH_INPUT_MISSING', 'Set TEST_USER and TEST_PASS, or TEST_ACCOUNTS_JSON, in the CI secret store'));
+}
+
+function validateParallelData(env, violations, projectRoot, requestedWorkers) {
+  if (requestedWorkers === null || requestedWorkers <= 1) return;
+  const projectKey = packageProjectKey(projectRoot, env);
+  const datasetEnvironment = configuredPool('DATASETS', projectKey, env);
+  if (!datasetEnvironment) {
+    violations.push(violation(
+      'CI_DATA_POOL_REQUIRED',
+      'PW_WORKERS greater than one requires one isolated dataset slot per worker',
+    ));
+    return;
+  }
+  try {
+    const slots = allPoolSlots(datasetEnvironment.raw, datasetEnvironment.name);
+    const capacity = poolCapacity(datasetEnvironment.raw, 'DATASETS', projectRoot);
+    if (slots.length === 0 || capacity < requestedWorkers) {
+      violations.push(violation(
+        'CI_DATA_POOL_CAPACITY',
+        `${datasetEnvironment.name} safe capacity is ${capacity}; PW_WORKERS requests ${requestedWorkers}`,
+      ));
+    }
+  } catch {
+    violations.push(violation(
+      'CI_DATA_JSON_INVALID',
+      `${datasetEnvironment.name} must contain non-empty, unique dataset slots`,
+    ));
+  }
 }
 
 export function inspectCiPreflight(projectRoot, {
@@ -97,6 +179,9 @@ export function inspectCiPreflight(projectRoot, {
   requireFile(resolvedRoot, 'quality-gates.json', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/ci-preflight.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
+  requireFile(resolvedRoot, 'fixtures/parallel-pool.js', violations);
+  requireFile(resolvedRoot, 'fixtures/parallel-pool.d.ts', violations);
 
   if (fs.existsSync(packagePath) && !packageJson) {
     violations.push(violation('CI_PACKAGE_JSON_INVALID', 'package.json is not valid JSON'));
@@ -131,10 +216,12 @@ export function inspectCiPreflight(projectRoot, {
   if (normalizedSurface === 'ui' || normalizedSurface === 'functional' || normalizedSurface === 'all') {
     validateUrl('UI_BASE_URL or BASE_URL', env.UI_BASE_URL || env.BASE_URL, violations);
   }
-  if (normalizedSurface === 'api' || normalizedSurface === 'all') {
+  if (normalizedSurface === 'api' || normalizedSurface === 'functional' || normalizedSurface === 'all') {
     validateUrl('API_BASE_URL', env.API_BASE_URL, violations);
   }
-  if (requireAuth) validateAuth(env, violations);
+  const workers = validateWorkers(env, violations);
+  if (requireAuth) validateAuth(env, violations, resolvedRoot, workers);
+  validateParallelData(env, violations, resolvedRoot, workers);
 
   return {
     status: violations.length > 0 ? 'BLOCKED' : 'PASS',

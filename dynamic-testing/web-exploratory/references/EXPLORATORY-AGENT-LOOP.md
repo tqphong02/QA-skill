@@ -36,7 +36,7 @@ node <skill-root>/scripts/helpers/exploratory-runner.mjs start \
   --session-id <same-session-id>
 ```
 
-Default runtime limits are `40` actions per run, `300000` milliseconds, `16` actions per charter and `1` automatic retry per action. Override with `--max-actions`, `--max-ms`, `--max-actions-per-charter`, `--max-retries-per-action` or the matching `QA_EXPLORATORY_*` environment variables. A budget stop is user-facing `UNTEST`, never a clean `PASS`
+Default runtime limits are `40` actions per run, `300000` milliseconds, `16` actions per charter and `1` automatic retry per action. Agentic defaults are `2` reliable stalled actions, `3` consecutive failures, `5` actions without completing one task step and a rolling `12`-action loop window. Override with `--max-actions`, `--max-ms`, `--max-actions-per-charter`, `--max-retries-per-action`, `--agent-stall-limit`, `--max-agent-failures`, `--max-actions-per-task-step`, `--agent-loop-window` or the matching `QA_EXPLORATORY_*` environment variables. A budget stop is user-facing `UNTEST`, never a clean `PASS`
 
 Use the runner commands as the ledger boundary:
 
@@ -52,7 +52,7 @@ Use the runner commands as the ledger boundary:
 10. `charter <RUN_ID> --charter-file <JSON>` after deciding each charter
 11. `finish <RUN_ID> --verdict PASS|FAILED|N/A|UNTEST --reason <text when needed>` before `run-manifest.mjs finish`
 
-The runner rejects browser actions before a rule plan, cross-session pages, unverified selectors, XPath without a reason, coordinate actions without bounding-box plus media evidence, destructive actions that are not internally marked `BLOCKED`, mutation retries, missing high-priority charter verdicts and `PASS` without screenshot/video evidence. Agentic `PASS` additionally requires an independent `SATISFIED` task judge with evidence for every success signal. `PASS` also requires runtime-verified coverage that is `COMPLETE_FOR_SCOPE`, type-specific evidence for applicable hidden-rule probes, an explicit session ID, resolved driver/observer/network tracks and no retry-derived `RECOVERED`/`FLAKY` quality flag. A technical blocker or incomplete scope is exposed as `UNTEST` at the final result boundary
+The runner rejects browser actions before a rule plan, cross-session pages, unverified selectors, XPath without a reason, coordinate actions without bounding-box plus media evidence, destructive actions that are not internally marked `BLOCKED`, mutation retries, an unlinked/non-`ACT` agentic decision, another action after trajectory `REPLAN_REQUIRED`, missing high-priority charter verdicts and `PASS` without screenshot/video evidence. Agentic `PASS` additionally requires an independent `SATISFIED` task judge with evidence for every success signal. `PASS` also requires runtime-verified coverage that is `COMPLETE_FOR_SCOPE`, type-specific evidence for applicable hidden-rule probes, an explicit session ID, resolved driver/observer/network tracks and no retry-derived `RECOVERED`/`FLAKY` quality flag. A technical blocker or incomplete scope is exposed as `UNTEST` at the final result boundary
 
 The run JSON keeps only redacted summaries and evidence pointers. Native `observe` defaults to the compact profile and exposes `truncation` plus a UTF-8/4 context estimate. Escalate to standard/full only when the current target or oracle is missing. Provider-reported token usage is read from `QA_TOKEN_USAGE_FILE`; the card/native estimates and provider measurement remain separate
 
@@ -75,7 +75,8 @@ Maintain a compact state object and refresh it after every meaningful observatio
 ```text
 route, charterId, url, tab, frame, role, dataNamespace
 pageState = loading | ready | dialog | auth_wall | error | stale | unknown
-lastAction, lastExpectedSignal, lastObservedDelta
+lastAction, lastExpectedSignal, lastObservedDelta, automaticOutcome
+trajectoryStatus, consecutiveNoProgress, consecutiveFailures, failedStrategies
 openRisks, unresolvedClaims, evidencePaths, actionCount, deadline
 ```
 

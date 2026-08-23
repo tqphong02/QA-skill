@@ -86,7 +86,9 @@ PW_WORKERS=2 npx playwright test
 
 `fixtures/pom` selects `accounts[parallelIndex]` and `datasets[parallelIndex]`. It intentionally returns `UNTEST` if a required role pool, storage-state file or mutating dataset slot is missing; it never cycles slots. The pool can be a role map (`owner`, `guest`, `auditor`) or an array whose rows declare `role`/`roles`. If an isolated tenant/database/schema is available, apply the same allocation rule.
 
-Without explicit `PW_WORKERS`, the template uses up to four workers only when both account and dataset pool capacity safely allow it; otherwise it defaults to one worker. Explicit `PW_WORKERS` is still checked at runtime and fails closed when a selected testcase lacks capacity.
+All pool consumers use the same lookup order: `<QA_PROJECT_KEY>_TEST_<KIND>_JSON`, `QA_TEST_<KIND>_JSON`, then `TEST_<KIND>_JSON`; blank values do not shadow a lower-priority pool. `QA_PROJECT_KEY` defaults to the normalized package name. An array must be entirely role-tagged or entirely untagged. Reusing the same storage state/login or data root plus values within a role reduces safe capacity. A multi-role account may be reused only at the same `parallelIndex` in every role pool; crossed indexes are unsafe. Changing only `id` does not make duplicate backend data isolated.
+
+Without explicit `PW_WORKERS`, the template uses up to four workers only when both account and dataset pool capacity safely allow it; otherwise it defaults to one worker. Explicit `PW_WORKERS` is still checked by the shared pool contract and fails closed when a selected testcase lacks capacity. The legacy authenticated fixture may fall back to `TEST_USER`/`TEST_PASS` only for a one-worker run.
 
 Read-only authentication scenarios may use one shared account. Document that the test does not change account/session state.
 
@@ -123,10 +125,14 @@ The template includes the namespace in the filename. The fallback includes the p
 
 Prefer `testInfo.outputPath('data.json')` for evidence that belongs to one test because Playwright already isolates each test output directory.
 
+`SessionManager` also scopes filenames by run, project, `TEST_PARALLEL_INDEX` and `TEST_WORKER_INDEX`. Its exported `authSession`, `lastRunSession` and `resourceSession()` instances are worker-local; they are not a synchronization channel between workers.
+
 ## 7. Retry, sharding, and CI rules
 
 - Set `RUN_ID` once before workers start; the template config does this automatically
 - CI matrix jobs need distinct run IDs or a matrix/project component in the namespace
+- Jobs that receive the same static account/data secrets run sequentially; job-level concurrency requires separately leased pools/tenants per job
+- Start one `qa:*` runner per project workspace. It owns the fixed report paths while Playwright workers remain parallel inside that process
 - A retry creates new data; it must not assume the failed attempt cleaned up successfully
 - Shards must not consume the same finite account pool unless each shard has a distinct pool/tenant
 - Do not depend on test order, `beforeAll` side effects from another file, or module-global mutable variables
@@ -146,5 +152,7 @@ PW_WORKERS=2 npx playwright test --grep @data-driven --repeat-each=2
 - [ ] Generated specs import from `fixtures/pom`, not `@playwright/test`
 - [ ] Mutating account tests have enough storage-state accounts and dataset/tenant slots for all parallel workers
 - [ ] JSON/files/resources are namespace-scoped
+- [ ] No identity is duplicated within a role; any multi-role identity keeps the same `parallelIndex`
+- [ ] CI jobs sharing a finite pool are serialized; concurrent jobs have dedicated pools
 - [ ] Cleanup targets only resources owned by that attempt
 - [ ] Suite passes with at least two workers and `--repeat-each=2`

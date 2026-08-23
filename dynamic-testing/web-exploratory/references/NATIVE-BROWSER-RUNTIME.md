@@ -135,7 +135,7 @@ The session keeps full locator candidates behind each ephemeral ref even when th
 
 The reference is intentionally ephemeral. Every successful action marks the page state stale. Reusing `e1` without a new observation fails with `STALE_TARGET`, so the agent cannot silently click an element that moved or changed meaning
 
-Every action result also contains `state_delta`: deterministic URL/title/content/control changes, new headings/alerts, runtime failures and a bounded progress classification. Use it to evaluate the previous goal and decide whether to continue or replan; do not treat the score as a QA oracle
+Every action result also contains `state_delta`: deterministic URL/title/content/form/dialog/control changes, new headings/alerts, runtime failures, `meaningful_change_count` and a bounded progress classification. Form values never leave the page: the runtime compares only an in-page hash, excludes password/card-sensitive values and emits only `form_state_changed`. Use the delta to evaluate the previous goal and decide whether to continue or replan; do not treat the score as a QA oracle. A changed state with runtime failures is `PROGRESS_WITH_RUNTIME_FAILURE`, not clean progress
 
 ## Structured extraction and read-only batches
 
@@ -260,7 +260,7 @@ The native runtime and `exploratory-runner.mjs` have separate responsibilities
 3. `exploratory-runner.mjs start` creates the scope, rule plan and evidence gate
 4. native runtime `start` creates the browser session/pool
 5. `observe → action → observe → verify` executes the live flow
-6. For agentic objectives, `task-plan → decision → action → observe` records why each live action was selected and triggers bounded replan on repeated no-progress
+6. For agentic objectives, `task-plan → decision → action → observe` records why each live action was selected; the trajectory layer fingerprints recent actions and triggers bounded replan on repeated state stagnation, alternating loops, failure budget or task-step exploration budget
 7. `native-action` imports each action result into the QA ledger and links its `decision_id` when provided
 8. rule probes, coverage, charter verdict and final finish remain mandatory
 

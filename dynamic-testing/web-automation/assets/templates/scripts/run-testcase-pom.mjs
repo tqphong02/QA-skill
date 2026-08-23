@@ -10,6 +10,7 @@ import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 import { buildUiCoverage } from './verify-ui-coverage.mjs';
 import { verifyAllureContract } from './verify-allure-contract.mjs';
+import { acquireExecutionLock } from './execution-lock.mjs';
 
 const VALID_PHASES = new Set(['plan', 'execute']);
 const VISUAL_RE = /\.(?:png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i;
@@ -299,7 +300,11 @@ async function main() {
   const planPath = resolveFrom(projectRoot, getArg('--plan-output'), 'reports/testcase-pom-plan.json');
   const runId = getArg('--run-id', `pom-${Date.now()}`);
   const resultPath = resolveFrom(projectRoot, getArg('--output'), 'reports/testcase-pom-execution.json');
-  writeJson(planPath, plan);
+  const executionLock = phase === 'execute'
+    ? acquireExecutionLock(projectRoot, { runId, operation: `testcase-pom:${mode}` })
+    : null;
+  try {
+    writeJson(planPath, plan);
 
   const appBuild = getArg('--app-build');
   const uiInventoryArg = getArg('--ui-inventory', process.env.QA_UI_FUNCTION_INVENTORY || '');
@@ -506,7 +511,10 @@ async function main() {
     writeJson(resultPath, report);
   }
   console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, summary: report.summary }, null, 2));
-  process.exitCode = report.verdict === 'FAILED' ? 1 : report.verdict === 'UNTEST' ? 2 : 0;
+    process.exitCode = report.verdict === 'FAILED' ? 1 : report.verdict === 'UNTEST' ? 2 : 0;
+  } finally {
+    executionLock?.release();
+  }
 }
 
 const isDirectRun = process.argv[1]

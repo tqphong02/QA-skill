@@ -17,7 +17,7 @@ Own the deterministic path from the `.automation.json` automation manifest to a 
 2. Select at most 20 cases by group or testcase ID; use the manifest as the only execution/POM source
 3. Before planning UI work, build the current-build Browser MCP `UI_FUNCTION_INVENTORY` for every allowed route/role/state. Read [ui-coverage-discovery.md](references/ui-coverage-discovery.md); block when required functions are absent from the manifest
 4. Run `testcase-workflow --phase plan --require-ui-coverage`, resolve selectors from same-session Browser MCP evidence, then generate selectors → Page Objects → tagged specs and consolidate by business module
-5. Copy the runtime scaffold: `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, dynamic `playwright.config.ts`, `scripts/artifact-naming.mjs`, `scripts/ci-preflight.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs`. Generated specs import `test`/`expect` from `fixtures/pom`, never directly from `@playwright/test` or `allure-playwright`
+5. Copy the runtime scaffold: `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, `fixtures/parallel-pool.js`, `fixtures/parallel-pool.d.ts`, dynamic `playwright.config.ts`, `scripts/artifact-naming.mjs`, `scripts/execution-lock.mjs`, `scripts/ci-preflight.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs`. Generated specs import `test`/`expect` from `fixtures/pom`, never directly from `@playwright/test` or `allure-playwright`
 6. Bootstrap project-local Playwright with `scripts/bootstrap-playwright.mjs`; install declared dependencies and Chromium before typecheck/provision/test
 7. Pass UI-function coverage, runtime scaffold, placeholder, TypeScript/lint and traceability gates
 8. Run `testcase-workflow --phase execute --require-ui-coverage`; read `reports/ui-function-coverage.json`, `reports/allure-contract.json` and `reports/testcase-pom-execution.json`
@@ -147,11 +147,11 @@ Use bounded state waits for async upload, validation, generation, save and run a
 | Need | Read |
 |---|---|
 | BUILD/RUN/BUILD_AND_RUN or Sheet/Excel | [testcase-execution.md](references/testcase-execution.md) |
-| UI/POM and complete UI coverage | [ui-testing.md](references/ui-testing.md), [selector-discovery.md](references/selector-discovery.md), [ui-coverage-discovery.md](references/ui-coverage-discovery.md) |
+| UI/POM, auto-wait, evidence choice and complete UI coverage | [ui-testing.md](references/ui-testing.md), [selector-discovery.md](references/selector-discovery.md), [ui-coverage-discovery.md](references/ui-coverage-discovery.md) |
 | API | [api-testing.md](references/api-testing.md) |
 | Data-driven/parallel | [data-driven-testing.md](references/data-driven-testing.md) |
 | Traceability/token telemetry | [automation-audit.md](references/automation-audit.md) |
-| CI/Allure/flaky management | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) |
+| CI/GitHub Actions/Jenkins, local-pass/CI-fail, Allure and flaky management | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) |
 | Canonical Allure parameters/evidence | [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
 | Performance | [performance-testing.md](references/performance-testing.md) |
 

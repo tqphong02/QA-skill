@@ -112,7 +112,7 @@ export function sheetFunctionalEvidenceDir(
     normalizeRunDate(runDate),
     sanitizeRunId(runId),
     `worker-${workerId}`,
-  );
+  ).replace(/\\/g, '/');
 }
 
 function validateWorkerCount(value) {

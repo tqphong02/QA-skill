@@ -29,6 +29,12 @@ import { pathToFileURL } from 'node:url';
 import { evaluateActionSafety } from '../analysis/attack-surface.mjs';
 import { resolveModelUsage } from '../../lib/model-telemetry.mjs';
 import {
+  normalizeAgentActionType,
+  createAgentTrajectory,
+  resetAgentTrajectoryForReplan,
+  updateAgentTrajectory,
+} from '../../lib/agent-trajectory.mjs';
+import {
   QA_RESULT_VERDICT_SET,
   normalizeQaResultVerdict,
 } from '../../lib/verdicts.mjs';
@@ -39,7 +45,11 @@ const DEFAULT_MAX_MS = 300_000;
 const DEFAULT_MAX_ACTIONS_PER_CHARTER = 16;
 const DEFAULT_MAX_RETRIES_PER_ACTION = 1;
 const DEFAULT_MAX_AGENT_REPLANS = 3;
-  const DEFAULT_BROWSER_DRIVER = 'playwright-runtime';
+const DEFAULT_AGENT_STALL_LIMIT = 2;
+const DEFAULT_AGENT_FAILURE_LIMIT = 3;
+const DEFAULT_AGENT_EXPLORATION_LIMIT = 5;
+const DEFAULT_AGENT_LOOP_WINDOW = 12;
+const DEFAULT_BROWSER_DRIVER = 'playwright-runtime';
 
 const EXPLORATORY_BROWSER_QA = 'EXPLORATORY_BROWSER_QA';
 const LEGACY_EXPLORATORY_ADHOC = 'EXPLORATORY_ADHOC';
@@ -567,6 +577,9 @@ export function setExploratoryTaskPlan({ dataDir = DATA_DIR, runId, plan }) {
       replan_reason: replanReason,
     });
   }
+  const trajectory = isReplan
+    ? resetAgentTrajectoryForReplan(previous.trajectory)
+    : (previous.trajectory || createAgentTrajectory());
   run.agentic_task = {
     ...previous,
     status: 'READY',
@@ -583,6 +596,7 @@ export function setExploratoryTaskPlan({ dataDir = DATA_DIR, runId, plan }) {
     compact_memory: compactUnique(previous.compact_memory, 8, 240),
     no_progress_count: 0,
     requires_replan: false,
+    trajectory,
     replan_count: Number(previous.replan_count || 0) + (isReplan ? 1 : 0),
     max_replans: Number(previous.max_replans || DEFAULT_MAX_AGENT_REPLANS),
     judge: null,
@@ -614,7 +628,10 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   if (!task || !['READY', 'IN_PROGRESS'].includes(task.status)) {
     fail('set an agentic task plan before recording a decision');
   }
-  if (task.requires_replan) fail('agentic task detected repeated no-progress; record a replan before another action');
+  const requestedDecisionType = text(input.decision, 80).toUpperCase();
+  if (task.requires_replan && !['REPLAN', 'STOP'].includes(requestedDecisionType)) {
+    fail('agentic trajectory requires REPLAN or STOP; record a replan before another action', 'REPLAN_REQUIRED');
+  }
   const page = getPage(run, input.page_id || run.browser.active_page_id);
   const sessionId = text(input.session_id, 160);
   const observationRevision = Number(input.observation_revision);
@@ -626,7 +643,7 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   }
   const step = getTaskStep(run, input.task_step_id || task.current_step_id);
   const evaluation = text(input.evaluation_previous_goal, 80).toUpperCase();
-  const decisionType = text(input.decision, 80).toUpperCase();
+  const decisionType = requestedDecisionType;
   const nextGoal = text(input.next_goal, 320);
   const rationale = text(input.rationale, 280);
   if (!ALLOWED_GOAL_EVALUATIONS.has(evaluation)) fail(`unsupported previous-goal evaluation: ${evaluation || 'missing'}`);
@@ -646,8 +663,23 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
   if (decisionType === 'REPLAN' && !text(input.replan_reason, 320)) {
     fail('REPLAN decision requires replan_reason');
   }
+  if (decisionType === 'COMPLETE' && evaluation !== 'ACHIEVED') {
+    fail('COMPLETE decision requires evaluation_previous_goal=ACHIEVED');
+  }
   const memory = compactUnique(input.memory, 4, 240);
   const previous = task.decisions[task.decisions.length - 1];
+  const previousAutomaticOutcome = text(previous?.automatic_outcome, 80).toUpperCase();
+  const evaluationEvidence = compactUnique(input.evaluation_evidence_refs || input.evidence_refs, 8, 300);
+  const evaluationConflictsWithRuntime = ['NO_PROGRESS', 'CONTRADICTED'].includes(previousAutomaticOutcome)
+    && ['PROGRESS', 'ACHIEVED'].includes(evaluation);
+  if (evaluation === 'ACHIEVED' && evaluationConflictsWithRuntime && !evaluationEvidence.length) {
+    fail(`ACHIEVED overrides deterministic ${previousAutomaticOutcome} and requires evidence_refs`);
+  }
+  const evaluationConsistency = !previousAutomaticOutcome || previousAutomaticOutcome === 'UNKNOWN'
+    ? 'NO_RUNTIME_SIGNAL'
+    : evaluationConflictsWithRuntime
+      ? 'EVIDENCE_OVERRIDE'
+      : 'SUPPORTED';
   const fingerprint = decisionType === 'ACT'
     ? [page.page_id, step.task_step_id, nextGoal, selectedAction.type, selectedAction.semantic_target]
       .map(value => text(value, 300).toLowerCase()).join('|')
@@ -673,6 +705,8 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
     alternatives_considered: compactUnique(input.alternatives_considered, 2, 240),
     rationale,
     memory,
+    evaluation_consistency: evaluationConsistency,
+    evaluation_evidence_refs: evaluationEvidence,
     replan_reason: text(input.replan_reason, 320) || null,
     evidence_refs: compactUnique(input.evidence_refs, 8, 300),
     fingerprint,
@@ -695,6 +729,10 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
     step.attempts += decisionType === 'ACT' ? 1 : 0;
     task.current_step_id = step.task_step_id;
   }
+  if (decisionType === 'COMPLETE' && task.steps.some(item => item.status !== 'COMPLETED')) {
+    task.decisions.pop();
+    fail(`COMPLETE requires every planned step to be completed: ${task.steps.filter(item => item.status !== 'COMPLETED').map(item => item.task_step_id).join(', ')}`);
+  }
   if (decisionType === 'REPLAN') task.requires_replan = true;
   task.updated_at = nowIso();
   saveRun(filePath, run);
@@ -704,6 +742,7 @@ export function recordExploratoryTaskDecision({ dataDir = DATA_DIR, runId, decis
 export function getExploratoryAgentContext({ dataDir = DATA_DIR, runId }) {
   const { run, filePath } = loadRun(path.resolve(dataDir), runId);
   const task = run.agentic_task || {};
+  const trajectory = task.trajectory || createAgentTrajectory();
   const page = run.browser.pages.find(item => item.page_id === run.browser.active_page_id) || null;
   const currentStep = task.steps?.find(item => item.task_step_id === task.current_step_id) || null;
   const lastDecision = task.decisions?.[task.decisions.length - 1] || null;
@@ -736,6 +775,9 @@ export function getExploratoryAgentContext({ dataDir = DATA_DIR, runId }) {
         status: currentStep.status,
         attempts: currentStep.attempts,
       } : null,
+      plan: safeArray((task.steps || []).map(item => (
+        `${item.status}:${item.task_step_id}:${item.goal}`
+      )), 12, 220),
       compact_memory: compactUnique(task.compact_memory, 8, 240),
       requires_replan: Boolean(task.requires_replan),
       replan_count: Number(task.replan_count || 0),
@@ -747,8 +789,30 @@ export function getExploratoryAgentContext({ dataDir = DATA_DIR, runId }) {
         next_goal: lastDecision.next_goal,
         selected_action: lastDecision.selected_action,
         observed_delta: lastDecision.observed_delta || null,
+        automatic_outcome: lastDecision.automatic_outcome || null,
+        failure_class: lastDecision.failure_class || null,
+        evaluation_consistency: lastDecision.evaluation_consistency || null,
         action_id: lastDecision.action_id,
       } : null,
+      trajectory: {
+        last_outcome: trajectory.last_outcome || 'UNKNOWN',
+        consecutive_no_progress: Number(trajectory.consecutive_no_progress || 0),
+        consecutive_failures: Number(trajectory.consecutive_failures || 0),
+        repeated_action_count: Number(trajectory.repeated_action_count || 0),
+        alternating_loop_detected: Boolean(trajectory.alternating_loop_detected),
+        recovery_status: trajectory.recovery?.status || 'CLEAR',
+        reason_codes: safeArray(trajectory.recovery?.reason_codes, 8, 100),
+        strategies: safeArray(trajectory.recovery?.strategies, 4, 220),
+        avoid_actions: safeArray(trajectory.recovery?.avoid_actions, 4, 180),
+        recent_failures: safeArray(
+          (trajectory.entries || [])
+            .filter(item => ['NO_PROGRESS', 'CONTRADICTED', 'BLOCKED'].includes(item.outcome))
+            .slice(-3)
+            .map(item => `${item.outcome}:${item.action_type}:${item.semantic_target || 'target'}`),
+          3,
+          200,
+        ),
+      },
     },
     rule_plan: {
       status: run.rule_discovery?.status,
@@ -904,6 +968,22 @@ export function startExploratoryRun({
     process.env.QA_EXPLORATORY_MAX_RETRIES_PER_ACTION,
     DEFAULT_MAX_RETRIES_PER_ACTION,
   ),
+  maxAgentFailures = positiveInt(
+    process.env.QA_EXPLORATORY_MAX_AGENT_FAILURES,
+    DEFAULT_AGENT_FAILURE_LIMIT,
+  ),
+  maxActionsPerTaskStep = positiveInt(
+    process.env.QA_EXPLORATORY_MAX_ACTIONS_PER_TASK_STEP,
+    DEFAULT_AGENT_EXPLORATION_LIMIT,
+  ),
+  agentStallLimit = positiveInt(
+    process.env.QA_EXPLORATORY_AGENT_STALL_LIMIT,
+    DEFAULT_AGENT_STALL_LIMIT,
+  ),
+  agentLoopWindow = positiveInt(
+    process.env.QA_EXPLORATORY_AGENT_LOOP_WINDOW,
+    DEFAULT_AGENT_LOOP_WINDOW,
+  ),
 } = {}) {
   const normalizedDataDir = path.resolve(dataDir);
   const normalizedMode = normalizeExploratoryMode(mode);
@@ -1004,6 +1084,12 @@ export function startExploratoryRun({
       compact_memory: [],
       no_progress_count: 0,
       requires_replan: false,
+      trajectory: createAgentTrajectory({
+        windowSize: agentLoopWindow,
+        stallLimit: agentStallLimit,
+        failureLimit: maxAgentFailures,
+        explorationLimit: maxActionsPerTaskStep,
+      }),
       replan_count: 0,
       max_replans: DEFAULT_MAX_AGENT_REPLANS,
       judge: null,
@@ -1401,11 +1487,21 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
   const consoleRefs = safeArray(input.console_refs || input.console_page_error_refs, 16);
   const pageErrorRefs = safeArray(input.page_error_refs, 16);
   const decisionId = text(input.decision_id, 120);
+  const plannedAgenticTask = run.agentic_task && run.agentic_task.status !== 'UNPLANNED';
+  if (plannedAgenticTask && !decisionId) {
+    fail('planned agentic task actions require a linked decision_id');
+  }
   const agentDecision = decisionId
     ? run.agentic_task?.decisions?.find(item => item.decision_id === decisionId)
     : null;
   if (decisionId && !agentDecision) fail(`action references unknown agentic decision: ${decisionId}`);
   if (agentDecision?.action_id) fail(`agentic decision is already linked to action: ${decisionId}`);
+  if (agentDecision && agentDecision.decision !== 'ACT') {
+    fail(`only an ACT decision can execute a browser action: ${decisionId}=${agentDecision.decision}`);
+  }
+  if (agentDecision && run.agentic_task?.requires_replan) {
+    fail('agentic trajectory requires a replacement plan before executing another action', 'REPLAN_REQUIRED');
+  }
   if (agentDecision && (agentDecision.session_id !== sessionId || agentDecision.page_id !== page.page_id)) {
     fail('agentic decision does not match the action browser session/page');
   }
@@ -1415,6 +1511,9 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
       fail(`action semantic_target differs from agentic decision: planned=${plannedTarget} actual=${semanticTarget.toLowerCase()}`);
     }
   }
+  const actionType = normalizeAgentActionType(
+    input.action_type || agentDecision?.selected_action?.type || actionText.split(/\s+/)[0],
+  ) || 'unknown';
   const record = {
     action_id: `ACT-${String(run.actions.length + 1).padStart(4, '0')}`,
     charter_id: charter.charter_id,
@@ -1425,6 +1524,7 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
     intent: text(input.intent, 500) || charter.mission,
     semantic_target: semanticTarget,
     locator_evidence: locatorEvidence,
+    action_type: actionType,
     action: actionText,
     http_method: text(input.http_method, 20).toUpperCase() || 'GET',
     target_url: text(input.target_url, 500) || page.url,
@@ -1446,10 +1546,13 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
       url_changed: Boolean(input.state_delta.url_changed),
       title_changed: Boolean(input.state_delta.title_changed),
       content_changed: Boolean(input.state_delta.content_changed),
+      form_state_changed: Boolean(input.state_delta.form_state_changed),
       control_count_changed: Boolean(input.state_delta.control_count_changed),
+      dialog_count_changed: Boolean(input.state_delta.dialog_count_changed),
       new_headings: safeArray(input.state_delta.new_headings, 12),
       new_alerts: safeArray(input.state_delta.new_alerts, 12),
       runtime_failure_count: Number(input.state_delta.runtime_failure_count || 0),
+      meaningful_change_count: Math.max(0, Number(input.state_delta.meaningful_change_count || 0)),
       progress_score: Math.max(0, Math.min(1, Number(input.state_delta.progress_score || 0))),
       progress_classification: text(input.state_delta.progress_classification, 80).toUpperCase() || 'UNKNOWN',
     } : null,
@@ -1463,6 +1566,29 @@ export function recordExploratoryAction({ dataDir = DATA_DIR, runId, action: inp
     agentDecision.observed_delta = record.state_delta;
     const taskStep = getTaskStep(run, agentDecision.task_step_id);
     taskStep.action_ids = safeArray([...taskStep.action_ids, record.action_id], 24);
+    const trajectoryResult = updateAgentTrajectory(run.agentic_task.trajectory, {
+      actionId: record.action_id,
+      decisionId: agentDecision.decision_id,
+      pageId: page.page_id,
+      taskStepId: taskStep.task_step_id,
+      actionType,
+      semanticTarget,
+      verdict: actionVerdict,
+      stateDelta: record.state_delta,
+      stepActionCount: taskStep.action_ids.length,
+      recordedAt: record.recorded_at,
+    });
+    run.agentic_task.trajectory = trajectoryResult.trajectory;
+    agentDecision.action_signature = trajectoryResult.entry.signature;
+    agentDecision.automatic_outcome = trajectoryResult.entry.outcome;
+    agentDecision.failure_class = trajectoryResult.entry.failure_class;
+    agentDecision.recovery_status = trajectoryResult.recovery.status;
+    if (['PROGRESS', 'PROGRESS_WITH_RISK'].includes(trajectoryResult.entry.outcome)) {
+      run.agentic_task.no_progress_count = 0;
+    }
+    if (['REPLAN_REQUIRED', 'STOP_REQUIRED'].includes(trajectoryResult.recovery.status)) {
+      run.agentic_task.requires_replan = true;
+    }
   }
   run.budget.action_count += 1;
   if (retryOf) run.budget.retry_count += 1;
@@ -1533,6 +1659,7 @@ export function recordNativeBrowserAction({
       intent: result.intent || `Native ${result.action_type || 'browser'} action`,
       semantic_target: result.semantic_target || locatorEvidence.selector || result.action_type || 'native browser transition',
       locator_evidence: locatorEvidence,
+      action_type: result.action_type || result.type || '',
       action: result.action || result.action_type || 'native browser action',
       http_method: result.http_method || 'GET',
       target_url: result.after?.url || result.target_url || '',
@@ -1782,6 +1909,10 @@ export async function main(argv = process.argv.slice(2)) {
       maxMs: localGetArg('--max-ms', process.env.QA_EXPLORATORY_MAX_MS || DEFAULT_MAX_MS),
       maxActionsPerCharter: localGetArg('--max-actions-per-charter', process.env.QA_EXPLORATORY_MAX_ACTIONS_PER_CHARTER || DEFAULT_MAX_ACTIONS_PER_CHARTER),
       maxRetriesPerAction: localGetArg('--max-retries-per-action', process.env.QA_EXPLORATORY_MAX_RETRIES_PER_ACTION || DEFAULT_MAX_RETRIES_PER_ACTION),
+      maxAgentFailures: localGetArg('--max-agent-failures', process.env.QA_EXPLORATORY_MAX_AGENT_FAILURES || DEFAULT_AGENT_FAILURE_LIMIT),
+      maxActionsPerTaskStep: localGetArg('--max-actions-per-task-step', process.env.QA_EXPLORATORY_MAX_ACTIONS_PER_TASK_STEP || DEFAULT_AGENT_EXPLORATION_LIMIT),
+      agentStallLimit: localGetArg('--agent-stall-limit', process.env.QA_EXPLORATORY_AGENT_STALL_LIMIT || DEFAULT_AGENT_STALL_LIMIT),
+      agentLoopWindow: localGetArg('--agent-loop-window', process.env.QA_EXPLORATORY_AGENT_LOOP_WINDOW || DEFAULT_AGENT_LOOP_WINDOW),
     });
     printResult(result);
     return 0;

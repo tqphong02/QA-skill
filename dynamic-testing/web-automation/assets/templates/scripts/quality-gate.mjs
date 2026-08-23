@@ -11,10 +11,41 @@ function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
-function collectTests(suites, output = []) {
+function normalizedTest(test, titleParts, inheritedTags = []) {
+  const title = [...titleParts, test.title].filter(Boolean).join(' › ');
+  const explicitTags = [
+    ...inheritedTags,
+    ...(Array.isArray(test.tags) ? test.tags : []),
+  ].map(tag => String(tag));
+  const titleTags = title.match(/@[\w-]+/g) ?? [];
+  return {
+    ...test,
+    title,
+    tags: [...new Set([...explicitTags, ...titleTags])],
+  };
+}
+
+function collectTests(suites, output = [], parentTitles = [], parentTags = []) {
   for (const suite of suites ?? []) {
-    if (suite.tests) output.push(...suite.tests);
-    collectTests(suite.suites, output);
+    const suiteTitles = [...parentTitles, suite.title].filter(Boolean);
+    const suiteTags = [
+      ...parentTags,
+      ...(Array.isArray(suite.tags) ? suite.tags : []),
+      ...((suite.title ?? '').match(/@[\w-]+/g) ?? []),
+    ];
+    if (Array.isArray(suite.tests)) {
+      output.push(...suite.tests.map(test => normalizedTest(test, suiteTitles, suiteTags)));
+    }
+    for (const spec of suite.specs ?? []) {
+      for (const test of spec.tests ?? []) {
+        output.push(normalizedTest(
+          test,
+          [...suiteTitles, spec.title],
+          [...suiteTags, ...(Array.isArray(spec.tags) ? spec.tags : [])],
+        ));
+      }
+    }
+    collectTests(suite.suites, output, suiteTitles, suiteTags);
   }
   return output;
 }
@@ -24,17 +55,23 @@ function evaluate(config, report) {
   const rows = tests.map(test => {
     const results = test.results ?? [];
     const statuses = results.map(result => result.status);
-    const passed = statuses.includes('passed');
+    const attemptPassed = statuses.includes('passed');
     const skipped = statuses.length > 0 && statuses.every(status => status === 'skipped');
-    const failedBeforePass = passed && statuses.some(status => ['failed', 'timedOut', 'interrupted'].includes(status));
+    const flaky = attemptPassed && statuses.some(status => ['failed', 'timedOut', 'interrupted'].includes(status));
+    // Repository invariant: a retry-pass is FAILED with flaky=true, never a
+    // clean PASS. Keep maxFlakeRate as a trend/release threshold, but do not let
+    // a low flake rate override the testcase verdict.
+    const passed = attemptPassed && !flaky;
     const evidence = results.some(result => (result.attachments ?? []).some(attachment =>
       /\.(png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i.test(attachment.path ?? attachment.name ?? '')));
     const evidenceTags = config.evidenceTags ?? ['@ui', '@functional'];
-    const requiresEvidence = evidenceTags.some(tag => String(test.title ?? '').includes(tag));
-    return { id: test.testId ?? test.title, passed, skipped, flaky: failedBeforePass, evidence, requiresEvidence, duration: results.reduce((sum, result) => sum + (result.duration ?? 0), 0) };
+    const title = String(test.title ?? '');
+    const tags = Array.isArray(test.tags) ? test.tags.map(tag => String(tag)) : [];
+    const requiresEvidence = evidenceTags.some(tag => title.includes(tag) || tags.includes(tag));
+    return { id: test.testId ?? title, title, passed, skipped, flaky, evidence, requiresEvidence, duration: results.reduce((sum, result) => sum + (result.duration ?? 0), 0) };
   });
   const executed = rows.filter(row => !row.skipped);
-  const failed = executed.filter(row => !row.passed && !row.flaky).length;
+  const failed = executed.filter(row => !row.passed).length;
   const flaky = executed.filter(row => row.flaky).length;
   const durationSeconds = executed.reduce((sum, row) => sum + row.duration, 0) / 1000;
   const evidenceRequired = executed.filter(row => row.requiresEvidence);
@@ -42,6 +79,7 @@ function evaluate(config, report) {
   const branchCoverage = Number(report.branchCoverage ?? 0);
   const thresholds = config.thresholds ?? {};
   const checks = {
+    testsDiscovered: { actual: rows.length, limit: 1, pass: rows.length >= 1 },
     failed: { actual: failed, limit: thresholds.maxFailed ?? 0, pass: failed <= (thresholds.maxFailed ?? 0) },
     flakyRate: { actual: executed.length ? flaky / executed.length : 0, limit: thresholds.maxFlakeRate ?? 0, pass: executed.length ? flaky / executed.length <= (thresholds.maxFlakeRate ?? 0) : true },
     durationSeconds: { actual: durationSeconds, limit: thresholds.maxDurationSeconds ?? Number.POSITIVE_INFINITY, pass: durationSeconds <= (thresholds.maxDurationSeconds ?? Number.POSITIVE_INFINITY) },

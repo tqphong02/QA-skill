@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import {
   LOCATOR_PRIORITY,
   MAX_ACTIONS_PER_AGENT_STEP,
@@ -109,7 +110,7 @@ test('native browser options use tested-project data paths and explicit auth mod
     cdpUrl: 'http://127.0.0.1:9222',
     headless: false,
   });
-  assert.equal(options.dataDir, '/tmp/qa-project');
+  assert.equal(options.dataDir, path.resolve('/tmp/qa-project'));
   assert.equal(options.runId, 'orders-run-1');
   assert.equal(options.workerId, 2);
   assert.equal(options.cdpUrl, 'http://127.0.0.1:9222');
@@ -156,6 +157,35 @@ test('native state delta exposes deterministic progress signals without model co
   assert.equal(delta.content_changed, true);
   assert.equal(delta.progress_classification, 'STRONG_PROGRESS');
   assert.ok(delta.progress_score >= 0.5);
+});
+
+test('native state delta recognizes form and dialog changes without exposing input values', () => {
+  const delta = computeNativeStateDelta(
+    {
+      url: 'https://app.test/orders/new',
+      title: 'New order',
+      headings: ['New order'],
+      content_fingerprint: 'same-content',
+      form_fingerprint: 'form-before',
+      interactive_count: 4,
+      dialog_count: 0,
+    },
+    {
+      url: 'https://app.test/orders/new',
+      title: 'New order',
+      headings: ['New order'],
+      content_fingerprint: 'same-content',
+      form_fingerprint: 'form-after',
+      interactive_count: 4,
+      dialog_count: 1,
+    },
+    { failures: [] },
+  );
+  assert.equal(delta.form_state_changed, true);
+  assert.equal(delta.dialog_count_changed, true);
+  assert.equal(delta.meaningful_change_count, 2);
+  assert.equal(delta.progress_classification, 'PROGRESS');
+  assert.equal('form_fingerprint' in delta, false);
 });
 
 test('native browser options normalize an explicit allowed-origin boundary', () => {

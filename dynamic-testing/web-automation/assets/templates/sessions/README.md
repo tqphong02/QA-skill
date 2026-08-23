@@ -8,10 +8,15 @@
 
 | File | Tạo bởi | Mô tả |
 |---|---|---|
-| `auth.json` | `fixtures/auth.ts` → `setupStorageState()` | Storage state sau khi login (cookies + localStorage) |
-| `auth-storage.json` | `fixtures/auth.ts` | Playwright storageState format |
-| `last-run.json` | `fixtures/session.ts` → `lastRunSession` | Snapshot của test run gần nhất (debug) |
-| `resource-<name>.json` | `fixtures/session.ts` → `resourceSession()` | Per-resource session data |
+| `auth-<run>-<project>-pN-wN.json` | `fixtures/auth.ts` | Storage state riêng cho một worker |
+| `auth.<scope>.json` | `fixtures/session.ts` → `authSession` | Token/context trong cùng run + worker |
+| `last-run.<scope>.json` | `fixtures/session.ts` → `lastRunSession` | Snapshot debug của worker |
+| `resource-<name>.<scope>.json` | `fixtures/session.ts` → `resourceSession()` | Per-resource data của worker |
+
+`<scope>` mặc định gồm run ID, project key, `TEST_PARALLEL_INDEX` và
+`TEST_WORKER_INDEX` (hoặc PID ngoài Playwright). Vì vậy hai worker không cùng
+read-modify-write một JSON file. Session này không dùng để truyền state giữa
+workers; data cần chia sẻ phải đi qua backend có locking/ownership rõ ràng.
 
 ## Gitignore
 
@@ -61,3 +66,7 @@ test('use saved token', async ({ request }) => {
 const userSession = resourceSession('user');
 userSession.set('lastCreatedId', 'abc-123');
 ```
+
+Chỉ truyền namespace tường minh trong một coordinator process đã chứng minh
+ownership; không dùng một namespace cố định cho các Playwright worker chạy song
+song.

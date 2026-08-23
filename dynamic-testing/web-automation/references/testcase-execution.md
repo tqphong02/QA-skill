@@ -69,7 +69,7 @@ The generated `pom-plan` records the canonical identity for a bounded module:
 All downstream artifact builders consume `module.slug`; they must not
 normalize `module.group` independently.
 
-BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, `scripts/artifact-naming.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough slots.
+BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, `fixtures/parallel-pool.js`, `fixtures/parallel-pool.d.ts`, `scripts/artifact-naming.mjs`, `scripts/execution-lock.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough unique slots. One `qa:*`/testcase runner owns the fixed reporter paths per project root; a concurrent second invocation is `BLOCKED` while Playwright workers inside the owner invocation remain parallel.
 
 After generating selectors, Page Objects and specs, execute the same IDs:
 

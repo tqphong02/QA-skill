@@ -46,7 +46,10 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
   requireFile(resolvedRoot, 'fixtures/pom.ts', violations);
   requireFile(resolvedRoot, 'fixtures/runtime-context.ts', violations);
   requireFile(resolvedRoot, 'fixtures/allure-contract.ts', violations);
+  requireFile(resolvedRoot, 'fixtures/parallel-pool.js', violations);
+  requireFile(resolvedRoot, 'fixtures/parallel-pool.d.ts', violations);
   requireFile(resolvedRoot, 'scripts/artifact-naming.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-allure-contract.mjs', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/merge-allure-results.mjs', violations);

@@ -41,7 +41,7 @@ For FAST, validate URL/domain, prefer `native-browser-runtime.mjs quick-start`, 
 1. Validate exact target URL/domain, objective, session, authority, role/data and stop conditions before browser action
 2. Default to `playwright-runtime`/Playwright MCP. Gemini/Antigravity is the host model, not a browser override: never use Gemini-in-Chrome or `antigravity-native`; unavailable Playwright is `UNTEST`
 3. Start Network, Console and Page Error observation in the same page/session as the UI driver. The observer and UI action must use the same session; cross-session evidence cannot support `PASS`
-4. Full exploratory/app-baseline runs start `exploratory-runner.mjs` with the same `RUN_ID`, declare `rule-plan`, and use observe → plan → one action → verify/state delta → recover/re-rank → complete/stop → independent task judge. Read [AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md) only for a non-deterministic path
+4. Full exploratory/app-baseline runs start `exploratory-runner.mjs` with the same `RUN_ID`, declare `rule-plan`, and use observe → plan → one action → verify/state delta → trajectory health/recovery → re-rank → complete/stop → independent task judge. The runner fingerprints actions, detects state stagnation and alternating loops, and blocks another `ACT` when `REPLAN_REQUIRED`; read [AGENTIC-TASK-PLANNING.md](references/AGENTIC-TASK-PLANNING.md) only for a non-deterministic path
 5. Full exploratory/ad-hoc and app baseline are UI-first. Requirements, source, guides, role/data and a Business Execution Brief are optional enrichment; never invent an oracle
 6. Retest, supplied-oracle regression and source-driven routes may use `context-builder.mjs`; a missing required brief field is `UNTEST`, not a generic fallback
 7. Every live route gets one `BROWSER_OBSERVABILITY` row. A full QA `PASS` needs target, oracle, observer, evidence, applicable rule probes, high-priority coverage and a `SATISFIED` independent judge
@@ -49,7 +49,7 @@ For FAST, validate URL/domain, prefer `native-browser-runtime.mjs quick-start`, 
 
 ## Token-efficient execution
 
-- Start observations at `detail=compact`; combine the latest packet with `exploratory-runner.mjs agent-context <RUN_ID>`
+- Start observations at `detail=compact`; combine the latest packet with `exploratory-runner.mjs agent-context <RUN_ID>`, including its plan status, automatic action outcome, compact trajectory and recovery strategies
 - Escalate to `standard`/`full` only when truncation hides the target or oracle
 - Prefer target-scoped `extract`; keep screenshots, traces and runtime events file-backed
 - Keep one current goal, one action and compact memory; compaction never removes evidence, observability, rule probes, coverage or judge requirements

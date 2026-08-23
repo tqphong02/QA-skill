@@ -15,6 +15,13 @@ import {
   captureCanonicalUiEvidence,
   canonicalAccountLabel,
 } from './allure-contract';
+import {
+  assertParallelPool,
+  assertPoolCapacity,
+  configuredPool,
+  packageProjectKey,
+  selectPoolSlots,
+} from './parallel-pool.js';
 
 /**
  * Auth Fixture Template — quản lý authentication cho cả suite.
@@ -54,31 +61,50 @@ function safeFileSegment(value: string): string {
 }
 
 function resolveWorkerAccount(workerInfo: WorkerInfo): TestAccount {
-  const rawPool = process.env.TEST_ACCOUNTS_JSON;
-  if (!rawPool) return AUTH_CONFIG.credentials;
-
-  let accounts: TestAccount[];
-  try {
-    accounts = JSON.parse(rawPool) as TestAccount[];
-  } catch {
-    throw new Error('TEST_ACCOUNTS_JSON must be a valid JSON array of { email, password }');
+  const projectRoot = process.cwd();
+  const projectKey = packageProjectKey(projectRoot);
+  const accountEnvironment = configuredPool('ACCOUNTS', projectKey);
+  const workers = Math.max(1, workerInfo.config.workers);
+  if (!accountEnvironment) {
+    if (workers > 1) {
+      throw new Error(
+        'UNTEST: parallel authenticated fixtures require one account per worker in '
+        + `${projectKey}_TEST_ACCOUNTS_JSON, QA_TEST_ACCOUNTS_JSON or TEST_ACCOUNTS_JSON`,
+      );
+    }
+    return AUTH_CONFIG.credentials;
   }
 
-  const invalid = !Array.isArray(accounts) || accounts.some(
-    (account) => !account || typeof account.email !== 'string' || typeof account.password !== 'string',
+  const role = process.env.QA_ROLE?.trim() || 'default';
+  assertParallelPool(
+    accountEnvironment.raw,
+    workers,
+    accountEnvironment.name,
+    'ACCOUNTS',
+    projectRoot,
   );
-  if (invalid) {
-    throw new Error('TEST_ACCOUNTS_JSON must contain only { email, password } objects');
-  }
+  const accounts = selectPoolSlots(
+    accountEnvironment.raw,
+    accountEnvironment.name,
+    role,
+    true,
+  );
+  assertPoolCapacity(accounts, workers, accountEnvironment.name, 'ACCOUNTS', projectRoot);
 
   const account = accounts[workerInfo.parallelIndex];
   if (!account) {
     throw new Error(
-      `TEST_ACCOUNTS_JSON has ${accounts.length} account(s), but parallel slot `
+      `UNTEST: ${accountEnvironment.name} has ${accounts.length} account(s), but parallel slot `
       + `${workerInfo.parallelIndex} needs its own account; do not cycle shared accounts`,
     );
   }
-  return account;
+  if (typeof account.email !== 'string' || !account.email.trim()
+    || typeof account.password !== 'string' || !account.password) {
+    throw new Error(
+      `UNTEST: ${accountEnvironment.name} slot ${workerInfo.parallelIndex} must contain email and password`,
+    );
+  }
+  return { email: account.email, password: account.password };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -218,7 +244,7 @@ export const test = base.extend<AuthFixtures, AuthWorkerFixtures>({
   // ─── Fixture: workerStorageStatePath ─────────────────────
   workerStorageStatePath: [
     async ({ workerAccount }, use, workerInfo) => {
-      const runId = safeFileSegment(process.env.RUN_ID ?? `local-${process.pid}`);
+      const runId = safeFileSegment(process.env.RUN_ID ?? process.env.QA_RUN_ID ?? `local-${process.pid}`);
       const project = safeFileSegment(workerInfo.project.name);
       const storagePath = path.resolve(
         __dirname,

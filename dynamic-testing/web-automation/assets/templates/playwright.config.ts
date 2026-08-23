@@ -1,7 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
+import {
+  configuredPool,
+  packageProjectKey,
+  poolCapacity,
+} from './fixtures/parallel-pool.js';
 
 // Set once in the config process; every worker inherits the same run ID.
-process.env.RUN_ID ??= `local-${Date.now()}-${process.pid}`;
+process.env.RUN_ID ??= process.env.QA_RUN_ID ?? `local-${Date.now()}-${process.pid}`;
+process.env.QA_RUN_ID ??= process.env.RUN_ID;
 // Evidence is on by default for direct `npm test` as well as the unified runner.
 // Explicitly set QA_UNIFIED_EVIDENCE=false only for local debugging.
 const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE !== 'false';
@@ -15,35 +21,14 @@ function resolveRetries(): number {
   return retries;
 }
 
-function poolCapacity(raw: string | undefined): number {
-  if (!raw) return 0;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (Array.isArray(parsed)) return parsed.length;
-    if (parsed && typeof parsed === 'object') {
-      const sizes = Object.values(parsed).filter(Array.isArray).map(items => items.length);
-      return sizes.length > 0 ? Math.min(...sizes) : 0;
-    }
-  } catch {
-    return 0;
-  }
-  return 0;
-}
-
-function configuredPool(kind: 'ACCOUNTS' | 'DATASETS'): string | undefined {
-  const projectKey = (process.env.QA_PROJECT_KEY ?? '')
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toUpperCase();
-  return process.env[`QA_TEST_${kind}_JSON`]
-    ?? process.env[`TEST_${kind}_JSON`]
-    ?? (projectKey ? process.env[`${projectKey}_TEST_${kind}_JSON`] : undefined);
-}
-
 function resolveWorkers(): number {
   if (!process.env.PW_WORKERS) {
-    const accountCapacity = poolCapacity(configuredPool('ACCOUNTS'));
-    const datasetCapacity = poolCapacity(configuredPool('DATASETS'));
+    const projectRoot = process.cwd();
+    const projectKey = packageProjectKey(projectRoot);
+    const accountPool = configuredPool('ACCOUNTS', projectKey);
+    const datasetPool = configuredPool('DATASETS', projectKey);
+    const accountCapacity = poolCapacity(accountPool?.raw, 'ACCOUNTS', projectRoot);
+    const datasetCapacity = poolCapacity(datasetPool?.raw, 'DATASETS', projectRoot);
     const safeCapacity = Math.min(accountCapacity, datasetCapacity, 4);
     return safeCapacity >= 2 ? safeCapacity : 1;
   }

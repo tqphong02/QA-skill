@@ -75,7 +75,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
     "@playwright/test": "^1.45.0",
-    "@types/node": "^20.14.0",
+    "@types/node": "^24.0.0",
     "allure-commandline": "^2.27.0",
     "allure-playwright": "^2.15.0",
     "eslint": "^8.57.0",
@@ -87,7 +87,7 @@
     "zod": "^3.23.0"
   },
   "engines": {
-    "node": ">=18.0.0",
+    "node": "^22.0.0 || ^24.0.0",
     "npm": ">=9.0.0"
   }
 }

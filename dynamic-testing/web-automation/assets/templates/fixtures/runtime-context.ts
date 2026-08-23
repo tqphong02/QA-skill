@@ -2,6 +2,14 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Page, TestInfo } from '@playwright/test';
+import {
+  assertParallelPool,
+  assertPoolCapacity,
+  configuredPool,
+  envSegment,
+  packageProjectKey,
+  selectPoolSlots,
+} from './parallel-pool.js';
 
 type JsonObject = Record<string, unknown>;
 
@@ -16,7 +24,7 @@ type AutomationTestcase = {
   };
 };
 
-type RuntimeSlot = {
+type RuntimeSlot = JsonObject & {
   id?: string;
   role?: string;
   roles?: string[];
@@ -68,15 +76,6 @@ function safeSegment(value: string, maxLength = 80): string {
     .slice(0, maxLength) || 'slot';
 }
 
-function envSegment(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^A-Za-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .toUpperCase();
-}
-
 function shortHash(value: string, length = 12): string {
   return createHash('sha256').update(value).digest('hex').slice(0, length);
 }
@@ -87,56 +86,6 @@ function readJson(filePath: string): unknown {
   } catch (error) {
     throw new Error(`UNTEST: cannot parse ${filePath}: ${(error as Error).message}`);
   }
-}
-
-function packageProjectKey(projectRoot: string): string {
-  if (process.env.QA_PROJECT_KEY) return envSegment(process.env.QA_PROJECT_KEY);
-  const packagePath = path.join(projectRoot, 'package.json');
-  if (!fs.existsSync(packagePath)) return 'QA';
-  const parsed = readJson(packagePath);
-  if (!isObject(parsed) || typeof parsed.name !== 'string') return 'QA';
-  return envSegment(parsed.name.split(/[^A-Za-z0-9]+/)[0] || 'QA');
-}
-
-function poolEnvironment(kind: 'ACCOUNTS' | 'DATASETS', projectKey: string): { name: string; raw: string } | null {
-  const candidates = [
-    `QA_TEST_${kind}_JSON`,
-    `TEST_${kind}_JSON`,
-    `${projectKey}_TEST_${kind}_JSON`,
-  ];
-  for (const name of [...new Set(candidates)]) {
-    const raw = process.env[name];
-    if (raw) return { name, raw };
-  }
-  return null;
-}
-
-function normalizePool(raw: string, envName: string, role: string, required: boolean): RuntimeSlot[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    throw new Error(`UNTEST: ${envName} must contain valid JSON`);
-  }
-
-  let candidates: unknown;
-  if (Array.isArray(parsed)) {
-    const typed = parsed.filter(isObject);
-    const hasRoleMetadata = typed.some(slot => typeof slot.role === 'string' || Array.isArray(slot.roles));
-    candidates = hasRoleMetadata
-      ? typed.filter(slot => slot.role === role || (Array.isArray(slot.roles) && slot.roles.includes(role)))
-      : typed;
-  } else if (isObject(parsed)) {
-    candidates = parsed[role] ?? parsed.default;
-  }
-
-  if (candidates === undefined && !required) return [];
-  if (!Array.isArray(candidates) || candidates.some(slot => !isObject(slot))) {
-    throw new Error(
-      `UNTEST: ${envName} must be an array or a role map containing arrays; missing role pool: ${role}`,
-    );
-  }
-  return candidates as RuntimeSlot[];
 }
 
 function slotName(slot: RuntimeSlot, index: number): string {
@@ -151,23 +100,6 @@ function dataRoot(slot: RuntimeSlot | null): string | null {
 function storageState(slot: RuntimeSlot | null): string | null {
   const value = slot?.storageState ?? slot?.storage_state;
   return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-function assertPoolCapacity(
-  slots: RuntimeSlot[],
-  workers: number,
-  envName: string,
-  identity: (slot: RuntimeSlot, index: number) => string,
-): void {
-  if (slots.length < workers) {
-    throw new Error(
-      `UNTEST: ${envName} has ${slots.length} slot(s), but ${workers} Playwright workers require one slot each`,
-    );
-  }
-  const identities = slots.slice(0, workers).map(identity);
-  if (new Set(identities).size !== identities.length) {
-    throw new Error(`UNTEST: ${envName} reuses a slot across parallel workers`);
-  }
 }
 
 function publicRoute(route: string): boolean {
@@ -272,18 +204,29 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
   const route = testcase.execution?.entry?.route || '';
   const workers = Math.max(1, testInfo.config.workers);
   const projectKey = packageProjectKey(projectRoot);
-  const accountEnvironment = poolEnvironment('ACCOUNTS', projectKey);
-  const datasetEnvironment = poolEnvironment('DATASETS', projectKey);
+  const accountEnvironment = configuredPool('ACCOUNTS', projectKey);
+  const datasetEnvironment = configuredPool('DATASETS', projectKey);
   const needsAuthentication = role !== 'unauthenticated' && !publicRoute(route);
 
   let accountPool: RuntimeSlot[] = [];
   if (accountEnvironment) {
-    accountPool = normalizePool(accountEnvironment.raw, accountEnvironment.name, role, needsAuthentication);
     if (needsAuthentication) {
-      assertPoolCapacity(accountPool, workers, accountEnvironment.name, (slot, index) => {
-        const state = storageState(slot);
-        return state ? path.resolve(projectRoot, state) : `missing-${index}`;
-      });
+      assertParallelPool(
+        accountEnvironment.raw,
+        workers,
+        accountEnvironment.name,
+        'ACCOUNTS',
+        projectRoot,
+      );
+    }
+    accountPool = selectPoolSlots(
+      accountEnvironment.raw,
+      accountEnvironment.name,
+      role,
+      needsAuthentication,
+    ) as RuntimeSlot[];
+    if (needsAuthentication) {
+      assertPoolCapacity(accountPool, workers, accountEnvironment.name, 'ACCOUNTS', projectRoot);
     }
   } else if (needsAuthentication) {
     throw new Error(
@@ -293,18 +236,23 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
 
   let datasetPool: RuntimeSlot[] = [];
   if (datasetEnvironment) {
-    datasetPool = normalizePool(
+    if (workers > 1 && mutates) {
+      assertParallelPool(
+        datasetEnvironment.raw,
+        workers,
+        datasetEnvironment.name,
+        'DATASETS',
+        projectRoot,
+      );
+    }
+    datasetPool = selectPoolSlots(
       datasetEnvironment.raw,
       datasetEnvironment.name,
       role,
       workers > 1 && mutates,
-    );
+    ) as RuntimeSlot[];
     if (workers > 1 && mutates) {
-      assertPoolCapacity(datasetPool, workers, datasetEnvironment.name, (slot, index) => (
-        typeof slot.id === 'string' && slot.id.trim()
-          ? slot.id.trim()
-          : `${dataRoot(slot) ?? ''}:${shortHash(JSON.stringify(slot.values ?? {}))}:${index}`
-      ));
+      assertPoolCapacity(datasetPool, workers, datasetEnvironment.name, 'DATASETS', projectRoot);
     }
   } else if (workers > 1 && mutates) {
     throw new Error(
