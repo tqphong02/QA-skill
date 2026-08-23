@@ -392,7 +392,7 @@ export function createPomRuntimeContext(testInfo: TestInfo, projectRoot = proces
 
   const resolveFile = (value: unknown, targetKey?: string): string => {
     const rendered = resolveValue(value, targetKey);
-    const root = dataRoot(dataset) ?? dataRoot(account) ?? 'testdata';
+    const root = dataRoot(dataset) ?? dataRoot(account) ?? 'runtime-data';
     const sourcePath = path.isAbsolute(rendered)
       ? rendered
       : path.resolve(projectRoot, root, rendered);

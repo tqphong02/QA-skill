@@ -462,7 +462,7 @@ function planeChecks(skill) {
 
 function pomChecks(skill) {
   const templateRoot = skillPath('dynamic-web-automation', 'assets', 'templates')
-  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'quality-gates.json', 'scripts/quality-gate.mjs', 'scripts/generate-pom-plan.mjs', 'scripts/verify-testcase-traceability.mjs']
+  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'test-data/cases/login.cases.ts', 'runtime-data/.gitkeep', 'runtime-data/README.md', 'quality-gates.json', 'scripts/quality-gate.mjs', 'scripts/artifact-naming.mjs', 'scripts/ci-preflight.mjs', 'scripts/generate-pom-plan.mjs', 'scripts/verify-module-artifact-layout.mjs', 'scripts/verify-testcase-traceability.mjs']
   const missing = required.filter(file => !fs.existsSync(path.join(templateRoot, file)))
   const specFiles = []
   function collect(directory) {

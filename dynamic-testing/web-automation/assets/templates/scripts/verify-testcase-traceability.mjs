@@ -14,6 +14,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resolveModuleSlug } from './artifact-naming.mjs';
 
 const CODE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const EXCLUDED_DIRS = new Set([
@@ -25,7 +26,7 @@ const EXCLUDED_DIRS = new Set([
   'allure-results',
   'allure-report',
   'sessions',
-  'testdata',
+  'runtime-data',
 ]);
 const ACTIONABLE_ACTIONS = new Set([
   'click',
@@ -94,16 +95,6 @@ function getArg(flag, fallback = '') {
 
 function displayPath(filePath, baseDir) {
   return path.relative(baseDir, filePath).replaceAll(path.sep, '/') || '.';
-}
-
-function moduleSlug(value) {
-  return String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/&/g, ' va ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 function sha256(filePath) {
@@ -702,8 +693,8 @@ function normalizedRoute(value) {
 function evidenceMatchesCase(record, testcase, targetKey) {
   const evidenceTestcaseId = String(record.testcase_id || '').trim();
   if (evidenceTestcaseId && evidenceTestcaseId !== testcase.id) return false;
-  const expectedFeature = moduleSlug(testcase.group);
-  const evidenceFeature = moduleSlug(record.feature || path.basename(record.evidence_file || '', '.json'));
+  const expectedFeature = resolveModuleSlug(testcase.group);
+  const evidenceFeature = resolveModuleSlug(record.feature || path.basename(record.evidence_file || '', '.json'));
   const hasTargetSpecificRoute = Boolean(testcase.target_routes?.[targetKey]);
   if (expectedFeature && evidenceFeature
     && evidenceFeature !== expectedFeature

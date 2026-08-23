@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { resolveModuleSlug } from './artifact-naming.mjs';
 import { parseAutomationManifest } from './verify-testcase-traceability.mjs';
 
 const STRATEGY_ORDER = ['testid', 'id', 'css', 'role', 'label', 'placeholder', 'text', 'xpath'];
@@ -37,18 +38,6 @@ function arg(flag, fallback = '') {
 
 function hasArg(flag) {
   return process.argv.includes(flag);
-}
-
-function slug(value, fallback = 'selectors') {
-  const normalized = String(value || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/&/g, '-and-')
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80);
-  return normalized || fallback;
 }
 
 function clean(value, max = 500) {
@@ -322,7 +311,7 @@ function normalizeBrowserMcpEvidence(source, contexts, {
 
   const evidence = {
     schema_version: 2,
-    feature: feature || slug(source.feature || 'selectors'),
+    feature: resolveModuleSlug(feature || source.feature || 'selectors', 'selectors'),
     provider: effectiveProvider,
     browser: source.browser || 'chromium',
     browser_driver: source.browser_driver || effectiveProvider,
@@ -769,7 +758,7 @@ function buildTargetContexts(manifest, parsed, { group, testcaseIds, targetKeys 
       }
       const context = {
         testcase_id: testcase.id,
-        feature: slug(arg('--module', testcase.group || 'selectors')),
+        feature: resolveModuleSlug(arg('--module', testcase.group || 'selectors')),
         target_key: key,
         target: { ...target },
         route: target.route || route || '',
@@ -831,7 +820,7 @@ Options:
   --browser-mcp-evidence <file>
                            JSON exported from the same Browser MCP discovery session
   --run-id <id>            Browser discovery run id
-  --output <file>          Evidence output (default: selector-evidence/<module>.json)
+  --output <file>          Evidence output (default: selector-evidence/<module-slug>.json)
   --headed                 Show the browser window
 `);
 }
@@ -860,7 +849,7 @@ async function main() {
 
   const runId = clean(arg('--run-id', process.env.RUN_ID || process.env.QA_RUN_ID || `selector-discovery-${Date.now()}`), 120);
   const requestedRunId = hasArg('--run-id') ? runId : '';
-  const outputPath = path.resolve(projectRoot, arg('--output', path.join('selector-evidence', `${slug(group || contexts[0].feature)}.json`)));
+  const outputPath = path.resolve(projectRoot, arg('--output', path.join('selector-evidence', `${resolveModuleSlug(group || contexts[0].feature)}.json`)));
   const providerArg = normalizeProvider(arg('--provider', process.env.QA_SELECTOR_PROVIDER || ''));
   const browserMcpEvidenceArg = arg('--browser-mcp-evidence', process.env.QA_BROWSER_MCP_SELECTOR_EVIDENCE || '');
   const browserMcpEvidencePath = browserMcpEvidenceArg
@@ -883,7 +872,7 @@ async function main() {
       expectedProvider,
       appBuild,
       runId: requestedRunId,
-      feature: slug(group || contexts[0].feature),
+      feature: resolveModuleSlug(group || contexts[0].feature),
     });
     if (normalized.evidence) writeJson(outputPath, normalized.evidence);
     const evidence = normalized.evidence || {
@@ -917,7 +906,7 @@ async function main() {
   const capturedAt = new Date().toISOString();
   const evidence = {
     schema_version: 1,
-    feature: slug(group || contexts[0].feature),
+    feature: resolveModuleSlug(group || contexts[0].feature),
     provider,
     browser: 'chromium',
     captured_at: capturedAt,

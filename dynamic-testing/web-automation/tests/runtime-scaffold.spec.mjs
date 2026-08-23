@@ -14,16 +14,24 @@ function write(root, relativePath, contents) {
 
 function scaffoldRoot(specImport) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-runtime-scaffold-'));
-  write(root, 'fixtures/pom.ts', 'export const test = {}; export const expect = {};\n');
+  write(root, 'fixtures/pom.ts', 'export const test = {}; export const expect = {}; captureCanonicalUiEvidence;\n');
   write(root, 'fixtures/runtime-context.ts', 'export const runtime = {};\n');
+  write(root, 'fixtures/allure-contract.ts', 'export const canonical = true;\n');
+  write(root, 'scripts/artifact-naming.mjs', 'export const resolveModuleSlug = value => value;\n');
+  write(root, 'scripts/verify-allure-contract.mjs', 'export const verifyAllureContract = () => ({ status: "PASS" });\n');
+  write(root, 'scripts/qa.mjs', 'export const main = () => 0;\n');
+  write(root, 'scripts/merge-allure-results.mjs', 'export const mergeAllureResults = () => ({ status: "PASS" });\n');
   write(root, 'playwright.config.ts', `
 const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE !== 'false';
 const workers = process.env.PW_WORKERS || 1;
 export default {
   workers,
   outputDir: 'evidence/test-results',
-  reporter: [['json', { outputFile: 'reports/playwright.json' }]],
-  use: { trace: unifiedEvidence ? 'on' : 'retain-on-failure', screenshot: 'on', video: 'on' },
+  reporter: [
+    ['json', { outputFile: 'reports/playwright.json' }],
+    ['allure-playwright', { resultsDir: 'reports/allure-results', detail: true, suiteTitle: false }],
+  ],
+  use: { trace: unifiedEvidence ? 'on' : 'retain-on-failure', screenshot: 'off', video: 'on' },
 };
 `);
   write(root, 'tests/functional/example.functional.spec.ts', `

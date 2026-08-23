@@ -1,8 +1,10 @@
 # Selector evidence
 
-Store one JSON manifest per feature here after resolving the testcase target keys in the real environment
+Store one JSON manifest per module here after resolving the testcase target keys in the real environment. The filename is
+`<module-slug>.json`, where the slug is derived from `testcase.group` using
+the canonical artifact naming rule.
 
-For complete UI/POM coverage, store the Browser MCP route/state inventory beside the selector manifest as `<module>.ui-function-inventory.json` and run `scripts/verify-ui-coverage.mjs` before selector promotion. Selector evidence covers known targets; the inventory gate detects functions that were never added to the testcase manifest
+For complete UI/POM coverage, store the Browser MCP route/state inventory beside the selector manifest as `<module-slug>.ui-function-inventory.json` and run `scripts/verify-ui-coverage.mjs` before selector promotion. Selector evidence covers known targets; the inventory gate detects functions that were never added to the testcase manifest
 
 Each target record should include:
 
@@ -23,9 +25,9 @@ The default discovery command requires a Browser MCP evidence file:
 ```bash
 npm run discover:selectors -- \
   --manifest testcases/<feature>.automation.json \
-  --group <module> \
+  --group <module-slug> \
   --app-build "$QA_APP_BUILD" \
-  --browser-mcp-evidence selector-evidence/<module>.browser-mcp.json
+  --browser-mcp-evidence selector-evidence/<module-slug>.browser-mcp.json
 ```
 
 For an XPath target, include `xpath` with the exact short expression returned by

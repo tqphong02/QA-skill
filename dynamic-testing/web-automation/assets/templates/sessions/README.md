@@ -19,7 +19,7 @@ Sessions folder PHẢI được gitignore (chứa secrets):
 
 ```gitignore
 # .gitignore
-sessions/*.json
+sessions/*
 !sessions/.gitkeep
 !sessions/README.md
 ```

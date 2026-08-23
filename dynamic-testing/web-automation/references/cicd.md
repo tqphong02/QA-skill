@@ -1,138 +1,140 @@
-# CI/CD — platform-neutral pipelines (Jenkins + GitHub Actions)
+# CI/CD contract for deterministic Playwright POM
 
-> Companion to `SKILL.md`. Read this when the user wants pipelines, CI, Jenkins, GitHub Actions, or scheduled test runs.
+Read this reference for GitHub Actions, Jenkins, scheduled execution, Allure
+publication or flaky-test handling. The copyable templates live under
+`assets/templates/`.
 
-## TOC
-1. Pick the platform (never assume)
-2. Standard stages (both platforms)
-3. GitHub Actions specifics
-4. Jenkins specifics
-5. Secrets management
-6. Tagging & filtering in CI
-7. k6 as a separate job
-8. Quality gates and flaky tests
-9. Common anti-patterns
+## Stable project interface
 
----
+The package scripts are the only interface used by developers and CI. They
+wrap project-local binaries through `scripts/qa.mjs`, so the workflow does not
+duplicate Playwright arguments or depend on a globally installed CLI.
 
-## 1. Pick the platform (never assume)
+| Command | Contract |
+|---|---|
+| `npm run qa:lint` | TypeScript `--noEmit` followed by ESLint |
+| `npm run qa:test:ui` | UI tests with the `@ui` tag |
+| `npm run qa:test:api` | API tests with the `@api` tag |
+| `npm run qa:test:functional` | Functional tests with the `@functional` tag |
+| `npm run qa:test -- --surface all` | Full deterministic suite |
+| `npm run qa:quality` | Evaluate `reports/playwright.json` against `quality-gates.json` |
+| `npm run qa:contract -- --mode <mode>` | Validate the canonical Allure result shape |
+| `npm run qa:report -- --mode mixed` | Validate then generate `reports/allure-report` |
+| `npm run qa:merge-allure` | Merge downloaded job results without overwriting collisions |
+| `npm run qa:preflight -- --surface <surface> --require-auth` | Validate project layout, lockfile, scripts, URLs and CI auth inputs without printing secrets |
+| `npm run qa:clean` | Remove only known generated output directories |
 
-```
-Repo has Jenkinsfile?              → Jenkins
-Repo has .github/workflows/?       → GitHub Actions
-New project / neither?             → ASK user which platform (offer both)
-```
-
-**Always provide BOTH templates** even when you pick one — the user may switch later. Keep pipeline logic identical across both; only syntax differs.
-
-## 2. Standard stages (both platforms — only syntax differs)
-
-| # | Stage | Why |
-|---|---|---|
-| 1 | **Checkout** | Get code |
-| 2 | **Install** (`npm ci`) + **cache** node_modules & browsers | Speed; `npm ci` = reproducible from lockfile |
-| 3 | **Lint** | Fail fast on type/syntax errors |
-| 4 | **test:ui + test:api in parallel** | Browser matrix + parallel API → faster feedback |
-| 5 | **Publish Allure** | Human-readable report per run |
-| 6 | **Archive** trace.zip / screenshots / video on fail | Debug failures without re-running |
-| 7 | **k6 load test** — **separate job/stage** | Long-running; must NOT block main pipeline |
-| 8 | **Quality gate** | Failed tests, flaky tests, evidence, duration and declared coverage |
-
-Templates: `assets/templates/github-actions-ci.yml` + `assets/templates/Jenkinsfile`.
-
-## 3. GitHub Actions specifics
-
-- **Triggers:** `push` (main), `pull_request`, `workflow_dispatch` (manual), `schedule` (cron for perf).
-- **Matrix** for browsers:
-  ```yaml
-  strategy:
-    fail-fast: false
-    matrix:
-      browser: [chromium, firefox]
-  ```
-- **Cache** via `actions/setup-node@v4` (`cache: 'npm'`) + Playwright browser cache.
-- **Install browsers:** `npx playwright install --with-deps ${{ matrix.browser }}`.
-- **Parallelism:** each matrix job runs independently; within a job, Playwright shards (`--shard=${GITHUB_SHARD}`) if needed.
-- **Artifacts:** `actions/upload-artifact@v4` with `if: always()` so failures still upload reports/traces.
-- **Quality gate:** run `npm run quality-gate` with `if: always()` after Playwright. A retry-pass is recorded as flaky and does not disappear from the report
-- **Allure:** use `simple-elf/allure-report-action` or similar to generate + publish GH Pages report.
-- **k6:** separate job gated by `if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'`, using `grafana/k6-action`.
-
-## 4. Jenkins specifics (Declarative Pipeline)
-
-- **Agent:** `agent any` (or a labeled node with browsers pre-installed).
-- **Node tool:** declare under `tools { nodejs 'Node-20' }` (configure NodeJS Installation in Jenkins).
-- **Parallel UI + API:**
-  ```groovy
-  stage('Test') {
-    parallel {
-      stage('UI')  { steps { sh 'npx playwright test --grep @ui' } }
-      stage('API') { steps { sh 'npx playwright test --grep @api' } }
-    }
-  }
-  ```
-- **Browser matrix:** replicate via separate `stage`s or a `matrix` directive (Declarative `matrix { axes { ... } }`).
-- **`post { always { } }`:** archive artifacts + publish Allure via the **Allure Jenkins plugin** (`allure results: 'allure-results'`) + publish JUnit (`junit 'reports/junit.xml'`).
-- **Timeout & build discarder:** keep build history bounded.
-- **k6:** separate `Jenkinsfile.perf` triggered by `cron`/TimerTrigger, OR a `when { triggeredBy 'TimerTrigger' }` stage. Never in the main PR pipeline.
-
-## 5. Secrets management
-
-| Secret | GitHub Actions | Jenkins |
-|---|---|---|
-| BASE_URL | `secrets.BASE_URL` | `credentials('base-url')` |
-| API token / user pass | `secrets.TEST_USER`, `secrets.TEST_PASS` | `credentials('test-user')`, `credentials('test-pass')` |
-| k6 cloud token | `secrets.K6_CLOUD_TOKEN` | `credentials('k6-cloud-token')` |
-
-**Rules:**
-- Never hardcode secrets in pipeline files.
-- Never echo secrets in logs (mask via plugin/feature).
-- Scope: repo-level for dev, environment/protected for prod-like.
-- Inject as env vars → tests read `process.env.*`.
-
-## 6. Tagging & filtering in CI
-
-Same `--grep` command works in both platforms:
+Additional Playwright options are forwarded after `--`, for example:
 
 ```bash
-npx playwright test --grep @ui        # UI only
-npx playwright test --grep @api       # API only
-npx playwright test --grep @perf      # Perf (Tier 1) only
-npx playwright test --grep '@ui|@api' # UI + API together
-npx playwright test --grep-invert @slow  # exclude slow
+npm run qa:test:ui -- --project=firefox --grep @smoke
 ```
 
-Map CI stages to tags: GH matrix job / Jenkins `stage` runs one tag group → parallel + clear pass/fail per category.
+Direct `npx playwright test` is reserved for local debugging. CI uses the
+stable `qa:*` commands; `qa:install:browsers` is the single browser-provisioning
+entrypoint.
 
-## 7. k6 as a separate job (do NOT block main pipeline)
+## Project root and lockfile contract
 
-**Why separate:** load tests take minutes, need a perf-grade environment, and their failure shouldn't block a code PR.
+The quickstart places the automation project in `<repository>/qa`. The
+GitHub/Jenkins templates therefore define `QA_PROJECT_DIR=qa`. If the
+automation `package.json` is at repository root, set `QA_PROJECT_DIR=.` in the
+workflow and Jenkinsfile and keep all artifact paths aligned with that value.
 
-| Platform | How |
+The selected project directory must contain `package.json`,
+`package-lock.json`, `quality-gates.json` and `scripts/qa.mjs`. Commit the
+lockfile after the first `npm install`; CI intentionally uses `npm ci` and
+does not silently fall back to a mutable install. The static preflight checks
+the lockfile and unresolved placeholders before dependency installation, while
+`qa:preflight` checks surface-specific URLs and optional authentication inputs.
+
+## Required output layout
+
+Every job writes to the same paths:
+
+| Path | Contents |
 |---|---|
-| GitHub Actions | Dedicated job: `if: github.event_name == 'workflow_dispatch' \|\| github.event_name == 'schedule'`, uses `grafana/k6-action` |
-| Jenkins | Separate `Jenkinsfile.perf` with `triggers { cron('0 2 * * *') }`, OR `when { triggeredBy 'TimerTrigger' }` stage |
+| `reports/playwright.json` | Playwright machine report |
+| `reports/junit.xml` | JUnit report |
+| `reports/quality-gate.json` | Threshold evaluation |
+| `reports/allure-results/` | Raw canonical Allure results and attachments |
+| `reports/allure-contract.json` | `PASS` or `BLOCKED` contract result |
+| `evidence/` | HTML, trace and unified screenshot/video evidence |
 
-Both: run against **staging/perf env** (not prod), warn stakeholders before scheduled runs, archive k6 summary as artifact.
+The runner clears stale raw results before a deterministic run. UI and
+functional results require `account`, `url`, `evidence_image`,
+`evidence_video`, `evidence-image` and `evidence-video`. A failed contract is
+`UNTEST` for the deterministic verdict and must not be hidden by an HTML report.
 
-## 8. Quality gates and flaky tests
+## GitHub Actions topology
 
-- Keep `reports/playwright.json`, `reports/quality-gate.json`, JUnit, Allure, traces, screenshots and videos as build artifacts
-- Configure thresholds in `quality-gates.json`; do not hardcode thresholds in CI YAML
-- Record first-attempt and retry results. A test that passes only after retry is `flaky`, not a clean PASS
-- Quarantine requires an owner, issue ID, expiry date and retained scheduled execution
-- See [FLAKY-TEST-MANAGEMENT.md](FLAKY-TEST-MANAGEMENT.md) and [AUTOMATION-QUALITY-GATES.md](AUTOMATION-QUALITY-GATES.md)
+`assets/templates/github-actions-ci.yml` uses this dependency graph:
 
-## 9. Common anti-patterns
+```text
+preflight ── lint ──┬── test-ui (chromium) ──┐
+                    ├── test-ui (firefox) ───┼── report (always)
+                    └── test-api ────────────┘
+```
 
-| Anti-pattern | Fix |
-|---|---|
-| k6 stage blocking PR pipeline | Move to separate scheduled/manual job |
-| No cache → slow pipelines (re-download browsers every run) | Cache node_modules + `~/.cache/ms-playwright` |
-| `npm install` instead of `npm ci` | `npm ci` for reproducible installs |
-| Hardcoded BASE_URL/token | Secrets (GH) / Credentials (Jenkins) |
-| Single huge stage doing everything | Split: lint / test:ui / test:api parallel / report / archive |
-| Allure report only on success | `if: always()` / `post { always {} }` so failures still get reports |
-| No browser matrix (only chromium) | Matrix `chromium, firefox` (webkit too if Safari support needed) |
-| Traces not archived | Upload `test-results/` artifact on failure |
-| Assuming platform without checking | Detect Jenkinsfile vs .github/workflows/; ask if new |
+Each test job:
+
+1. runs the static layout/lockfile/placeholder preflight;
+2. runs `npm ci` from the committed lockfile;
+3. validates the surface URL and authentication inputs without echoing values;
+4. installs only the required project-local browser;
+5. runs one surface through `npm run qa:test:*`;
+6. evaluates the quality gate and Allure contract with `if: always()`;
+7. uploads `reports/` and `evidence/`, including failed-run diagnostics;
+8. fails explicitly after artifact upload when a test or gate failed.
+
+The final `report` job also runs with `if: always()`. It downloads all `qa-*`
+artifacts into `ci-artifacts/`, runs:
+
+```bash
+npm run qa:merge-allure -- \
+  --input ci-artifacts \
+  --output reports/allure-results \
+  --summary reports/allure-merge.json
+npm run qa:report -- --mode mixed
+```
+
+`merge-allure-results.mjs` deduplicates byte-identical files and blocks a
+conflicting filename instead of silently replacing evidence. A missing job
+artifact or missing canonical result therefore remains visible as `BLOCKED`.
+
+Use repository/environment secrets for `BASE_URL`, `UI_BASE_URL`,
+`API_BASE_URL`, `TEST_USER` and `TEST_PASS`, or `TEST_ACCOUNTS_JSON` for a
+parallel account pool. The workflow tests an already reachable application;
+it does not start or deploy the application. Never write credentials to
+Allure parameters, source files, storage state or workflow logs.
+
+Live UI/API jobs are skipped for pull requests from forks because GitHub does
+not expose repository secrets to fork workflows. Static preflight and lint
+still run. If a live test job is red, fix the first failing step in this order:
+layout/lockfile, `npm ci`, placeholder check, `qa:lint`, CI input preflight,
+browser/test execution, then quality/Allure projection. Quality or Allure
+errors after a missing Playwright report are secondary evidence, not the root
+cause.
+
+## Jenkins
+
+`assets/templates/Jenkinsfile` uses the same `qa:*` commands and output paths:
+layout/lockfile preflight, parallel UI/API stages, `qa:quality`, `qa:report`,
+JUnit publication and archived `reports/**, evidence/**` under
+`QA_PROJECT_DIR`. Configure the NodeJS installation and credential IDs in
+Jenkins; do not change the test contract per platform.
+
+## Performance and flaky policy
+
+k6 is a separate manual/scheduled job and does not run on every pull request.
+Playwright retries are bounded by `PW_RETRIES` (0–2); a retry-pass remains
+`FAILED` with `flaky=true`, never a clean `PASS`. Keep thresholds in
+`quality-gates.json`, not in YAML or Jenkinsfile logic.
+
+## CI anti-patterns
+
+- Do not merge UI and API into one opaque step; preserve separate artifacts.
+- Do not generate Allure only on success; upload evidence with `always()`.
+- Do not use a global Playwright or Gemini/Antigravity browser override.
+- Do not overwrite a downloaded Allure attachment on filename collision.
+- Do not commit `.env`, credentials, storage state, reports or runtime data.

@@ -169,6 +169,6 @@ export abstract class BasePage {
     const runtime = pomRuntimeFor(this.page);
     if (runtime) return runtime.resolveFile(value, targetKey);
     const rendered = this.expectedValue(value, targetKey);
-    return path.isAbsolute(rendered) ? rendered : path.resolve(process.cwd(), 'testdata', rendered);
+    return path.isAbsolute(rendered) ? rendered : path.resolve(process.cwd(), 'runtime-data', rendered);
   }
 }

@@ -45,7 +45,24 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
 
   requireFile(resolvedRoot, 'fixtures/pom.ts', violations);
   requireFile(resolvedRoot, 'fixtures/runtime-context.ts', violations);
+  requireFile(resolvedRoot, 'fixtures/allure-contract.ts', violations);
+  requireFile(resolvedRoot, 'scripts/artifact-naming.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-allure-contract.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/merge-allure-results.mjs', violations);
   requireFile(resolvedRoot, 'playwright.config.ts', violations);
+
+  const pomPath = path.join(resolvedRoot, 'fixtures/pom.ts');
+  if (fs.existsSync(pomPath)) {
+    const pomSource = fs.readFileSync(pomPath, 'utf8');
+    requirePattern(
+      pomSource,
+      /captureCanonicalUiEvidence/,
+      'CANONICAL_ALLURE_FIXTURE_MISSING',
+      'fixtures/pom.ts',
+      violations,
+    );
+  }
 
   if (fs.existsSync(configPath)) {
     const source = fs.readFileSync(configPath, 'utf8');
@@ -62,6 +79,18 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
     requirePattern(source, /\bscreenshot\s*:/, 'SCREENSHOT_POLICY_MISSING', 'playwright.config.ts', violations);
     requirePattern(source, /\bvideo\s*:/, 'VIDEO_POLICY_MISSING', 'playwright.config.ts', violations);
     requirePattern(source, /reports\/playwright\.json/, 'JSON_REPORTER_MISSING', 'playwright.config.ts', violations);
+    requirePattern(source, /allure-playwright/, 'ALLURE_REPORTER_MISSING', 'playwright.config.ts', violations);
+    requirePattern(
+      source,
+      /resultsDir\s*:\s*['"]reports\/allure-results['"]/,
+      'ALLURE_RESULTS_DIR_MISSING',
+      'playwright.config.ts',
+      violations,
+    );
+    requirePattern(source, /detail\s*:\s*true/, 'ALLURE_DETAIL_POLICY_MISSING', 'playwright.config.ts', violations);
+    requirePattern(source, /suiteTitle\s*:\s*false/, 'ALLURE_SUITE_POLICY_MISSING', 'playwright.config.ts', violations);
+    requirePattern(source, /screenshot\s*:\s*['"]off['"]/, 'CANONICAL_SCREENSHOT_POLICY_MISSING', 'playwright.config.ts', violations);
+    requirePattern(source, /video\s*:\s*['"]on['"]/, 'CANONICAL_VIDEO_POLICY_MISSING', 'playwright.config.ts', violations);
   }
 
   const generatedSpecs = specFiles(path.join(resolvedRoot, testRoot)).filter(filePath => (
@@ -76,6 +105,9 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
     if (!/from\s+['"][^'"]*fixtures\/pom(?:\.[cm]?[jt]s)?['"]/.test(source)) {
       violations.push({ code: 'GENERATED_SPEC_POM_FIXTURE_MISSING', file });
     }
+    if (/from\s+['"]allure-playwright['"]/.test(source)) {
+      violations.push({ code: 'GENERATED_SPEC_BYPASSES_ALLURE_FIXTURE', file });
+    }
   }
 
   return {
@@ -83,6 +115,7 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
     project_root: resolvedRoot,
     generated_spec_count: generatedSpecs.length,
     fixture_entrypoint: 'fixtures/pom.ts',
+    command_entrypoint: 'scripts/qa.mjs',
     evidence_root: 'evidence',
     violations,
   };

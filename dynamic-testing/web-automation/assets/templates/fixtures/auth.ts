@@ -10,6 +10,11 @@ import {
 import path from 'path';
 import fs from 'fs';
 import { ApiClient } from './api-client';
+import {
+  addCanonicalAllureParameters,
+  captureCanonicalUiEvidence,
+  canonicalAccountLabel,
+} from './allure-contract';
 
 /**
  * Auth Fixture Template — quản lý authentication cho cả suite.
@@ -32,8 +37,10 @@ const AUTH_CONFIG = {
   loginPath: '/auth/login', // ← AI fill endpoint login của project
   storageStatePath: path.resolve(__dirname, '../sessions/auth-storage.json'),
   credentials: {
-    email: process.env.TEST_USER ?? '<ADMIN_TEST_COM>', // ← AI fill
-    password: process.env.TEST_PASS ?? '<ADMIN_123>',   // ← AI fill
+    // CI preflight requires real values; these non-secret sentinels prevent
+    // unresolved source placeholders from masking the missing-input error.
+    email: process.env.TEST_USER ?? 'ci-user-required',
+    password: process.env.TEST_PASS ?? 'ci-credential-required',
   },
 } as const;
 
@@ -125,6 +132,7 @@ export async function setupStorageState(
 type AuthFixtures = {
   authenticatedPage: Page;       // Page đã login (UI test)
   authenticatedApi: ApiClient;   // ApiClient kèm token
+  canonicalAllure: void;
 };
 
 type AuthWorkerFixtures = {
@@ -134,6 +142,53 @@ type AuthWorkerFixtures = {
 };
 
 export const test = base.extend<AuthFixtures, AuthWorkerFixtures>({
+  // Every fixture-based test gets the four parameter names. UI tests replace
+  // the N/A media values in the page teardown below; API tests keep N/A.
+  canonicalAllure: [
+    async ({}, use, testInfo) => {
+      await use();
+      const hasCanonicalMetadata = testInfo.annotations.some(
+        annotation => annotation.type === 'qa-allure-contract',
+      );
+      if (hasCanonicalMetadata) return;
+      await addCanonicalAllureParameters({
+        account: canonicalAccountLabel({
+          accountSlot: process.env.QA_ALLURE_ACCOUNT ?? `account-slot-${testInfo.parallelIndex}`,
+          parallelIndex: testInfo.parallelIndex,
+        }),
+        url: process.env.API_BASE_URL
+          ?? process.env.UI_BASE_URL
+          ?? process.env.BASE_URL
+          ?? 'http://localhost:3000',
+        evidenceImage: 'N/A',
+        evidenceVideo: 'N/A',
+        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
+        runId: process.env.QA_RUN_ID ?? process.env.RUN_ID ?? 'N/A',
+        role: process.env.QA_ROLE ?? 'default',
+        browser: testInfo.project.name,
+        appBuild: process.env.QA_APP_BUILD ?? process.env.APP_BUILD ?? 'N/A',
+      });
+    },
+    { auto: true },
+  ],
+
+  // Override the default page fixture so data-driven/legacy fixture tests use
+  // the same canonical image/video evidence as manifest-generated POM tests.
+  page: async ({ context }, use, testInfo) => {
+    const page = await context.newPage();
+    await use(page);
+    await captureCanonicalUiEvidence({
+      page,
+      runtime: {
+        accountSlot: `account-slot-${testInfo.parallelIndex}`,
+        role: process.env.QA_ROLE ?? 'default',
+        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
+        parallelIndex: testInfo.parallelIndex,
+      },
+      testInfo,
+    });
+  },
+
   // ─── Fixture: workerAccount ───────────────────────────────
   workerAccount: [
     async ({}, use, workerInfo) => {
@@ -183,10 +238,20 @@ export const test = base.extend<AuthFixtures, AuthWorkerFixtures>({
 
   // ─── Fixture: authenticatedPage ─────────────────────────
   // Browser context mới per test, storageState riêng per worker/run
-  authenticatedPage: async ({ browser, workerStorageStatePath }, use: (r: Page) => Promise<void>) => {
+  authenticatedPage: async ({ browser, workerStorageStatePath }, use: (r: Page) => Promise<void>, testInfo) => {
     const context = await browser.newContext({ storageState: workerStorageStatePath });
     const page = await context.newPage();
     await use(page);
+    await captureCanonicalUiEvidence({
+      page,
+      runtime: {
+        accountSlot: `account-slot-${testInfo.parallelIndex}`,
+        role: process.env.QA_ROLE ?? 'default',
+        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
+        parallelIndex: testInfo.parallelIndex,
+      },
+      testInfo,
+    });
     await context.close();
   },
 });

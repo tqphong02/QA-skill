@@ -9,6 +9,7 @@ import { buildPomPlan } from './generate-pom-plan.mjs';
 import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 import { buildUiCoverage } from './verify-ui-coverage.mjs';
+import { verifyAllureContract } from './verify-allure-contract.mjs';
 
 const VALID_PHASES = new Set(['plan', 'execute']);
 const VISUAL_RE = /\.(?:png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i;
@@ -249,6 +250,28 @@ function untestReport(plan, reason, runId, mode) {
   };
 }
 
+function applyAllureContractGate(report, contract, mode) {
+  if (!['ui', 'functional'].includes(mode) || contract.status === 'PASS') return report;
+  const reason = contract.violations?.[0]?.message
+    || 'Canonical Allure report contract is incomplete';
+  report.results = report.results.map(result => ({
+    ...result,
+    verdict: 'UNTEST',
+    sheet_result: 'Untest',
+    note: `Allure canonical contract BLOCKED: ${reason}`,
+  }));
+  report.verdict = 'UNTEST';
+  report.summary = {
+    total: report.results.length,
+    pass: 0,
+    failed: 0,
+    not_applicable: 0,
+    untest: report.results.length,
+    flaky: report.results.filter(result => result.flaky).length,
+  };
+  return report;
+}
+
 function selectedPlan(manifestPath, maxCases) {
   const testcaseIds = getArg('--testcase-id')
     .split(',')
@@ -418,8 +441,18 @@ async function main() {
   const project = getArg('--browser-project', 'chromium');
   if (project) playwrightArgs.push('--project', project);
   const playwrightReportPath = resolveFrom(projectRoot, getArg('--playwright-report'), 'reports/playwright.json');
+  const allureResultsPath = resolveFrom(projectRoot, getArg('--allure-results'), 'reports/allure-results');
+  const allureContractPath = resolveFrom(
+    projectRoot,
+    getArg('--allure-contract-output'),
+    'reports/allure-contract.json',
+  );
   // A previous JSON report must never be accepted as same-session evidence.
   fs.rmSync(playwrightReportPath, { force: true });
+  // Allure raw results are also same-session evidence; stale result files must
+  // not be merged into the current report.
+  fs.rmSync(allureResultsPath, { recursive: true, force: true });
+  fs.mkdirSync(allureResultsPath, { recursive: true });
   const execution = spawnSync('npx', playwrightArgs, {
     cwd: projectRoot,
     encoding: 'utf8',
@@ -434,7 +467,11 @@ async function main() {
   });
   if (!fs.existsSync(playwrightReportPath)) {
     const report = untestReport(plan, 'Playwright không tạo JSON report', runId, mode);
+    const allureContract = verifyAllureContract({ resultsDir: allureResultsPath, mode });
+    writeJson(allureContractPath, allureContract);
     report.traceability = traceabilityPath;
+    report.allure_results = allureResultsPath;
+    report.allure_contract = allureContractPath;
     report.runner_exit_code = execution.status;
     writeJson(resultPath, report);
     console.log(JSON.stringify({ verdict: report.verdict, output: resultPath }, null, 2));
@@ -443,12 +480,17 @@ async function main() {
   }
 
   const report = normalizePlaywrightReport(readJson(playwrightReportPath), plan, { projectRoot, mode, runId });
+  const allureContract = verifyAllureContract({ resultsDir: allureResultsPath, mode });
+  writeJson(allureContractPath, allureContract);
   report.traceability = traceabilityPath;
   report.ui_coverage = uiCoveragePath && uiCoverage ? uiCoveragePath : null;
   report.playwright_report = playwrightReportPath;
+  report.allure_results = allureResultsPath;
+  report.allure_contract = allureContractPath;
   report.bootstrap = runtimeBootstrap;
   report.runtime_scaffold = runtimeScaffold;
   report.runner_exit_code = execution.status;
+  applyAllureContractGate(report, allureContract, mode);
   writeJson(resultPath, report);
   const sheetPlanArg = getArg('--sheet-plan');
   if (sheetPlanArg) {

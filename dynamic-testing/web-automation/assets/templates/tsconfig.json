@@ -41,5 +41,5 @@
     "utils/**/*",
     "*.ts"
   ],
-  "exclude": ["node_modules", "reports", "test-results", "playwright-report"]
+  "exclude": ["node_modules", "reports", "evidence", "sessions", "runtime-data", "test-results", "playwright-report"]
 }

@@ -62,8 +62,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
     const api = new ApiClient(page.request, API_BASE);
     const loginRes = await api.post(LOGIN_PATH, {
-      email: process.env.TEST_USER ?? '<ADMIN_TEST_COM>',
-      password: process.env.TEST_PASS ?? '<ADMIN_123>',
+      email: process.env.TEST_USER ?? 'ci-user-required',
+      password: process.env.TEST_PASS ?? 'ci-credential-required',
     });
 
     if (loginRes.status() !== 200) {

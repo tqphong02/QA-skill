@@ -35,8 +35,8 @@ export const ENV = {
   uiBaseUrl: optional('UI_BASE_URL', 'http://localhost:3000'),
 
   // ─── Auth ─────────────────────────────────────────────────
-  testUser: optional('TEST_USER', '<ADMIN_TEST_COM>'),      // ← AI fill default
-  testPass: optional('TEST_PASS', '<ADMIN_123>'),           // ← AI fill default
+  testUser: optional('TEST_USER', 'ci-user-required'),
+  testPass: optional('TEST_PASS', 'ci-credential-required'),
 
   // ─── Feature flags ────────────────────────────────────────
   // Bật/tắt feature qua env var (vd: CI=true, DEBUG=true)
@@ -44,8 +44,6 @@ export const ENV = {
   isDebug: process.env.DEBUG === 'true',
 
   // ─── Allure ───────────────────────────────────────────────
-  allureResultsDir: optional('ALLURE_RESULTS_DIR', 'reports/allure-results'),
-
   // ─── Helpers ──────────────────────────────────────────────
   /** Get header Authorization (Bearer) */
   authHeader(token: string): Record<string, string> {

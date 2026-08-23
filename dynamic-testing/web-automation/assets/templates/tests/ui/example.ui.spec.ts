@@ -1,12 +1,11 @@
-import { test, expect } from '@playwright/test';
-import { allure } from 'allure-playwright';
+import { test, expect } from '../../fixtures/data-driven';
 import { LoginPage } from '../../pages/example.page';
 import { DashboardPage } from '../../pages/dashboard.page';
 import { ENV } from '../../fixtures/env';
 
 /**
  * UI test mẫu — Login flow đầy đủ với Annotations kiểu TestNG.
- * Tag @ui để filter trong CI:  npx playwright test --grep @ui
+ * Tag @ui để filter trong CI:  npm run qa:test:ui
  *
  * ┌─────────────────────────────────────────────────────────────┐
  * │  ANNOTATIONS — Playwright tương đương TestNG                 │
@@ -55,18 +54,6 @@ test.describe('Login @ui', () => {
     await loginPage.open();
   });
 
-  // @AfterMethod — screenshot khi fail, tương đương ITestListener trong TestNG
-  // `_page` prefix → TypeScript biết param có chủ đích không dùng (noUnusedLocals)
-  test.afterEach(async ({ page: _page }, testInfo) => {
-    if (testInfo.status !== testInfo.expectedStatus) {
-      const screenshot = await _page.screenshot();
-      await testInfo.attach('screenshot-on-failure', {
-        body: screenshot,
-        contentType: 'image/png',
-      });
-    }
-  });
-
   // ─────────────────────────────────────────────────────────────
   // Test cases với Allure annotations
   // ─────────────────────────────────────────────────────────────
@@ -75,12 +62,6 @@ test.describe('Login @ui', () => {
   // @Severity(CRITICAL) @Feature("Login") @Story("Happy path")
   test('happy path — credentials đúng → redirect dashboard + welcome', async ({ page }) => {
     // Allure annotations — tương đương @Severity, @Feature, @Story, @Owner (TestNG)
-    allure.severity('critical');
-    allure.feature('Login');
-    allure.story('Happy path');
-    allure.owner('QA Team');
-    allure.description('Valid credentials should redirect to dashboard and show welcome message');
-
     // Playwright native annotation — hiển thị trong HTML report
     // PHẢI gọi trong async test body (không gọi ngoài test block)
     test.info().annotations.push({
@@ -89,18 +70,18 @@ test.describe('Login @ui', () => {
     });
 
     // @Step — tương đương @Step annotation trong Allure-TestNG
-    await allure.step('Fill credentials and submit', async () => {
+    await test.step('Fill credentials and submit', async () => {
       await loginPage.login(
         ENV.testUser,
         ENV.testPass,
       );
     });
 
-    await allure.step('Assert redirect to dashboard', async () => {
+    await test.step('Assert redirect to dashboard', async () => {
       await expect(page).toHaveURL(/dashboard|home/i);
     });
 
-    await allure.step('Assert dashboard heading visible', async () => {
+    await test.step('Assert dashboard heading visible', async () => {
       await expect(dashboardPage.headerTitle).toBeVisible();
     });
   });
@@ -108,16 +89,12 @@ test.describe('Login @ui', () => {
   // @Test(priority=2, groups={"regression","ui"})
   // @Severity(NORMAL) @Story("Negative — wrong password")
   test('negative — sai password → error message hiển thị', async () => {
-    allure.severity('normal');
-    allure.feature('Login');
-    allure.story('Negative — wrong credentials');
-
-    await allure.step('Submit wrong credentials', async () => {
+    await test.step('Submit wrong credentials', async () => {
       await loginPage.fillCredentials('wrong@example.com', 'wrong-password-xyz');
       await loginPage.submit();
     });
 
-    await allure.step('Assert error message visible and correct', async () => {
+    await test.step('Assert error message visible and correct', async () => {
       await expect(loginPage.errorMessage).toBeVisible();
       const err = await loginPage.getError();
       expect(err).toMatch(/invalid|sai|incorrect|wrong/i);
@@ -127,10 +104,6 @@ test.describe('Login @ui', () => {
   // @Test(priority=3, groups={"regression","ui"})
   // @Severity(MINOR) @Story("Negative — empty fields")
   test('negative — bỏ trống field → submit disabled', async ({ page }) => {
-    allure.severity('minor');
-    allure.feature('Login');
-    allure.story('Negative — empty fields');
-
     await loginPage.fillCredentials('', '');
 
     await expect(loginPage.submitButton).toBeDisabled();
@@ -146,10 +119,6 @@ test.describe('Login @ui', () => {
       process.env.SKIP_FLAKY === 'true',
       'Skipped in CI when SKIP_FLAKY=true — tương đương @Test(enabled=false) TestNG'
     );
-
-    allure.severity('minor');
-    allure.feature('Login');
-    allure.story('Flaky scenario');
 
     // ... nội dung test thật ở đây
     await expect(page).toHaveURL(/login/i);

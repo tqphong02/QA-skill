@@ -70,23 +70,29 @@ export default defineConfig({
   workers: resolveWorkers(),
   outputDir: 'evidence/test-results',
 
-  // Reporter: list (console) + HTML + JUnit + Allure (bật allure-playwright khi đã cài).
-  // Allure raw results → reports/allure-results; HTML generate bằng:
-  //   allure generate reports/allure-results -o reports/allure-report --clean
+  // Reporter outputs are fixed. The Allure result shape is enforced by
+  // scripts/verify-allure-contract.mjs after every deterministic run.
   reporter: [
     ['list'],
     ['html', { outputFolder: 'evidence/html', open: 'never' }],
     ['junit', { outputFile: 'reports/junit.xml' }],
     ['json', { outputFile: 'reports/playwright.json' }],
-    ['allure-playwright', { resultsDir: 'reports/allure-results' }],
+    ['allure-playwright', {
+      resultsDir: 'reports/allure-results',
+      detail: true,
+      suiteTitle: false,
+    }],
   ],
 
   use: {
     baseURL: process.env.UI_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
-    // Unified testcase execution records browser evidence for PASS and FAILED
+    // The POM fixture owns the canonical evidence-image attachment. Keep the
+    // Playwright screenshot reporter off to avoid a second screenshot format.
     trace: unifiedEvidence ? 'on' : 'retain-on-failure',
-    screenshot: unifiedEvidence ? 'on' : 'only-on-failure',
-    video: unifiedEvidence ? 'on' : 'retain-on-failure',
+    screenshot: 'off',
+    // The POM fixture closes the page and attaches this recording as
+    // evidence-video, so PASS and FAILED have the same visible media contract.
+    video: 'on',
     actionTimeout: 10000,
     navigationTimeout: 30000,
   },

@@ -3,20 +3,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import {
+  moduleArtifactNames,
+  moduleArtifactPaths,
+  RESERVED_MODULE_SLUGS,
+  resolveModuleSlug,
+} from './artifact-naming.mjs';
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
   return index === -1 ? fallback : process.argv[index + 1] || fallback;
-}
-
-function moduleSlug(value) {
-  return String(value || 'other')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/đ/g, 'd')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '') || 'other';
 }
 
 function testDeclarations(source) {
@@ -44,15 +40,38 @@ function verifyModuleArtifactLayout({ manifestPath, projectRoot, surface = 'func
   const mappedIds = [];
   const artifacts = [];
   const expectedFinalFiles = new Set();
+  const slugOwners = new Map();
   for (const [moduleName, expectedIds] of modules) {
-    const slug = moduleSlug(moduleName);
-    const expected = {
-      spec: path.join(projectRoot, 'tests', surface, `${slug}.${surface}.spec.ts`),
-      page: path.join(projectRoot, 'pages', `${slug}.page.ts`),
-      selector: path.join(projectRoot, 'selectors', `${slug}.selectors.ts`),
-    };
+    const slug = resolveModuleSlug(moduleName);
+    if (RESERVED_MODULE_SLUGS.has(slug)) {
+      violations.push({
+        code: 'MODULE_SLUG_RESERVED',
+        module: moduleName,
+        slug,
+        message: `Module slug "${slug}" is reserved by the runtime scaffold`,
+      });
+    }
+    const previousOwner = slugOwners.get(slug);
+    if (previousOwner && previousOwner !== moduleName) {
+      violations.push({
+        code: 'MODULE_SLUG_COLLISION',
+        slug,
+        modules: [previousOwner, moduleName],
+        message: `Distinct manifest groups resolve to the same module slug: ${slug}`,
+      });
+    } else {
+      slugOwners.set(slug, moduleName);
+    }
+    const expected = moduleArtifactPaths(projectRoot, slug, surface);
+    const names = moduleArtifactNames(slug, surface);
     Object.values(expected).forEach(filePath => expectedFinalFiles.add(path.resolve(filePath)));
-    artifacts.push({ module: moduleName, slug, testcase_count: expectedIds.length, ...expected });
+    artifacts.push({
+      module: moduleName,
+      slug,
+      names,
+      testcase_count: expectedIds.length,
+      ...expected,
+    });
 
     for (const [kind, filePath] of Object.entries(expected)) {
       if (!fs.existsSync(filePath)) {
@@ -128,7 +147,7 @@ function main() {
   if (result.status !== 'PASS') process.exitCode = 1;
 }
 
-export { moduleSlug, testDeclarations, verifyModuleArtifactLayout };
+export { resolveModuleSlug, testDeclarations, verifyModuleArtifactLayout };
 
 const invokedAsScript = process.argv[1]
   && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;

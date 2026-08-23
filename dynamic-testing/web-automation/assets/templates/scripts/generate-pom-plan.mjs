@@ -10,6 +10,7 @@ import {
   stepMethodName,
   valueFingerprint,
 } from './verify-testcase-traceability.mjs';
+import { resolveModuleSlug } from './artifact-naming.mjs';
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
@@ -18,6 +19,16 @@ function getArg(flag, fallback = '') {
 
 function sha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function defaultPomPlanPath(manifestPath, group = '') {
+  const defaultModuleName = group || path.basename(manifestPath).replace(/\.automation\.json$/i, '');
+  return path.resolve('plans', `${resolveModuleSlug(defaultModuleName)}.pom-plan.json`);
+}
+
+function moduleDescriptor(group) {
+  const name = String(group || 'Other').trim() || 'Other';
+  return { group: name, slug: resolveModuleSlug(name) };
 }
 
 function targetHints(target) {
@@ -45,11 +56,28 @@ function buildPomPlan(manifestPath, options = {}) {
     const missing = [...testcaseIds].filter(id => !selected.some(testcase => testcase.id === id));
     if (missing.length > 0) throw new Error(`BLOCKED: testcase IDs not found in selection: ${missing.join(', ')}`);
   }
+  const modules = [];
+  const moduleBySlug = new Map();
+  for (const testcase of selected) {
+    const descriptor = moduleDescriptor(testcase.group);
+    const previous = moduleBySlug.get(descriptor.slug);
+    if (previous && previous.group !== descriptor.group) {
+      throw new Error(
+        `BLOCKED: MODULE_SLUG_COLLISION for "${previous.group}" and "${descriptor.group}" -> ${descriptor.slug}`,
+      );
+    }
+    if (!previous) {
+      moduleBySlug.set(descriptor.slug, descriptor);
+      modules.push(descriptor);
+    }
+  }
   return {
     schema_version: 1,
     source_manifest: path.basename(manifestPath),
     source_manifest_sha256: sourceHash,
     source_marker: `[AUTOMATION_SOURCE:${sourceHash}]`,
+    module: modules.length === 1 ? modules[0] : null,
+    modules,
     selection: {
       requested_testcase_ids: [...testcaseIds],
       requested_group: options.group || null,
@@ -113,15 +141,15 @@ async function main() {
   if (!manifestArg) throw new Error('BLOCKED: --manifest is required');
   const manifestPath = path.resolve(manifestArg);
   if (!fs.existsSync(manifestPath)) throw new Error(`BLOCKED: manifest not found: ${manifestPath}`);
+  const group = getArg('--group');
   const outputPath = path.resolve(getArg(
     '--output',
-    manifestPath.replace(/\.automation\.json$/i, '.pom-plan.json'),
+    defaultPomPlanPath(manifestPath, group),
   ));
   const testcaseIds = getArg('--testcase-id')
     .split(',')
     .map(value => value.trim())
     .filter(Boolean);
-  const group = getArg('--group');
   const maxCases = Number(getArg('--max-cases', '20'));
   if (!Number.isInteger(maxCases) || maxCases <= 0) {
     throw new Error('BLOCKED: --max-cases must be a positive integer');
@@ -144,7 +172,7 @@ async function main() {
   }, null, 2));
 }
 
-export { buildPomPlan, targetHints };
+export { buildPomPlan, defaultPomPlanPath, targetHints };
 
 const invokedAsScript = process.argv[1]
   && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;

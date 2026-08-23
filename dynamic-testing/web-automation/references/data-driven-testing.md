@@ -78,8 +78,8 @@ export QA_TEST_ACCOUNTS_JSON='{"owner":[
   {"id":"owner-1","storageState":"sessions/owner-1.json"}
 ]}'
 export QA_TEST_DATASETS_JSON='{"owner":[
-  {"id":"data-0","dataRoot":"testdata/slot-0","values":{"resource_name":"qa-{{namespace}}"}},
-  {"id":"data-1","dataRoot":"testdata/slot-1","values":{"resource_name":"qa-{{namespace}}"}}
+  {"id":"data-0","dataRoot":"runtime-data/slot-0","values":{"resource_name":"qa-{{namespace}}"}},
+  {"id":"data-1","dataRoot":"runtime-data/slot-1","values":{"resource_name":"qa-{{namespace}}"}}
 ]}'
 PW_WORKERS=2 npx playwright test
 ```

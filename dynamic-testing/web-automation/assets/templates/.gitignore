@@ -18,6 +18,7 @@ out/
 # ─────────────────────────────────────────────────────────────
 # Playwright reports
 reports/
+ci-artifacts/
 test-results/
 evidence/
 playwright-report/
@@ -34,18 +35,15 @@ coverage/
 .nyc_output/
 
 # ─────────────────────────────────────────────────────────────
-# Sessions & Testdata (runtime-generated, contains secrets/data)
+# Sessions & runtime data (generated; may contain secrets/data)
 # ─────────────────────────────────────────────────────────────
-sessions/*.json
+sessions/*
 !sessions/.gitkeep
 !sessions/README.md
 
-testdata/*.json
-testdata/*.tmp
-!testdata/.gitkeep
-!testdata/README.md
-# OPTIONAL: commit seed files for sharing across team
-# !testdata/seed-*.json
+runtime-data/*
+!runtime-data/.gitkeep
+!runtime-data/README.md
 
 # ─────────────────────────────────────────────────────────────
 # Environment & secrets

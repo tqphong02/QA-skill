@@ -1,10 +1,9 @@
 import { test, expect } from '../../fixtures/data-driven';
-// import { allure } from 'allure-playwright';
 import { LoginPage } from '../../pages/example.page';
 import { DashboardPage } from '../../pages/dashboard.page';
 
 /**
- * Functional / E2E test mẫu — tag @functional:  npx playwright test --grep @functional
+ * Functional / E2E test mẫu — tag @functional:  npm run qa:test:functional
  *
  * Đặc điểm (khác UI/API test):
  *  - Test theo BUSINESS FLOW end-to-end, SPAN nhiều step / nhiều page / cả UI + API.

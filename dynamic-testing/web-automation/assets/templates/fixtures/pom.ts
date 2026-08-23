@@ -4,6 +4,11 @@ import {
   createPomRuntimeContext,
   type PomRuntimeContext,
 } from './runtime-context';
+import {
+  addCanonicalAllureParameters,
+  canonicalAccountLabel,
+  captureCanonicalUiEvidence,
+} from './allure-contract';
 
 type PomFixtures = {
   pomRuntime: PomRuntimeContext;
@@ -56,6 +61,26 @@ export const test = base.extend<PomFixtures>({
         contentType: 'application/json',
       });
       await use(runtime);
+      const hasCanonicalMetadata = testInfo.annotations.some(
+        annotation => annotation.type === 'qa-allure-contract',
+      );
+      if (!hasCanonicalMetadata) {
+        await addCanonicalAllureParameters({
+          account: canonicalAccountLabel({
+            accountSlot: runtime.accountSlot,
+            role: runtime.role,
+            parallelIndex: runtime.parallelIndex,
+          }),
+          url: String(testInfo.project.use?.baseURL ?? 'N/A'),
+          evidenceImage: 'N/A',
+          evidenceVideo: 'N/A',
+          testcaseId: runtime.testcaseId,
+          runId: process.env.QA_RUN_ID ?? process.env.RUN_ID ?? 'N/A',
+          role: runtime.role,
+          browser: testInfo.project.name,
+          appBuild: process.env.QA_APP_BUILD ?? process.env.APP_BUILD ?? 'N/A',
+        });
+      }
     },
     { auto: true },
   ],
@@ -68,6 +93,7 @@ export const test = base.extend<PomFixtures>({
     const page = await context.newPage();
     bindPomRuntime(page, pomRuntime);
     await use(page);
+    await captureCanonicalUiEvidence({ page, runtime: pomRuntime, testInfo });
     if (process.env.QA_SELECTOR_EVIDENCE_CAPTURE === 'true') {
       await testInfo.attach('selector-runtime-evidence', {
         body: Buffer.from(JSON.stringify({

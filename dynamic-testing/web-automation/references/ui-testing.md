@@ -21,8 +21,14 @@
 - **Responsibilities:** hold locators, perform actions (click/fill/select), read & return data (text, count, state).
 - **NOT its job:** `expect()` assertions. Assertions belong in the spec so the page stays reusable across tests with different expectations.
 - **Component composition:** a page may expose child components as properties (`this.header = new Header(page)`), but avoid deep nesting — flatten if it hurts readability.
-- **Naming:** `<thing>.page.ts` → class `<Thing>Page`. Component: `<thing>.component.ts` → `<Thing>Component`.
-- **Forbidden layout:** one global `app.page.ts`/`aifa.page.ts` containing every module, or several `<module>.batch-NN.functional.spec.ts` files for one module.
+- **Naming:** derive the module slug only from `testcase.group` using ASCII
+  lowercase `kebab-case`; then use `<module-slug>.page.ts` → class
+  `<ModuleSlug>Page`. A component uses `<component-slug>.component.ts` →
+  `<ComponentSlug>Component`. Final generated module files are
+  `selectors/<module-slug>.selectors.ts`, `pages/<module-slug>.page.ts` and
+  `tests/<surface>/<module-slug>.<surface>.spec.ts`; do not use testcase IDs,
+  route names, timestamps or batch names in those paths.
+- **Forbidden layout:** one global `app.page.ts`/`aifa.page.ts` containing every module, or several `<module-slug>.batch-NN.functional.spec.ts` files for one module.
 
 ## 2. Locator strategy (priority order)
 
@@ -117,11 +123,12 @@ test.describe('Feature @ui', () => {
 // playwright.config.ts
 use: {
   trace: unifiedEvidence ? 'on' : 'retain-on-failure',
-  screenshot: unifiedEvidence ? 'on' : 'only-on-failure',
-  video: unifiedEvidence ? 'on' : 'retain-on-failure',
+  screenshot: 'off',
+  video: 'on',
 }
 ```
-- `run-testcase-pom.mjs` sets `QA_UNIFIED_EVIDENCE=true`, so deterministic testcase execution retains visual and same-session trace evidence for both PASS and FAILED
+- `fixtures/pom.ts` owns the canonical `evidence-image` and `evidence-video` attachments. `run-testcase-pom.mjs` sets `QA_UNIFIED_EVIDENCE=true`, so deterministic testcase execution retains visual and same-session trace evidence for both PASS and FAILED
+- Allure parameters and attachment names are fixed by `references/allure-playwright-mapping.md`; validate with `npm run allure:contract`
 - **Trace viewer** (`npx playwright show-trace trace.zip`) = full timeline (DOM snapshot, network, console, source). The #1 debugging tool.
 - In CI: archive `test-results/` as artifact on failure (see `cicd.md`).
 

@@ -326,7 +326,9 @@ npm run traceability -- --testcases testcases/login.md --manifest testcases/logi
 
 ---
 
-## 7. Allure labels mapping
+## 7. Allure labels mapping (optional)
+
+Labels such as epic/feature/story are optional filters only. They do not define the report contract. The shared POM fixture always owns the required `account`, `url`, `evidence_image`, `evidence_video`, `evidence-image` and `evidence-video` fields; do not add per-spec screenshot/video or parameter hooks. See `references/allure-playwright-mapping.md` for the single canonical format.
 
 Mỗi test có metadata để filter trên Allure dashboard. Xem chi tiết ở `references/allure-playwright-mapping.md`.
 
@@ -380,7 +382,7 @@ test('TC_LOGIN_01 [happy] — Login thành công @smoke', async ({ page }) => {
 - [ ] Type được tag (1 trong 8) + tag phụ (`@smoke`, `@validation`,...)
 - [ ] Allure labels đầy đủ (epic/feature/story/severity)
 - [ ] Mỗi page có 1 Page Object với readonly properties
-- [ ] Mỗi feature có file `selectors/<feature>.selectors.ts`
+- [ ] Mỗi module có file `selectors/<module-slug>.selectors.ts`, với slug suy ra duy nhất từ `testcase.group`
 - [ ] Mỗi `target.key` có selector evidence runtime với `count=1`, visibility khớp expected state và actionable khi cần
 - [ ] Không có XPath/CSS đoán từ prose, full XPath, generated class hoặc positional selector
 - [ ] `tsconfig.json` strict mode (template trong SKILL.md)

@@ -67,7 +67,7 @@ export class GenericBuilder<T extends object> {
 // ─────────────────────────────────────────────────────────────
 // TestDataStore — persist data giữa các test runs (optional)
 // ─────────────────────────────────────────────────────────────
-const TESTDATA_DIR = path.resolve(__dirname, '../testdata');
+const RUNTIME_DATA_DIR = path.resolve(__dirname, '../runtime-data');
 
 function safeFileSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'data';
@@ -84,11 +84,11 @@ export class TestDataStore {
     name: string,
     namespace = `${process.env.RUN_ID ?? 'local'}-pid-${process.pid}`,
   ) {
-    if (!fs.existsSync(TESTDATA_DIR)) {
-      fs.mkdirSync(TESTDATA_DIR, { recursive: true });
+    if (!fs.existsSync(RUNTIME_DATA_DIR)) {
+      fs.mkdirSync(RUNTIME_DATA_DIR, { recursive: true });
     }
     this.filePath = path.join(
-      TESTDATA_DIR,
+      RUNTIME_DATA_DIR,
       `${safeFileSegment(name)}.${safeFileSegment(namespace)}.json`,
     );
   }

@@ -36,17 +36,40 @@ npm run testcase-workflow -- \
   --max-cases 20
 ```
 
-The 20-case ceiling bounds each planning artifact, not the final source-file layout. When one module contains more than 20 testcases, create multiple `plans/<module>.batch-NN.pom-plan.json` inputs, then deterministically merge them into:
+The 20-case ceiling bounds each planning artifact, not the final source-file layout. When one module contains more than 20 testcases, create multiple `plans/<module-slug>.batch-NN.pom-plan.json` inputs, then deterministically merge them into:
 
 ```text
-selectors/<module>.selectors.ts
-pages/<module>.page.ts
-tests/<surface>/<module>.<surface>.spec.ts
+selectors/<module-slug>.selectors.ts
+pages/<module-slug>.page.ts
+tests/<surface>/<module-slug>.<surface>.spec.ts
 ```
 
-Do not emit `tests/**/<module>.batch-NN.*.spec.ts`, one global Page Object, or one global selector registry. Validate that every module has exactly one final file of each kind and every Testcase ID appears in exactly one `test()`.
+`<module-slug>` is derived only from `testcase.group`: ASCII lowercase
+`kebab-case`, accents removed, `&` becomes `and`, non-alphanumeric runs become
+`-`, and a leading digit receives the `module-` prefix. Empty groups map to
+`other`; `base` is reserved. If different groups produce the same slug, stop
+with `MODULE_SLUG_COLLISION`. Do not derive filenames from testcase IDs,
+scenario titles, routes, timestamps, workers or model output.
 
-BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts` and `scripts/verify-runtime-scaffold.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough slots.
+Do not emit `tests/**/<module-slug>.batch-NN.*.spec.ts`, one global Page Object,
+or one global selector registry. Validate that every module has exactly one
+final file of each kind and every Testcase ID appears in exactly one `test()`.
+
+The generated `pom-plan` records the canonical identity for a bounded module:
+
+```json
+{
+  "module": {
+    "group": "Quản lý đơn hàng & Đổi trả",
+    "slug": "quan-ly-don-hang-and-doi-tra"
+  }
+}
+```
+
+All downstream artifact builders consume `module.slug`; they must not
+normalize `module.group` independently.
+
+BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, `scripts/artifact-naming.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough slots.
 
 After generating selectors, Page Objects and specs, execute the same IDs:
 
@@ -61,16 +84,16 @@ npm run testcase-workflow -- \
   --browser-project chromium
 ```
 
-The runner sets `QA_UNIFIED_EVIDENCE=true`; Playwright records screenshot, video and trace for the selected tests. The template defaults this evidence on even for direct `npx playwright test` runs. Per-test media/trace/runtime-context attachments are under `evidence/test-results/`, HTML is under `evidence/html/`, and machine-readable execution output is under `reports/`. These folders appear only after a browser test starts; `fixtures/` is source code created during BUILD, not an evidence folder. The runner blocks browser execution when runtime scaffold or traceability is not `PASS`.
+The runner sets `QA_UNIFIED_EVIDENCE=true`; the POM fixture records canonical `evidence-image` and `evidence-video` plus same-session trace for the selected tests. Raw Allure results are cleared into `reports/allure-results/`, validated into `reports/allure-contract.json`, HTML is under `evidence/html/`, and machine-readable execution output is under `reports/`. These folders appear only after a browser test starts; `fixtures/` is source code created during BUILD, not an evidence folder. The runner blocks browser execution when runtime scaffold, traceability or the Allure contract is not `PASS`.
 
 ## Verdict gate
 
-- `PASS`: Playwright passed with required screenshot/video and same-session trace
-- `FAILED`: assertion/action failed with required evidence, or a retry-pass is flaky
+- `PASS`: Playwright passed with canonical Allure parameters, image/video and same-session trace
+- `FAILED`: assertion/action failed with canonical evidence, or a retry-pass is flaky
 - `N/A`: the Playwright test was skipped by an applicable suite condition
 - `UNTEST`: missing test, selector/build traceability, target, data, browser report, visual evidence, trace, timeout or interruption
 
-For UI/functional tests, JSON, logs or a report without existing visual media and trace cannot support `PASS` or `FAILED`.
+For UI/functional tests, JSON, logs or an Allure HTML page without `reports/allure-contract.json: PASS`, canonical image/video and same-session trace cannot support `PASS` or `FAILED`.
 
 ## Google Sheet or Excel
 

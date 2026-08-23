@@ -22,17 +22,18 @@ npm run bootstrap                # tự cài dependency, Chromium, typecheck và
 # Bước 2: Sửa .env + chạy test
 #   Mở .env — fill 4 giá trị REQUIRED:
 #     API_BASE_URL, UI_BASE_URL, TEST_USER, TEST_PASS
-npm run test:ui                  # @ui          — browser-driven
-# npm run test:api               # @api         — request-level
-# npm run test:functional        # @functional  — E2E business flow
+npm run qa:test:ui              # @ui          — browser-driven
+# npm run qa:test:api            # @api         — request-level
+# npm run qa:test:functional     # @functional  — E2E business flow
 ```
 
-> Tip: `npm run bootstrap` idempotent — chạy lại không lỗi. Nó kiểm tra/cài dependency trong project-local, chạy `npx --no-install playwright install chromium`, typecheck, rồi hướng dẫn bước tiếp theo.
+> Tip: `npm run bootstrap` idempotent — chạy lại không lỗi. Nó kiểm tra/cài dependency trong project-local, cài Chromium qua runtime local, typecheck, rồi hướng dẫn bước tiếp theo.
 
 **Xem report:**
 ```bash
 npm run test:report              # Playwright HTML
-npm run allure:gen && npm run allure:open    # Allure
+npm run qa:contract              # validate one canonical Allure format
+npm run qa:report && npm run allure:open      # Allure
 ```
 
 ## 📁 Cấu trúc
@@ -56,21 +57,55 @@ assets/templates/
 │   ├── login.selectors.ts            LoginLocators mẫu
 │   └── dashboard.selectors.ts        DashboardLocators mẫu
 ├── selector-evidence/              ← Runtime DOM verification per target.key
-├── fixtures/                      ← mandatory POM runtime, account/data slots, auth and test-data helpers
-├── test-data/                     ← typed, versioned, read-only DDT case rows
+├── fixtures/                      ← mandatory POM runtime, canonical Allure evidence, account/data slots and auth helpers
+├── test-data/                     ← committed/static typed DDT case rows
 ├── tests/
 │   ├── ui/                          @ui    — browser-driven, per-page
 │   ├── api/                         @api   — request-level, no browser
 │   ├── functional/                  @functional — E2E business flow
 │   └── performance/                 @perf  — Playwright + k6 (Tier 2)
-├── sessions/                      ← runtime-generated auth state (gitignored) — xem README riêng
-├── testdata/                      ← runtime-generated test data (gitignored) — xem README riêng
-├── scripts/                       ← unified testcase/POM runner, traceability, plan và CI helpers
+├── sessions/                      ← generated auth state, sensitive (gitignored) — xem README riêng
+├── runtime-data/                  ← generated runtime test data (gitignored) — xem README riêng
+├── scripts/                       ← qa runner, testcase/POM runner, Allure merge/contract, traceability and CI helpers
+├── plans/                         ← bounded POM plans; batch-NN chỉ dùng ở đây
 ├── quality-gates.json             ← thresholds for failed/flaky/evidence/duration/coverage
 └── testcases/                     ← manual test case Excel template
 ```
 
-`assets/templates/` là phần reusable của skill và được copy sang project automation thật. Không đặt `.env` thật, credential, auth/storage state, live selector evidence, testcase hay runtime data của bất kỳ project nào vào repository skill; các file đó thuộc project đích. Template đã có sẵn `.env.example`, `fixtures/`, `test-data/` và `testdata/` để project đích tiếp tục dùng
+`assets/templates/` là phần reusable của skill và được copy sang project automation thật. Không đặt `.env` thật, credential, auth/storage state, live selector evidence, testcase hay runtime data của bất kỳ project nào vào repository skill; các file đó thuộc project đích. Template đã có sẵn `.env.example`, `fixtures/`, `test-data/` và `runtime-data/` để project đích tiếp tục dùng
+
+## Quy tắc tên file của auto POM
+
+`testcase.group` là nguồn duy nhất để đặt tên module. Skill chuẩn hóa group
+thành `<module-slug>` dạng ASCII `kebab-case`: bỏ dấu, đổi `&` thành `and`,
+đổi chuỗi ký tự không hợp lệ thành `-`, và thêm tiền tố `module-` nếu bắt đầu
+bằng số. Group rỗng dùng `other`; `base` là tên dành riêng cho runtime
+scaffold. Ví dụ `Quản lý đơn hàng & Đổi trả` →
+`quan-ly-don-hang-and-doi-tra`.
+
+```text
+selectors/<module-slug>.selectors.ts
+pages/<module-slug>.page.ts
+tests/<surface>/<module-slug>.<surface>.spec.ts
+selector-evidence/<module-slug>.json
+plans/<module-slug>.batch-NN.pom-plan.json   # intermediate only
+```
+
+Mỗi module chỉ có một selector registry, một Page Object và một spec cuối
+cùng. Không đặt tên file theo testcase ID, route, scenario title, timestamp,
+worker hoặc `batch-NN`; batch chỉ được phép nằm dưới `plans/`. Nếu hai group
+khác nhau tạo cùng slug, `module-layout` dừng với
+`MODULE_SLUG_COLLISION` để tránh ghi đè artifact.
+
+`scripts/artifact-naming.mjs` cung cấp resolver duy nhất
+`resolveModuleSlug(testcase.group)`. `pom-plan` lưu cả `module.group` và
+`module.slug`; selectors, evidence, Page Object và spec phải dùng lại slug
+đã resolve này, không tự normalize `group` lần nữa.
+
+`reports/`, `evidence/`, `sessions/` và `runtime-data/` là generated folders;
+đều phải được gitignore. `sessions/` có thể chứa cookies, token và
+storage-state nên không được commit. `qa:clean` chỉ xóa các generated paths
+đã khai báo trong runner.
 
 ## ➕ Thêm page mới (6 bước)
 
@@ -78,10 +113,10 @@ assets/templates/
 2. Run a bounded `.automation.json` slice through `npm run pom-plan -- --group <name> --max-cases 20`, then use the same-session Browser MCP to discover every selected target key
 3. Run `node scripts/verify-ui-coverage.mjs --manifest <manifest> --inventory <inventory> --app-build "$QA_APP_BUILD" --require-explicit`; the gate blocks uncovered functions
 4. Export Browser MCP selector evidence and pass it to `npm run discover:selectors -- --browser-mcp-evidence <file>`; the command blocks guessed XPath and non-MCP discovery by default
-5. Tạo `selectors/<feature>.selectors.ts` — gồm runtime-verified locator factory + type alias
-6. Thêm `export * from './<feature>.selectors';` vào `selectors/index.ts`
-7. Tạo `pages/<feature>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
-8. Viết `tests/ui/<feature>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
+5. Tạo `selectors/<module-slug>.selectors.ts` — gồm runtime-verified locator factory + type alias
+6. Thêm `export * from './<module-slug>.selectors';` vào `selectors/index.ts`
+7. Tạo `pages/<module-slug>.page.ts` extend `BasePage`, import từ selectors (xem `pages/example.page.ts` hoặc `pages/dashboard.page.ts`)
+8. Viết `tests/ui/<module-slug>.ui.spec.ts` — tag `@ui`, instantiate page object trong `beforeEach`
 
 Chi tiết POM convention xem **[references/ui-testing.md](references/ui-testing.md)**.
 
@@ -100,7 +135,7 @@ Xem **[references/data-driven-testing.md](references/data-driven-testing.md)** v
 
 ```bash
 npm run placeholder-check        # quét <UPPERCASE_SNAKE> còn sót
-npm run lint                     # tsc --noEmit + eslint
+npm run qa:lint                  # tsc --noEmit + eslint
 npm run quality-gate:config      # kiểm tra cấu hình quality gate
 # Sau khi Playwright tạo reports/playwright.json:
 npm run quality-gate              # đánh giá quality gate và ghi reports/quality-gate.json
@@ -109,6 +144,7 @@ npm run testcase-workflow -- --phase plan --mode ui --manifest testcases/<featur
 npm run ui-coverage -- --manifest testcases/<feature>.automation.json --inventory selector-evidence/<feature>.ui-function-inventory.json --app-build "$QA_APP_BUILD" --require-explicit
 npm run traceability -- --testcases testcases/<feature>.md --manifest testcases/<feature>.automation.json --require-browser-mcp --app-build "$QA_APP_BUILD"
 npm run runtime-scaffold
+npm run qa:clean                 # xoá đúng các thư mục output sinh tự động
 npm run testcase-workflow -- --phase plan --mode ui --manifest testcases/<feature>.automation.json --group <group> --ui-inventory selector-evidence/<feature>.ui-function-inventory.json --require-ui-coverage
 npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --testcases testcases/<feature>.md --group <group> --app-build "$QA_APP_BUILD" --ui-inventory selector-evidence/<feature>.ui-function-inventory.json --require-ui-coverage
 ```
@@ -121,12 +157,22 @@ Chi tiết placeholder semantics xem **[assets/templates/PLACEHOLDERS.md](assets
 
 ## 🔄 CI/CD
 
-`Jenkinsfile` + `github-actions-ci.yml` đã có sẵn (template, không hardcode secrets). Fill secrets trong CI dashboard:
+`Jenkinsfile` + `github-actions-ci.yml` đã có sẵn (copy file YAML vào `.github/workflows/qa.yml`, không hardcode secrets). Framework dùng các lệnh `npm run qa:*` thống nhất cho local và CI. GitHub Actions tách `lint` → UI browser matrix → API → unified Allure report; mỗi job test upload `reports/` và `evidence/`, job report merge raw Allure bằng `npm run qa:merge-allure` rồi validate contract trước khi generate HTML. Fill secrets trong CI dashboard:
 
 - `API_BASE_URL`, `UI_BASE_URL` — Jenkins Credentials / GitHub Secrets
 - `TEST_USER`, `TEST_PASS` — Jenkins Credentials / GitHub Secrets
+- `TEST_ACCOUNTS_JSON` — optional parallel account pool in GitHub Secrets
 
 **KHÔNG commit secrets vào YAML** — xem **[references/cicd.md](references/cicd.md)**.
+
+CI mặc định giả định automation project nằm ở `<repository>/qa` theo
+quickstart. Nếu `package.json` nằm ở repository root, đổi `QA_PROJECT_DIR` từ
+`qa` thành `.` trong cả workflow và Jenkinsfile. Commit
+`qa/package-lock.json` (hoặc `package-lock.json` khi dùng root); template dùng
+`npm ci` và có `qa:preflight` để báo rõ thiếu lockfile, placeholder, URL hoặc
+credential trước khi chạy browser. Workflow chỉ kiểm thử application đã được
+deploy/reachable, không tự start hoặc deploy application. Pull request từ fork
+skip live UI/API vì GitHub không cấp repository secrets cho fork.
 
 Quality gate phải giữ lại first-attempt/retry evidence, phân loại flaky riêng và không biến retry-pass thành PASS sạch. Xem [references/FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md) và [references/AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md)
 

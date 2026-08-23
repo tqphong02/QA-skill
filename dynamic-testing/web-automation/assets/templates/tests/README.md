@@ -6,15 +6,17 @@ Chứa 4 loại test theo **tag**. Mỗi test trong `describe()` PHẢI có tag 
 
 | Folder | Tag | Lệnh filter | Đặc điểm |
 |---|---|---|---|
-| `tests/ui/` | `@ui` | `npx playwright test --grep @ui` | Browser-driven, per-page/component |
-| `tests/api/` | `@api` | `npx playwright test --grep @api` | Request-level, không browser |
-| `tests/functional/` | `@functional` | `npx playwright test --grep @functional` | E2E business flow (UI + API) |
-| `tests/performance/` | `@perf` | `npx playwright test --grep @perf` | Smoke perf gate; k6 cho scale (Tier 2) |
+| `tests/ui/` | `@ui` | `npm run qa:test:ui` | Browser-driven, per-page/component |
+| `tests/api/` | `@api` | `npm run qa:test:api` | Request-level, không browser |
+| `tests/functional/` | `@functional` | `npm run qa:test:functional` | E2E business flow (UI + API) |
+| `tests/performance/` | `@perf` | `npm run qa:test -- --grep @perf` | Smoke perf gate; k6 cho scale (Tier 2) |
 
 ## 📄 Quy ước đặt tên file
 
-- `tests/ui/<module>.ui.spec.ts` — đúng 1 spec cho 1 module chức năng; batch plan không được tách thành nhiều file spec
-- Mỗi module cũng có đúng 1 `pages/<module>.page.ts` và 1 `selectors/<module>.selectors.ts`; không gom toàn hệ thống vào một Page Object/selector file
+- `tests/ui/<module-slug>.ui.spec.ts` — đúng 1 spec cho 1 module chức năng; batch plan không được tách thành nhiều file spec
+- Mỗi module cũng có đúng 1 `pages/<module-slug>.page.ts` và 1 `selectors/<module-slug>.selectors.ts`; không gom toàn hệ thống vào một Page Object/selector file
+- `<module-slug>` chỉ được suy ra từ `testcase.group`: ASCII lowercase `kebab-case`, bỏ dấu, `&` thành `and`, chuỗi ký tự khác thành `-`; group trống dùng `other`, `base` là tên dành riêng.
+- Tên spec UI/functional theo `tests/<surface>/<module-slug>.<surface>.spec.ts`; không dùng testcase ID, route, timestamp, worker hoặc `batch-NN` trong final source filename. `batch-NN` chỉ được phép trong `plans/`.
 - `tests/api/<endpoint>.api.spec.ts` — 1 spec cho 1 endpoint hoặc resource (CRUD)
 - `tests/functional/<flow>.functional.spec.ts` — 1 spec cho 1 business flow spanning UI + API
 - `tests/performance/k6-*.js` — k6 script (Tier 2); Playwright `*.perf.spec.ts` cho Tier 1

@@ -9,11 +9,11 @@ import path from 'path';
  * AI đọc skill này sẽ:
  *   1. Copy file này về project (đã reference trong playwright.config.ts)
  *   2. Customize cleanup endpoint theo backend
- *   3. (Optional) Save test summary vào testdata/ để debug
+ *   3. (Optional) Save test summary vào runtime-data/ để debug
  *
  * Workflow:
  *   1. Cleanup test data theo RUN_ID (best-effort)
- *   2. Save test summary → testdata/last-run.json
+ *   2. Save test summary → runtime-data/last-run.json
  *   3. Cleanup expired sessions
  *
  * Lưu ý:
@@ -83,12 +83,12 @@ export default async function globalTeardown(_config: FullConfig): Promise<void>
   }
 
   // ─────────────────────────────────────────────────────────
-  // 2. Save test summary → testdata/last-run.json
+  // 2. Save test summary → runtime-data/last-run.json
   // ─────────────────────────────────────────────────────────
   try {
-    const testdataDir = path.resolve(__dirname, '../testdata');
-    if (!fs.existsSync(testdataDir)) {
-      fs.mkdirSync(testdataDir, { recursive: true });
+    const runtimeDataDir = path.resolve(__dirname, '../runtime-data');
+    if (!fs.existsSync(runtimeDataDir)) {
+      fs.mkdirSync(runtimeDataDir, { recursive: true });
     }
 
     const summary = {
@@ -98,7 +98,7 @@ export default async function globalTeardown(_config: FullConfig): Promise<void>
     };
 
     fs.writeFileSync(
-      path.join(testdataDir, 'last-run.json'),
+      path.join(runtimeDataDir, 'last-run.json'),
       JSON.stringify(summary, null, 2),
     );
     console.log(`[global-teardown] Test summary saved`);
