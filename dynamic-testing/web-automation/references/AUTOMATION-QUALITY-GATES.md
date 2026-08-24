@@ -7,7 +7,7 @@ Use the lowest reliable level for each risk:
 1. Unit/component for pure rules and rendered component states
 2. Contract/API for schemas, permissions, idempotency and integration boundaries
 3. UI functional for a small set of critical business journeys
-4. k6/JMeter for concurrent load; do not use Playwright as a load generator
+4. Handoff concurrent load to `dynamic-performance`; never use this Playwright suite as a load generator
 
 Use service virtualization for unavailable or expensive dependencies. Keep at least one approved environment test against the real dependency so mocks do not become the only evidence
 
@@ -21,17 +21,13 @@ Use service virtualization for unavailable or expensive dependencies. Keep at le
 - Evidence completeness for every Pass/Fail UI result
 - Duration within the suite budget
 - Branch or statement coverage threshold when the project declares one
-- Visual and axe accessibility checks for supported critical UI journeys
 - Browser matrix matching the product support policy
 
 See `assets/templates/quality-gates.json` and `assets/templates/scripts/quality-gate.mjs` for the executable template
 
-## Visual and accessibility controls
+## Cross-skill visual and accessibility controls
 
-- Baselines must be tied to commit, browser, viewport, locale and theme
-- Review anti-aliasing and dynamic-region masks explicitly; never approve a broad mask that hides business content
-- Run axe for automated checks, then retain keyboard/focus/manual evidence for critical flows
-- A screenshot proves visual state only; it does not prove network success, persistence or accessibility
+Route WCAG/axe/keyboard/screen-reader claims to `hybrid-accessibility` and Figma/visual design review to `hybrid-ui-ux-review`. Evidence produced here proves the deterministic UI state only; it does not independently prove accessibility or design conformance
 
 ## Coverage quality
 

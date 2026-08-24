@@ -141,3 +141,66 @@ test('canonical Allure contract rejects secret-like account values', () => {
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('unknown Allure modes fail closed', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-contract-mode-'));
+  try {
+    writeResult(root, 'result-001', canonicalResult());
+    const report = verifyAllureContract({ resultsDir: root, mode: 'uui' });
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(item => item.code === 'ALLURE_MODE_UNKNOWN'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('canonical media requirements cannot be disabled by a caller override', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-contract-bypass-'));
+  try {
+    writeResult(root, 'result-001', canonicalResult({ attachments: [] }));
+    const report = verifyAllureContract({ resultsDir: root, mode: 'ui', requireMedia: false });
+    assert.equal(report.require_media, true);
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(item => item.code === 'ALLURE_MEDIA_OVERRIDE_FORBIDDEN'));
+    assert.ok(report.violations.some(item => item.code === 'ALLURE_ATTACHMENT_REQUIRED_MISSING'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('UI evidence parameters must name the exact canonical attachments', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-contract-parameter-'));
+  try {
+    writeResult(root, 'result-001', canonicalResult({
+      parameters: canonicalResult().parameters.map(parameter => (
+        parameter.name === 'evidence_image'
+          ? { ...parameter, value: 'alternate-screenshot' }
+          : parameter
+      )),
+    }));
+    const report = verifyAllureContract({ resultsDir: root, mode: 'ui' });
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(item => item.code === 'ALLURE_EVIDENCE_PARAMETER_INVALID'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('canonical media sources cannot escape the Allure results directory', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-contract-source-'));
+  try {
+    const result = canonicalResult({
+      attachments: [
+        { name: 'evidence-image', source: path.resolve(root, '..', 'outside.png'), type: 'image/png' },
+        { name: 'evidence-video', source: 'video-001.webm', type: 'video/webm' },
+      ],
+    });
+    fs.writeFileSync(path.join(root, 'video-001.webm'), 'evidence');
+    fs.writeFileSync(path.join(root, 'result-001-result.json'), `${JSON.stringify(result)}\n`, 'utf8');
+    const report = verifyAllureContract({ resultsDir: root, mode: 'ui' });
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(item => item.code === 'ALLURE_ATTACHMENT_SOURCE_OUTSIDE_RESULTS'));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});

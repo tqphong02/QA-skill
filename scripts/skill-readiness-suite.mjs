@@ -462,7 +462,7 @@ function planeChecks(skill) {
 
 function pomChecks(skill) {
   const templateRoot = skillPath('dynamic-web-automation', 'assets', 'templates')
-  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'test-data/cases/login.cases.ts', 'runtime-data/.gitkeep', 'runtime-data/README.md', 'quality-gates.json', 'scripts/quality-gate.mjs', 'scripts/artifact-naming.mjs', 'scripts/ci-preflight.mjs', 'scripts/generate-pom-plan.mjs', 'scripts/verify-module-artifact-layout.mjs', 'scripts/verify-testcase-traceability.mjs']
+  const required = ['pages/base.page.ts', 'pages/example.page.ts', 'selectors/index.ts', 'tests/ui/example.ui.spec.ts', 'tests/api/example.api.spec.ts', 'tests/functional/example.functional.spec.ts', 'test-data/cases/login.cases.ts', 'quality-gates.json', 'fixtures/pom.ts', 'scripts/quality-gate.mjs', 'scripts/artifact-naming.mjs', 'scripts/ci-preflight.mjs', 'scripts/generate-pom-plan.mjs', 'scripts/generate-pom-code.mjs', 'scripts/verify-module-artifact-layout.mjs', 'scripts/verify-api-operation-coverage.mjs', 'scripts/verify-testcase-traceability.mjs']
   const missing = required.filter(file => !fs.existsSync(path.join(templateRoot, file)))
   const specFiles = []
   function collect(directory) {
@@ -475,7 +475,7 @@ function pomChecks(skill) {
   }
   collect(path.join(templateRoot, 'tests'))
   const rawLocatorInSpecs = specFiles.filter(file => /page\.(?:locator|getByTestId|getByRole|getByLabel|getByPlaceholder|getByText)\s*\(/.test(fs.readFileSync(file, 'utf8')))
-  const tags = specFiles.every(file => /@(ui|api|functional|perf)/.test(fs.readFileSync(file, 'utf8')))
+  const tags = specFiles.every(file => /@(ui|api|functional)/.test(fs.readFileSync(file, 'utf8')))
   const structureOk = missing.length === 0 && rawLocatorInSpecs.length === 0 && tags
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
   const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: skillPath('dynamic-web-automation'), env: safeEnv({ npm_config_offline: 'true' }), timeout: 90000 })

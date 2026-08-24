@@ -1,4 +1,4 @@
 interface:
-  display_name: "Testcase Execution & POM"
-  short_description: "Build POM, chạy browser, thu evidence và verdict"
-  default_prompt: "Use $dynamic-web-automation to build and run a bounded testcase manifest slice through Playwright POM, capture same-session visual and trace evidence, and return only PASS, FAILED, N/A or UNTEST."
+  display_name: "UI & API Automation POM"
+  short_description: "Build UI/API POM sạch, chạy test và trả verdict"
+  default_prompt: "Use $dynamic-web-automation to deterministically build and run a bounded UI, API, or functional automation manifest through its canonical fixtures, enforce surface coverage and evidence gates, and return only PASS, FAILED, N/A, or UNTEST."

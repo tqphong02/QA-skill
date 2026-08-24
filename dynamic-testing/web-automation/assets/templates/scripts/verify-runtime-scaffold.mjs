@@ -44,12 +44,18 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
   const configPath = path.join(resolvedRoot, 'playwright.config.ts');
 
   requireFile(resolvedRoot, 'fixtures/pom.ts', violations);
+  requireFile(resolvedRoot, 'fixtures/api-client.ts', violations);
+  requireFile(resolvedRoot, 'fixtures/auth.ts', violations);
+  requireFile(resolvedRoot, 'fixtures/data-driven.ts', violations);
   requireFile(resolvedRoot, 'fixtures/runtime-context.ts', violations);
   requireFile(resolvedRoot, 'fixtures/allure-contract.ts', violations);
   requireFile(resolvedRoot, 'fixtures/parallel-pool.js', violations);
   requireFile(resolvedRoot, 'fixtures/parallel-pool.d.ts', violations);
   requireFile(resolvedRoot, 'scripts/artifact-naming.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/generate-pom-code.mjs', violations);
   requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-module-artifact-layout.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-api-operation-coverage.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-allure-contract.mjs', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/merge-allure-results.mjs', violations);
@@ -65,6 +71,20 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
       'fixtures/pom.ts',
       violations,
     );
+    for (const [fixture, code] of [
+      ['api', 'CANONICAL_API_FIXTURE_MISSING'],
+      ['authenticatedApi', 'CANONICAL_AUTHENTICATED_API_FIXTURE_MISSING'],
+      ['testData', 'CANONICAL_TEST_DATA_FIXTURE_MISSING'],
+      ['workerAccount', 'CANONICAL_WORKER_ACCOUNT_FIXTURE_MISSING'],
+    ]) {
+      requirePattern(
+        pomSource,
+        new RegExp(`\\b${fixture}\\s*:`),
+        code,
+        'fixtures/pom.ts',
+        violations,
+      );
+    }
   }
 
   if (fs.existsSync(configPath)) {
@@ -110,6 +130,9 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
     }
     if (/from\s+['"]allure-playwright['"]/.test(source)) {
       violations.push({ code: 'GENERATED_SPEC_BYPASSES_ALLURE_FIXTURE', file });
+    }
+    if (/async\s*\(\s*\{[^}]*\brequest\b[^}]*\}/s.test(source)) {
+      violations.push({ code: 'GENERATED_SPEC_BYPASSES_API_FIXTURE', file });
     }
   }
 

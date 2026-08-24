@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/data-driven';
+import { test, expect } from '../../fixtures/pom';
 import { LoginPage } from '../../pages/example.page';
 import { DashboardPage } from '../../pages/dashboard.page';
 import { ENV } from '../../fixtures/env';
@@ -60,7 +60,7 @@ test.describe('Login @ui', () => {
 
   // @Test(priority=1, groups={"smoke","ui"})
   // @Severity(CRITICAL) @Feature("Login") @Story("Happy path")
-  test('happy path — credentials đúng → redirect dashboard + welcome', async ({ page }) => {
+  test('TC-UI-LOGIN-SUCCESS-001 | happy path — credentials đúng → redirect dashboard + welcome', async ({ page }) => {
     // Allure annotations — tương đương @Severity, @Feature, @Story, @Owner (TestNG)
     // Playwright native annotation — hiển thị trong HTML report
     // PHẢI gọi trong async test body (không gọi ngoài test block)
@@ -88,7 +88,7 @@ test.describe('Login @ui', () => {
 
   // @Test(priority=2, groups={"regression","ui"})
   // @Severity(NORMAL) @Story("Negative — wrong password")
-  test('negative — sai password → error message hiển thị', async () => {
+  test('TC-UI-LOGIN-WRONG-PASSWORD-001 | negative — sai password → error message hiển thị', async () => {
     await test.step('Submit wrong credentials', async () => {
       await loginPage.fillCredentials('wrong@example.com', 'wrong-password-xyz');
       await loginPage.submit();
@@ -103,7 +103,7 @@ test.describe('Login @ui', () => {
 
   // @Test(priority=3, groups={"regression","ui"})
   // @Severity(MINOR) @Story("Negative — empty fields")
-  test('negative — bỏ trống field → submit disabled', async ({ page }) => {
+  test('TC-UI-LOGIN-EMPTY-001 | negative — bỏ trống field → submit disabled', async ({ page }) => {
     await loginPage.fillCredentials('', '');
 
     await expect(loginPage.submitButton).toBeDisabled();
@@ -112,7 +112,7 @@ test.describe('Login @ui', () => {
 
   // @Test(enabled=false) — skip có điều kiện theo environment
   // CÚ PHÁP ĐÚNG: test.skip() phải nằm TRONG test body (không phải standalone)
-  test('flaky test example — skip khi SKIP_FLAKY=true @ui', async ({ page }) => {
+  test('TC-UI-LOGIN-FLAKY-001 | flaky test example — skip khi SKIP_FLAKY=true @ui', async ({ page }) => {
     // Tương đương @Test(enabled=false) trong TestNG
     // test.skip() trong body = conditional skip — không phải bỏ test hoàn toàn
     test.skip(

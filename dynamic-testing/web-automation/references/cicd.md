@@ -17,12 +17,13 @@ duplicate Playwright arguments or depend on a globally installed CLI.
 | `npm run qa:test:api` | API tests with the `@api` tag |
 | `npm run qa:test:functional` | Functional tests with the `@functional` tag |
 | `npm run qa:test -- --surface all` | Full deterministic suite |
-| `npm run qa:quality` | Evaluate `reports/playwright.json` against `quality-gates.json` |
+| `npm run qa:quality -- --surface <surface> --project <browser>` | Enforce minimum executed tests, required surface tags and expected browser projects |
 | `npm run qa:contract -- --mode <mode>` | Validate the canonical Allure result shape |
-| `npm run qa:report -- --mode mixed` | Validate then generate `reports/allure-report` |
-| `npm run qa:merge-allure` | Merge downloaded job results without overwriting collisions |
+| `npm run qa:report -- --mode mixed --contract-output <file> --report-output <dir>` | Validate then generate the canonical Allure HTML report; ambiguous `--output`/`--no-media` are blocked |
+| `npm run qa:merge-allure -- --expect-artifact <name>` | Merge every expected downloaded job result without overwriting collisions; missing jobs/results are blocked |
 | `npm run qa:preflight -- --surface <surface> --require-auth` | Validate project layout, lockfile, scripts, URLs and CI auth inputs without printing secrets |
 | `npm run qa:clean` | Remove only known generated output directories |
+| `npm run toolchain:check` | Validate `package.json` dependency parity against `dependency-versions.json` before install |
 
 Additional Playwright options are forwarded after `--`, for example:
 
@@ -44,7 +45,8 @@ workflow and Jenkinsfile and keep all artifact paths aligned with that value.
 The selected project directory must contain `package.json`,
 `package-lock.json`, `quality-gates.json` and `scripts/qa.mjs`. Commit the
 lockfile after the first `npm install`; CI intentionally uses `npm ci` and
-does not silently fall back to a mutable install. The static preflight checks
+does not silently fall back to a mutable install. Run `npm run toolchain:check`
+before `npm ci`; dependency drift is fail-closed. The static preflight checks
 the lockfile and unresolved placeholders before dependency installation, while
 `qa:preflight` checks surface-specific URLs and optional authentication inputs.
 
@@ -59,6 +61,8 @@ Every job writes to the same paths:
 | `reports/quality-gate.json` | Threshold evaluation |
 | `reports/allure-results/` | Raw canonical Allure results and attachments |
 | `reports/allure-contract.json` | `PASS` or `BLOCKED` contract result |
+| `reports/module-artifact-layout.json` | Surface-aware generated module layout gate |
+| `reports/api-operation-coverage.json` | Exact selected API operation coverage when applicable |
 | `evidence/` | HTML, trace and unified screenshot/video evidence |
 
 The runner clears stale raw results before a deterministic run. UI and
@@ -107,7 +111,12 @@ artifacts into `ci-artifacts/`, runs:
 npm run qa:merge-allure -- \
   --input ci-artifacts \
   --output reports/allure-results \
-  --summary reports/allure-merge.json
+  --summary reports/allure-merge.json \
+  --expect-artifact qa-ui-chromium-<run-id> \
+  --expect-artifact qa-ui-firefox-<run-id> \
+  --expect-artifact qa-functional-chromium-<run-id> \
+  --expect-artifact qa-functional-firefox-<run-id> \
+  --expect-artifact qa-api-<run-id>
 npm run qa:report -- --mode mixed
 ```
 
@@ -203,10 +212,10 @@ run namespace. Configure the `Node-24` NodeJS
 installation and credential IDs in Jenkins; do not change the test contract per
 platform.
 
-## Performance and flaky policy
+## Flaky policy and cross-skill handoff
 
-k6 is a separate manual/scheduled job and does not run on every pull request.
-Playwright retries are bounded by `PW_RETRIES` (0–2); a retry-pass remains
+Performance/load/JMeter/k6 belongs to `dynamic-performance` and is absent from
+this automation CI template. Playwright retries are bounded by `PW_RETRIES` (0–2); a retry-pass remains
 `FAILED` with `flaky=true`, never a clean `PASS`. The executable quality gate
 reads the real Playwright `suites/specs/tests` report shape, blocks an empty
 report and counts a retry-pass in `failed` even when `maxFlakeRate` itself is

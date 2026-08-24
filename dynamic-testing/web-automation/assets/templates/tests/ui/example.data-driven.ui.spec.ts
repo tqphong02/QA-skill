@@ -1,4 +1,4 @@
-import { test, expect } from '../../fixtures/data-driven';
+import { test, expect } from '../../fixtures/pom';
 import { LoginPage } from '../../pages/example.page';
 import { loginValidationCases } from '../../test-data/cases/login.cases';
 

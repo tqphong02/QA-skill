@@ -40,7 +40,9 @@ jobs:
           qa_dir="$QA_PROJECT_DIR"
           test -f "$qa_dir/package.json" || { echo "::error title=CI project missing::$qa_dir/package.json was not found"; exit 1; }
           test -f "$qa_dir/package-lock.json" || { echo "::error title=Lockfile missing::Commit $qa_dir/package-lock.json; CI uses npm ci"; exit 1; }
+          test -f "$qa_dir/dependency-versions.json" || { echo "::error title=Toolchain manifest missing::$qa_dir/dependency-versions.json was not found"; exit 1; }
           test -f "$qa_dir/quality-gates.json" || { echo "::error title=Quality gate missing::$qa_dir/quality-gates.json was not found"; exit 1; }
+          test -f "$qa_dir/.eslintrc.cjs" || { echo "::error title=ESLint config missing::$qa_dir/.eslintrc.cjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/qa.mjs" || { echo "::error title=QA runner missing::$qa_dir/scripts/qa.mjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/ci-preflight.mjs" || { echo "::error title=CI preflight missing::$qa_dir/scripts/ci-preflight.mjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/execution-lock.mjs" || { echo "::error title=Execution lock missing::$qa_dir/scripts/execution-lock.mjs was not found"; exit 1; }
@@ -70,6 +72,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd "$QA_PROJECT_DIR"
+          npm run toolchain:check
           npm ci
 
       - name: Validate quality-gate configuration
@@ -150,7 +153,7 @@ jobs:
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
-          npm run qa:quality
+          npm run qa:quality -- --surface ui --project=${{ matrix.browser }}
 
       - name: Validate canonical Allure result
         id: contract
@@ -165,7 +168,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: qa-ui-${{ matrix.browser }}-${{ github.run_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 14
           path: |
             ${{ env.QA_PROJECT_DIR }}/reports/
@@ -173,8 +176,22 @@ jobs:
             ${{ env.QA_PROJECT_DIR }}/test-results/
             ${{ env.QA_PROJECT_DIR }}/quality-gates.json
 
+      - name: Validate required UI artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
       - name: Fail UI job on test or quality failure
-        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure')
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
         run: exit 1
 
   test-functional:
@@ -243,7 +260,7 @@ jobs:
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
-          npm run qa:quality
+          npm run qa:quality -- --surface functional --project=${{ matrix.browser }}
 
       - name: Validate canonical Allure result
         id: contract
@@ -258,7 +275,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: qa-functional-${{ matrix.browser }}-${{ github.run_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 14
           path: |
             ${{ env.QA_PROJECT_DIR }}/reports/
@@ -266,8 +283,22 @@ jobs:
             ${{ env.QA_PROJECT_DIR }}/test-results/
             ${{ env.QA_PROJECT_DIR }}/quality-gates.json
 
+      - name: Validate required functional artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
       - name: Fail functional job on test or quality failure
-        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure')
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
         run: exit 1
 
   test-api:
@@ -322,7 +353,7 @@ jobs:
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
-          npm run qa:quality
+          npm run qa:quality -- --surface api --project=chromium
 
       - name: Validate canonical Allure result
         id: contract
@@ -337,7 +368,7 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: qa-api-${{ github.run_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 14
           path: |
             ${{ env.QA_PROJECT_DIR }}/reports/
@@ -345,8 +376,22 @@ jobs:
             ${{ env.QA_PROJECT_DIR }}/test-results/
             ${{ env.QA_PROJECT_DIR }}/quality-gates.json
 
+      - name: Validate required API artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
       - name: Fail API job on test or quality failure
-        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure')
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
         run: exit 1
 
   report:
@@ -379,7 +424,15 @@ jobs:
       - name: Merge Allure results
         run: |
           cd "$QA_PROJECT_DIR"
-          npm run qa:merge-allure -- --input ci-artifacts --output reports/allure-results --summary reports/allure-merge.json
+          npm run qa:merge-allure -- \
+            --input ci-artifacts \
+            --output reports/allure-results \
+            --summary reports/allure-merge.json \
+            --expect-artifact qa-ui-chromium-${{ github.run_id }} \
+            --expect-artifact qa-ui-firefox-${{ github.run_id }} \
+            --expect-artifact qa-functional-chromium-${{ github.run_id }} \
+            --expect-artifact qa-functional-firefox-${{ github.run_id }} \
+            --expect-artifact qa-api-${{ github.run_id }}
 
       - name: Generate unified Allure report
         run: |
@@ -391,23 +444,8 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: qa-allure-${{ github.run_id }}
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 14
           path: |
             ${{ env.QA_PROJECT_DIR }}/reports/
             ${{ env.QA_PROJECT_DIR }}/evidence/
-
-  k6-load-test:
-    name: k6 (manual or scheduled)
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v6
-      - name: Run k6
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: ${{ env.QA_PROJECT_DIR }}/tests/performance/k6-load-test.js
-        env:
-          BASE_URL: ${{ secrets.BASE_URL }}
-          K6_CLOUD_TOKEN: ${{ secrets.K6_CLOUD_TOKEN }}

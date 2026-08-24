@@ -25,6 +25,10 @@ function projectRoot({ lockfileVersion = 3 } = {}) {
       'qa:contract': 'true',
       'qa:report': 'true',
       'qa:merge-allure': 'true',
+      'pom-codegen': 'true',
+      'module-layout': 'true',
+      'api-operation-coverage': 'true',
+      'testcase-workflow': 'true',
     },
   }));
   write(root, 'package-lock.json', JSON.stringify({ lockfileVersion, packages: {} }));
@@ -32,6 +36,10 @@ function projectRoot({ lockfileVersion = 3 } = {}) {
   write(root, 'scripts/qa.mjs', 'export {};\n');
   write(root, 'scripts/ci-preflight.mjs', 'export {};\n');
   write(root, 'scripts/execution-lock.mjs', 'export {};\n');
+  write(root, 'scripts/generate-pom-code.mjs', 'export {};\n');
+  write(root, 'scripts/verify-module-artifact-layout.mjs', 'export {};\n');
+  write(root, 'scripts/verify-api-operation-coverage.mjs', 'export {};\n');
+  write(root, 'scripts/run-testcase-pom.mjs', 'export {};\n');
   write(root, 'fixtures/parallel-pool.js', 'module.exports = {};\n');
   write(root, 'fixtures/parallel-pool.d.ts', 'export {};\n');
   write(root, 'playwright.config.ts', 'export default {};\n');

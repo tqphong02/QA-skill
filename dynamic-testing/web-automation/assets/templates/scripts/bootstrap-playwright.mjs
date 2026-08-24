@@ -8,11 +8,12 @@ import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
-const REQUIRED_DEV_DEPENDENCIES = {
-  '@playwright/test': '^1.54.0',
-  '@types/node': '^22.0.0',
-  typescript: '^5.8.0',
-};
+const REQUIRED_DEV_DEPENDENCIES = Object.freeze([
+  '@playwright/test',
+  '@types/node',
+  'typescript',
+]);
+const DEPENDENCY_SECTIONS = Object.freeze(['dependencies', 'devDependencies']);
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
@@ -35,6 +36,82 @@ function declaredDependencies(packageJson) {
   ])];
 }
 
+function readDependencyVersions(projectRoot) {
+  const manifestPath = path.join(projectRoot, 'dependency-versions.json');
+  if (!fs.existsSync(manifestPath)) {
+    return {
+      status: 'BLOCKED',
+      reason: 'dependency-versions.json is required as the generated project dependency source of truth',
+      manifest_path: manifestPath,
+      value: null,
+    };
+  }
+  try {
+    const value = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    if (value.schema_version !== 1) {
+      throw new Error(`unsupported schema_version: ${value.schema_version ?? 'missing'}`);
+    }
+    for (const section of DEPENDENCY_SECTIONS) {
+      if (!value[section] || typeof value[section] !== 'object' || Array.isArray(value[section])) {
+        throw new Error(`${section} must be an object`);
+      }
+    }
+    return { status: 'PASS', manifest_path: manifestPath, value };
+  } catch (error) {
+    return {
+      status: 'BLOCKED',
+      reason: `cannot parse dependency-versions.json: ${error.message}`,
+      manifest_path: manifestPath,
+      value: null,
+    };
+  }
+}
+
+function dependencyVersionMismatches(packageJson, manifest) {
+  const mismatches = [];
+  for (const section of DEPENDENCY_SECTIONS) {
+    for (const [name, expected] of Object.entries(manifest[section])) {
+      const actualSection = DEPENDENCY_SECTIONS.find(candidate => (
+        typeof packageJson[candidate]?.[name] === 'string'
+      ));
+      const actual = actualSection ? packageJson[actualSection][name] : null;
+      if (actualSection !== section || actual !== expected) {
+        mismatches.push({
+          dependency: name,
+          expected_section: section,
+          expected,
+          actual_section: actualSection || null,
+          actual,
+        });
+      }
+    }
+  }
+  return mismatches;
+}
+
+export function inspectDependencyVersionParity(projectRoot) {
+  const packagePath = path.join(projectRoot, 'package.json');
+  if (!fs.existsSync(packagePath)) {
+    return { status: 'BLOCKED', reason: 'package.json is required in project-root', package_path: packagePath };
+  }
+  let packageJson;
+  try {
+    packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+  } catch (error) {
+    return { status: 'BLOCKED', reason: `cannot parse package.json: ${error.message}`, package_path: packagePath };
+  }
+  const manifest = readDependencyVersions(projectRoot);
+  if (manifest.status !== 'PASS') return { ...manifest, package_path: packagePath };
+  const mismatches = dependencyVersionMismatches(packageJson, manifest.value);
+  return {
+    status: mismatches.length > 0 ? 'BLOCKED' : 'PASS',
+    reason: mismatches.length > 0 ? 'package.json does not match dependency-versions.json' : null,
+    package_path: packagePath,
+    manifest_path: manifest.manifest_path,
+    mismatches,
+  };
+}
+
 function localBinary(projectRoot, name) {
   const binaryName = process.platform === 'win32' ? `${name}.cmd` : name;
   return path.join(projectRoot, 'node_modules', '.bin', binaryName);
@@ -47,7 +124,7 @@ export function inspectProjectRuntime(projectRoot) {
       status: 'BLOCKED',
       reason: 'package.json is required in project-root',
       package_path: packagePath,
-      missing_dependencies: Object.keys(REQUIRED_DEV_DEPENDENCIES),
+      missing_dependencies: [...REQUIRED_DEV_DEPENDENCIES],
       install_required: true,
       playwright_module: false,
       playwright_cli: false,
@@ -71,14 +148,32 @@ export function inspectProjectRuntime(projectRoot) {
     };
   }
 
-  const missingDependencies = Object.keys(REQUIRED_DEV_DEPENDENCIES)
+  const manifest = readDependencyVersions(projectRoot);
+  if (manifest.status !== 'PASS') {
+    return {
+      status: 'BLOCKED',
+      reason: manifest.reason,
+      package_path: packagePath,
+      dependency_manifest_path: manifest.manifest_path,
+      missing_dependencies: [],
+      version_mismatches: [],
+      install_required: false,
+      playwright_module: false,
+      playwright_cli: false,
+      typescript_cli: false,
+    };
+  }
+
+  const missingDependencies = REQUIRED_DEV_DEPENDENCIES
     .filter(name => !hasAnyDependency(packageJson, name));
+  const versionMismatches = dependencyVersionMismatches(packageJson, manifest.value);
   const missingDeclaredModules = declaredDependencies(packageJson)
     .filter(name => !fs.existsSync(path.join(projectRoot, 'node_modules', name, 'package.json')));
   const playwrightModule = fs.existsSync(path.join(projectRoot, 'node_modules', '@playwright', 'test', 'package.json'));
   const playwrightCli = fs.existsSync(localBinary(projectRoot, 'playwright'));
   const typescriptCli = fs.existsSync(localBinary(projectRoot, 'tsc'));
   const installRequired = missingDependencies.length > 0
+    || versionMismatches.length > 0
     || missingDeclaredModules.length > 0
     || !playwrightModule
     || !playwrightCli
@@ -88,6 +183,8 @@ export function inspectProjectRuntime(projectRoot) {
     status: installRequired ? 'NEEDS_BOOTSTRAP' : 'READY',
     package_path: packagePath,
     missing_dependencies: missingDependencies,
+    version_mismatches: versionMismatches,
+    dependency_manifest_path: manifest.manifest_path,
     missing_declared_modules: missingDeclaredModules,
     install_required: installRequired,
     playwright_module: playwrightModule,
@@ -128,16 +225,23 @@ function run(command, args, projectRoot, label, { allowFailure = false } = {}) {
 
 function ensurePackageDependencies(projectRoot) {
   const { packagePath, value: packageJson } = readPackageJson(projectRoot);
-  const missingDependencies = Object.entries(REQUIRED_DEV_DEPENDENCIES)
-    .filter(([name]) => !hasAnyDependency(packageJson, name));
-  if (missingDependencies.length === 0) return [];
-
-  packageJson.devDependencies = {
-    ...(packageJson.devDependencies || {}),
-    ...Object.fromEntries(missingDependencies),
-  };
+  const manifest = readDependencyVersions(projectRoot);
+  if (manifest.status !== 'PASS') throw new Error(`BLOCKED: ${manifest.reason}`);
+  const mismatches = dependencyVersionMismatches(packageJson, manifest.value);
+  if (mismatches.length === 0) return [];
+  for (const section of DEPENDENCY_SECTIONS) {
+    packageJson[section] = { ...(packageJson[section] || {}) };
+  }
+  for (const section of DEPENDENCY_SECTIONS) {
+    for (const [name, version] of Object.entries(manifest.value[section])) {
+      for (const otherSection of DEPENDENCY_SECTIONS) {
+        if (otherSection !== section) delete packageJson[otherSection][name];
+      }
+      packageJson[section][name] = version;
+    }
+  }
   fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
-  return missingDependencies.map(([name]) => name);
+  return mismatches.map(item => item.dependency);
 }
 
 function installDependencies(projectRoot) {
@@ -230,12 +334,15 @@ function parseBrowsers(value) {
 function main() {
   const projectRoot = path.resolve(getArg('--project-root', process.cwd()));
   const checkOnly = process.argv.includes('--check-only');
+  const checkToolchain = process.argv.includes('--check-toolchain');
   const skipInstall = process.argv.includes('--skip-install');
   const skipBrowsers = process.argv.includes('--skip-browsers');
   const skipTypes = process.argv.includes('--skip-types');
-  const result = checkOnly
-    ? inspectProjectRuntime(projectRoot)
-    : ensurePlaywrightRuntime(projectRoot, {
+  const result = checkToolchain
+    ? inspectDependencyVersionParity(projectRoot)
+    : checkOnly
+      ? inspectProjectRuntime(projectRoot)
+      : ensurePlaywrightRuntime(projectRoot, {
       browsers: parseBrowsers(getArg('--browsers', 'chromium')),
       install: !skipInstall,
       installBrowsers: !skipBrowsers,
@@ -244,10 +351,10 @@ function main() {
     });
   const output = {
     ...result,
-    command: checkOnly ? 'check-only' : 'bootstrap',
+    command: checkToolchain ? 'check-toolchain' : checkOnly ? 'check-only' : 'bootstrap',
   };
   console.log(JSON.stringify(output, null, 2));
-  if (output.status !== 'READY') process.exitCode = 2;
+  if (!['READY', 'PASS'].includes(output.status)) process.exitCode = 2;
 }
 
 const isDirectRun = process.argv[1]

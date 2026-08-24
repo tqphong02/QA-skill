@@ -6,42 +6,44 @@ Use this reference when the request includes executing deterministic testcases, 
 
 ```text
 .automation.json
-  → bounded plans
-  → consolidate plans by business module
-  → one selector + Page Object + spec file per module
-  → traceability PASS
-  → Playwright browser run
-  → screenshot/video + trace from that run
+  → one immutable bounded module plan
+  → deterministic surface-specific codegen
+  → UI function coverage and/or API operation coverage PASS
+  → module layout + runtime scaffold + traceability PASS
+  → Playwright surface run
+  → canonical same-run evidence
   → PASS | FAILED | N/A | UNTEST
   → optional Sheet write-back
 ```
 
 Modes:
 
-- `BUILD`: create the plan and reusable POM code; no runtime verdict
-- `RUN`: execute an existing traced POM suite and produce evidence/verdict
+- `BUILD`: create the immutable plan and reusable UI/API/functional code; no runtime verdict
+- `RUN`: require that exact plan through `--plan-input`, validate its manifest hash, then execute the existing generated suite
 - `BUILD_AND_RUN`: default; complete BUILD then RUN without reinterpreting the manifest
 
 Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, installs all declared package dependencies when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. Generated targets also wire this bootstrap to direct typecheck, provisioning and test npm entrypoints so editor/test commands do not depend on a pre-existing global install. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
 
 ## Commands
 
-Create the bounded plan before code generation:
+Inspect the bounded plan without writing code:
 
 ```bash
 npm run testcase-workflow -- \
   --phase plan \
+  --mode api \
   --manifest testcases/login.automation.json \
   --group LOGIN \
   --max-cases 20
 ```
 
-The 20-case ceiling bounds each planning artifact, not the final source-file layout. When one module contains more than 20 testcases, create multiple `plans/<module-slug>.batch-NN.pom-plan.json` inputs, then deterministically merge them into:
+The hard 20-case ceiling bounds each plan and a plan contains exactly one module. When one module contains more than 20 testcases, create multiple `plans/<module-slug>.batch-NN.pom-plan.json` inputs; the standalone code generator may deterministically consolidate those batches. Final files remain surface-specific:
 
 ```text
-selectors/<module-slug>.selectors.ts
-pages/<module-slug>.page.ts
-tests/<surface>/<module-slug>.<surface>.spec.ts
+ui: selectors/<slug>.selectors.ts, pages/<slug>.page.ts, tests/ui/<slug>.ui.spec.ts
+api: clients/<slug>.client.ts, schemas/<slug>.schema.ts, tests/api/<slug>.api.spec.ts
+functional: all four layers, tests/functional/<slug>.functional.spec.ts
+API sidecar: operation-inventory/<slug>.api-operations.json
 ```
 
 `<module-slug>` is derived only from `testcase.group`: ASCII lowercase
@@ -51,9 +53,9 @@ tests/<surface>/<module-slug>.<surface>.spec.ts
 with `MODULE_SLUG_COLLISION`. Do not derive filenames from testcase IDs,
 scenario titles, routes, timestamps, workers or model output.
 
-Do not emit `tests/**/<module-slug>.batch-NN.*.spec.ts`, one global Page Object,
-or one global selector registry. Validate that every module has exactly one
-final file of each kind and every Testcase ID appears in exactly one `test()`.
+Do not emit `tests/**/<module-slug>.batch-NN.*.spec.ts`, a global Page Object/client,
+or a global selector registry. Validate exactly one required artifact of each
+surface kind and exactly one `test()` per Testcase ID
 
 The generated `pom-plan` records the canonical identity for a bounded module:
 
@@ -69,7 +71,18 @@ The generated `pom-plan` records the canonical identity for a bounded module:
 All downstream artifact builders consume `module.slug`; they must not
 normalize `module.group` independently.
 
-BUILD must also copy `fixtures/pom.ts`, `fixtures/runtime-context.ts`, `fixtures/allure-contract.ts`, `fixtures/parallel-pool.js`, `fixtures/parallel-pool.d.ts`, `scripts/artifact-naming.mjs`, `scripts/execution-lock.mjs`, `scripts/verify-runtime-scaffold.mjs` and `scripts/verify-allure-contract.mjs` into the target project. Every generated spec imports `test` and `expect` from the relative `fixtures/pom` path. Keep ordered/mutating tests serial inside their business module; module files may run in parallel when the configured account and dataset pools have enough unique slots. One `qa:*`/testcase runner owns the fixed reporter paths per project root; a concurrent second invocation is `BLOCKED` while Playwright workers inside the owner invocation remain parallel.
+BUILD uses the template runtime scaffold and keeps `fixtures/pom.ts` as the only public fixture entrypoint. Every generated spec imports `test` and `expect` from it. API/module clients wrap `api` or `authenticatedApi`; generated specs never destructure raw Playwright `request`. Keep ordered/mutating tests serial inside their business module; module files may run in parallel only when configured account and dataset pools have enough unique slots. One `qa:*`/testcase runner owns fixed reporter paths per project root; a concurrent second invocation is `BLOCKED` while Playwright workers inside the owner invocation remain parallel
+
+Build reusable API code and its operation inventory:
+
+```bash
+npm run testcase-workflow -- \
+  --phase build \
+  --mode api \
+  --manifest testcases/orders.automation.json \
+  --group ORDERS \
+  --plan-output plans/orders.pom-plan.json
+```
 
 After generating selectors, Page Objects and specs, execute the same IDs:
 
@@ -77,6 +90,7 @@ After generating selectors, Page Objects and specs, execute the same IDs:
 npm run testcase-workflow -- \
   --phase execute \
   --manifest testcases/login.automation.json \
+  --plan-input plans/login.pom-plan.json \
   --testcases testcases/login.md \
   --project-root . \
   --group LOGIN \
@@ -84,13 +98,13 @@ npm run testcase-workflow -- \
   --browser-project chromium
 ```
 
-The runner sets `QA_UNIFIED_EVIDENCE=true`; the POM fixture records canonical `evidence-image` and `evidence-video` plus same-session trace for the selected tests. Raw Allure results are cleared into `reports/allure-results/`, validated into `reports/allure-contract.json`, HTML is under `evidence/html/`, and machine-readable execution output is under `reports/`. These folders appear only after a browser test starts; `fixtures/` is source code created during BUILD, not an evidence folder. The runner blocks browser execution when runtime scaffold, traceability or the Allure contract is not `PASS`.
+The runner sets `QA_UNIFIED_EVIDENCE=true`; UI/functional fixtures record canonical `evidence-image`, `evidence-video` and same-session trace. API results keep the same parameter contract with browser media marked `N/A`. Raw Allure results are cleared into `reports/allure-results/`, validated into `reports/allure-contract.json`, HTML is under `evidence/html/`, and machine output is under `reports/`. The runner blocks execution unless module layout, runtime scaffold, scoped traceability, applicable UI coverage and `reports/api-operation-coverage.json` are `PASS`
 
 ## Verdict gate
 
 - `PASS`: Playwright passed with canonical Allure parameters, image/video and same-session trace
 - `FAILED`: assertion/action failed with canonical evidence, or a retry-pass is flaky
-- `N/A`: the Playwright test was skipped by an applicable suite condition
+- `N/A`: the skipped test carries an explicit `N/A`/`not_applicable` annotation; an unmarked skip is `UNTEST`
 - `UNTEST`: missing test, selector/build traceability, target, data, browser report, visual evidence, trace, timeout or interruption
 
 For UI/functional tests, JSON, logs or an Allure HTML page without `reports/allure-contract.json: PASS`, canonical image/video and same-session trace cannot support `PASS` or `FAILED`.

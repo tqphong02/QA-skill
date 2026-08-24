@@ -154,7 +154,6 @@ test('unified POM plan blocks before code generation when UI coverage is incompl
       '--project-root', fixture.root,
       '--manifest', fixture.manifestPath,
       '--ui-inventory', fixture.inventoryPath,
-      '--require-ui-coverage',
       '--plan-output', path.join(fixture.root, 'reports', 'plan.json'),
     ], { encoding: 'utf8' });
     assert.equal(result.status, 2, `${result.stdout}

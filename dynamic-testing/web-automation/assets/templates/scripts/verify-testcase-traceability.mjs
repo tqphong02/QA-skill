@@ -302,7 +302,12 @@ function parseAutomationManifest(manifestPath) {
     );
     return {
       id,
+      source_index: index,
       group: item.group || null,
+      section_kind: item.section_kind || null,
+      capability_order: Array.isArray(item.capability_order)
+        ? item.capability_order.map(value => String(value).trim().toLowerCase())
+        : null,
       scenario_id: item.scenario_id || null,
       scenario_name: item.scenario_name || null,
       case_ref: item.case_ref || null,
@@ -315,8 +320,12 @@ function parseAutomationManifest(manifestPath) {
       rbac_refs: rbacRefs,
       steps,
       outcome_assertions: outcomeAssertions,
+      outcome_route: execution?.outcome?.route || null,
       cleanup: execution?.cleanup ?? null,
       mutates: execution?.mutates === true,
+      api: item.api && typeof item.api === 'object' && !Array.isArray(item.api)
+        ? item.api
+        : null,
       ui_function_keys: uiFunctionKeys,
       target_keys: targetKeys,
       all_target_keys: allTargetKeys,

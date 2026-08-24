@@ -21,7 +21,7 @@ After `integration/plane/SKILL.md`, read `integration/plane/QUICK_REF.md`. For i
 - Chỉ có Plane URL hoặc ticket ID → `integration-plane` doctor/read
 - Chỉ có Drive/Docs/Sheets/Slides URL hoặc ID → `integration-google-drive` resolve/read
 - Generic browser task → `dynamic-web-exploratory` FAST; không cần business brief
-- Deterministic Sheet/testcase chuyển sang `dynamic-web-automation`; literal: deterministic Sheet/testcase chuyển sang `dynamic-web-automation`
+- Deterministic Sheet/testcase và API automation chuyển sang `dynamic-web-automation`; literal: deterministic Sheet/testcase chuyển sang `dynamic-web-automation`
 - Retest/verify → Plane read → exploratory RETEST_PLUS → Plane read-back/comment/state
 
 A bare link authorizes only exact read-only inspection. A mutation requires an execution contract and target validation. link đứng một mình không cấp quyền write
@@ -34,6 +34,6 @@ Antigravity/Gemini is the host model, not the browser. Use Playwright runtime/MC
 
 Use `PASS`, `FAILED`, `N/A` or `UNTEST` only. `PASS` requires the skill's evidence contract; do not infer missing business logic, role, data, authority or oracle
 
-`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX. `RETEST_PLUS` is the retest stack. Deterministic Sheet execution = unified POM BUILD_AND_RUN. Contract literals: PASS → `Done`; FAILED → `In Progress`; BLOCKED → giữ nguyên trạng thái; new bug → `Todo`. `dynamic-performance` là public skill duy nhất cho performance
+`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX. `RETEST_PLUS` is the retest stack. Deterministic Sheet/API automation execution = unified POM BUILD_AND_RUN. Contract literals: PASS → `Done`; FAILED → `In Progress`; BLOCKED → giữ nguyên trạng thái; new bug → `Todo`. `dynamic-performance` là public skill duy nhất cho performance
 
 `AGENTS.md`, `config/core-routing-contract.json` and the selected skill remain the sources of truth. Validate router changes with `node scripts/core-skill-router.mjs --self-test`

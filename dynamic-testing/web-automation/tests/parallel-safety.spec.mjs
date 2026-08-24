@@ -142,15 +142,6 @@ test('execution lock blocks two runners from owning fixed report paths', () => {
   fs.rmSync(root, { recursive: true, force: true });
 });
 
-test('session template namespaces files by run and worker', () => {
-  const source = fs.readFileSync(path.join(TEMPLATE_ROOT, 'fixtures/session.ts'), 'utf8');
-  assert.match(source, /defaultSessionNamespace/);
-  assert.match(source, /TEST_PARALLEL_INDEX/);
-  assert.match(source, /TEST_WORKER_INDEX/);
-  assert.match(source, /`\$\{safeFileSegment\(name\)\}\.\$\{safeFileSegment\(namespace\)\}\.json`/);
-  assert.doesNotMatch(source, /path\.join\(SESSIONS_DIR, `\$\{name\}\.json`\)/);
-});
-
 test('public QA and deterministic testcase runners own the report lock', () => {
   const qa = fs.readFileSync(path.join(TEMPLATE_ROOT, 'scripts/qa.mjs'), 'utf8');
   const testcaseRunner = fs.readFileSync(

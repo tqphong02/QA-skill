@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ensurePlaywrightRuntime } from './bootstrap-playwright.mjs';
+import { generatePomCode } from './generate-pom-code.mjs';
 import { buildPomPlan } from './generate-pom-plan.mjs';
 import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
+import { verifyApiOperationCoverage } from './verify-api-operation-coverage.mjs';
+import { verifyModuleArtifactLayout } from './verify-module-artifact-layout.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 import { buildUiCoverage } from './verify-ui-coverage.mjs';
 import { verifyAllureContract } from './verify-allure-contract.mjs';
 import { acquireExecutionLock } from './execution-lock.mjs';
 
-const VALID_PHASES = new Set(['plan', 'execute']);
+const VALID_PHASES = new Set(['plan', 'build', 'execute', 'build-and-run']);
+const VALID_MODES = new Set(['ui', 'api', 'functional']);
 const VISUAL_RE = /\.(?:png|jpe?g|webp|gif|mp4|webm|mov|m4v)$/i;
 const TRACE_RE = /(?:trace|network|console).*\.zip$|\.zip$/i;
+const NPX = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
@@ -26,6 +32,89 @@ function resolveFrom(root, value, fallback) {
   return path.isAbsolute(selected) ? selected : path.resolve(root, selected);
 }
 
+function getArgs(flag) {
+  const values = [];
+  for (let index = 0; index < process.argv.length; index += 1) {
+    if (process.argv[index] === flag && process.argv[index + 1]) values.push(process.argv[index + 1]);
+  }
+  return values;
+}
+
+function assertProjectOutputPath(root, target, label = 'output') {
+  const resolvedRoot = path.resolve(root);
+  const resolvedTarget = path.resolve(target);
+  const relative = path.relative(resolvedRoot, resolvedTarget);
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`BLOCKED: ${label} must stay below project-root: ${resolvedTarget}`);
+  }
+  if (!fs.existsSync(resolvedRoot)) {
+    throw new Error(`BLOCKED: project-root must exist before resolving ${label}: ${resolvedRoot}`);
+  }
+  let existingAncestor = resolvedTarget;
+  while (!fs.existsSync(existingAncestor)) {
+    const parent = path.dirname(existingAncestor);
+    if (parent === existingAncestor) break;
+    existingAncestor = parent;
+  }
+  const canonicalRoot = fs.realpathSync.native(resolvedRoot);
+  const canonicalAncestor = fs.realpathSync.native(existingAncestor);
+  const canonicalRelative = path.relative(canonicalRoot, canonicalAncestor);
+  if (canonicalRelative.startsWith(`..${path.sep}`) || path.isAbsolute(canonicalRelative)) {
+    throw new Error(`BLOCKED: ${label} resolves outside project-root through a link: ${resolvedTarget}`);
+  }
+  return resolvedTarget;
+}
+
+function resolveOutputFrom(root, value, fallback, label = 'output') {
+  return assertProjectOutputPath(root, resolveFrom(root, value, fallback), label);
+}
+
+function testcaseGrep(testcaseIds) {
+  const ids = [...new Set((testcaseIds || []).map(value => String(value).trim()).filter(Boolean))];
+  if (ids.length === 0) throw new Error('BLOCKED: at least one testcase ID is required');
+  const alternatives = ids.map(escapeRegex).join('|');
+  return `(?:^|[^A-Za-z0-9_-])(?:${alternatives})(?:$|[^A-Za-z0-9_-])`;
+}
+
+function surfaceTestPath(mode) {
+  if (!VALID_MODES.has(mode)) throw new Error(`BLOCKED: unsupported --mode ${mode}; use ui, api or functional`);
+  return `tests/${mode}`;
+}
+
+function assertPlanSupportsMode(plan, mode) {
+  if (!VALID_MODES.has(mode)) throw new Error(`BLOCKED: unsupported --mode ${mode}; use ui, api or functional`);
+  const required = mode === 'functional' ? ['ui', 'api'] : [mode];
+  const incompatible = (plan?.testcases || []).filter(testcase => {
+    const capabilities = new Set(testcase.capabilities || []);
+    return required.some(capability => !capabilities.has(capability));
+  });
+  if (incompatible.length > 0) {
+    throw new Error(
+      `BLOCKED: --mode ${mode} is incompatible with testcase capabilities: ${incompatible.map(item => item.testcase_id).join(', ')}`,
+    );
+  }
+  return plan;
+}
+
+function assertBoundedPlan(plan, maxCases = 20) {
+  const testcases = Array.isArray(plan?.testcases) ? plan.testcases : [];
+  if (testcases.length === 0 || testcases.length > maxCases || maxCases > 20) {
+    throw new Error(`BLOCKED: a POM plan must contain 1-${Math.min(maxCases, 20)} testcases`);
+  }
+  const ids = testcases.map(testcase => String(testcase.testcase_id || '').trim());
+  if (ids.some(id => !id) || new Set(ids).size !== ids.length) {
+    throw new Error('BLOCKED: a POM plan requires unique non-empty testcase IDs');
+  }
+  const moduleSlugs = new Set(testcases.map(testcase => String(testcase.group || '').trim().toLowerCase()));
+  if (moduleSlugs.size !== 1 || !plan?.module?.slug) {
+    throw new Error('BLOCKED: a POM plan must contain exactly one resolved business module');
+  }
+  if (!/^[a-f0-9]{64}$/i.test(String(plan.source_manifest_sha256 || ''))) {
+    throw new Error('BLOCKED: a POM plan requires a valid source_manifest_sha256');
+  }
+  return plan;
+}
+
 function writeJson(filePath, value) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
@@ -33,6 +122,22 @@ function writeJson(filePath, value) {
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function loadImmutablePlan(planPath, manifestPath, { maxCases = 20, mode = 'ui' } = {}) {
+  if (!fs.existsSync(planPath)) throw new Error(`BLOCKED: --plan-input does not exist: ${planPath}`);
+  const plan = readJson(planPath);
+  assertBoundedPlan(plan, maxCases);
+  assertPlanSupportsMode(plan, mode);
+  const currentHash = sha256File(manifestPath);
+  if (plan.source_manifest_sha256 !== currentHash) {
+    throw new Error('BLOCKED: --plan-input source hash does not match the current automation manifest');
+  }
+  return plan;
 }
 
 function collectTests(suites, output = []) {
@@ -75,6 +180,19 @@ function existingAttachmentPaths(results, projectRoot) {
   return values;
 }
 
+function isExplicitNotApplicable(matches, results) {
+  const annotations = [
+    ...matches.flatMap(item => item.annotations || []),
+    ...results.flatMap(item => item.annotations || []),
+  ];
+  return annotations.some(annotation => {
+    const type = String(annotation?.type || '').trim().toLowerCase();
+    const description = String(annotation?.description || '').trim();
+    return ['n/a', 'na', 'not_applicable', 'not-applicable'].includes(type)
+      || (type === 'skip' && /^N\/A\b/i.test(description));
+  });
+}
+
 function verdictForMatches(matches, projectRoot, mode) {
   if (matches.length === 0) {
     return {
@@ -100,9 +218,12 @@ function verdictForMatches(matches, projectRoot, mode) {
 
   let verdict = 'UNTEST';
   let note = 'Playwright không trả về trạng thái kết luận được';
-  if (skipped) {
+  if (skipped && isExplicitNotApplicable(matches, results)) {
     verdict = 'N/A';
-    note = 'Playwright test bị skip theo điều kiện suite';
+    note = 'Playwright test được đánh dấu N/A tường minh theo điều kiện suite';
+  } else if (skipped) {
+    verdict = 'UNTEST';
+    note = 'Playwright test bị skip nhưng không có annotation N/A tường minh';
   } else if (flaky) {
     verdict = 'FAILED';
     note = 'Retry-pass được phân loại flaky, không nâng thành PASS sạch';
@@ -252,14 +373,36 @@ function untestReport(plan, reason, runId, mode) {
 }
 
 function applyAllureContractGate(report, contract, mode) {
-  if (!['ui', 'functional'].includes(mode) || contract.status === 'PASS') return report;
+  if (contract.status === 'PASS') return report;
   const reason = contract.violations?.[0]?.message
     || 'Canonical Allure report contract is incomplete';
   report.results = report.results.map(result => ({
     ...result,
     verdict: 'UNTEST',
     sheet_result: 'Untest',
-    note: `Allure canonical contract BLOCKED: ${reason}`,
+    note: `Allure canonical contract BLOCKED (${mode}): ${reason}`,
+  }));
+  report.verdict = 'UNTEST';
+  report.summary = {
+    total: report.results.length,
+    pass: 0,
+    failed: 0,
+    not_applicable: 0,
+    untest: report.results.length,
+    flaky: report.results.filter(result => result.flaky).length,
+  };
+  return report;
+}
+
+function applyRunnerProcessGate(report, execution) {
+  if (!execution?.error && !execution?.signal && execution?.status !== null) return report;
+  const reason = execution?.error?.message
+    || (execution?.signal ? `terminated by ${execution.signal}` : 'runner exit status is unavailable');
+  report.results = report.results.map(result => ({
+    ...result,
+    verdict: 'UNTEST',
+    sheet_result: 'Untest',
+    note: `Playwright runner incomplete: ${reason}`,
   }));
   report.verdict = 'UNTEST';
   report.summary = {
@@ -278,7 +421,11 @@ function selectedPlan(manifestPath, maxCases) {
     .split(',')
     .map(value => value.trim())
     .filter(Boolean);
-  const plan = buildPomPlan(manifestPath, { testcaseIds, group: getArg('--group') });
+  const plan = buildPomPlan(manifestPath, {
+    testcaseIds,
+    group: getArg('--group'),
+    maxCases,
+  });
   if (plan.testcases.length === 0) throw new Error('BLOCKED: selection contains no testcases');
   if (plan.testcases.length > maxCases) {
     throw new Error(`BLOCKED: selection contains ${plan.testcases.length} cases; maximum is ${maxCases}`);
@@ -287,43 +434,78 @@ function selectedPlan(manifestPath, maxCases) {
 }
 
 async function main() {
-  const phase = getArg('--phase', 'execute').toLowerCase();
-  if (!VALID_PHASES.has(phase)) throw new Error('--phase must be plan or execute');
+  const phase = getArg('--phase', 'build-and-run').toLowerCase();
+  if (!VALID_PHASES.has(phase)) {
+    throw new Error('--phase must be plan, build, execute or build-and-run');
+  }
   const mode = getArg('--mode', 'ui').toLowerCase();
+  if (!VALID_MODES.has(mode)) {
+    throw new Error(`BLOCKED: unsupported --mode ${mode}; use ui, api or functional`);
+  }
   const isUiMode = ['ui', 'functional'].includes(mode);
   const projectRoot = path.resolve(getArg('--project-root', process.cwd()));
   const manifestPath = resolveFrom(projectRoot, getArg('--manifest'), '');
   if (!getArg('--manifest') || !fs.existsSync(manifestPath)) throw new Error('--manifest is required and must exist');
   const maxCases = Number(getArg('--max-cases', '20'));
-  if (!Number.isInteger(maxCases) || maxCases < 1) throw new Error('--max-cases must be a positive integer');
-  const plan = selectedPlan(manifestPath, maxCases);
-  const planPath = resolveFrom(projectRoot, getArg('--plan-output'), 'reports/testcase-pom-plan.json');
+  if (!Number.isInteger(maxCases) || maxCases < 1 || maxCases > 20) {
+    throw new Error('--max-cases must be an integer from 1 to the hard limit 20');
+  }
+  const planInputArg = getArg('--plan-input');
+  if (phase === 'execute' && !planInputArg) {
+    throw new Error('BLOCKED: --plan-input is required for execute so RUN cannot reinterpret the manifest');
+  }
+  const planPath = phase === 'execute'
+    ? assertProjectOutputPath(
+      projectRoot,
+      resolveFrom(projectRoot, planInputArg, ''),
+      '--plan-input',
+    )
+    : resolveOutputFrom(
+      projectRoot,
+      getArg('--plan-output'),
+      'reports/testcase-pom-plan.json',
+      '--plan-output',
+    );
+  const plan = phase === 'execute'
+    ? loadImmutablePlan(planPath, manifestPath, { maxCases, mode })
+    : selectedPlan(manifestPath, maxCases);
+  assertBoundedPlan(plan, maxCases);
+  assertPlanSupportsMode(plan, mode);
   const runId = getArg('--run-id', `pom-${Date.now()}`);
-  const resultPath = resolveFrom(projectRoot, getArg('--output'), 'reports/testcase-pom-execution.json');
-  const executionLock = phase === 'execute'
+  const resultPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--output'),
+    'reports/testcase-pom-execution.json',
+    '--output',
+  );
+  const executionLock = phase !== 'plan'
     ? acquireExecutionLock(projectRoot, { runId, operation: `testcase-pom:${mode}` })
     : null;
   try {
-    writeJson(planPath, plan);
+    if (phase !== 'execute') writeJson(planPath, plan);
 
   const appBuild = getArg('--app-build');
   const uiInventoryArg = getArg('--ui-inventory', process.env.QA_UI_FUNCTION_INVENTORY || '');
-  const requireUiCoverage = isUiMode && (
-    process.argv.includes('--require-ui-coverage')
-    || String(process.env.QA_REQUIRE_UI_COVERAGE || '').toLowerCase() === 'true'
-  );
+  const diagnosticSkipUiCoverage = process.argv.includes('--diagnostic-skip-ui-coverage');
+  if (diagnosticSkipUiCoverage && phase !== 'plan') {
+    throw new Error('BLOCKED: --diagnostic-skip-ui-coverage is allowed only for plan diagnostics');
+  }
+  const requireUiCoverage = isUiMode && !diagnosticSkipUiCoverage;
   const requireExplicitUiCoverage = process.argv.includes('--require-explicit-ui-coverage')
     || String(process.env.QA_REQUIRE_EXPLICIT_UI_COVERAGE || '').toLowerCase() === 'true';
-  const uiCoveragePath = resolveFrom(
+  const uiCoveragePath = resolveOutputFrom(
     projectRoot,
     getArg('--ui-coverage-output'),
     'reports/ui-function-coverage.json',
+    '--ui-coverage-output',
   );
   let uiCoverage = null;
   if (isUiMode && (requireUiCoverage || uiInventoryArg)) {
     if (!uiInventoryArg) {
       const reason = 'UI function inventory is required for complete UI/POM coverage';
-      if (phase === 'plan') throw new Error(`BLOCKED: --require-ui-coverage requires --ui-inventory <Browser MCP function inventory>`);
+      if (phase === 'plan') {
+        throw new Error('BLOCKED: UI/functional planning requires --ui-inventory <Browser MCP function inventory>');
+      }
       const report = untestReport(plan, reason, runId, mode);
       report.ui_coverage = { status: 'BLOCKED', reason };
       writeJson(resultPath, report);
@@ -361,6 +543,137 @@ async function main() {
     return;
   }
 
+
+  let codegen = null;
+  if (phase === 'build' || phase === 'build-and-run') {
+    const codegenReportPath = resolveOutputFrom(
+      projectRoot,
+      getArg('--codegen-report'),
+      'reports/pom-codegen.json',
+      '--codegen-report',
+    );
+    const selectorEvidenceArgs = getArgs('--selector-evidence');
+    const selectorEvidencePaths = selectorEvidenceArgs.length > 0
+      ? selectorEvidenceArgs.map(value => resolveFrom(projectRoot, value, ''))
+      : (isUiMode ? [resolveFrom(
+        projectRoot,
+        getArg('--selector-evidence-dir'),
+        'selector-evidence',
+      )] : []);
+    try {
+      codegen = generatePomCode({
+        planPaths: [planPath],
+        selectorEvidencePaths,
+        projectRoot,
+        surface: mode,
+        reportPath: codegenReportPath,
+      });
+    } catch (error) {
+      if (phase === 'build') throw error;
+      const report = untestReport(plan, `Deterministic code generation BLOCKED: ${error.message}`, runId, mode);
+      report.codegen = { status: 'BLOCKED', reason: error.message };
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, codegen: report.codegen }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+    if (codegen.status !== 'PASS') {
+      throw new Error(`BLOCKED: deterministic code generation failed; see ${codegenReportPath}`);
+    }
+  }
+
+  const moduleLayoutPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--module-layout-output'),
+    'reports/module-artifact-layout.json',
+    '--module-layout-output',
+  );
+  const moduleLayout = verifyModuleArtifactLayout({
+    manifestPath,
+    projectRoot,
+    surface: mode,
+    planPaths: [planPath],
+  });
+  writeJson(moduleLayoutPath, moduleLayout);
+  if (moduleLayout.status !== 'PASS') {
+    if (phase === 'build') {
+      throw new Error(`BLOCKED: module artifact layout is incomplete; see ${moduleLayoutPath}`);
+    }
+    const report = untestReport(plan, 'Module artifact layout is incomplete before execution', runId, mode);
+    report.module_layout = moduleLayoutPath;
+    writeJson(resultPath, report);
+    console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, module_layout: moduleLayoutPath }, null, 2));
+    process.exitCode = 2;
+    return;
+  }
+
+  let apiOperationCoverage = null;
+  let apiOperationCoveragePath = null;
+  if (['api', 'functional'].includes(mode)) {
+    const inventoryPath = resolveFrom(
+      projectRoot,
+      getArg(
+        '--api-operation-inventory',
+        codegen?.api_operation_inventory?.path
+          || `operation-inventory/${plan.module.slug}.api-operations.json`,
+      ),
+      '',
+    );
+    apiOperationCoveragePath = resolveOutputFrom(
+      projectRoot,
+      getArg('--api-operation-coverage-output'),
+      'reports/api-operation-coverage.json',
+      '--api-operation-coverage-output',
+    );
+    apiOperationCoverage = verifyApiOperationCoverage({
+      projectRoot,
+      inventoryPath,
+      testcaseIds: plan.testcases.map(testcase => testcase.testcase_id),
+    });
+    writeJson(apiOperationCoveragePath, apiOperationCoverage);
+    if (apiOperationCoverage.status !== 'PASS') {
+      if (phase === 'build') {
+        throw new Error(`BLOCKED: API operation coverage is incomplete; see ${apiOperationCoveragePath}`);
+      }
+      const report = untestReport(plan, 'API operation coverage is incomplete before execution', runId, mode);
+      report.module_layout = moduleLayoutPath;
+      report.api_operation_coverage = apiOperationCoveragePath;
+      writeJson(resultPath, report);
+      console.log(JSON.stringify({
+        verdict: report.verdict,
+        output: resultPath,
+        api_operation_coverage: apiOperationCoveragePath,
+      }, null, 2));
+      process.exitCode = 2;
+      return;
+    }
+  }
+
+  if (phase === 'build') {
+    const buildRuntimeScaffoldPath = resolveOutputFrom(
+      projectRoot,
+      getArg('--runtime-scaffold-output'),
+      'reports/runtime-scaffold.json',
+      '--runtime-scaffold-output',
+    );
+    const buildRuntimeScaffold = inspectRuntimeScaffold(projectRoot);
+    writeJson(buildRuntimeScaffoldPath, buildRuntimeScaffold);
+    if (buildRuntimeScaffold.status !== 'PASS') {
+      throw new Error(`BLOCKED: runtime scaffold is incomplete; see ${buildRuntimeScaffoldPath}`);
+    }
+    console.log(JSON.stringify({
+      status: 'READY_FOR_RUN',
+      plan: planPath,
+      codegen: codegen?.report || null,
+      module_layout: moduleLayoutPath,
+      api_operation_coverage: apiOperationCoveragePath,
+      runtime_scaffold: buildRuntimeScaffoldPath,
+      testcase_count: plan.testcases.length,
+      surface: mode,
+    }, null, 2));
+    return;
+  }
+
   const testcasePath = resolveFrom(projectRoot, getArg('--testcases'), '');
   if (!getArg('--testcases') || !fs.existsSync(testcasePath)) throw new Error('--testcases Markdown is required for execute');
   if (['ui', 'functional'].includes(mode) && !appBuild) throw new Error('--app-build is required for UI/functional execute');
@@ -384,16 +697,17 @@ async function main() {
   }
 
   let runtimeScaffold = null;
-  if (['ui', 'functional'].includes(mode)) {
-    const runtimeScaffoldPath = resolveFrom(
+  if (VALID_MODES.has(mode)) {
+    const runtimeScaffoldPath = resolveOutputFrom(
       projectRoot,
       getArg('--runtime-scaffold-output'),
       'reports/runtime-scaffold.json',
+      '--runtime-scaffold-output',
     );
     runtimeScaffold = inspectRuntimeScaffold(projectRoot);
     writeJson(runtimeScaffoldPath, runtimeScaffold);
     if (runtimeScaffold.status !== 'PASS') {
-      const report = untestReport(plan, 'Runtime fixture/evidence scaffold BLOCKED trước browser execution', runId, mode);
+      const report = untestReport(plan, 'Runtime fixture/evidence scaffold BLOCKED before Playwright execution', runId, mode);
       report.bootstrap = runtimeBootstrap;
       report.runtime_scaffold = runtimeScaffoldPath;
       writeJson(resultPath, report);
@@ -407,7 +721,12 @@ async function main() {
     }
   }
 
-  const traceabilityPath = resolveFrom(projectRoot, getArg('--traceability-output'), 'reports/testcase-automation-traceability.json');
+  const traceabilityPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--traceability-output'),
+    'reports/testcase-automation-traceability.json',
+    '--traceability-output',
+  );
   let traceability;
   try {
     const traceabilityMode = ['ui', 'functional'].includes(mode) ? 'ui' : mode;
@@ -423,6 +742,7 @@ async function main() {
       maxEvidenceAgeHours: Number(getArg('--max-evidence-age-hours', '168')),
       requireBrowserMcp: ['ui', 'functional'].includes(mode),
       mode: traceabilityMode,
+      testcaseIds: plan.testcases.map(testcase => testcase.testcase_id),
     });
     writeJson(traceabilityPath, traceability);
   } catch (error) {
@@ -441,16 +761,34 @@ async function main() {
     return;
   }
 
-  const grep = plan.testcases.map(item => escapeRegex(item.testcase_id)).join('|');
-  const playwrightArgs = ['--no-install', 'playwright', 'test', '--grep', grep];
+  const grep = testcaseGrep(plan.testcases.map(item => item.testcase_id));
+  const playwrightArgs = [
+    '--no-install',
+    'playwright',
+    'test',
+    surfaceTestPath(mode),
+    '--grep',
+    grep,
+  ];
   const project = getArg('--browser-project', 'chromium');
   if (project) playwrightArgs.push('--project', project);
-  const playwrightReportPath = resolveFrom(projectRoot, getArg('--playwright-report'), 'reports/playwright.json');
-  const allureResultsPath = resolveFrom(projectRoot, getArg('--allure-results'), 'reports/allure-results');
-  const allureContractPath = resolveFrom(
+  const playwrightReportPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--playwright-report'),
+    'reports/playwright.json',
+    '--playwright-report',
+  );
+  const allureResultsPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--allure-results'),
+    'reports/allure-results',
+    '--allure-results',
+  );
+  const allureContractPath = resolveOutputFrom(
     projectRoot,
     getArg('--allure-contract-output'),
     'reports/allure-contract.json',
+    '--allure-contract-output',
   );
   // A previous JSON report must never be accepted as same-session evidence.
   fs.rmSync(playwrightReportPath, { force: true });
@@ -458,7 +796,7 @@ async function main() {
   // not be merged into the current report.
   fs.rmSync(allureResultsPath, { recursive: true, force: true });
   fs.mkdirSync(allureResultsPath, { recursive: true });
-  const execution = spawnSync('npx', playwrightArgs, {
+  const execution = spawnSync(NPX, playwrightArgs, {
     cwd: projectRoot,
     encoding: 'utf8',
     env: {
@@ -494,17 +832,22 @@ async function main() {
   report.allure_contract = allureContractPath;
   report.bootstrap = runtimeBootstrap;
   report.runtime_scaffold = runtimeScaffold;
+  report.codegen = codegen?.report || null;
+  report.module_layout = moduleLayoutPath;
+  report.api_operation_coverage = apiOperationCoveragePath;
   report.runner_exit_code = execution.status;
+  applyRunnerProcessGate(report, execution);
   applyAllureContractGate(report, allureContract, mode);
   writeJson(resultPath, report);
   const sheetPlanArg = getArg('--sheet-plan');
   if (sheetPlanArg) {
     const sheetPlanPath = resolveFrom(projectRoot, sheetPlanArg, '');
     if (!fs.existsSync(sheetPlanPath)) throw new Error(`--sheet-plan không tồn tại: ${sheetPlanPath}`);
-    const sheetResultsPath = resolveFrom(
+    const sheetResultsPath = resolveOutputFrom(
       projectRoot,
       getArg('--sheet-results-output'),
       'reports/sheet-worker-results.json',
+      '--sheet-results-output',
     );
     writeJson(sheetResultsPath, buildSheetResults(report, readJson(sheetPlanPath)));
     report.sheet_results = sheetResultsPath;
@@ -516,6 +859,18 @@ async function main() {
     executionLock?.release();
   }
 }
+
+export {
+  applyAllureContractGate,
+  applyRunnerProcessGate,
+  assertBoundedPlan,
+  assertPlanSupportsMode,
+  assertProjectOutputPath,
+  loadImmutablePlan,
+  resolveOutputFrom,
+  surfaceTestPath,
+  testcaseGrep,
+};
 
 const isDirectRun = process.argv[1]
   && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;

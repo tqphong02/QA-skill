@@ -133,7 +133,7 @@
       "id": "deterministic-web-automation",
       "priority": 70,
       "match": {
-        "any": ["playwright|page object model|\\bpom\\b|\\.automation\\.json|chạy (?:testcase|test case)|execute (?:testcase|test case)|build_and_run|excel automation|sheet automation"]
+        "any": ["playwright|page object model|\\bpom\\b|\\.automation\\.json|chạy (?:testcase|test case)|execute (?:testcase|test case)|build_and_run|excel automation|sheet automation|api automation|automation api|auto api|tự động hóa api"]
       },
       "route": ["dynamic-web-automation"],
       "mode": "BUILD_AND_RUN",
@@ -437,7 +437,8 @@
     {"id": "ROUTE-024", "input": "Tạo JMeter JMX cho API load test", "expected_route": ["dynamic-performance"], "expected_mode": "PERFORMANCE", "requires_brief": false},
     {"id": "ROUTE-025", "input": "Validate OpenAPI contract với implementation", "expected_route": ["hybrid-api-contract"], "expected_mode": "CONTRACT_VALIDATION", "requires_brief": false},
     {"id": "ROUTE-026", "input": "Test mobile app trên Android và iOS bằng Appium", "expected_route": ["dynamic-mobile"], "expected_mode": "MOBILE_QA", "requires_brief": false},
-    {"id": "ROUTE-027", "input": "Phân tích white-box function processPayment và branch coverage", "expected_route": ["hybrid-source-coverage"], "expected_mode": "SOURCE_ANALYSIS", "requires_brief": false}
+    {"id": "ROUTE-027", "input": "Phân tích white-box function processPayment và branch coverage", "expected_route": ["hybrid-source-coverage"], "expected_mode": "SOURCE_ANALYSIS", "requires_brief": false},
+    {"id": "ROUTE-028", "input": "Tạo API automation cho POST /orders, chạy test và trả verdict", "expected_route": ["dynamic-web-automation"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true}
   ],
   "document_contracts": {
     "AGENTS.md": {

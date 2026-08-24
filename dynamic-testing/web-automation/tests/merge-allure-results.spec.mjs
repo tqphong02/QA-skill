@@ -21,7 +21,11 @@ test('Allure merge copies results and attachments from each CI job', () => {
     write(input, 'job-api/reports/allure-results/api-result.json', '{"status":"passed"}\n');
     write(input, 'job-api/reports/allure-results/api-image.png', 'api-image');
     const output = path.join(root, 'merged', 'reports', 'allure-results');
-    const result = mergeAllureResults({ inputRoot: input, outputDir: output });
+    const result = mergeAllureResults({
+      inputRoot: input,
+      outputDir: output,
+      expectedArtifacts: ['job-ui', 'job-api'],
+    });
     assert.equal(result.status, 'PASS');
     assert.equal(result.copied_files, 4);
     assert.equal(fs.readFileSync(path.join(output, 'ui-result.json'), 'utf8'), '{"status":"passed"}\n');
@@ -54,6 +58,41 @@ test('Allure merge blocks when the artifact root has no results', () => {
     const result = mergeAllureResults({ inputRoot: input, outputDir: path.join(root, 'merged') });
     assert.equal(result.status, 'BLOCKED');
     assert.equal(result.copied_files, 0);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Allure merge blocks when an expected CI job artifact is missing', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-merge-missing-artifact-'));
+  try {
+    const input = path.join(root, 'artifacts');
+    write(input, 'job-ui/reports/allure-results/ui-result.json', '{"status":"passed"}\n');
+    const result = mergeAllureResults({
+      inputRoot: input,
+      outputDir: path.join(root, 'merged'),
+      expectedArtifacts: ['job-ui', 'job-api'],
+    });
+    assert.equal(result.status, 'BLOCKED');
+    assert.deepEqual(result.missing_artifacts, ['job-api']);
+    assert.equal(fs.existsSync(path.join(root, 'merged')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('Allure merge blocks an allure-results directory with attachments but no result JSON', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'allure-merge-no-result-'));
+  try {
+    const input = path.join(root, 'artifacts');
+    write(input, 'job-ui/reports/allure-results/image.png', 'image');
+    const result = mergeAllureResults({
+      inputRoot: input,
+      outputDir: path.join(root, 'merged'),
+      expectedArtifacts: ['job-ui'],
+    });
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.empty_result_directories.length, 1);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

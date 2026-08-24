@@ -12,7 +12,7 @@ Hard requirements:
 - Plane ticket retest order is `integration-plane doctor/read → dynamic-web-exploratory RETEST_PLUS → integration-plane comment/state`
 - `DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
 - RETEST_PLUS composes Original Retest + Sanity + Impacted Regression + `DISCOVERY_CORE`
-- Deterministic Sheet/testcase execution uses the single `dynamic-web-automation` BUILD_AND_RUN workflow: manifest → POM → browser evidence → `PASS|FAILED|N/A|UNTEST`; use RETEST_PLUS only for a linked ticket or previous failure
+- Deterministic Sheet/testcase and API automation execution uses the single `dynamic-web-automation` BUILD_AND_RUN workflow: manifest → surface-specific POM/client code → evidence → `PASS|FAILED|N/A|UNTEST`; use RETEST_PLUS only for a linked ticket or previous failure
 - RETEST_PLUS includes Retest, Sanity, Impacted regression, Exploratory, Ad-hoc, and UI/UX
 - General app exploration uses `APP_BASELINE_DISCOVERY` and writes `qa-knowledge/app-business-guide.md` with a `coverage_map`; ticket retest reads it but does not repeat the full baseline
 - PASS moves to `Done`, FAILED moves to `In Progress`, BLOCKED keeps its state, and a new bug starts in `Todo`
@@ -35,7 +35,7 @@ Hard requirements:
 - API testcase mode is opt-in only when the user explicitly asks to write API testcases or testcases for an endpoint, OpenAPI/Swagger, Postman collection, or curl request; merely mentioning an API artifact does not switch modes
 - For API testcase files, run `support/testcase-authoring/scripts/import-api-spec.py` first and do not generate Excel while `review_required` is non-empty
 - Testcase generation must write the complete same-basename Markdown before Excel; future agents read Markdown first
-- UI-first exploratory/ad-hoc and app-baseline work starts from the exact URL plus objective; a brief is optional enrichment. Retest and source-driven execution require a scoped `READY` Business Execution Brief, while deterministic testcase/Sheet work exits to the single `dynamic-web-automation` BUILD_AND_RUN workflow
+- UI-first exploratory/ad-hoc and app-baseline work starts from the exact URL plus objective; a brief is optional enrichment. Retest and source-driven execution require a scoped `READY` Business Execution Brief, while deterministic testcase/Sheet/API automation work exits to the single `dynamic-web-automation` BUILD_AND_RUN workflow
 - For brief-gated routes, copy Target, Role/Data, Original flow, Expected and Impact area from the READY brief; never replace missing business logic with a generic flow
 - After every run, rewrite and validate matching knowledge with `scripts/writers/write-business-guide.mjs`
 - Plane comments, testcase prose, and human-readable Drive CRUD content have no terminal `.` and no emoji/icon

@@ -1,5 +1,5 @@
 // Jenkinsfile — Declarative Pipeline (generic).
-// Pipeline UI + API + functional qua một Playwright run có tag, archive artifact + publish Allure, k6 tách riêng.
+// Pipeline UI + API + functional qua một Playwright run có tag, archive artifact + publish Allure.
 // Yêu cầu Jenkins: NodeJS plugin (tool name 'Node-24'), Allure plugin (tuỳ chọn).
 
 pipeline {
@@ -44,7 +44,9 @@ pipeline {
           set -eu
           test -f "$QA_PROJECT_DIR/package.json" || { echo "CI project missing: $QA_PROJECT_DIR/package.json"; exit 1; }
           test -f "$QA_PROJECT_DIR/package-lock.json" || { echo "Lockfile missing: commit $QA_PROJECT_DIR/package-lock.json because CI uses npm ci"; exit 1; }
+          test -f "$QA_PROJECT_DIR/dependency-versions.json" || { echo "Toolchain manifest missing: $QA_PROJECT_DIR/dependency-versions.json"; exit 1; }
           test -f "$QA_PROJECT_DIR/quality-gates.json" || { echo "Quality gate missing: $QA_PROJECT_DIR/quality-gates.json"; exit 1; }
+          test -f "$QA_PROJECT_DIR/.eslintrc.cjs" || { echo "ESLint config missing: $QA_PROJECT_DIR/.eslintrc.cjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/qa.mjs" || { echo "QA runner missing: $QA_PROJECT_DIR/scripts/qa.mjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/ci-preflight.mjs" || { echo "CI preflight missing: $QA_PROJECT_DIR/scripts/ci-preflight.mjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/execution-lock.mjs" || { echo "Execution lock missing: $QA_PROJECT_DIR/scripts/execution-lock.mjs"; exit 1; }
@@ -58,6 +60,7 @@ pipeline {
     stage('Install') {
       steps {
         dir("${env.QA_PROJECT_DIR}") {
+          sh 'npm run toolchain:check'
           sh 'npm ci'
           sh 'npm run qa:install:browsers -- --browser chromium --with-deps'
         }
@@ -106,18 +109,30 @@ pipeline {
       script {
         def qualityStatus
         def reportStatus
+        def artifactStatus
         dir("${env.QA_PROJECT_DIR}") {
-          qualityStatus = sh(script: 'npm run qa:quality', returnStatus: true)
+          qualityStatus = sh(script: 'npm run qa:quality -- --surface all --project=chromium', returnStatus: true)
           reportStatus = sh(script: 'npm run qa:report', returnStatus: true)
+          artifactStatus = sh(
+            script: '''
+              set -eu
+              test -f reports/playwright.json
+              test -f reports/junit.xml
+              test -f reports/quality-gate.json
+              test -f reports/allure-contract.json
+              find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+            ''',
+            returnStatus: true
+          )
         }
-        if (qualityStatus != 0 || reportStatus != 0) {
+        if (qualityStatus != 0 || reportStatus != 0 || artifactStatus != 0) {
           currentBuild.result = 'FAILURE'
         }
       }
       // Archive trace + screenshot + report khi fail
-      archiveArtifacts artifacts: "${env.QA_PROJECT_DIR}/reports/**, ${env.QA_PROJECT_DIR}/evidence/**, ${env.QA_PROJECT_DIR}/test-results/**, ${env.QA_PROJECT_DIR}/quality-gates.json", allowEmptyArchive: true
+      archiveArtifacts artifacts: "${env.QA_PROJECT_DIR}/reports/**, ${env.QA_PROJECT_DIR}/evidence/**, ${env.QA_PROJECT_DIR}/test-results/**, ${env.QA_PROJECT_DIR}/quality-gates.json", allowEmptyArchive: false
       // JUnit report — hiển thị test results trong Jenkins UI
-      junit testResults: "${env.QA_PROJECT_DIR}/reports/junit.xml", allowEmptyResults: true
+      junit testResults: "${env.QA_PROJECT_DIR}/reports/junit.xml", allowEmptyResults: false
       // Allure report qua Allure Jenkins plugin (cài plugin + allure commandline):
       // allure includeProperties: false, results: [[path: 'reports/allure-results']]
       // Clean workspace khi xong (tuỳ chọn)
@@ -127,18 +142,4 @@ pipeline {
 }
 
 // ─────────────────────────────────────────────────────────────
-// k6 LOAD TEST — TÁCH SANG Jenkinsfile.perf (KHÔNG cho vào PR pipeline).
-// Trigger bởi cron/TimerTrigger, chạy against STAGING (không prod).
-//
-// // Jenkinsfile.perf
-// pipeline {
-//   agent any
-//   triggers { cron('0 2 * * *') }   // hàng ngày 02:00
-//   environment { BASE_URL = credentials('staging-base-url') }
-//   stages {
-//     stage('k6') {
-//       steps { sh 'k6 run tests/performance/k6-load-test.js' }
-//     }
-//   }
-// }
 // ─────────────────────────────────────────────────────────────

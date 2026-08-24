@@ -8,7 +8,7 @@ Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng đ
 |---|---|---|
 | [dynamic-web-exploratory](./dynamic-testing/web-exploratory/SKILL.md) | Agentic UI-first browser QA + one-command FAST task, extraction/state delta/judge, same-session network/console | ranked charters + `FINDINGS.md` + evidence + ticket Plane |
 | [support-testcase-authoring](./support/testcase-authoring/SKILL.md) | Sinh testcase manual, RBAC Matrix và execution contract lossless cho unified POM | `.md` + `.automation.json` + `.xlsx` |
-| [dynamic-web-automation](./dynamic-testing/web-automation/SKILL.md) | Build POM, chạy Playwright browser, thu evidence và trả verdict testcase | POM code + execution/evidence JSON + `PASS/FAILED/N/A/UNTEST` |
+| [dynamic-web-automation](./dynamic-testing/web-automation/SKILL.md) | Build automation POM sạch cho UI/API/functional, chạy Playwright, thu evidence và trả verdict | selectors/pages/API clients/specs + execution/evidence JSON + `PASS/FAILED/N/A/UNTEST` |
 | [support-document-conversion](./support/document-conversion/SKILL.md) | Convert PDF/DOCX/PPTX/XLSX sang Markdown bằng MarkItDown (Microsoft) | `.md` files |
 | [static-requirements-analysis](./static-testing/requirements-analysis/SKILL.md) | Phân tích business như senior fullstack QA/QC, dựng flow và Q&A | `.xmind` + Q&A `.md`/`.xlsx` + requirement registry ẩn cho browser mapping |
 | [dynamic-security-pentest](./dynamic-testing/security-pentest/SKILL.md) | Điều phối pentest được ủy quyền từ scope, recon đến validation và report | engagement contract + evidence + findings |

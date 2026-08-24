@@ -10,8 +10,6 @@ const PLACEHOLDER_RE = /<([A-Z][A-Z0-9_]+|[a-z][a-z0-9._@-]+)>/g;
 const GENERIC_RE = /<([A-Za-z_][A-Za-z0-9_]*)(?:\s+(?:extends|=)|\s+[A-Za-z_]|\s*[,|])/;
 const EXCLUDED_NAMES = new Set([
   'README.md',
-  'PLACEHOLDERS.md',
-  'TEMPLATE.md',
 ]);
 const EXCLUDED_PARTS = new Set([
   '.git',

@@ -1,42 +1,40 @@
-import { test, expect } from '../../fixtures/data-driven';
+import { z } from 'zod';
+import { test, expect } from '../../fixtures/pom';
+import { ApiClient } from '../../fixtures/api-client';
 import { LoginPage } from '../../pages/example.page';
 import { DashboardPage } from '../../pages/dashboard.page';
 
-/**
- * Functional / E2E test mẫu — tag @functional:  npm run qa:test:functional
- *
- * Đặc điểm (khác UI/API test):
- *  - Test theo BUSINESS FLOW end-to-end, SPAN nhiều step / nhiều page / cả UI + API.
- *  - Verify STATE CHUYỂN qua các bước (state machine), không chỉ 1 assertion cuối.
- *  - Chậm hơn UI/API test → chạy ít hơn, dùng cho critical path (regression cốt lõi).
- *
- * Phân biệt:
- *  - tests/ui      → per-page, 1 intent, nhanh
- *  - tests/api     → per-endpoint, request-level
- *  - tests/functional → full business journey (login → tạo → verify → cleanup)
- */
+const OrderListSchema = z.array(z.object({
+  id: z.union([z.string(), z.number()]),
+}));
+
 test.describe.serial('Order flow @functional', () => {
-  test('UI login → lọc dữ liệu qua POM → đối chiếu API', async ({
+  test('TC-FUNCTIONAL-ORDERS-SEARCH-001 | search orders through UI and API @functional', async ({
     page,
     authenticatedApi,
     workerAccount,
     testData,
   }) => {
+    test.info().annotations.push(
+      {
+        type: 'api-operation',
+        description: '[TC-FUNCTIONAL-ORDERS-SEARCH-001:API] GET /orders searchOrders',
+      },
+      { type: 'contract', description: '[TC-FUNCTIONAL-ORDERS-SEARCH-001:ROLE] admin' },
+    );
     const searchValue = testData.uniqueString('qa-search');
 
-    // 1. UI: login
     const loginPage = new LoginPage(page);
     await loginPage.open();
     await loginPage.login(workerAccount.email, workerAccount.password);
     await expect(page).toHaveURL(/dashboard/i);
 
-    // 2. UI: mọi selector đi qua DashboardPage
     const dashboardPage = new DashboardPage(page);
     await dashboardPage.filterBy(searchValue);
     await expect(dashboardPage.filterInput).toHaveValue(searchValue);
 
-    // 3. Cross-verify cùng điều kiện qua API
-    const res = await authenticatedApi.get(`/orders?search=${encodeURIComponent(searchValue)}`);
-    expect(res.status()).toBe(200);
+    const response = await authenticatedApi.get(`/orders?search=${encodeURIComponent(searchValue)}`);
+    expect(response.status()).toBe(200);
+    ApiClient.validate(OrderListSchema, await response.json());
   });
 });

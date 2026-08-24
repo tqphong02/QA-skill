@@ -180,6 +180,10 @@ export function inspectCiPreflight(projectRoot, {
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/ci-preflight.mjs', violations);
   requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/generate-pom-code.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-module-artifact-layout.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-api-operation-coverage.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/run-testcase-pom.mjs', violations);
   requireFile(resolvedRoot, 'fixtures/parallel-pool.js', violations);
   requireFile(resolvedRoot, 'fixtures/parallel-pool.d.ts', violations);
 
@@ -194,7 +198,18 @@ export function inspectCiPreflight(projectRoot, {
   }
 
   if (packageJson) {
-    for (const script of ['qa:lint', 'qa:preflight', 'qa:quality', 'qa:contract', 'qa:report', 'qa:merge-allure']) {
+    for (const script of [
+      'qa:lint',
+      'qa:preflight',
+      'qa:quality',
+      'qa:contract',
+      'qa:report',
+      'qa:merge-allure',
+      'pom-codegen',
+      'module-layout',
+      'api-operation-coverage',
+      'testcase-workflow',
+    ]) {
       requireScript(packageJson, script, violations);
     }
     if (normalizedSurface === 'ui' || normalizedSurface === 'all') requireScript(packageJson, 'qa:test:ui', violations);

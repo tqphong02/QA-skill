@@ -23,7 +23,7 @@ Compose internal layers: DISCOVERY_CORE = Scoped Business Discovery + Explorator
 
 ## Không dùng
 - Viết script automation mới (→ `dynamic-web-automation`)
-- Chạy deterministic testcase, Excel, Sheet hoặc POM (→ `dynamic-web-automation` BUILD_AND_RUN)
+- Chạy deterministic testcase, Excel, Sheet, POM hoặc API automation (→ `dynamic-web-automation` BUILD_AND_RUN)
 
 ## Nguyên tắc cốt lõi
 > Chạy đúng phạm vi đúng lúc — không full regression mỗi cycle.

@@ -1,26 +1,8 @@
-import { createHash, randomUUID } from 'crypto';
-import type { TestInfo, WorkerInfo } from '@playwright/test';
-import { test as base, expect } from './auth';
+import { createHash, randomUUID } from 'node:crypto';
+import type { TestInfo } from '@playwright/test';
+import type { PomRuntimeContext } from './runtime-context';
 
-/**
- * Parallel-safe Data-Driven Testing fixtures.
- *
- * Static case rows answer "what scenario should run".
- * This fixture answers "which unique runtime data belongs to this attempt".
- */
-
-function safeSegment(value: string, maxLength = 80): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, maxLength) || 'data';
-}
-
-function shortHash(value: string, length = 12): string {
-  return createHash('sha256').update(value).digest('hex').slice(0, length);
-}
-
+/** Static case rows describe what to test; this object owns attempt-local data. */
 export type WorkerData = Readonly<{
   runId: string;
   project: string;
@@ -38,76 +20,57 @@ export type TestData = Readonly<{
   caseKey(caseId: string): string;
 }>;
 
-type DataDrivenFixtures = {
-  testData: TestData;
-};
-
-type DataDrivenWorkerFixtures = {
-  workerData: WorkerData;
-};
-
-function buildWorkerData(workerInfo: WorkerInfo): WorkerData {
-  const runId = safeSegment(process.env.RUN_ID ?? `local-${process.pid}`);
-  const project = safeSegment(workerInfo.project.name);
-  const namespace = [
-    runId,
-    project,
-    `p${workerInfo.parallelIndex}`,
-    `w${workerInfo.workerIndex}`,
-  ].join('-');
-
-  return Object.freeze({
-    runId,
-    project,
-    parallelIndex: workerInfo.parallelIndex,
-    workerIndex: workerInfo.workerIndex,
-    namespace,
-  });
+function safeSegment(value: string, maxLength = 80): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, maxLength) || 'data';
 }
 
-function buildTestData(workerData: WorkerData, testInfo: TestInfo): TestData {
-  let sequence = 0;
-  const namespace = [
-    workerData.namespace,
-    `t${shortHash(testInfo.testId)}`,
-    `r${testInfo.retry}`,
-    `e${testInfo.repeatEachIndex}`,
-  ].join('-');
+function shortHash(value: string, length = 12): string {
+  return createHash('sha256').update(value).digest('hex').slice(0, length);
+}
 
+/** Internal builder used by fixtures/pom; it is not a second test entrypoint. */
+export function createTestData(runtime: PomRuntimeContext, testInfo: TestInfo): TestData {
+  let sequence = 0;
+  const runId = safeSegment(process.env.QA_RUN_ID ?? process.env.RUN_ID ?? `local-${process.pid}`);
+  const project = safeSegment(testInfo.project.name);
+  const workerNamespace = [
+    runId,
+    project,
+    `p${runtime.parallelIndex}`,
+    `w${runtime.workerIndex}`,
+  ].join('-');
+  const worker = Object.freeze({
+    runId,
+    project,
+    parallelIndex: runtime.parallelIndex,
+    workerIndex: runtime.workerIndex,
+    namespace: workerNamespace,
+  });
   const nextSequence = (): number => {
     sequence += 1;
     return sequence;
   };
 
   return Object.freeze({
-    namespace,
-    worker: workerData,
+    namespace: runtime.namespace,
+    worker,
     uniqueEmail(domain = 'example.com'): string {
-      return `qa-${shortHash(namespace)}-${nextSequence()}@${domain}`;
+      return `qa-${shortHash(runtime.namespace)}-${nextSequence()}@${domain}`;
     },
     uniqueString(prefix = 'qa'): string {
-      return `${safeSegment(prefix, 24)}-${namespace}-${nextSequence()}`;
+      return `${safeSegment(prefix, 24)}-${runtime.namespace}-${nextSequence()}`;
     },
     uuid(): string {
       return randomUUID();
     },
     caseKey(caseId: string): string {
-      return `${safeSegment(caseId, 40)}-${shortHash(namespace)}-${nextSequence()}`;
+      return `${safeSegment(caseId, 40)}-${shortHash(runtime.namespace)}-${nextSequence()}`;
     },
   });
 }
-
-export const test = base.extend<DataDrivenFixtures, DataDrivenWorkerFixtures>({
-  workerData: [
-    async ({}, use, workerInfo) => {
-      await use(buildWorkerData(workerInfo));
-    },
-    { scope: 'worker' },
-  ],
-
-  testData: async ({ workerData }, use, testInfo) => {
-    await use(buildTestData(workerData, testInfo));
-  },
-});
-
-export { expect };

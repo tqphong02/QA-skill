@@ -59,10 +59,9 @@ functional results must pass the canonical Allure contract with the required
 `account`, `url`, `evidence_image`, `evidence_video` parameters and the
 `evidence-image`/`evidence-video` attachments.
 
-`reports/`, `evidence/`, `sessions/` and `runtime-data/` are generated paths.
-The template ignores their runtime contents; only the README and `.gitkeep`
-markers are retained. `sessions/` may contain authenticated storage state,
-cookies or tokens and must never be committed.
+`reports/`, `evidence/`, `sessions/` and `runtime-data/` are generated paths and
+are not shipped as source folders. `sessions/` may contain authenticated
+storage state, cookies or tokens and must never be committed.
 
 ## Adding a module
 
@@ -85,8 +84,7 @@ final Page Object, selector registry and spec. The layout validator blocks
 missing, extra, batch-leaked or colliding artifact names.
 
 `test-data/` is committed/static data. `runtime-data/` is generated data and
-is not a second source-data folder. Both the runtime fixture and the cleanup
-command use the `runtime-data/` name consistently.
+is not a second source-data folder.
 
 Copy `github-actions-ci.yml` to `.github/workflows/qa.yml`. The workflow
 assumes the automation project is in `<repository>/qa`; change

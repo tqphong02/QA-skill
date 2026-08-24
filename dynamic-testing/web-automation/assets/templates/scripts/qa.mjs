@@ -13,6 +13,8 @@ const SURFACE_TAGS = Object.freeze({
   all: null,
 });
 
+const ALLURE_MODES = new Set(['ui', 'api', 'functional', 'mixed']);
+
 const GENERATED_PATHS = Object.freeze([
   'reports',
   'evidence',
@@ -34,6 +36,20 @@ function optionValue(args, name, fallback = '') {
   const prefix = `${name}=`;
   const inline = args.find(argument => argument.startsWith(prefix));
   return inline ? inline.slice(prefix.length) : fallback;
+}
+
+function optionValues(args, name) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === name && args[index + 1] && !args[index + 1].startsWith('--')) {
+      values.push(args[index + 1]);
+      index += 1;
+    } else if (argument.startsWith(`${name}=`)) {
+      values.push(argument.slice(name.length + 1));
+    }
+  }
+  return values.flatMap(value => value.split(',')).map(value => value.trim()).filter(Boolean);
 }
 
 function removeOption(args, name) {
@@ -59,6 +75,14 @@ function normalizedSurface(surface) {
   const value = String(surface || 'all').toLowerCase();
   if (!Object.hasOwn(SURFACE_TAGS, value)) {
     throw new Error(`Unknown test surface: ${surface}. Expected ui, api, functional or all`);
+  }
+  return value;
+}
+
+function normalizedAllureMode(mode) {
+  const value = String(mode || 'mixed').toLowerCase();
+  if (!ALLURE_MODES.has(value)) {
+    throw new Error(`Unknown Allure mode: ${mode}. Expected ui, api, functional or mixed`);
   }
   return value;
 }
@@ -137,6 +161,7 @@ function runNodeScript(script, args = [], label = script) {
 }
 
 function runContract(mode = 'mixed', extraArgs = []) {
+  const selectedMode = normalizedAllureMode(mode);
   const resultDir = optionValue(extraArgs, '--results-dir', 'reports/allure-results');
   const outputPath = optionValue(extraArgs, '--output', 'reports/allure-contract.json');
   let forwarded = removeOption(extraArgs, '--mode');
@@ -144,30 +169,69 @@ function runContract(mode = 'mixed', extraArgs = []) {
   forwarded = removeOption(forwarded, '--output');
   return runNodeScript('scripts/verify-allure-contract.mjs', [
     '--results-dir', resultDir,
-    '--mode', mode,
+    '--mode', selectedMode,
     '--output', outputPath,
     ...forwarded,
-  ], `Allure contract (${mode})`);
+  ], `Allure contract (${selectedMode})`);
 }
 
-function runQualityGate() {
-  if (!fs.existsSync(path.resolve('reports/playwright.json'))) {
-    console.warn('[qa] reports/playwright.json not found; quality gate is BLOCKED');
+function runQualityGate(extraArgs = []) {
+  const configPath = optionValue(extraArgs, '--config', 'quality-gates.json');
+  const reportPath = optionValue(extraArgs, '--report', 'reports/playwright.json');
+  const outputPath = optionValue(extraArgs, '--output', 'reports/quality-gate.json');
+  const surface = normalizedSurface(optionValue(extraArgs, '--surface', 'all'));
+  const projects = optionValues(extraArgs, '--project');
+  if (!fs.existsSync(path.resolve(reportPath))) {
+    console.warn(`[qa] ${reportPath} not found; quality gate is BLOCKED`);
     return 2;
   }
-  return runNodeScript('scripts/quality-gate.mjs', [
-    '--config', 'quality-gates.json',
-    '--report', 'reports/playwright.json',
-  ], 'quality gate');
+  const qualityArgs = [
+    '--config', configPath,
+    '--report', reportPath,
+    '--output', outputPath,
+    '--surface', surface,
+  ];
+  for (const project of projects) qualityArgs.push('--project', project);
+  return runNodeScript('scripts/quality-gate.mjs', qualityArgs, `quality gate (${surface})`);
+}
+
+function isWithin(parent, candidate) {
+  const relative = path.relative(path.resolve(parent), path.resolve(candidate));
+  return !relative || (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
+export function parseReportArgs(extraArgs = []) {
+  if (hasOption(extraArgs, '--output')) {
+    throw new Error('qa report does not accept ambiguous --output; use --contract-output and --report-output');
+  }
+  if (hasOption(extraArgs, '--no-media')) {
+    throw new Error('--no-media is forbidden by the canonical Allure contract');
+  }
+  const mode = normalizedAllureMode(optionValue(extraArgs, '--mode', 'mixed'));
+  const resultsDir = optionValue(extraArgs, '--results-dir', 'reports/allure-results');
+  const contractOutput = optionValue(extraArgs, '--contract-output', 'reports/allure-contract.json');
+  const reportOutput = optionValue(extraArgs, '--report-output', 'reports/allure-report');
+  if (isWithin(reportOutput, contractOutput)) {
+    throw new Error('--contract-output must be outside --report-output because report generation cleans its output directory');
+  }
+  if (isWithin(resultsDir, contractOutput)) {
+    throw new Error('--contract-output must be outside the raw --results-dir');
+  }
+  if (isWithin(resultsDir, reportOutput) || isWithin(reportOutput, resultsDir)) {
+    throw new Error('--results-dir and --report-output must be separate directories');
+  }
+  return { mode, resultsDir, contractOutput, reportOutput };
 }
 
 function runReport(extraArgs = []) {
-  const contractCode = runContract(optionValue(extraArgs, '--mode', 'mixed'), extraArgs);
+  const parsed = parseReportArgs(extraArgs);
+  const contractCode = runContract(parsed.mode, [
+    '--results-dir', parsed.resultsDir,
+    '--output', parsed.contractOutput,
+  ]);
   if (contractCode !== 0) return contractCode;
-  const outputDir = optionValue(extraArgs, '--output', 'reports/allure-report');
-  const resultDir = optionValue(extraArgs, '--results-dir', 'reports/allure-results');
   return run(NPX, [
-    '--no-install', 'allure', 'generate', resultDir, '-o', outputDir, '--clean',
+    '--no-install', 'allure', 'generate', parsed.resultsDir, '-o', parsed.reportOutput, '--clean',
   ], { label: 'Allure report' });
 }
 
@@ -177,8 +241,31 @@ function runAllureCommand(command, args) {
   });
 }
 
-function cleanGeneratedPaths() {
-  const root = path.resolve(process.cwd());
+function isPreservedGeneratedFile(name) {
+  return name === '.gitkeep' || /^README(?:\.[^/\\]+)?$/i.test(name);
+}
+
+function cleanDirectory(directory) {
+  let changed = false;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const target = path.join(directory, entry.name);
+    if (entry.isFile() && isPreservedGeneratedFile(entry.name)) continue;
+    if (entry.isDirectory()) {
+      changed = cleanDirectory(target) || changed;
+      if (fs.readdirSync(target).length === 0) {
+        fs.rmdirSync(target);
+        changed = true;
+      }
+      continue;
+    }
+    fs.rmSync(target, { recursive: true, force: true });
+    changed = true;
+  }
+  return changed;
+}
+
+export function cleanGeneratedPaths(projectRoot = process.cwd()) {
+  const root = path.resolve(projectRoot);
   const removed = [];
   for (const relativePath of GENERATED_PATHS) {
     const target = path.resolve(root, relativePath);
@@ -187,8 +274,19 @@ function cleanGeneratedPaths() {
       throw new Error(`Refusing to clean path outside the project root: ${target}`);
     }
     if (fs.existsSync(target)) {
-      fs.rmSync(target, { recursive: true, force: true });
-      removed.push(relativePath);
+      const stats = fs.lstatSync(target);
+      if (!stats.isDirectory() || stats.isSymbolicLink()) {
+        fs.rmSync(target, { recursive: true, force: true });
+        removed.push(relativePath);
+        continue;
+      }
+      const changed = cleanDirectory(target);
+      if (fs.readdirSync(target).length === 0) {
+        fs.rmdirSync(target);
+        removed.push(relativePath);
+      } else if (changed) {
+        removed.push(relativePath);
+      }
     }
   }
   console.log(JSON.stringify({ status: 'PASS', command: 'clean', removed }, null, 2));
@@ -214,7 +312,7 @@ Commands:
   report [--mode <mode>]       Validate and generate the Allure report
   html                         Open the Playwright HTML report
   install-browsers              Install project-local Playwright browsers
-  quality                      Evaluate reports/playwright.json
+  quality [--surface <name>]   Evaluate reports/playwright.json for the selected surface/projects
   clean                        Remove only known generated output folders
   ci --surface <surface>       Run tests, quality gate, contract and report
 `);
@@ -246,7 +344,7 @@ export function main(argv = process.argv.slice(2)) {
   if (command === 'report') return runReport(args);
   if (command === 'html') return run(NPX, ['--no-install', 'playwright', 'show-report', 'evidence/html'], { label: 'Playwright HTML report' });
   if (command === 'install-browsers') return installBrowsers(args);
-  if (command === 'quality') return runQualityGate();
+  if (command === 'quality') return runQualityGate(args);
   if (command === 'clean') return cleanGeneratedPaths();
   if (command === 'open-allure') return runAllureCommand('open', [optionValue(args, '--report', 'reports/allure-report')]);
   if (command === 'serve-allure') return runAllureCommand('serve', ['reports/allure-results']);
@@ -254,7 +352,9 @@ export function main(argv = process.argv.slice(2)) {
     const parsed = parseTestArgs(args);
     return withPlaywrightLock(parsed.surface, env => {
       const testCode = runPlaywright(parsed.surface, parsed.extraArgs, env);
-      const qualityCode = runQualityGate();
+      const projectArgs = optionValues(parsed.extraArgs, '--project')
+        .flatMap(project => ['--project', project]);
+      const qualityCode = runQualityGate(['--surface', parsed.surface, ...projectArgs]);
       const reportCode = runReport(['--mode', parsed.surface === 'api' ? 'api' : 'mixed']);
       return testCode || qualityCode || reportCode;
     });

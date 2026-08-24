@@ -17,6 +17,7 @@ export const CANONICAL_ATTACHMENTS = Object.freeze({
 });
 
 const MEDIA_MODES = new Set(['ui', 'functional', 'mixed']);
+const ALLOWED_MODES = new Set(['ui', 'api', 'functional', 'mixed']);
 const ALLOWED_PARAMETER_NAMES = new Set([
   ...REQUIRED_PARAMETERS,
   'testcase_id',
@@ -126,6 +127,11 @@ function validHttpUrl(value) {
   }
 }
 
+function pathIsWithin(root, candidate) {
+  const relative = path.relative(path.resolve(root), path.resolve(candidate));
+  return !relative || (!relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 function isApiResult(result) {
   const labels = Array.isArray(result.labels) ? result.labels : [];
   const labelMatch = labels.some(label => (
@@ -182,10 +188,15 @@ function attachmentMap(result, file, resultsDir, violations) {
         ));
       } else {
         const source = String(attachment.source);
-        const sourcePath = path.isAbsolute(source)
-          ? source
-          : path.join(resultsDir, source);
-        if (!fs.existsSync(sourcePath)) {
+        const sourcePath = path.resolve(resultsDir, source);
+        if (path.isAbsolute(source) || !pathIsWithin(resultsDir, sourcePath)) {
+          violations.push(violation(
+            'ALLURE_ATTACHMENT_SOURCE_OUTSIDE_RESULTS',
+            file,
+            `Canonical attachment must resolve inside the Allure results directory: ${expected.name}`,
+            { attachment: expected.name, source },
+          ));
+        } else if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile()) {
           violations.push(violation(
             'ALLURE_ATTACHMENT_FILE_MISSING',
             file,
@@ -199,16 +210,31 @@ function attachmentMap(result, file, resultsDir, violations) {
   return byName;
 }
 
-export function verifyAllureContract({
-  resultsDir,
-  mode = 'ui',
-  requireMedia = MEDIA_MODES.has(mode),
-} = {}) {
+export function verifyAllureContract(options = {}) {
+  const resultsDir = options.resultsDir;
+  const mode = String(options.mode || 'ui').toLowerCase();
+  const requireMedia = MEDIA_MODES.has(mode);
   const resolvedResultsDir = path.resolve(resultsDir || 'reports/allure-results');
   const files = resultFiles(resolvedResultsDir);
   const violations = [];
   const warnings = [];
   const results = [];
+
+  if (!ALLOWED_MODES.has(mode)) {
+    violations.push(violation(
+      'ALLURE_MODE_UNKNOWN',
+      resolvedResultsDir,
+      `Unknown Allure mode: ${mode}. Expected ui, api, functional or mixed`,
+      { mode },
+    ));
+  }
+  if (Object.hasOwn(options, 'requireMedia')) {
+    violations.push(violation(
+      'ALLURE_MEDIA_OVERRIDE_FORBIDDEN',
+      resolvedResultsDir,
+      'Canonical media requirements are derived from mode and cannot be overridden',
+    ));
+  }
 
   if (!fs.existsSync(resolvedResultsDir)) {
     violations.push(violation(
@@ -249,7 +275,7 @@ export function verifyAllureContract({
       }
     }
     const urlValue = parameters.get('url');
-    if (!skipped && urlValue !== 'N/A' && !validHttpUrl(urlValue)) {
+    if (!skipped && !validHttpUrl(urlValue)) {
       violations.push(violation(
         'ALLURE_URL_INVALID',
         file,
@@ -257,23 +283,27 @@ export function verifyAllureContract({
         { value: urlValue },
       ));
     }
-    if (parameters.has('evidence_image')
-      && parameters.get('evidence_image') !== 'N/A'
-      && !(attachments.get(CANONICAL_ATTACHMENTS.image.name) || []).length) {
-      violations.push(violation(
-        'ALLURE_IMAGE_PARAMETER_UNRESOLVED',
-        file,
-        'evidence_image does not resolve to the canonical attachment',
-      ));
-    }
-    if (parameters.has('evidence_video')
-      && parameters.get('evidence_video') !== 'N/A'
-      && !(attachments.get(CANONICAL_ATTACHMENTS.video.name) || []).length) {
-      violations.push(violation(
-        'ALLURE_VIDEO_PARAMETER_UNRESOLVED',
-        file,
-        'evidence_video does not resolve to the canonical attachment',
-      ));
+    for (const [kind, parameterName] of [['image', 'evidence_image'], ['video', 'evidence_video']]) {
+      if (!parameters.has(parameterName)) continue;
+      const expected = CANONICAL_ATTACHMENTS[kind];
+      const value = parameters.get(parameterName);
+      const attachmentCount = (attachments.get(expected.name) || []).length;
+      const allowedValues = mediaRequired ? [expected.name] : [expected.name, 'N/A'];
+      if (!allowedValues.includes(value)) {
+        violations.push(violation(
+          'ALLURE_EVIDENCE_PARAMETER_INVALID',
+          file,
+          `${parameterName} must be ${allowedValues.join(' or ')}`,
+          { parameter: parameterName, value },
+        ));
+      }
+      if (value === expected.name && attachmentCount === 0) {
+        violations.push(violation(
+          kind === 'image' ? 'ALLURE_IMAGE_PARAMETER_UNRESOLVED' : 'ALLURE_VIDEO_PARAMETER_UNRESOLVED',
+          file,
+          `${parameterName} does not resolve to the canonical attachment`,
+        ));
+      }
     }
     results.push({
       file,
@@ -306,7 +336,7 @@ function main() {
   const result = verifyAllureContract({
     resultsDir: getArg('--results-dir', 'reports/allure-results'),
     mode,
-    requireMedia: MEDIA_MODES.has(mode) && !process.argv.includes('--no-media'),
+    ...(process.argv.includes('--no-media') ? { requireMedia: false } : {}),
   });
   const outputArg = getArg('--output');
   if (outputArg) {

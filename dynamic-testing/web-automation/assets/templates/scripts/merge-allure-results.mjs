@@ -12,6 +12,20 @@ function getArg(args, flag, fallback = '') {
   return inline ? inline.slice(flag.length + 1) : fallback;
 }
 
+function getArgs(args, flag) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index];
+    if (value === flag && args[index + 1] && !args[index + 1].startsWith('--')) {
+      values.push(args[index + 1]);
+      index += 1;
+    } else if (value.startsWith(`${flag}=`)) {
+      values.push(value.slice(flag.length + 1));
+    }
+  }
+  return values.map(value => value.trim()).filter(Boolean);
+}
+
 function hashFile(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
@@ -53,19 +67,55 @@ function assertSafeOutput(inputRoot, outputDir) {
   }
 }
 
-export function mergeAllureResults({ inputRoot = 'ci-artifacts', outputDir = 'reports/allure-results' } = {}) {
+function safeExpectedArtifact(inputRoot, name) {
+  const directory = path.resolve(inputRoot, name);
+  const relative = path.relative(inputRoot, directory);
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`Expected artifact must be a child of the input artifact root: ${name}`);
+  }
+  return directory;
+}
+
+export function mergeAllureResults({
+  inputRoot = 'ci-artifacts',
+  outputDir = 'reports/allure-results',
+  expectedArtifacts = [],
+} = {}) {
   const resolvedInput = path.resolve(inputRoot);
   const resolvedOutput = path.resolve(outputDir);
   assertSafeOutput(resolvedInput, resolvedOutput);
   const sourceDirectories = findAllureResultDirs(resolvedInput);
-  if (sourceDirectories.length === 0) {
+  const expected = [...new Set(expectedArtifacts.map(value => String(value).trim()).filter(Boolean))];
+  const missingArtifacts = [];
+  const artifactsWithoutResults = [];
+  for (const artifact of expected) {
+    const artifactDirectory = safeExpectedArtifact(resolvedInput, artifact);
+    if (!fs.existsSync(artifactDirectory) || !fs.statSync(artifactDirectory).isDirectory()) {
+      missingArtifacts.push(artifact);
+    } else if (findAllureResultDirs(artifactDirectory).length === 0) {
+      artifactsWithoutResults.push(artifact);
+    }
+  }
+  const emptyResultDirectories = sourceDirectories.filter(directory => (
+    !walkFiles(directory).some(file => /-result\.json$/i.test(path.basename(file)))
+  ));
+  if (sourceDirectories.length === 0
+    || missingArtifacts.length > 0
+    || artifactsWithoutResults.length > 0
+    || emptyResultDirectories.length > 0) {
     return {
       schema_version: 1,
       status: 'BLOCKED',
-      reason: 'No allure-results directory found under the CI artifact root',
+      reason: sourceDirectories.length === 0
+        ? 'No allure-results directory found under the CI artifact root'
+        : 'One or more expected CI artifacts have no canonical Allure result',
       input_root: resolvedInput,
       output_dir: resolvedOutput,
-      source_directories: [],
+      expected_artifacts: expected,
+      missing_artifacts: missingArtifacts,
+      artifacts_without_results: artifactsWithoutResults,
+      empty_result_directories: emptyResultDirectories,
+      source_directories: sourceDirectories,
       copied_files: 0,
       deduplicated_files: 0,
       conflicts: [],
@@ -111,6 +161,10 @@ export function mergeAllureResults({ inputRoot = 'ci-artifacts', outputDir = 're
     status: 'PASS',
     input_root: resolvedInput,
     output_dir: resolvedOutput,
+    expected_artifacts: expected,
+    missing_artifacts: [],
+    artifacts_without_results: [],
+    empty_result_directories: [],
     source_directories: sourceDirectories,
     copied_files: copiedFiles,
     deduplicated_files: deduplicatedFiles,
@@ -123,6 +177,7 @@ function main() {
   const result = mergeAllureResults({
     inputRoot: getArg(args, '--input', 'ci-artifacts'),
     outputDir: getArg(args, '--output', 'reports/allure-results'),
+    expectedArtifacts: getArgs(args, '--expect-artifact'),
   });
   const summaryPath = path.resolve(getArg(args, '--summary', 'reports/allure-merge.json'));
   fs.mkdirSync(path.dirname(summaryPath), { recursive: true });

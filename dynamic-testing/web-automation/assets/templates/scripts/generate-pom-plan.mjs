@@ -31,6 +31,19 @@ function moduleDescriptor(group) {
   return { group: name, slug: resolveModuleSlug(name) };
 }
 
+function testcaseCapabilities(testcase) {
+  return [
+    ...(testcase?.structured ? ['ui'] : []),
+    ...(testcase?.api ? ['api'] : []),
+  ];
+}
+
+function planSurface(capabilities) {
+  if (capabilities.length === 1) return capabilities[0];
+  if (capabilities.length === 2) return 'functional';
+  return null;
+}
+
 function targetHints(target) {
   if (!target || typeof target !== 'object' || Array.isArray(target)) return null;
   const fields = ['key', 'kind', 'name', 'role', 'label', 'placeholder', 'test_id', 'id', 'route'];
@@ -52,6 +65,10 @@ function buildPomPlan(manifestPath, options = {}) {
     (testcaseIds.size === 0 || testcaseIds.has(testcase.id))
     && (!group || String(testcase.group || '').trim().toLowerCase() === group)
   ));
+  const maxCases = Number(options.maxCases ?? 20);
+  if (!Number.isInteger(maxCases) || maxCases < 1 || maxCases > 20) {
+    throw new Error('BLOCKED: maxCases must be an integer from 1 to 20');
+  }
   if (testcaseIds.size > 0) {
     const missing = [...testcaseIds].filter(id => !selected.some(testcase => testcase.id === id));
     if (missing.length > 0) throw new Error(`BLOCKED: testcase IDs not found in selection: ${missing.join(', ')}`);
@@ -71,6 +88,36 @@ function buildPomPlan(manifestPath, options = {}) {
       modules.push(descriptor);
     }
   }
+  if (selected.length === 0) throw new Error('BLOCKED: selection contains no testcases');
+  if (selected.length > maxCases) {
+    throw new Error(
+      `BLOCKED: selection contains ${selected.length} cases; use group/testcaseIds to stay within the hard limit 20`,
+    );
+  }
+  if (modules.length !== 1) {
+    throw new Error(
+      `BLOCKED: PLAN_REQUIRES_EXACTLY_ONE_MODULE; selection contains ${modules.length} modules`,
+    );
+  }
+  const capabilities = ['ui', 'api'].filter(capability => (
+    selected.some(testcase => testcaseCapabilities(testcase).includes(capability))
+  ));
+  if (capabilities.length === 2) {
+    const uncomposed = selected.filter(testcase => {
+      const testcaseCaps = testcaseCapabilities(testcase);
+      const order = testcase.capability_order || [];
+      return testcaseCaps.length !== 2
+        || order.length !== 2
+        || !order.includes('ui')
+        || !order.includes('api');
+    });
+    if (uncomposed.length > 0) {
+      throw new Error(
+        'BLOCKED: FUNCTIONAL_FLOW_NOT_COMPOSED; mixed standalone UI/API cases '
+        + 'cannot be inferred as one functional flow',
+      );
+    }
+  }
   return {
     schema_version: 1,
     source_manifest: path.basename(manifestPath),
@@ -78,6 +125,8 @@ function buildPomPlan(manifestPath, options = {}) {
     source_marker: `[AUTOMATION_SOURCE:${sourceHash}]`,
     module: modules.length === 1 ? modules[0] : null,
     modules,
+    capabilities,
+    surface: planSurface(capabilities),
     selection: {
       requested_testcase_ids: [...testcaseIds],
       requested_group: options.group || null,
@@ -86,7 +135,11 @@ function buildPomPlan(manifestPath, options = {}) {
     },
     testcases: selected.map(testcase => ({
       testcase_id: testcase.id,
+      source_index: testcase.source_index,
       group: testcase.group,
+      section_kind: testcase.section_kind,
+      capabilities: testcaseCapabilities(testcase),
+      capability_order: testcase.capability_order,
       scenario_id: testcase.scenario_id,
       case_ref: testcase.case_ref,
       type: testcase.type,
@@ -119,8 +172,10 @@ function buildPomPlan(manifestPath, options = {}) {
         assertion,
         required_matchers: assertionMatcherTokens(assertion.kind),
       })),
+      outcome_route: testcase.outcome_route,
       cleanup: testcase.cleanup,
       mutates: testcase.mutates,
+      api: testcase.api,
       ui_function_keys: testcase.ui_function_keys,
       selector_target_keys: testcase.target_keys,
       selector_target_routes: testcase.target_routes,
@@ -151,16 +206,10 @@ async function main() {
     .map(value => value.trim())
     .filter(Boolean);
   const maxCases = Number(getArg('--max-cases', '20'));
-  if (!Number.isInteger(maxCases) || maxCases <= 0) {
-    throw new Error('BLOCKED: --max-cases must be a positive integer');
+  if (!Number.isInteger(maxCases) || maxCases <= 0 || maxCases > 20) {
+    throw new Error('BLOCKED: --max-cases must be an integer from 1 to 20');
   }
-  const plan = buildPomPlan(manifestPath, { testcaseIds, group });
-  if (plan.testcases.length === 0) throw new Error('BLOCKED: selection contains no testcases');
-  if (plan.testcases.length > maxCases) {
-    throw new Error(
-      `BLOCKED: selection contains ${plan.testcases.length} cases; use --group/--testcase-id or raise --max-cases explicitly`,
-    );
-  }
+  const plan = buildPomPlan(manifestPath, { testcaseIds, group, maxCases });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
   console.log(JSON.stringify({
@@ -172,7 +221,13 @@ async function main() {
   }, null, 2));
 }
 
-export { buildPomPlan, defaultPomPlanPath, targetHints };
+export {
+  buildPomPlan,
+  defaultPomPlanPath,
+  planSurface,
+  targetHints,
+  testcaseCapabilities,
+};
 
 const invokedAsScript = process.argv[1]
   && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href;

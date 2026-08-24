@@ -30,7 +30,7 @@ Then read the matched `SKILL.md` completely and only the references required by 
 | Plane retest/verify/PASS/FAILED/BLOCKED | Plane read → `dynamic-web-exploratory` RETEST_PLUS → Plane comment/state |
 | Release/go-no-go/sign-off | Plane if applicable → `governance-release-quality`; evaluate packet read-only |
 | Drive/Docs/Sheets/Slides URL or ID | `integration-google-drive`; resolve and read object |
-| Deterministic testcase/Excel/Sheet/Playwright/POM/BUILD/RUN | `dynamic-web-automation`; unified BUILD_AND_RUN |
+| Deterministic testcase/Excel/Sheet/Playwright/POM/API automation/BUILD/RUN | `dynamic-web-automation`; unified BUILD_AND_RUN |
 | Generic browser task | `dynamic-web-exploratory` FAST; no business brief is required |
 | Exploratory, ad-hoc, sanity, UI/UX, baseline, browser errors | `dynamic-web-exploratory`; UI-first |
 | Source/business discovery or UI ↔ source reconciliation | `dynamic-web-exploratory`; run the matching orchestrator |
@@ -83,12 +83,12 @@ Use exact `{{PLANE_DESCRIPTION_IMAGE_N}}` and `{{PLANE_COMMENT_IMAGE_N}}` placeh
 
 `playwright-runtime`/Playwright MCP is the default live browser. Gemini/Antigravity is a host model, not a browser override: never use Gemini-in-Chrome or `antigravity-native`; Antigravity must use Playwright runtime/MCP and returns `UNTEST` when unavailable. Network, console and page-error evidence must be observed in the same page/session as the UI action. `adapter-browser-session` is a separate real-login driver, not a Playwright fallback; run its doctor first and never perform destructive real-session actions without confirmation
 
-Deterministic Sheet/testcase routes exit to `dynamic-web-automation`. The exact contract literal is: deterministic Sheet/testcase routes exit to `dynamic-web-automation`. Full exploratory/app-baseline routes are UI-first; a brief, source or knowledge file is optional enrichment unless the selected retest/source-driven contract requires it. Retest uses `RETEST_PLUS`; it does not silently become a full-app regression
+Deterministic Sheet/testcase and API automation routes exit to `dynamic-web-automation`. The exact contract literal is: deterministic Sheet/testcase routes exit to `dynamic-web-automation`. Full exploratory/app-baseline routes are UI-first; a brief, source or knowledge file is optional enrichment unless the selected retest/source-driven contract requires it. Retest uses `RETEST_PLUS`; it does not silently become a full-app regression
 
 ### Invariants
 
 - `DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX
-- Deterministic Sheet execution = unified POM BUILD_AND_RUN with exact IDs, evidence and verdict projection
+- Deterministic Sheet/API automation execution = unified POM BUILD_AND_RUN with exact IDs, operation coverage, evidence and verdict projection
 - Retest includes Retest, Sanity, Impacted Regression, Exploratory, Ad-hoc and UI/UX
 - `PASS` → `Done`; `FAILED` → `In Progress`; `BLOCKED` → giữ nguyên trạng thái; new bug → `Todo`
 - `dynamic-performance` là public skill duy nhất cho performance; JMeter and k6 remain internal engines

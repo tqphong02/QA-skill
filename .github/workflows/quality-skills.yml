@@ -11,6 +11,27 @@ permissions:
   contents: read
 
 jobs:
+  web-automation-contracts:
+    name: Web automation contract gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run deterministic web-automation contracts
+        run: node --test dynamic-testing/web-automation/tests/*.spec.mjs
+
   mandatory-quality-gates:
     name: AI and data quality gates
     runs-on: ubuntu-latest

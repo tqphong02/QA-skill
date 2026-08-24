@@ -26,9 +26,6 @@ blob-report/
 
 # Allure results (raw data, regenerate report from these)
 reports/allure-results/
-# Keep allure-report/ if you want to commit pre-generated HTML
-!reports/allure-report/.gitkeep
-
 # Coverage
 coverage/
 *.lcov
@@ -37,13 +34,8 @@ coverage/
 # ─────────────────────────────────────────────────────────────
 # Sessions & runtime data (generated; may contain secrets/data)
 # ─────────────────────────────────────────────────────────────
-sessions/*
-!sessions/.gitkeep
-!sessions/README.md
-
-runtime-data/*
-!runtime-data/.gitkeep
-!runtime-data/README.md
+sessions/
+runtime-data/
 
 # ─────────────────────────────────────────────────────────────
 # Environment & secrets
@@ -99,9 +91,3 @@ lerna-debug.log*
 # ─────────────────────────────────────────────────────────────
 playwright/.cache/
 playwright/.last-run.json
-
-# ─────────────────────────────────────────────────────────────
-# k6 (performance testing)
-# ─────────────────────────────────────────────────────────────
-k6-results/
-k6-summary.json

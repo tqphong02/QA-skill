@@ -1,35 +1,46 @@
-import { test, expect } from '../../fixtures/data-driven';
 import { z } from 'zod';
+import { test, expect } from '../../fixtures/pom';
 import { ApiClient } from '../../fixtures/api-client';
 
-// Schema mô tả contract mong đợi của User — validate mọi response dùng schema này.
+const CreateUserRequestSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(1),
+});
+
 const UserSchema = z.object({
   id: z.union([z.string(), z.number()]),
   email: z.string().email(),
   name: z.string(),
 });
 
-/**
- * API test mẫu — tag @api:  npm run qa:test:api
- * Đặc điểm: request-level (không browser), validate schema, cleanup theo từng test.
- * Quy ước: dùng APIRequestContext (qua ApiClient), KHÔNG dùng axios.
- */
+const UserListSchema = z.array(UserSchema);
+
+const ApiErrorSchema = z.object({
+  message: z.string(),
+});
+
 test.describe('Users API @api', () => {
-  test('POST /users tạo user mới (auth)', async ({ authenticatedApi, testData }) => {
-    const payload = {
+  test('TC-API-USERS-CREATE-001 | POST /users | createUser @api', async ({
+    authenticatedApi,
+    testData,
+  }) => {
+    test.info().annotations.push(
+      { type: 'api-operation', description: '[TC-API-USERS-CREATE-001:API] POST /users createUser' },
+      { type: 'contract', description: '[TC-API-USERS-CREATE-001:ROLE] admin' },
+      { type: 'contract', description: '[TC-API-USERS-CREATE-001:CLEANUP] DELETE /users/{id} same_test' },
+    );
+    const payload = ApiClient.validate(CreateUserRequestSchema, {
       email: testData.uniqueEmail(),
       name: testData.uniqueString('qa-user'),
-    };
+    });
     let createdId: string | number | undefined;
 
     try {
-      await test.step('POST /users với valid payload', async () => {
-        const res = await authenticatedApi.post('/users', payload);
-        expect(res.status()).toBe(201);
-        const user = ApiClient.validate(UserSchema, await res.json());
-        expect(user.email).toBe(payload.email);
-        createdId = user.id;
-      });
+      const response = await authenticatedApi.post('/users', payload);
+      expect(response.status()).toBe(201);
+      const user = ApiClient.validate(UserSchema, await response.json());
+      expect(user.email).toBe(payload.email);
+      createdId = user.id;
     } finally {
       if (createdId !== undefined) {
         await authenticatedApi.delete(`/users/${createdId}`);
@@ -37,20 +48,28 @@ test.describe('Users API @api', () => {
     }
   });
 
-  test('GET /users trả list (auth)', async ({ authenticatedApi }) => {
-    await test.step('GET /users với valid token', async () => {
-      const res = await authenticatedApi.get('/users');
-      expect(res.status()).toBe(200);
-      const list = await res.json() as unknown[];
-      expect(Array.isArray(list)).toBe(true);
-    });
+  test('TC-API-USERS-LIST-001 | GET /users | listUsers @api', async ({ authenticatedApi }) => {
+    test.info().annotations.push(
+      { type: 'api-operation', description: '[TC-API-USERS-LIST-001:API] GET /users listUsers' },
+      { type: 'contract', description: '[TC-API-USERS-LIST-001:ROLE] admin' },
+    );
+    const response = await authenticatedApi.get('/users');
+    expect(response.status()).toBe(200);
+    const users = ApiClient.validate(UserListSchema, await response.json());
+    expect(Array.isArray(users)).toBe(true);
   });
 
-  test('negative — không token → 401', async ({ request }) => {
-    await test.step('GET /users WITHOUT token', async () => {
-      const api = new ApiClient(request, process.env.API_BASE_URL ?? 'http://localhost:3000');
-      const res = await api.get('/users'); // KHÔNG truyền token
-      expect(res.status()).toBe(401);
-    });
+  test('TC-API-USERS-UNAUTHORIZED-001 | GET /users | listUsersUnauthorized @api', async ({ api }) => {
+    test.info().annotations.push(
+      {
+        type: 'api-operation',
+        description: '[TC-API-USERS-UNAUTHORIZED-001:API] GET /users listUsersUnauthorized',
+      },
+      { type: 'contract', description: '[TC-API-USERS-UNAUTHORIZED-001:ROLE] unauthenticated' },
+    );
+    const response = await api.get('/users');
+    expect(response.status()).toBe(401);
+    const error = ApiClient.validate(ApiErrorSchema, await response.json());
+    expect(error.message).toBeTruthy();
   });
 });

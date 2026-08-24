@@ -6,14 +6,26 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { inspectProjectRuntime } from '../assets/templates/scripts/bootstrap-playwright.mjs';
+import {
+  inspectDependencyVersionParity,
+  inspectProjectRuntime,
+} from '../assets/templates/scripts/bootstrap-playwright.mjs';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const SCRIPT = path.join(REPO_ROOT, 'dynamic-testing/web-automation/assets/templates/scripts/bootstrap-playwright.mjs');
 
-function makeProject(packageJson) {
+function makeProject(packageJson, manifest = {
+  schema_version: 1,
+  dependencies: packageJson.dependencies || {},
+  devDependencies: packageJson.devDependencies || {},
+}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'playwright-bootstrap-'));
   fs.writeFileSync(path.join(root, 'package.json'), `${JSON.stringify(packageJson, null, 2)}\n`, 'utf8');
+  fs.writeFileSync(
+    path.join(root, 'dependency-versions.json'),
+    `${JSON.stringify(manifest, null, 2)}\n`,
+    'utf8',
+  );
   return root;
 }
 
@@ -36,8 +48,8 @@ function fakeLocalRuntime(root) {
 
 test('runtime inspection reports a generated project with no install as needing bootstrap', () => {
   const root = makeProject({ name: 'fixture', devDependencies: {
-    '@playwright/test': '^1.54.0',
-    '@types/node': '^22.0.0',
+    '@playwright/test': '^1.62.0',
+    '@types/node': '^24.0.0',
     typescript: '^5.8.0',
   } });
   try {
@@ -53,8 +65,8 @@ test('runtime inspection reports a generated project with no install as needing 
 
 test('runtime inspection is READY only when local Playwright and TypeScript binaries exist', () => {
   const root = makeProject({ name: 'fixture', devDependencies: {
-    '@playwright/test': '^1.54.0',
-    '@types/node': '^22.0.0',
+    '@playwright/test': '^1.62.0',
+    '@types/node': '^24.0.0',
     typescript: '^5.8.0',
   } });
   try {
@@ -78,6 +90,39 @@ test('check-only fails closed when project package metadata is missing', () => {
     });
     assert.equal(result.status, 2);
     assert.match(result.stdout, /package.json is required/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('template package has exact parity with the single dependency version manifest', () => {
+  const templateRoot = path.join(REPO_ROOT, 'dynamic-testing/web-automation/assets/templates');
+  const result = inspectDependencyVersionParity(templateRoot);
+  assert.equal(result.status, 'PASS');
+  assert.deepEqual(result.mismatches, []);
+});
+
+test('dependency version drift is blocked before npm install', () => {
+  const root = makeProject({
+    name: 'fixture',
+    devDependencies: {
+      '@playwright/test': '^1.45.0',
+      '@types/node': '^24.0.0',
+      typescript: '^5.8.0',
+    },
+  }, {
+    schema_version: 1,
+    dependencies: {},
+    devDependencies: {
+      '@playwright/test': '^1.62.0',
+      '@types/node': '^24.0.0',
+      typescript: '^5.8.0',
+    },
+  });
+  try {
+    const result = inspectDependencyVersionParity(root);
+    assert.equal(result.status, 'BLOCKED');
+    assert.deepEqual(result.mismatches.map(item => item.dependency), ['@playwright/test']);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

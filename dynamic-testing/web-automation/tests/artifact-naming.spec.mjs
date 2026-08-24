@@ -102,14 +102,30 @@ test('module layout blocks slug collisions and reserved scaffold names', () => {
   }
 });
 
-test('runtime data has one generated-folder name distinct from static test-data', () => {
+test('POM planning hard-blocks more than 20 cases even through the public function', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-plan-limit-'));
+  try {
+    const manifestPath = path.join(root, 'testcases.automation.json');
+    write(root, 'testcases.automation.json', manifest(Array.from({ length: 21 }, (_, index) => ({
+      group: 'LOGIN',
+      testcase_id: `TC_LOGIN_${String(index + 1).padStart(2, '0')}`,
+    }))));
+    assert.throws(() => buildPomPlan(manifestPath), /hard limit 20/);
+    assert.throws(() => buildPomPlan(manifestPath, { maxCases: 21 }), /integer from 1 to 20/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('runtime data is fixture-owned and distinct from committed case data', () => {
   const templateRoot = path.resolve('dynamic-testing/web-automation/assets/templates');
   const gitignore = fs.readFileSync(path.join(templateRoot, '.gitignore'), 'utf8');
-  const runtimeDataFixture = fs.readFileSync(path.join(templateRoot, 'fixtures/test-data.ts'), 'utf8');
+  const dataFixture = fs.readFileSync(path.join(templateRoot, 'fixtures/data-driven.ts'), 'utf8');
 
-  assert.match(gitignore, /runtime-data\/\*/);
+  assert.match(gitignore, /runtime-data\//);
   assert.doesNotMatch(gitignore, /(^|\n)testdata\//);
-  assert.match(runtimeDataFixture, /\.\.\/runtime-data/);
-  assert.ok(fs.existsSync(path.join(templateRoot, 'runtime-data/README.md')));
+  assert.match(dataFixture, /export function createTestData/);
+  assert.doesNotMatch(dataFixture, /writeFileSync|TestDataStore/);
+  assert.equal(fs.existsSync(path.join(templateRoot, 'fixtures/test-data.ts')), false);
   assert.ok(fs.existsSync(path.join(templateRoot, 'test-data/cases/login.cases.ts')));
 });

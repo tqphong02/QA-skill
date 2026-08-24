@@ -1,20 +1,12 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import {
-  test as base,
+  chromium,
   request as playwrightRequest,
-  type Page,
   type APIRequestContext,
   type APIResponse,
-  type WorkerInfo,
-  expect,
 } from '@playwright/test';
-import path from 'path';
-import fs from 'fs';
 import { ApiClient } from './api-client';
-import {
-  addCanonicalAllureParameters,
-  captureCanonicalUiEvidence,
-  canonicalAccountLabel,
-} from './allure-contract';
 import {
   assertParallelPool,
   assertPoolCapacity,
@@ -23,59 +15,76 @@ import {
   selectPoolSlots,
 } from './parallel-pool.js';
 
-/**
- * Auth Fixture Template — quản lý authentication cho cả suite.
- *
- * AI đọc skill này sẽ:
- *   1. Copy file này về project
- *   2. Sửa AUTH_CONFIG theo project (login URL, credentials, storage path)
- *   3. Reuse `authenticatedPage` fixture trong mọi test cần login
- *
- * 2 patterns:
- *  - **Storage state** (UI): login 1 lần, save storageState → reuse cho nhiều test
- *  - **API token** (API call): login qua API, share token trong test
- */
-
-// ─────────────────────────────────────────────────────────────
-// CONFIG — AI FILL theo project
-// ─────────────────────────────────────────────────────────────
-const AUTH_CONFIG = {
+export const AUTH_CONFIG = {
   apiBaseUrl: process.env.API_BASE_URL ?? 'http://localhost:3000',
-  loginPath: '/auth/login', // ← AI fill endpoint login của project
+  loginPath: process.env.API_LOGIN_PATH ?? '/auth/login',
   storageStatePath: path.resolve(__dirname, '../sessions/auth-storage.json'),
-  credentials: {
-    // CI preflight requires real values; these non-secret sentinels prevent
-    // unresolved source placeholders from masking the missing-input error.
-    email: process.env.TEST_USER ?? 'ci-user-required',
-    password: process.env.TEST_PASS ?? 'ci-credential-required',
-  },
 } as const;
 
-export type TestAccount = Readonly<{
+export type TestCredentials = Readonly<{
   email: string;
   password: string;
 }>;
 
-function safeFileSegment(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'default';
+export type TestAccount = TestCredentials & Readonly<{
+  id: string;
+  role: string;
+}>;
+
+type AccountSlot = Record<string, unknown> & {
+  id?: string;
+  role?: string;
+  roles?: string[];
+  email?: string;
+  password?: string;
+};
+
+export type WorkerAccountOptions = Readonly<{
+  parallelIndex: number;
+  workers: number;
+  role: string;
+  projectRoot?: string;
+}>;
+
+function safeLabel(value: unknown, fallback: string): string {
+  const normalized = String(value ?? '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return normalized || fallback;
 }
 
-function resolveWorkerAccount(workerInfo: WorkerInfo): TestAccount {
-  const projectRoot = process.cwd();
+/**
+ * Select the credential row that owns the current parallel slot.
+ * This is deliberately a helper rather than a second Playwright test fixture:
+ * generated specs have exactly one public entrypoint, fixtures/pom.
+ */
+export function resolveWorkerAccount(options: WorkerAccountOptions): TestAccount {
+  const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
   const projectKey = packageProjectKey(projectRoot);
   const accountEnvironment = configuredPool('ACCOUNTS', projectKey);
-  const workers = Math.max(1, workerInfo.config.workers);
+  const workers = Math.max(1, options.workers);
+  const role = options.role.trim() || 'default';
+
   if (!accountEnvironment) {
     if (workers > 1) {
       throw new Error(
-        'UNTEST: parallel authenticated fixtures require one account per worker in '
+        'UNTEST: parallel authenticated tests require one account per worker in '
         + `${projectKey}_TEST_ACCOUNTS_JSON, QA_TEST_ACCOUNTS_JSON or TEST_ACCOUNTS_JSON`,
       );
     }
-    return AUTH_CONFIG.credentials;
+    const email = process.env.TEST_USER?.trim() ?? '';
+    const password = process.env.TEST_PASS ?? '';
+    if (!email || !password) {
+      throw new Error(
+        'UNTEST: authenticatedApi/workerAccount requires TEST_USER and TEST_PASS '
+        + 'or an account pool with email/password',
+      );
+    }
+    return Object.freeze({ id: 'legacy-account-0', role, email, password });
   }
 
-  const role = process.env.QA_ROLE?.trim() || 'default';
   assertParallelPool(
     accountEnvironment.raw,
     workers,
@@ -88,227 +97,141 @@ function resolveWorkerAccount(workerInfo: WorkerInfo): TestAccount {
     accountEnvironment.name,
     role,
     true,
-  );
+  ) as AccountSlot[];
   assertPoolCapacity(accounts, workers, accountEnvironment.name, 'ACCOUNTS', projectRoot);
 
-  const account = accounts[workerInfo.parallelIndex];
+  const account = accounts[options.parallelIndex];
   if (!account) {
     throw new Error(
       `UNTEST: ${accountEnvironment.name} has ${accounts.length} account(s), but parallel slot `
-      + `${workerInfo.parallelIndex} needs its own account; do not cycle shared accounts`,
+      + `${options.parallelIndex} needs its own account`,
     );
   }
-  if (typeof account.email !== 'string' || !account.email.trim()
-    || typeof account.password !== 'string' || !account.password) {
+  const email = typeof account.email === 'string' ? account.email.trim() : '';
+  const password = typeof account.password === 'string' ? account.password : '';
+  if (!email || !password) {
     throw new Error(
-      `UNTEST: ${accountEnvironment.name} slot ${workerInfo.parallelIndex} must contain email and password`,
+      `UNTEST: ${accountEnvironment.name} slot ${options.parallelIndex} for role ${role} `
+      + 'must contain email and password',
     );
   }
-  return { email: account.email, password: account.password };
-}
 
-// ─────────────────────────────────────────────────────────────
-// Helper: login qua API, lưu storageState (cho UI tests)
-// ─────────────────────────────────────────────────────────────
-export async function setupStorageState(
-  credentials: TestAccount = AUTH_CONFIG.credentials,
-  storageStatePath = AUTH_CONFIG.storageStatePath,
-): Promise<string> {
-  const sessionDir = path.dirname(storageStatePath);
-  if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-  }
-
-  // Nếu đã có session hợp lệ → reuse
-  if (fs.existsSync(storageStatePath)) {
-    return storageStatePath;
-  }
-
-  // Login qua API → lấy token → set vào localStorage/cookie
-  const browser = await (await import('@playwright/test')).chromium.launch();
-  const context = await browser.newContext({
-    baseURL: process.env.UI_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
+  return Object.freeze({
+    id: safeLabel(account.id, `account-slot-${options.parallelIndex}`),
+    role,
+    email,
+    password,
   });
-  const page = await context.newPage();
-
-  const api = new ApiClient(page.request, AUTH_CONFIG.apiBaseUrl);
-  const res = await api.post(AUTH_CONFIG.loginPath, credentials);
-  expect(res.status()).toBe(200);
-  const { accessToken } = await res.json();
-
-  // Set token vào localStorage/cookie tùy project
-  await page.goto('/'); // về base URL trước
-  await page.evaluate(
-    ({ token }) => {
-      localStorage.setItem('accessToken', token);
-    },
-    { token: accessToken },
-  );
-
-  // Save storageState
-  await context.storageState({ path: storageStatePath });
-  await browser.close();
-
-  return storageStatePath;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Custom fixtures — extend base test với auth helpers
-// ─────────────────────────────────────────────────────────────
-type AuthFixtures = {
-  authenticatedPage: Page;       // Page đã login (UI test)
-  authenticatedApi: ApiClient;   // ApiClient kèm token
-  canonicalAllure: void;
-};
-
-type AuthWorkerFixtures = {
-  workerAccount: TestAccount;    // Account riêng cho parallel slot khi có pool
-  apiToken: string;              // Token login 1 lần per worker
-  workerStorageStatePath: string;// Storage state riêng cho worker/run
-};
-
-export const test = base.extend<AuthFixtures, AuthWorkerFixtures>({
-  // Every fixture-based test gets the four parameter names. UI tests replace
-  // the N/A media values in the page teardown below; API tests keep N/A.
-  canonicalAllure: [
-    async ({}, use, testInfo) => {
-      await use();
-      const hasCanonicalMetadata = testInfo.annotations.some(
-        annotation => annotation.type === 'qa-allure-contract',
-      );
-      if (hasCanonicalMetadata) return;
-      await addCanonicalAllureParameters({
-        account: canonicalAccountLabel({
-          accountSlot: process.env.QA_ALLURE_ACCOUNT ?? `account-slot-${testInfo.parallelIndex}`,
-          parallelIndex: testInfo.parallelIndex,
-        }),
-        url: process.env.API_BASE_URL
-          ?? process.env.UI_BASE_URL
-          ?? process.env.BASE_URL
-          ?? 'http://localhost:3000',
-        evidenceImage: 'N/A',
-        evidenceVideo: 'N/A',
-        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
-        runId: process.env.QA_RUN_ID ?? process.env.RUN_ID ?? 'N/A',
-        role: process.env.QA_ROLE ?? 'default',
-        browser: testInfo.project.name,
-        appBuild: process.env.QA_APP_BUILD ?? process.env.APP_BUILD ?? 'N/A',
-      });
-    },
-    { auto: true },
-  ],
-
-  // Override the default page fixture so data-driven/legacy fixture tests use
-  // the same canonical image/video evidence as manifest-generated POM tests.
-  page: async ({ context }, use, testInfo) => {
-    const page = await context.newPage();
-    await use(page);
-    await captureCanonicalUiEvidence({
-      page,
-      runtime: {
-        accountSlot: `account-slot-${testInfo.parallelIndex}`,
-        role: process.env.QA_ROLE ?? 'default',
-        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
-        parallelIndex: testInfo.parallelIndex,
-      },
-      testInfo,
-    });
-  },
-
-  // ─── Fixture: workerAccount ───────────────────────────────
-  workerAccount: [
-    async ({}, use, workerInfo) => {
-      await use(resolveWorkerAccount(workerInfo));
-    },
-    { scope: 'worker' },
-  ],
-
-  // ─── Fixture: apiToken ───────────────────────────────────
-  // Worker fixture không được phụ thuộc Playwright `request` test fixture.
-  apiToken: [
-    async ({ workerAccount }, use) => {
-      const requestContext = await playwrightRequest.newContext();
-      try {
-        const api = new ApiClient(requestContext, AUTH_CONFIG.apiBaseUrl);
-        const res = await api.post(AUTH_CONFIG.loginPath, workerAccount);
-        expect(res.status()).toBe(200);
-        const token = (await res.json()).accessToken as string;
-        await use(token);
-      } finally {
-        await requestContext.dispose();
-      }
-    },
-    { scope: 'worker' },
-  ],
-
-  // ─── Fixture: workerStorageStatePath ─────────────────────
-  workerStorageStatePath: [
-    async ({ workerAccount }, use, workerInfo) => {
-      const runId = safeFileSegment(process.env.RUN_ID ?? process.env.QA_RUN_ID ?? `local-${process.pid}`);
-      const project = safeFileSegment(workerInfo.project.name);
-      const storagePath = path.resolve(
-        __dirname,
-        `../sessions/auth-${runId}-${project}-p${workerInfo.parallelIndex}-w${workerInfo.workerIndex}.json`,
-      );
-      await use(await setupStorageState(workerAccount, storagePath));
-    },
-    { scope: 'worker' },
-  ],
-
-  // ─── Fixture: authenticatedApi ───────────────────────────
-  authenticatedApi: async ({ request, apiToken }, use: (r: ApiClient) => Promise<void>) => {
-    // Wrap api với token mặc định — không cần truyền token mỗi lần
-    const authedApi = new AuthedApiClient(request, AUTH_CONFIG.apiBaseUrl, apiToken);
-    await use(authedApi);
-  },
-
-  // ─── Fixture: authenticatedPage ─────────────────────────
-  // Browser context mới per test, storageState riêng per worker/run
-  authenticatedPage: async ({ browser, workerStorageStatePath }, use: (r: Page) => Promise<void>, testInfo) => {
-    const context = await browser.newContext({ storageState: workerStorageStatePath });
-    const page = await context.newPage();
-    await use(page);
-    await captureCanonicalUiEvidence({
-      page,
-      runtime: {
-        accountSlot: `account-slot-${testInfo.parallelIndex}`,
-        role: process.env.QA_ROLE ?? 'default',
-        testcaseId: testInfo.title.match(/\bTC-[A-Za-z0-9_-]+\b/)?.[0],
-        parallelIndex: testInfo.parallelIndex,
-      },
-      testInfo,
-    });
-    await context.close();
-  },
-});
-
-// ─────────────────────────────────────────────────────────────
-// AuthedApiClient — wrapper có sẵn token
-// ─────────────────────────────────────────────────────────────
-class AuthedApiClient extends ApiClient {
+export class AuthedApiClient extends ApiClient {
   constructor(
     request: APIRequestContext,
     baseUrl: string,
     private readonly token: string,
   ) {
-    super(request, baseUrl);
+    super(request, baseUrl, token);
   }
 
-  override get(path: string): Promise<APIResponse> {
-    return super.get(path, this.token);
+  override get(requestPath: string): Promise<APIResponse> {
+    return super.get(requestPath, this.token);
   }
-  override post(path: string, body: unknown): Promise<APIResponse> {
-    return super.post(path, body, this.token);
+
+  override post(requestPath: string, body: unknown): Promise<APIResponse> {
+    return super.post(requestPath, body, this.token);
   }
-  override put(path: string, body: unknown): Promise<APIResponse> {
-    return super.put(path, body, this.token);
+
+  override put(requestPath: string, body: unknown): Promise<APIResponse> {
+    return super.put(requestPath, body, this.token);
   }
-  override patch(path: string, body: unknown): Promise<APIResponse> {
-    return super.patch(path, body, this.token);
+
+  override patch(requestPath: string, body: unknown): Promise<APIResponse> {
+    return super.patch(requestPath, body, this.token);
   }
-  override delete(path: string): Promise<APIResponse> {
-    return super.delete(path, this.token);
+
+  override delete(requestPath: string): Promise<APIResponse> {
+    return super.delete(requestPath, this.token);
   }
 }
 
-export { expect };
+const workerTokenCache = new Map<string, Promise<string>>();
+
+async function loginForToken(account: TestAccount): Promise<string> {
+  const requestContext = await playwrightRequest.newContext();
+  try {
+    const api = new ApiClient(requestContext, AUTH_CONFIG.apiBaseUrl);
+    const response = await api.post(AUTH_CONFIG.loginPath, {
+      email: account.email,
+      password: account.password,
+    });
+    if (response.status() !== 200) {
+      throw new Error(`UNTEST: API login returned HTTP ${response.status()}`);
+    }
+    const body = await response.json() as { accessToken?: unknown };
+    if (typeof body.accessToken !== 'string' || !body.accessToken) {
+      throw new Error('UNTEST: API login response does not contain a non-empty accessToken');
+    }
+    return body.accessToken;
+  } finally {
+    await requestContext.dispose();
+  }
+}
+
+/** Login once per worker process/account without exposing the token to reports. */
+export async function apiTokenFor(account: TestAccount): Promise<string> {
+  const cacheKey = `${AUTH_CONFIG.apiBaseUrl}\u0000${account.role}\u0000${account.id}\u0000${account.email}`;
+  let pending = workerTokenCache.get(cacheKey);
+  if (!pending) {
+    pending = loginForToken(account);
+    workerTokenCache.set(cacheKey, pending);
+  }
+  try {
+    return await pending;
+  } catch (error) {
+    workerTokenCache.delete(cacheKey);
+    throw error;
+  }
+}
+
+/**
+ * Optional project bootstrap helper for a UI storage state. Runtime tests still
+ * consume the project-local storageState selected by fixtures/runtime-context.
+ */
+export async function setupStorageState(
+  credentials: TestCredentials,
+  storageStatePath = AUTH_CONFIG.storageStatePath,
+): Promise<string> {
+  const resolvedPath = path.resolve(storageStatePath);
+  fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+  if (fs.existsSync(resolvedPath)) return resolvedPath;
+
+  const browser = await chromium.launch();
+  try {
+    const context = await browser.newContext({
+      baseURL: process.env.UI_BASE_URL ?? process.env.BASE_URL ?? 'http://localhost:3000',
+    });
+    try {
+      const page = await context.newPage();
+      const api = new ApiClient(page.request, AUTH_CONFIG.apiBaseUrl);
+      const response = await api.post(AUTH_CONFIG.loginPath, credentials);
+      if (response.status() !== 200) {
+        throw new Error(`UNTEST: API login returned HTTP ${response.status()}`);
+      }
+      const body = await response.json() as { accessToken?: unknown };
+      if (typeof body.accessToken !== 'string' || !body.accessToken) {
+        throw new Error('UNTEST: API login response does not contain a non-empty accessToken');
+      }
+      await page.goto('/');
+      await page.evaluate(({ token }) => {
+        localStorage.setItem('accessToken', token);
+      }, { token: body.accessToken });
+      await context.storageState({ path: resolvedPath });
+    } finally {
+      await context.close();
+    }
+  } finally {
+    await browser.close();
+  }
+
+  return resolvedPath;
+}

@@ -4,12 +4,13 @@
 
 ## TOC
 1. Why Playwright `request` (not axios)
-2. ApiClient pattern
+2. Canonical fixture + module client pattern
 3. Auth/token fixtures (share across tests)
 4. Schema validation with zod
 5. CRUD lifecycle (create → use → delete)
 6. Status code expectations
-7. Common anti-patterns
+7. Operation coverage gate
+8. Common anti-patterns
 
 ---
 
@@ -22,52 +23,40 @@
 
 **Exception:** use `axios`/`got` **only if** the project already depends on them and wants a single HTTP client. Never introduce a second client just for tests.
 
-## 2. ApiClient pattern
+## 2. Canonical fixture + module client pattern
 
-Wrap `APIRequestContext` in an `ApiClient` class (`assets/templates/api-client.ts`):
+`fixtures/api-client.ts` wraps `APIRequestContext`; `fixtures/pom.ts` exposes it as `api` and `authenticatedApi`. Generated specs never destructure raw `request`:
 
 ```typescript
-const res = await api.post('/users', payload, token);
-expect(res.status()).toBe(201);
-const data = await res.json();
+test('TC-API-001 | create user @api', async ({ authenticatedApi }) => {
+  const usersClient = new UsersClient(authenticatedApi);
+  const payload = CreateUserRequestSchema.parse(testData);
+  const response = await usersClient.postUsers({ body: payload });
+  expect(response.status()).toBe(201);
+  UserResponseSchema.parse(await response.json());
+});
 ```
 
-Why a wrapper:
-- Centralize base URL + headers (Content-Type, Authorization).
-- One place to add logging / Allure attachment / retry policy.
-- Methods return `APIResponse` so the spec still controls `expect()`.
+Why two layers:
+
+- `ApiClient` centralizes base URL, auth, safe request metadata and Playwright transport
+- `clients/<module>.client.ts` owns stable business operation methods and paths
+- `schemas/<module>.schema.ts` validates request and response payloads
+- Specs retain status/business assertions and only import `test`/`expect` from `fixtures/pom`
 
 ## 3. Auth/token fixtures
 
-**Login once, reuse everywhere.** Two common patterns:
+`fixtures/pom.ts` is the only fixture graph. Use `api` for anonymous endpoints and `authenticatedApi` for role-bound endpoints. Its internal auth helper logs in once per worker/account slot, caches only the token in memory and never exposes it to a spec or report
 
-**Pattern A — token in `beforeAll`:**
 ```typescript
-test.beforeAll(async ({ request }) => {
-  const res = await new ApiClient(request, BASE).post('/auth/login', credentials);
-  token = (await res.json()).accessToken;
+test('TC-API-USERS-READ-001 | read user @api', async ({ authenticatedApi }) => {
+  const usersClient = new UsersClient(authenticatedApi);
+  const response = await usersClient.getUsersById({ path: { id: 'owned-id' } });
+  expect(response.status()).toBe(200);
 });
 ```
 
-**Pattern B — custom fixture (more reusable):**
-```typescript
-import { request as playwrightRequest } from '@playwright/test';
-
-export const test = base.extend<{}, { token: string }>({
-  token: [async ({}, use) => {
-    const context = await playwrightRequest.newContext();
-    try {
-      const res = await context.post(`${BASE}/auth/login`, { data: credentials });
-      await use((await res.json()).accessToken);
-    } finally {
-      await context.dispose();
-    }
-  }, { scope: 'worker' }],  // login once per worker, not per test
-});
-```
-
-Credentials from env (`process.env.TEST_USER`), never hardcoded.
-A worker-scoped fixture must not depend on the test-scoped `request` fixture. For account-state mutation, allocate credentials from `TEST_ACCOUNTS_JSON[parallelIndex]`.
+Credentials come from environment/CI only. For parallel state mutation, allocate a unique account and dataset slot per worker; a worker-scoped fixture never depends on test-scoped `request`
 
 ## 4. Schema validation with zod
 
@@ -86,41 +75,29 @@ const UserSchema = z.object({
 const user = ApiClient.validate(UserSchema, await res.json()); // throws on mismatch
 ```
 
-- Keep schema next to the test or in `fixtures/schemas/`.
+- Generated schemas live in `schemas/<module-slug>.schema.ts`.
 - Reuse schema in UI tests too (when UI reads the same shape) — single source of truth.
 - For arrays: `z.array(UserSchema)`.
 
 ## 5. CRUD lifecycle
 
 ```typescript
-test.describe.serial('User CRUD @api', () => {
-  let userId: string;
-
-  test('create', async () => {
-    const res = await api.post('/users', payload, token);
-    userId = (await res.json()).id;
-    expect(res.status()).toBe(201);
-  });
-
-  test('read', async () => {
-    const res = await api.get(`/users/${userId}`, token);
-    expect(res.status()).toBe(200);
-  });
-
-  test('update', async () => {
-    const res = await api.patch(`/users/${userId}`, { name: 'Updated' }, token);
-    expect(res.status()).toBe(200);
-  });
-
-  test.afterAll(async () => {
-    if (userId) await api.delete(`/users/${userId}`, token); // cleanup — no pollution
-  });
+test('TC-API-USERS-CREATE-001 | create user @api', async ({ authenticatedApi }) => {
+  const usersClient = new UsersClient(authenticatedApi);
+  let userId: string | undefined;
+  try {
+    const response = await usersClient.postUsers({ body: requestBody });
+    expect(response.status()).toBe(201);
+    userId = UserResponseSchema.parse(await response.json()).id;
+  } finally {
+    if (userId) await usersClient.deleteUsersById({ path: { id: userId } });
+  }
 });
 ```
 
-- Use `test.describe.serial` only when tests genuinely depend on order (a single worker-owned CRUD lifecycle is a legitimate case).
-- For independent/parallel CRUD tests, create and delete the exact resource in the same test with `try/finally` or fixture teardown.
-- **Cleanup is mandatory**. `afterAll` is allowed only when the serial block owns the resource exclusively.
+- Prefer one owned lifecycle per test with `try/finally`
+- Use `test.describe.serial` only when cases genuinely share one explicitly owned lifecycle
+- Cleanup is mandatory for mutations and the operation coverage gate verifies it
 
 ## 6. Status code expectations
 
@@ -138,7 +115,21 @@ test.describe.serial('User CRUD @api', () => {
 
 **Negative tests are as important as positive ones** — verify 401 without token, 403 with wrong role, 422 with bad payload.
 
-## 7. Common anti-patterns
+## 7. Operation coverage gate
+
+BUILD writes `operation-inventory/<module-slug>.api-operations.json` from the immutable plan. Before RUN, `verify-api-operation-coverage.mjs` proves each selected Testcase ID maps exactly once to method, path, module client operation, canonical fixture, auth/role, expected status, request/response/error schemas and same-test cleanup when mutating
+
+```bash
+node scripts/verify-api-operation-coverage.mjs \
+  --project-root . \
+  --inventory operation-inventory/orders.api-operations.json \
+  --testcase-id TC-API-ORDERS-001 \
+  --output reports/api-operation-coverage.json
+```
+
+Coverage must be 100%. Missing inventory, an unmapped API test, raw `request`, unvalidated schema, status mismatch or cleanup outside `finally` is `BLOCKED` and produces `UNTEST`, never `PASS`
+
+## 8. Common anti-patterns
 
 | Anti-pattern | Fix |
 |---|---|
@@ -150,3 +141,5 @@ test.describe.serial('User CRUD @api', () => {
 | `axios` introduced when Playwright `request` available | Use `APIRequestContext` |
 | Trusting only status code | Assert response body shape + values |
 | Tests depending on shared mutable data | Use `testData` namespace; timestamp alone is not worker/test isolation |
+| Generated spec destructures `request` | Consume `api`/`authenticatedApi` from `fixtures/pom` and wrap it with the module client |
+| API client exists but is unused | Map it in the generated operation inventory and enforce 100% coverage |

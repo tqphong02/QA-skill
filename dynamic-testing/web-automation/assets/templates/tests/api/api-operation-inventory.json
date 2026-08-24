@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "operations": [
+    {
+      "method": "POST",
+      "path": "/users",
+      "operation": "createUser",
+      "required": true,
+      "mutates": true,
+      "testcase_id": "TC-API-USERS-CREATE-001",
+      "spec": "tests/api/example.api.spec.ts",
+      "client": {
+        "type": "ApiClient",
+        "fixture": "authenticatedApi",
+        "method": "post"
+      },
+      "auth": {
+        "mode": "bearer",
+        "role": "admin"
+      },
+      "expected_status": [201],
+      "schemas": {
+        "request": "CreateUserRequestSchema",
+        "response": "UserSchema",
+        "error": null
+      },
+      "cleanup": {
+        "required": true,
+        "owner": "same_test",
+        "client": "authenticatedApi",
+        "method": "delete",
+        "path": "/users/{id}"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "operation": "listUsers",
+      "required": true,
+      "mutates": false,
+      "testcase_id": "TC-API-USERS-LIST-001",
+      "spec": "tests/api/example.api.spec.ts",
+      "client": {
+        "type": "ApiClient",
+        "fixture": "authenticatedApi",
+        "method": "get"
+      },
+      "auth": {
+        "mode": "bearer",
+        "role": "admin"
+      },
+      "expected_status": [200],
+      "schemas": {
+        "request": null,
+        "response": "UserListSchema",
+        "error": null
+      },
+      "cleanup": {
+        "required": false,
+        "reason": "Read-only operation"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/users",
+      "operation": "listUsersUnauthorized",
+      "required": true,
+      "mutates": false,
+      "testcase_id": "TC-API-USERS-UNAUTHORIZED-001",
+      "spec": "tests/api/example.api.spec.ts",
+      "client": {
+        "type": "ApiClient",
+        "fixture": "api",
+        "method": "get"
+      },
+      "auth": {
+        "mode": "none",
+        "role": "unauthenticated"
+      },
+      "expected_status": [401],
+      "schemas": {
+        "request": null,
+        "response": null,
+        "error": "ApiErrorSchema"
+      },
+      "cleanup": {
+        "required": false,
+        "reason": "Read-only negative operation"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/orders",
+      "operation": "searchOrders",
+      "required": true,
+      "mutates": false,
+      "testcase_id": "TC-FUNCTIONAL-ORDERS-SEARCH-001",
+      "spec": "tests/functional/example.functional.spec.ts",
+      "client": {
+        "type": "ApiClient",
+        "fixture": "authenticatedApi",
+        "method": "get"
+      },
+      "auth": {
+        "mode": "bearer",
+        "role": "admin"
+      },
+      "expected_status": [200],
+      "schemas": {
+        "request": null,
+        "response": "OrderListSchema",
+        "error": null
+      },
+      "cleanup": {
+        "required": false,
+        "reason": "Read-only operation"
+      }
+    }
+  ]
+}
