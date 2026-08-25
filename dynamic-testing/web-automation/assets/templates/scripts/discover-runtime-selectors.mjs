@@ -758,7 +758,7 @@ function buildTargetContexts(manifest, parsed, { group, testcaseIds, targetKeys 
       }
       const context = {
         testcase_id: testcase.id,
-        feature: resolveModuleSlug(arg('--module', testcase.group || 'selectors')),
+        feature: resolveModuleSlug(arg('--module', testcase.feature || testcase.group || 'selectors')),
         target_key: key,
         target: { ...target },
         route: target.route || route || '',
@@ -849,7 +849,7 @@ async function main() {
 
   const runId = clean(arg('--run-id', process.env.RUN_ID || process.env.QA_RUN_ID || `selector-discovery-${Date.now()}`), 120);
   const requestedRunId = hasArg('--run-id') ? runId : '';
-  const outputPath = path.resolve(projectRoot, arg('--output', path.join('selector-evidence', `${resolveModuleSlug(group || contexts[0].feature)}.json`)));
+  const outputPath = path.resolve(projectRoot, arg('--output', path.join('selector-evidence', `${resolveModuleSlug(contexts[0].feature)}.json`)));
   const providerArg = normalizeProvider(arg('--provider', process.env.QA_SELECTOR_PROVIDER || ''));
   const browserMcpEvidenceArg = arg('--browser-mcp-evidence', process.env.QA_BROWSER_MCP_SELECTOR_EVIDENCE || '');
   const browserMcpEvidencePath = browserMcpEvidenceArg
@@ -872,7 +872,7 @@ async function main() {
       expectedProvider,
       appBuild,
       runId: requestedRunId,
-      feature: resolveModuleSlug(group || contexts[0].feature),
+      feature: resolveModuleSlug(contexts[0].feature),
     });
     if (normalized.evidence) writeJson(outputPath, normalized.evidence);
     const evidence = normalized.evidence || {
@@ -906,7 +906,7 @@ async function main() {
   const capturedAt = new Date().toISOString();
   const evidence = {
     schema_version: 1,
-    feature: resolveModuleSlug(group || contexts[0].feature),
+    feature: resolveModuleSlug(contexts[0].feature),
     provider,
     browser: 'chromium',
     captured_at: capturedAt,

@@ -35,6 +35,7 @@
     "pom-plan": "node scripts/generate-pom-plan.mjs",
     "pom-codegen": "node scripts/generate-pom-code.mjs",
     "module-layout": "node scripts/verify-module-artifact-layout.mjs",
+    "complexity-gate": "node scripts/verify-automation-complexity.mjs",
     "api-operation-coverage": "node scripts/verify-api-operation-coverage.mjs",
     "testcase-workflow": "node scripts/run-testcase-pom.mjs",
     "bootstrap:runtime": "node scripts/bootstrap-playwright.mjs --project-root . --browsers chromium",

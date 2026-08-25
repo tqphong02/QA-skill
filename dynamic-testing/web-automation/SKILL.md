@@ -32,25 +32,29 @@ Turn a bounded `.automation.json` manifest into maintainable Playwright code, ex
 
 ## Generated project contract
 
-One module owns one deterministic surface-specific artifact set:
+One module is identified by `domain/feature`. Prefer explicit `domain` and `feature` manifest fields; legacy single-segment groups deterministically map to `app/<group>`, while `Domain / Feature` groups map to `<domain>/<feature>`:
 
 ```text
-ui:         selectors/<slug>.selectors.ts
-            pages/<slug>.page.ts
-            tests/ui/<slug>.ui.spec.ts
-api:        clients/<slug>.client.ts
-            schemas/<slug>.schema.ts
-            tests/api/<slug>.api.spec.ts
-functional: selectors + page + client + schema
-            tests/functional/<slug>.functional.spec.ts
-api map:    operation-inventory/<slug>.api-operations.json
+ui:         src/modules/<domain>/<feature>/ui/<feature>.selectors.ts
+            src/modules/<domain>/<feature>/ui/<feature>.page.ts
+            tests/ui/<domain>/<feature>.ui.spec.ts
+api:        src/modules/<domain>/<feature>/api/<feature>.client.ts
+            src/modules/<domain>/<feature>/api/schemas/<resource>/<operation>.schema.ts
+            tests/api/<domain>/<feature>.api.spec.ts
+functional: all module layers above
+            tests/functional/<domain>/<feature>.functional.spec.ts
+api map:    operation-inventory/<domain>/<feature>.api-operations.json
 ```
 
-`scripts/artifact-naming.mjs` is the only slug resolver. The slug comes from `testcase.group`; never derive final filenames from testcase IDs, titles, routes, timestamps, workers, or model output. Reject collisions, reserved names, leaked batch names, non-codegen-owned target files, and symlink/junction output escapes.
+`scripts/artifact-naming.mjs` is the only identity/path resolver. Never derive schema names or files from testcase IDs; schemas are operation-owned and split by resource, method/path, status and deterministic shape variant. Reject identity collisions, reserved names, leaked batch names, non-codegen-owned target files, and symlink/junction output escapes.
+
+Reusable manual code belongs only under `src/shared/{components,helpers,schemas,extensions}` or module-local `extensions/`. Every manual file must have one `src/shared/ownership.json` entry with `path`, `kind`, `owner`, and `purpose`; generated files cannot be claimed as manual extensions.
+
+`automation-complexity.json` gates routes/module, selectors/module, actions/page, API operations/client, schema variants/operation, and generated file length. `reports/automation-complexity.json` must pass before RUN; split a feature or extract an owned shared component when a limit is exceeded.
 
 Keep `fixtures/pom.ts` as the sole public Playwright fixture entrypoint. Generated specs import `test` and `expect` from it and consume `page`, `api`, or `authenticatedApi`. They must not import another fixture-owned `test`, destructure raw Playwright `request`, place locators in specs, or add per-spec Allure hooks.
 
-Map each testcase ID to exactly one `test()`. Keep UI actions in Page Objects, API operations in module clients, request/response validation in Zod schemas, and assertions in specs. Preserve `AUTOMATION_SOURCE`, testcase IDs, role/RBAC, values, cleanup, and operation markers.
+Map each testcase ID to exactly one `test()`. Keep UI actions in Page Objects, API operations in module clients, request/response validation in Zod schemas, and assertions in specs. Preserve `AUTOMATION_SOURCE`, testcase IDs, `COV-*` source obligations, role/RBAC, values, cleanup, and operation markers. A manifest with `requirement_coverage` must have bidirectional testcase ↔ coverage-item links; generated specs carry `[TESTCASE:COVERAGE] COV-*` annotations and traceability fails when any link or marker is missing.
 
 Parallel mutation requires one isolated account/storage state and dataset/cleanup slot per worker. Missing capacity is `UNTEST`; never cycle accounts, share mutable runtime JSON, or silently lower isolation.
 
@@ -96,6 +100,6 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 
 - UI full runs require 100% UI-function inventory coverage and fresh same-session selector evidence
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
-- Runtime scaffold, module layout, traceability, applicable coverage, and `reports/allure-contract.json` must pass
+- Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
 - Generated specs use the canonical fixture, contain no raw selector/request, and selected tests actually execute
 - Never claim `PASS` from static findings, generated code alone, or missing runtime evidence

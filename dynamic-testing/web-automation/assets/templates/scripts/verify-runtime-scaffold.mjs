@@ -55,7 +55,11 @@ export function inspectRuntimeScaffold(projectRoot, { testRoot = 'tests' } = {})
   requireFile(resolvedRoot, 'scripts/generate-pom-code.mjs', violations);
   requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-module-artifact-layout.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-automation-complexity.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-api-operation-coverage.mjs', violations);
+  requireFile(resolvedRoot, 'automation-complexity.json', violations);
+  requireFile(resolvedRoot, 'src/shared/ownership.json', violations);
+  requireFile(resolvedRoot, 'src/shared/components/base.component.ts', violations);
   requireFile(resolvedRoot, 'scripts/verify-allure-contract.mjs', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/merge-allure-results.mjs', violations);

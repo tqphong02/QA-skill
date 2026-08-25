@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { resolveModuleSlug } from './artifact-naming.mjs';
+import { resolveModuleIdentity, resolveModuleSlug } from './artifact-naming.mjs';
 
 const CODE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs']);
 const EXCLUDED_DIRS = new Set([
@@ -223,6 +223,10 @@ function outcomeMarker(testcaseId, assertion, index) {
   return `[${testcaseId}:OUTCOME:${String(index + 1).padStart(2, '0')}] ${assertion?.kind || 'assert'} ${markerValue(oracle)}`;
 }
 
+function coverageMarker(testcaseId, coverageItemId) {
+  return `[${testcaseId}:COVERAGE] ${coverageItemId}`;
+}
+
 function parseAutomationManifest(manifestPath) {
   const parsed = JSON.parse(readText(manifestPath));
   if (parsed.schema_version !== 1 || !Array.isArray(parsed.testcases)) {
@@ -300,10 +304,13 @@ function parseAutomationManifest(manifestPath) {
       execution?.ui_function_keys,
       execution?.coverage_refs,
     );
+    const coverageItemRefs = referenceList(item.coverage_item_refs);
     return {
       id,
       source_index: index,
       group: item.group || null,
+      domain: item.domain ?? item.module?.domain ?? null,
+      feature: item.feature ?? item.module?.feature ?? null,
       section_kind: item.section_kind || null,
       capability_order: Array.isArray(item.capability_order)
         ? item.capability_order.map(value => String(value).trim().toLowerCase())
@@ -314,6 +321,8 @@ function parseAutomationManifest(manifestPath) {
       type: item.type || null,
       bb_technique: item.bb_technique || null,
       requirement: item.requirement || null,
+      description: item.description || null,
+      coverage_item_refs: coverageItemRefs,
       priority: item.priority || null,
       entry,
       role_key: entry.role_key || null,
@@ -344,10 +353,50 @@ function parseAutomationManifest(manifestPath) {
         outcomes: outcomeAssertions.map((assertion, outcomeIndex) => outcomeMarker(id, assertion, outcomeIndex)),
         role: entry.role_key ? `[${id}:ROLE] ${entry.role_key}` : null,
         rbac: rbacRefs.map(ref => `[${id}:RBAC] ${ref}`),
+        coverage: coverageItemRefs.map(ref => coverageMarker(id, ref)),
         cleanup: execution?.cleanup != null || execution?.mutates === true ? `[${id}:CLEANUP]` : null,
       },
     };
   });
+  const coverageLedger = Array.isArray(parsed.requirement_coverage)
+    ? parsed.requirement_coverage
+    : [];
+  if (coverageLedger.length > 0) {
+    const coverageById = new Map();
+    for (const [index, item] of coverageLedger.entries()) {
+      const coverageId = String(item?.coverage_item_id || '').trim();
+      if (!/^COV[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$/.test(coverageId)) {
+        throw new Error(`Invalid coverage_item_id at requirement_coverage[${index}]`);
+      }
+      if (coverageById.has(coverageId)) throw new Error(`Duplicate coverage_item_id: ${coverageId}`);
+      if (item.status !== 'COVERED') throw new Error(`Coverage item ${coverageId} must use status=COVERED`);
+      const testcaseIds = referenceList(item.testcase_ids);
+      if (testcaseIds.length === 0) throw new Error(`Coverage item ${coverageId} has no testcase_ids`);
+      coverageById.set(coverageId, new Set(testcaseIds));
+    }
+    const caseById = new Map(cases.map(testcase => [testcase.id, testcase]));
+    for (const testcase of cases) {
+      if (testcase.requirement !== '(out-of-spec)' && testcase.coverage_item_refs.length === 0) {
+        throw new Error(`Testcase ${testcase.id} has no coverage_item_refs`);
+      }
+      for (const coverageId of testcase.coverage_item_refs) {
+        const ledgerIds = coverageById.get(coverageId);
+        if (!ledgerIds) throw new Error(`Testcase ${testcase.id} references unknown coverage item ${coverageId}`);
+        if (!ledgerIds.has(testcase.id)) {
+          throw new Error(`Coverage item ${coverageId} does not map back to testcase ${testcase.id}`);
+        }
+      }
+    }
+    for (const [coverageId, testcaseIds] of coverageById) {
+      for (const testcaseId of testcaseIds) {
+        const testcase = caseById.get(testcaseId);
+        if (!testcase) throw new Error(`Coverage item ${coverageId} references unknown testcase ${testcaseId}`);
+        if (!testcase.coverage_item_refs.includes(coverageId)) {
+          throw new Error(`Testcase ${testcaseId} does not map back to coverage item ${coverageId}`);
+        }
+      }
+    }
+  }
   return { cases, duplicateIds, raw: parsed };
 }
 
@@ -702,7 +751,7 @@ function normalizedRoute(value) {
 function evidenceMatchesCase(record, testcase, targetKey) {
   const evidenceTestcaseId = String(record.testcase_id || '').trim();
   if (evidenceTestcaseId && evidenceTestcaseId !== testcase.id) return false;
-  const expectedFeature = resolveModuleSlug(testcase.group);
+  const expectedFeature = resolveModuleIdentity(testcase).feature;
   const evidenceFeature = resolveModuleSlug(record.feature || path.basename(record.evidence_file || '', '.json'));
   const hasTargetSpecificRoute = Boolean(testcase.target_routes?.[targetKey]);
   if (expectedFeature && evidenceFeature
@@ -896,6 +945,7 @@ function buildTraceability({
         ...(testcase.required_markers?.outcomes || []),
         ...(testcase.required_markers?.role ? [testcase.required_markers.role] : []),
         ...(testcase.required_markers?.rbac || []),
+        ...(testcase.required_markers?.coverage || []),
         ...(testcase.required_markers?.cleanup ? [testcase.required_markers.cleanup] : []),
       ];
       for (const marker of requiredMarkers) {
@@ -1189,6 +1239,7 @@ function buildTraceability({
       all_target_keys: testcase.all_target_keys || testcase.target_keys,
       role_key: testcase.role_key || null,
       rbac_refs: testcase.rbac_refs || [],
+      coverage_item_refs: testcase.coverage_item_refs || [],
       implementation_markers: implementationMarkers,
       matched_spec_files: relativeList(matchedSpecFiles, automationRoot),
       declaration_files: relativeList(declarationFiles, automationRoot),

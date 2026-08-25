@@ -73,6 +73,7 @@ EXECUTION_ACTIONS = {
 EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
 TESTCASE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$')
 SCENARIO_ID_RE = re.compile(r'^SCN[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$')
+COVERAGE_ITEM_ID_RE = re.compile(r'^COV[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$')
 MACHINE_DATA_REF_RE = re.compile(
     r'\bAIFA_[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*(?:@[A-Za-z0-9.-]+)?(?:\.[A-Za-z0-9]+)?\b'
 )
@@ -570,6 +571,149 @@ def _ui_function_keys(case):
     return keys
 
 
+def _coverage_item_refs(case):
+    """Return stable source-obligation refs without confusing UI inventory refs."""
+    raw = case.get('coverage_item_refs', [])
+    if raw is None:
+        raw = []
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        raise ValueError('case.coverage_item_refs must be an array of stable coverage item IDs')
+    refs = [str(value or '').strip() for value in raw]
+    if any(not ref for ref in refs):
+        raise ValueError('case.coverage_item_refs cannot contain empty values')
+    if len(set(refs)) != len(refs):
+        raise ValueError('case.coverage_item_refs cannot contain duplicates')
+    return refs
+
+
+def _validate_resolved_expected_result(value, field):
+    """Reject explicit uncertainty so generated cases never choose an oracle for the source."""
+    rendered = str(value or '').strip()
+    unresolved_patterns = (
+        r'(?im)^\s*(?:or|hoặc)\s*$',
+        r'(?i)\b(?:tbd|tbc|unknown|unresolved|to be clarified)\b',
+        r'(?i)\b(?:chưa xác định|chưa rõ|cần làm rõ|đang chờ xác nhận)\b',
+        r'(?i)\beither\b.{0,120}\bor\b',
+    )
+    if any(re.search(pattern, rendered) for pattern in unresolved_patterns):
+        raise ValueError(
+            f'{field} contains an unresolved alternative; add it to review_required and resolve the oracle before generation'
+        )
+    return rendered
+
+
+def _requirement_coverage_registry(data, execution_required):
+    """Validate the document-derived coverage ledger before testcase projection."""
+    requirements = data.get('requirements') or []
+    if execution_required and not requirements:
+        raise ValueError('execution_contract="required" requires a non-empty requirements registry')
+    if not isinstance(requirements, list):
+        raise ValueError('requirements must be an array')
+
+    requirement_ids = set()
+    coverage_items = {}
+    for requirement in requirements:
+        if not isinstance(requirement, dict):
+            raise ValueError('requirements entries must be objects')
+        requirement_id = str(requirement.get('id') or '').strip()
+        if not requirement_id:
+            raise ValueError('requirements[].id is required')
+        if requirement_id in requirement_ids:
+            raise ValueError(f'Duplicate requirement ID: {requirement_id}')
+        requirement_ids.add(requirement_id)
+        if execution_required and not str(requirement.get('text') or '').strip():
+            raise ValueError(f'requirement {requirement_id} requires non-empty text')
+
+        items = requirement.get('coverage_items') or []
+        if execution_required and not items:
+            raise ValueError(
+                f'requirement {requirement_id} requires non-empty coverage_items derived from the source document'
+            )
+        if not isinstance(items, list):
+            raise ValueError(f'requirement {requirement_id}.coverage_items must be an array')
+        for item in items:
+            if not isinstance(item, dict):
+                raise ValueError(f'requirement {requirement_id}.coverage_items entries must be objects')
+            item_id = str(item.get('id') or '').strip()
+            if not COVERAGE_ITEM_ID_RE.fullmatch(item_id):
+                raise ValueError(
+                    f'coverage item ID must use a stable ID such as COV-AC1-HAPPY: {item_id or "<empty>"}'
+                )
+            if item_id in coverage_items:
+                raise ValueError(f'Duplicate coverage item ID: {item_id}')
+            description = str(item.get('description') or '').strip()
+            source_ref = str(item.get('source_ref') or '').strip()
+            expected_result = str(item.get('expected_result') or '').strip()
+            if not description or not source_ref or not expected_result:
+                raise ValueError(
+                    f'coverage item {item_id} requires description, source_ref and expected_result'
+                )
+            _validate_resolved_expected_result(
+                expected_result,
+                f'coverage item {item_id}.expected_result',
+            )
+            minimum_cases = item.get('minimum_cases', 1)
+            if isinstance(minimum_cases, bool) or not isinstance(minimum_cases, int) or minimum_cases < 1:
+                raise ValueError(f'coverage item {item_id}.minimum_cases must be an integer >= 1')
+
+            required_case_types = item.get('required_case_types') or []
+            if isinstance(required_case_types, str):
+                required_case_types = [required_case_types]
+            if not isinstance(required_case_types, list) or not required_case_types:
+                raise ValueError(f'coverage item {item_id} requires required_case_types')
+            required_case_types = [str(value or '').strip().lower() for value in required_case_types]
+            invalid_case_types = [value for value in required_case_types if value not in TYPE_ORDER]
+            if invalid_case_types or 'additional' in required_case_types:
+                raise ValueError(
+                    f'coverage item {item_id} has invalid required_case_types: {invalid_case_types or ["additional"]}'
+                )
+
+            required_techniques = item.get('required_techniques') or []
+            if isinstance(required_techniques, str):
+                required_techniques = [required_techniques]
+            if not isinstance(required_techniques, list) or not required_techniques:
+                raise ValueError(f'coverage item {item_id} requires required_techniques')
+            invalid_techniques = [value for value in required_techniques if value not in BB_TECHNIQUES]
+            if invalid_techniques:
+                raise ValueError(
+                    f'coverage item {item_id} has unsupported required_techniques: {invalid_techniques}'
+                )
+            coverage_items[item_id] = {
+                'id': item_id,
+                'requirement': requirement_id,
+                'description': description,
+                'source_ref': source_ref,
+                'expected_result': expected_result,
+                'minimum_cases': minimum_cases,
+                'required_case_types': list(dict.fromkeys(required_case_types)),
+                'required_techniques': list(dict.fromkeys(required_techniques)),
+                'testcase_ids': [],
+                'observed_case_types': set(),
+                'observed_techniques': set(),
+            }
+    return requirement_ids, coverage_items
+
+
+def _validate_source_inventory(data, coverage_item_count):
+    inventory = data.get('source_inventory')
+    if inventory is None:
+        return
+    if not isinstance(inventory, dict):
+        raise ValueError('source_inventory must be an object')
+    generated = inventory.get('generated_obligation_count')
+    unresolved = inventory.get('unresolved_obligation_count')
+    if generated != coverage_item_count:
+        raise ValueError(
+            'source_inventory.generated_obligation_count does not match requirements[].coverage_items'
+        )
+    if unresolved != len(data.get('review_required') or []):
+        raise ValueError(
+            'source_inventory.unresolved_obligation_count does not match review_required'
+        )
+
+
 def iter_testcases(data):
     """Yield cases in canonical order with stable explicit IDs for new contracts."""
     counter = 0
@@ -577,13 +721,8 @@ def iter_testcases(data):
     contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
     execution_required = contract_mode == 'required'
     seen_ids = set()
-    requirement_ids = {
-        str(item.get('id') or '').strip()
-        for item in data.get('requirements') or []
-        if isinstance(item, dict) and str(item.get('id') or '').strip()
-    }
-    if execution_required and not requirement_ids:
-        raise ValueError('execution_contract="required" requires a non-empty requirements registry')
+    requirement_ids, coverage_items = _requirement_coverage_registry(data, execution_required)
+    _validate_source_inventory(data, len(coverage_items))
     if data.get('review_required'):
         raise ValueError('review_required must be empty before testcase generation')
     for section in data.get('sections') or []:
@@ -633,6 +772,7 @@ def iter_testcases(data):
                     key=lambda item: type_rank(item.get('type')),
                 ):
                     counter += 1
+                    explicit_id = case.get('testcase_id')
                     case_type = str(case.get('type') or '').strip().lower()
                     if execution_required and case_type not in TYPE_ORDER:
                         raise ValueError(
@@ -669,7 +809,31 @@ def iter_testcases(data):
                             raise ValueError(
                                 f'Unsupported bb_technique: {invalid_techniques}; allowed={sorted(BB_TECHNIQUES)}'
                             )
-                    explicit_id = case.get('testcase_id')
+                        coverage_refs = _coverage_item_refs(case)
+                        if case_type == 'additional':
+                            if coverage_refs:
+                                raise ValueError('additional testcase cannot cover confirmed source obligations')
+                        elif not coverage_refs:
+                            raise ValueError('New executable cases require case.coverage_item_refs')
+                        for coverage_ref in coverage_refs:
+                            coverage_item = coverage_items.get(coverage_ref)
+                            if not coverage_item:
+                                raise ValueError(f'Unknown coverage item reference: {coverage_ref}')
+                            if coverage_item['requirement'] != case_requirement:
+                                raise ValueError(
+                                    f'case {explicit_id or "<unknown>"} maps {case_requirement} to coverage item '
+                                    f'{coverage_ref} owned by {coverage_item["requirement"]}'
+                                )
+                            if case_type not in coverage_item['required_case_types']:
+                                raise ValueError(
+                                    f'case {explicit_id or "<unknown>"} type {case_type} is not allowed by coverage item '
+                                    f'{coverage_ref}: {coverage_item["required_case_types"]}'
+                                )
+                            if not set(techniques).intersection(coverage_item['required_techniques']):
+                                raise ValueError(
+                                    f'case {explicit_id or "<unknown>"} techniques {techniques} do not satisfy coverage item '
+                                    f'{coverage_ref}: {coverage_item["required_techniques"]}'
+                                )
                     if execution_required and explicit_id in (None, ''):
                         raise ValueError(
                             'New executable UI/FUNCTION cases require stable case.testcase_id'
@@ -682,6 +846,11 @@ def iter_testcases(data):
                     if raw_test_id in seen_ids:
                         raise ValueError(f'Duplicate testcase_id: {raw_test_id}')
                     seen_ids.add(raw_test_id)
+                    if execution_required:
+                        for coverage_ref in _coverage_item_refs(case):
+                            coverage_items[coverage_ref]['testcase_ids'].append(raw_test_id)
+                            coverage_items[coverage_ref]['observed_case_types'].add(case_type)
+                            coverage_items[coverage_ref]['observed_techniques'].update(techniques)
                     # Keep the stable testcase ID readable in every projection.
                     # Brackets were previously added only for the legacy Excel
                     # display and made the ID disagree with JSON/Markdown/POM.
@@ -694,6 +863,50 @@ def iter_testcases(data):
                         'group': group,
                         'scenario': scenario,
                     }
+    if execution_required:
+        for coverage_item in coverage_items.values():
+            item_id = coverage_item['id']
+            actual_count = len(coverage_item['testcase_ids'])
+            if actual_count < coverage_item['minimum_cases']:
+                raise ValueError(
+                    f'coverage item {item_id} requires at least {coverage_item["minimum_cases"]} cases; found {actual_count}'
+                )
+            missing_case_types = set(coverage_item['required_case_types']) - coverage_item['observed_case_types']
+            if missing_case_types:
+                raise ValueError(
+                    f'coverage item {item_id} is missing required case types: {sorted(missing_case_types)}'
+                )
+            missing_techniques = set(coverage_item['required_techniques']) - coverage_item['observed_techniques']
+            if missing_techniques:
+                raise ValueError(
+                    f'coverage item {item_id} is missing required techniques: {sorted(missing_techniques)}'
+                )
+
+
+def build_requirement_coverage(data):
+    """Return a validated, JSON-safe source-to-test coverage matrix."""
+    execution_required = str(data.get('execution_contract') or 'legacy_text_only').strip().lower() == 'required'
+    _requirement_ids, coverage_items = _requirement_coverage_registry(data, execution_required)
+    records = list(iter_testcases(data))
+    refs_by_id = {item_id: [] for item_id in coverage_items}
+    for record in records:
+        for item_id in _coverage_item_refs(record['case']):
+            refs_by_id[item_id].append(record['testcase_id'])
+    return [
+        {
+            'coverage_item_id': item['id'],
+            'requirement': item['requirement'],
+            'description': item['description'],
+            'source_ref': item['source_ref'],
+            'expected_result': item['expected_result'],
+            'minimum_cases': item['minimum_cases'],
+            'required_case_types': item['required_case_types'],
+            'required_techniques': item['required_techniques'],
+            'testcase_ids': refs_by_id[item['id']],
+            'status': 'COVERED',
+        }
+        for item in coverage_items.values()
+    ]
 
 
 def build_case_registry(data):
@@ -1573,6 +1786,7 @@ def write_testcase_markdown(data, output_path):
     """Write the complete AI-readable testcase design before Excel generation."""
     rbac, case_registry = validate_rbac_contract(data)
     testcase_records = list(iter_testcases(data))
+    requirement_coverage = build_requirement_coverage(data)
     record_by_case = {id(record['case']): record for record in testcase_records}
     project = data.get('project') or {}
     project_code = str(project.get('code') or '')
@@ -1600,6 +1814,31 @@ def write_testcase_markdown(data, output_path):
             lines.append(f'- `{req_id}`: {req_text or "Cần làm rõ"}')
     else:
         lines.append('- Chưa có requirement được xác nhận')
+
+    lines.extend(['', '## Requirement coverage', ''])
+    if requirement_coverage:
+        lines.append(
+            '| Coverage item | Requirement | Source | Expected result | Required design | Testcase IDs | Status |'
+        )
+        lines.append('|---|---|---|---|---|---|---|')
+        for item in requirement_coverage:
+            required_design = (
+                f'Type={", ".join(item["required_case_types"])}; '
+                f'Technique={", ".join(item["required_techniques"])}; '
+                f'Min cases={item["minimum_cases"]}'
+            )
+            row = [
+                item['coverage_item_id'],
+                item['requirement'],
+                item['source_ref'],
+                item['expected_result'],
+                required_design,
+                ', '.join(item['testcase_ids']),
+                item['status'],
+            ]
+            lines.append('| ' + ' | '.join(_markdown_cell(value) for value in row) + ' |')
+    else:
+        lines.append('- N/A cho legacy text-only')
 
     append_rbac_markdown(lines, rbac, case_registry)
 
@@ -1698,6 +1937,7 @@ def build_automation_manifest(data, markdown_path):
             ).strip(),
             'priority': human_text(case.get('priority') or 'N/A', 'priority'),
             'description': human_text(case.get('description') or '', 'description'),
+            'coverage_item_refs': _coverage_item_refs(case),
             'ui_function_keys': _ui_function_keys(case),
             'execution': execution,
             'api': case.get('api'),
@@ -1715,6 +1955,7 @@ def build_automation_manifest(data, markdown_path):
             'testcase_count': len(manifest_cases),
         },
         'rbac': rbac,
+        'requirement_coverage': build_requirement_coverage(data),
         'testcases': manifest_cases,
     }
 

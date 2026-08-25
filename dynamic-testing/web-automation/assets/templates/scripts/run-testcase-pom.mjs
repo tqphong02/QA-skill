@@ -6,10 +6,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { ensurePlaywrightRuntime } from './bootstrap-playwright.mjs';
+import { moduleOperationInventoryPath } from './artifact-naming.mjs';
 import { generatePomCode } from './generate-pom-code.mjs';
 import { buildPomPlan } from './generate-pom-plan.mjs';
 import { inspectRuntimeScaffold } from './verify-runtime-scaffold.mjs';
 import { verifyApiOperationCoverage } from './verify-api-operation-coverage.mjs';
+import { verifyAutomationComplexity } from './verify-automation-complexity.mjs';
 import { verifyModuleArtifactLayout } from './verify-module-artifact-layout.mjs';
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 import { buildUiCoverage } from './verify-ui-coverage.mjs';
@@ -545,13 +547,13 @@ async function main() {
 
 
   let codegen = null;
+  const codegenReportPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--codegen-report'),
+    'reports/pom-codegen.json',
+    '--codegen-report',
+  );
   if (phase === 'build' || phase === 'build-and-run') {
-    const codegenReportPath = resolveOutputFrom(
-      projectRoot,
-      getArg('--codegen-report'),
-      'reports/pom-codegen.json',
-      '--codegen-report',
-    );
     const selectorEvidenceArgs = getArgs('--selector-evidence');
     const selectorEvidencePaths = selectorEvidenceArgs.length > 0
       ? selectorEvidenceArgs.map(value => resolveFrom(projectRoot, value, ''))
@@ -580,6 +582,29 @@ async function main() {
     if (codegen.status !== 'PASS') {
       throw new Error(`BLOCKED: deterministic code generation failed; see ${codegenReportPath}`);
     }
+  }
+
+  const complexityPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--complexity-output'),
+    'reports/automation-complexity.json',
+    '--complexity-output',
+  );
+  const complexity = verifyAutomationComplexity({
+    planPaths: [planPath],
+    projectRoot,
+    configPath: resolveFrom(projectRoot, getArg('--complexity-config'), 'automation-complexity.json'),
+    codegenReportPath,
+  });
+  writeJson(complexityPath, complexity);
+  if (complexity.status !== 'PASS') {
+    if (phase === 'build') throw new Error(`BLOCKED: automation complexity limit exceeded; see ${complexityPath}`);
+    const report = untestReport(plan, 'Automation complexity limit exceeded before execution', runId, mode);
+    report.complexity = complexityPath;
+    writeJson(resultPath, report);
+    console.log(JSON.stringify({ verdict: report.verdict, output: resultPath, complexity: complexityPath }, null, 2));
+    process.exitCode = 2;
+    return;
   }
 
   const moduleLayoutPath = resolveOutputFrom(
@@ -615,7 +640,7 @@ async function main() {
       getArg(
         '--api-operation-inventory',
         codegen?.api_operation_inventory?.path
-          || `operation-inventory/${plan.module.slug}.api-operations.json`,
+          || path.relative(projectRoot, moduleOperationInventoryPath(projectRoot, plan.module)),
       ),
       '',
     );
@@ -665,6 +690,7 @@ async function main() {
       status: 'READY_FOR_RUN',
       plan: planPath,
       codegen: codegen?.report || null,
+      complexity: complexityPath,
       module_layout: moduleLayoutPath,
       api_operation_coverage: apiOperationCoveragePath,
       runtime_scaffold: buildRuntimeScaffoldPath,

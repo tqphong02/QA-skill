@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   assertParallelPool,
@@ -14,7 +15,7 @@ import {
 } from '../assets/templates/fixtures/parallel-pool.js';
 import { acquireExecutionLock } from '../assets/templates/scripts/execution-lock.mjs';
 
-const TEMPLATE_ROOT = path.resolve('dynamic-testing/web-automation/assets/templates');
+const TEMPLATE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/templates');
 
 test('pool resolution prefers project-specific, then QA, then generic non-empty values', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'parallel-pool-project-'));

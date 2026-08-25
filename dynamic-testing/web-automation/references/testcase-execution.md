@@ -9,7 +9,7 @@ Use this reference when the request includes executing deterministic testcases, 
   → one immutable bounded module plan
   → deterministic surface-specific codegen
   → UI function coverage and/or API operation coverage PASS
-  → module layout + runtime scaffold + traceability PASS
+  → module layout + complexity + runtime scaffold + traceability PASS
   → Playwright surface run
   → canonical same-run evidence
   → PASS | FAILED | N/A | UNTEST
@@ -21,6 +21,8 @@ Modes:
 - `BUILD`: create the immutable plan and reusable UI/API/functional code; no runtime verdict
 - `RUN`: require that exact plan through `--plan-input`, validate its manifest hash, then execute the existing generated suite
 - `BUILD_AND_RUN`: default; complete BUILD then RUN without reinterpreting the manifest
+
+Before planning, validate source coverage bidirectionally: every in-spec testcase references at least one `COV-*` item, every coverage-ledger item names its testcase IDs, and both sides agree. Preserve those refs in the immutable POM plan and generated spec annotations so an executable test cannot silently drift away from the documented obligation
 
 Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, installs all declared package dependencies when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. Generated targets also wire this bootstrap to direct typecheck, provisioning and test npm entrypoints so editor/test commands do not depend on a pre-existing global install. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
 
@@ -40,18 +42,17 @@ npm run testcase-workflow -- \
 The hard 20-case ceiling bounds each plan and a plan contains exactly one module. When one module contains more than 20 testcases, create multiple `plans/<module-slug>.batch-NN.pom-plan.json` inputs; the standalone code generator may deterministically consolidate those batches. Final files remain surface-specific:
 
 ```text
-ui: selectors/<slug>.selectors.ts, pages/<slug>.page.ts, tests/ui/<slug>.ui.spec.ts
-api: clients/<slug>.client.ts, schemas/<slug>.schema.ts, tests/api/<slug>.api.spec.ts
-functional: all four layers, tests/functional/<slug>.functional.spec.ts
-API sidecar: operation-inventory/<slug>.api-operations.json
+ui: src/modules/<domain>/<feature>/ui/{<feature>.selectors.ts,<feature>.page.ts}
+api: src/modules/<domain>/<feature>/api/<feature>.client.ts plus schemas/<resource>/<operation>.schema.ts
+tests: tests/<surface>/<domain>/<feature>.<surface>.spec.ts
+API sidecar: operation-inventory/<domain>/<feature>.api-operations.json
 ```
 
-`<module-slug>` is derived only from `testcase.group`: ASCII lowercase
-`kebab-case`, accents removed, `&` becomes `and`, non-alphanumeric runs become
-`-`, and a leading digit receives the `module-` prefix. Empty groups map to
-`other`; `base` is reserved. If different groups produce the same slug, stop
-with `MODULE_SLUG_COLLISION`. Do not derive filenames from testcase IDs,
-scenario titles, routes, timestamps, workers or model output.
+Prefer explicit `domain` and `feature`; a legacy single group maps to
+`app/<group>`, and `Domain / Feature` maps to two path segments. Both segments
+are canonical ASCII `kebab-case`. Stop on identity collisions or reserved
+segments. Do not derive paths or schemas from testcase IDs, scenario titles,
+routes, timestamps, workers or model output.
 
 Do not emit `tests/**/<module-slug>.batch-NN.*.spec.ts`, a global Page Object/client,
 or a global selector registry. Validate exactly one required artifact of each
@@ -63,13 +64,16 @@ The generated `pom-plan` records the canonical identity for a bounded module:
 {
   "module": {
     "group": "Quản lý đơn hàng & Đổi trả",
-    "slug": "quan-ly-don-hang-and-doi-tra"
+    "domain": "commerce",
+    "feature": "order-returns",
+    "key": "commerce/order-returns",
+    "slug": "commerce-order-returns"
   }
 }
 ```
 
-All downstream artifact builders consume `module.slug`; they must not
-normalize `module.group` independently.
+All downstream artifact builders consume the canonical module identity; they
+must not normalize `module.group` independently.
 
 BUILD uses the template runtime scaffold and keeps `fixtures/pom.ts` as the only public fixture entrypoint. Every generated spec imports `test` and `expect` from it. API/module clients wrap `api` or `authenticatedApi`; generated specs never destructure raw Playwright `request`. Keep ordered/mutating tests serial inside their business module; module files may run in parallel only when configured account and dataset pools have enough unique slots. One `qa:*`/testcase runner owns fixed reporter paths per project root; a concurrent second invocation is `BLOCKED` while Playwright workers inside the owner invocation remain parallel
 
@@ -98,7 +102,7 @@ npm run testcase-workflow -- \
   --browser-project chromium
 ```
 
-The runner sets `QA_UNIFIED_EVIDENCE=true`; UI/functional fixtures record canonical `evidence-image`, `evidence-video` and same-session trace. API results keep the same parameter contract with browser media marked `N/A`. Raw Allure results are cleared into `reports/allure-results/`, validated into `reports/allure-contract.json`, HTML is under `evidence/html/`, and machine output is under `reports/`. The runner blocks execution unless module layout, runtime scaffold, scoped traceability, applicable UI coverage and `reports/api-operation-coverage.json` are `PASS`
+The runner sets `QA_UNIFIED_EVIDENCE=true`; UI/functional fixtures record canonical `evidence-image`, `evidence-video` and same-session trace. API results keep the same parameter contract with browser media marked `N/A`. Raw Allure results are cleared into `reports/allure-results/`, validated into `reports/allure-contract.json`, HTML is under `evidence/html/`, and machine output is under `reports/`. The runner blocks execution unless module layout, `reports/automation-complexity.json`, runtime scaffold, scoped traceability, applicable UI coverage and `reports/api-operation-coverage.json` are `PASS`
 
 ## Verdict gate
 

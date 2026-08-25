@@ -44,6 +44,12 @@ class AutomationManifestTests(unittest.TestCase):
         self.assertEqual(['DEMO-01', 'DEMO-02'], [case['testcase_id'] for case in manifest['testcases']])
         first = manifest['testcases'][0]
         self.assertEqual('Use Case Testing', first['bb_technique'])
+        self.assertEqual(['COV-AC1-HAPPY'], first['coverage_item_refs'])
+        self.assertEqual(
+            ['COV-AC1-HAPPY', 'COV-AC2-DENY'],
+            [item['coverage_item_id'] for item in manifest['requirement_coverage']],
+        )
+        self.assertTrue(all(item['status'] == 'COVERED' for item in manifest['requirement_coverage']))
         self.assertEqual('employee', first['execution']['entry']['role_key'])
         self.assertEqual(['RBAC-DASH-001'], first['execution']['entry']['rbac_refs'])
         self.assertEqual('dashboard_heading', first['execution']['outcome']['assertions'][1]['target'])
@@ -84,6 +90,7 @@ class AutomationManifestTests(unittest.TestCase):
 
     def test_cases_are_sorted_by_black_box_type_order(self):
         data = self.data()
+        data['execution_contract'] = 'legacy_text_only'
         section = data['sections'][0]
         group = section['groups'][0]
         scenario = group['scenarios'][0]
@@ -168,6 +175,53 @@ class AutomationManifestTests(unittest.TestCase):
         case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
         case['req'] = 'AC2'
         with self.assertRaisesRegex(ValueError, 'mixes requirements'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_rejects_uncovered_source_obligation(self):
+        data = self.data()
+        group = data['sections'][0]['groups'][0]
+        group['scenarios'] = [group['scenarios'][0]]
+
+        with self.assertRaisesRegex(ValueError, 'COV-AC2-DENY requires at least 1 cases; found 0'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_rejects_case_without_coverage_item_ref(self):
+        data = self.data()
+        case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
+        case.pop('coverage_item_refs')
+
+        with self.assertRaisesRegex(ValueError, 'require case.coverage_item_refs'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_rejects_requirement_without_coverage_items(self):
+        data = self.data()
+        data['requirements'][0].pop('coverage_items')
+
+        with self.assertRaisesRegex(ValueError, 'AC1 requires non-empty coverage_items'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_rejects_ambiguous_expected_result(self):
+        data = self.data()
+        coverage_item = data['requirements'][0]['coverage_items'][0]
+        coverage_item['expected_result'] = 'Đăng nhập thành công\nHOẶC\nHiển thị lỗi'
+
+        with self.assertRaisesRegex(ValueError, 'unresolved alternative'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_enforces_minimum_case_count(self):
+        data = self.data()
+        coverage_item = data['requirements'][0]['coverage_items'][0]
+        coverage_item['minimum_cases'] = 2
+
+        with self.assertRaisesRegex(ValueError, 'COV-AC1-HAPPY requires at least 2 cases; found 1'):
+            list(self.generator.iter_testcases(data))
+
+    def test_required_contract_enforces_all_required_techniques(self):
+        data = self.data()
+        coverage_item = data['requirements'][0]['coverage_items'][0]
+        coverage_item['required_techniques'] = ['Use Case Testing', 'BVA']
+
+        with self.assertRaisesRegex(ValueError, r"missing required techniques: \['BVA'\]"):
             list(self.generator.iter_testcases(data))
 
     def test_execution_template_reuse_materializes_deterministically(self):

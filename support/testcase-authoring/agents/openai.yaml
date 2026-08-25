@@ -1,4 +1,4 @@
 interface:
   display_name: "Testcase Template"
   short_description: "Tạo testcase và manifest cho unified POM"
-  default_prompt: "Use $support-testcase-authoring to generate synchronized Markdown, a lossless manifest for unified Playwright POM build-and-run, and Excel from a compact reusable JSON source with stable IDs, one AC per scenario, black-box metadata, detailed Vietnamese steps, measurable results, and optional RBAC coverage."
+  default_prompt: "Use $support-testcase-authoring to inventory the complete supplied source into atomic requirements and COV obligations, then generate synchronized Markdown, a lossless manifest for unified Playwright POM build-and-run, and Excel from one validated JSON source with stable IDs, source-to-test coverage, one AC per scenario, black-box metadata, detailed Vietnamese steps, measurable results, and optional RBAC coverage."

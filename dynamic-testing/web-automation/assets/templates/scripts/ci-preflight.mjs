@@ -177,11 +177,13 @@ export function inspectCiPreflight(projectRoot, {
   requireFile(resolvedRoot, 'package.json', violations);
   requireFile(resolvedRoot, 'package-lock.json', violations);
   requireFile(resolvedRoot, 'quality-gates.json', violations);
+  requireFile(resolvedRoot, 'automation-complexity.json', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/ci-preflight.mjs', violations);
   requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
   requireFile(resolvedRoot, 'scripts/generate-pom-code.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-module-artifact-layout.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/verify-automation-complexity.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-api-operation-coverage.mjs', violations);
   requireFile(resolvedRoot, 'scripts/run-testcase-pom.mjs', violations);
   requireFile(resolvedRoot, 'fixtures/parallel-pool.js', violations);
@@ -207,6 +209,7 @@ export function inspectCiPreflight(projectRoot, {
       'qa:merge-allure',
       'pom-codegen',
       'module-layout',
+      'complexity-gate',
       'api-operation-coverage',
       'testcase-workflow',
     ]) {

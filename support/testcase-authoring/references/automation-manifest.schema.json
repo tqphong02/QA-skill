@@ -19,6 +19,30 @@
       "additionalProperties": true
     },
     "rbac": { "type": ["object", "null"] },
+    "requirement_coverage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "coverage_item_id", "requirement", "description", "source_ref",
+          "expected_result", "minimum_cases", "required_case_types",
+          "required_techniques", "testcase_ids", "status"
+        ],
+        "properties": {
+          "coverage_item_id": { "type": "string", "pattern": "^COV[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$" },
+          "requirement": { "type": "string", "minLength": 1 },
+          "description": { "type": "string", "minLength": 1 },
+          "source_ref": { "type": "string", "minLength": 1 },
+          "expected_result": { "type": "string", "minLength": 1 },
+          "minimum_cases": { "type": "integer", "minimum": 1 },
+          "required_case_types": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "required_techniques": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "testcase_ids": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+          "status": { "const": "COVERED" }
+        },
+        "additionalProperties": false
+      }
+    },
     "testcases": {
       "type": "array",
       "items": {
@@ -33,7 +57,10 @@
             "type": "string",
             "pattern": "^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$"
           },
-          "testcase_id_display": { "type": "string", "pattern": "^\\[[^\\]]+\\]$" },
+          "testcase_id_display": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$"
+          },
           "case_ref": { "type": ["string", "null"] },
           "section_kind": { "type": "string", "minLength": 1 },
           "group": { "type": "string", "minLength": 1 },
@@ -49,6 +76,11 @@
           "requirement": { "type": "string", "minLength": 1 },
           "priority": { "type": "string", "minLength": 1 },
           "description": { "type": "string", "minLength": 1 },
+          "coverage_item_refs": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "pattern": "^COV[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$" }
+          },
           "execution": { "type": ["object", "null"] },
           "api": { "type": ["object", "null"] }
         },

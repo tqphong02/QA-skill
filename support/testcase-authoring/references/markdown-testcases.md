@@ -18,6 +18,7 @@ Markdown phải chứa đầy đủ:
 
 - Project metadata và source document
 - Requirement ID và requirement text
+- Validated source-to-test coverage matrix with every `COV-*` item, source ref, expected result, required design, minimum count and linked testcase IDs
 - Business-facing RBAC Matrix with role expectations, linked allow/deny testcase IDs, coverage, verification provenance and Q&A notes; write `N/A` when RBAC does not apply
 - Lossless `<basename>.automation.json` companion generated after Markdown and before Excel for POM planning; do not reconstruct assertion targets, cleanup or RBAC fields from prose
 - Section UI/FUNCTION
@@ -51,6 +52,7 @@ Markdown không chứa execution columns I-M vì chúng được tester cập nh
 
 - Markdown phải được ghi trước Excel
 - Tổng case phải bằng nhau
+- Mọi requirement coverage item phải là `COVERED`; không được generate khi thiếu case type, kỹ thuật hoặc minimum count
 - Scenario ID, Scenario Name, Testcase ID, description, pre-condition, procedure và expected phải khớp
 - Với case có `execution`, F/G/H phải là projection manual đúng thứ tự của `entry`, `steps` và `outcome.assertions`; Step Contract giữ machine keys/values cho automation và không được tạo nguồn flow thứ hai
 - New executable cases phải có Testcase ID explicit, unique và ổn định khi thêm/reorder case

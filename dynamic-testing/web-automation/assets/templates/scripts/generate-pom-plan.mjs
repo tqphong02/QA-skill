@@ -10,7 +10,7 @@ import {
   stepMethodName,
   valueFingerprint,
 } from './verify-testcase-traceability.mjs';
-import { resolveModuleSlug } from './artifact-naming.mjs';
+import { resolveModuleIdentity, resolveModuleSlug } from './artifact-naming.mjs';
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
@@ -26,9 +26,12 @@ function defaultPomPlanPath(manifestPath, group = '') {
   return path.resolve('plans', `${resolveModuleSlug(defaultModuleName)}.pom-plan.json`);
 }
 
-function moduleDescriptor(group) {
-  const name = String(group || 'Other').trim() || 'Other';
-  return { group: name, slug: resolveModuleSlug(name) };
+function moduleDescriptor(testcase) {
+  return resolveModuleIdentity({
+    group: testcase?.group,
+    domain: testcase?.domain,
+    feature: testcase?.feature,
+  });
 }
 
 function testcaseCapabilities(testcase) {
@@ -74,17 +77,17 @@ function buildPomPlan(manifestPath, options = {}) {
     if (missing.length > 0) throw new Error(`BLOCKED: testcase IDs not found in selection: ${missing.join(', ')}`);
   }
   const modules = [];
-  const moduleBySlug = new Map();
+  const moduleByKey = new Map();
   for (const testcase of selected) {
-    const descriptor = moduleDescriptor(testcase.group);
-    const previous = moduleBySlug.get(descriptor.slug);
+    const descriptor = moduleDescriptor(testcase);
+    const previous = moduleByKey.get(descriptor.key);
     if (previous && previous.group !== descriptor.group) {
       throw new Error(
-        `BLOCKED: MODULE_SLUG_COLLISION for "${previous.group}" and "${descriptor.group}" -> ${descriptor.slug}`,
+        `BLOCKED: MODULE_IDENTITY_COLLISION for "${previous.group}" and "${descriptor.group}" -> ${descriptor.key}`,
       );
     }
     if (!previous) {
-      moduleBySlug.set(descriptor.slug, descriptor);
+      moduleByKey.set(descriptor.key, descriptor);
       modules.push(descriptor);
     }
   }
@@ -137,6 +140,8 @@ function buildPomPlan(manifestPath, options = {}) {
       testcase_id: testcase.id,
       source_index: testcase.source_index,
       group: testcase.group,
+      domain: testcase.domain,
+      feature: testcase.feature,
       section_kind: testcase.section_kind,
       capabilities: testcaseCapabilities(testcase),
       capability_order: testcase.capability_order,
@@ -145,6 +150,8 @@ function buildPomPlan(manifestPath, options = {}) {
       type: testcase.type,
       bb_technique: testcase.bb_technique,
       requirement: testcase.requirement,
+      description: testcase.description,
+      coverage_item_refs: testcase.coverage_item_refs,
       priority: testcase.priority,
       role_key: testcase.role_key,
       rbac_refs: testcase.rbac_refs,

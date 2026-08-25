@@ -4,10 +4,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import { buildUiCoverage } from '../assets/templates/scripts/verify-ui-coverage.mjs';
 
-const RUNNER = path.resolve('dynamic-testing/web-automation/assets/templates/scripts/run-testcase-pom.mjs');
+const RUNNER = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/templates/scripts/run-testcase-pom.mjs');
 
 function writeFixture({ extraFunction = null, provenance = true } = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pom-ui-coverage-'));

@@ -6,9 +6,13 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
   moduleArtifactPaths,
+  moduleOperationInventoryPath,
+  moduleSchemaRoot,
   normalizeCapabilities,
   normalizeSurface,
+  relativeImport,
   RESERVED_MODULE_SLUGS,
+  resolveModuleIdentity,
   resolveModuleSlug,
   slugToCamelCase,
   slugToPascalCase,
@@ -89,18 +93,24 @@ function assertCanonicalModule(plan, planPath) {
     blocked('PLAN_REQUIRES_EXACTLY_ONE_MODULE', `${planPath} must contain modules[] with exactly one entry`);
   }
   const group = String(plan.module.group || '').trim();
+  const expected = resolveModuleIdentity(plan.module);
+  const domain = String(plan.module.domain || expected.domain).trim();
+  const feature = String(plan.module.feature || expected.feature).trim();
+  const key = String(plan.module.key || expected.key).trim();
   const slug = String(plan.module.slug || '').trim();
-  if (!group || !slug || resolveModuleSlug(group) !== slug) {
-    blocked('PLAN_MODULE_IDENTITY_INVALID', `${planPath} has an invalid module.group/module.slug pair`);
+  if (!group || domain !== expected.domain || feature !== expected.feature
+    || key !== expected.key || slug !== expected.slug) {
+    blocked('PLAN_MODULE_IDENTITY_INVALID', `${planPath} has an invalid domain/feature module identity`);
   }
-  if (RESERVED_MODULE_SLUGS.has(slug)) {
-    blocked('MODULE_SLUG_RESERVED', `Module slug "${slug}" is reserved by the runtime scaffold`);
+  if (RESERVED_MODULE_SLUGS.has(domain) || RESERVED_MODULE_SLUGS.has(feature)) {
+    blocked('MODULE_SLUG_RESERVED', `Module identity "${key}" uses a reserved segment`);
   }
   const listed = plan.modules[0] || {};
-  if (listed.group !== group || listed.slug !== slug) {
+  const listedIdentity = resolveModuleIdentity(listed);
+  if (listed.group !== group || listedIdentity.key !== key || listed.slug !== slug) {
     blocked('PLAN_MODULE_IDENTITY_INVALID', `${planPath} module and modules[0] do not match`);
   }
-  return { group, slug };
+  return { group, domain, feature, key, slug };
 }
 
 function loadPomPlans(planPaths) {
@@ -130,10 +140,10 @@ function loadPomPlans(planPaths) {
   const sourceHash = String(records[0].plan.source_manifest_sha256 || '').trim();
   const sourceManifest = String(records[0].plan.source_manifest || '').trim();
   for (const record of records) {
-    if (record.module.group !== owner.group || record.module.slug !== owner.slug) {
+    if (record.module.key !== owner.key || record.module.group !== owner.group) {
       blocked(
         'PLAN_REQUIRES_EXACTLY_ONE_MODULE',
-        `All plans must belong to ${owner.group} (${owner.slug})`,
+        `All plans must belong to ${owner.group} (${owner.key})`,
       );
     }
     if (String(record.plan.source_manifest_sha256 || '').trim() !== sourceHash
@@ -171,6 +181,19 @@ function loadPomPlans(planPaths) {
     }
     if (String(testcase.group || '').trim() !== owner.group) {
       blocked('PLAN_REQUIRES_EXACTLY_ONE_MODULE', `${testcaseId} belongs to a different group`);
+    }
+    const coverageRefs = Array.isArray(testcase.coverage_item_refs)
+      ? testcase.coverage_item_refs.map(value => String(value).trim()).filter(Boolean)
+      : [];
+    const coverageMarkers = Array.isArray(testcase.required_markers?.coverage)
+      ? testcase.required_markers.coverage.map(value => String(value).trim()).filter(Boolean)
+      : [];
+    const expectedCoverageMarkers = coverageRefs.map(ref => `[${testcaseId}:COVERAGE] ${ref}`);
+    if (JSON.stringify(coverageMarkers) !== JSON.stringify(expectedCoverageMarkers)) {
+      blocked(
+        'PLAN_COVERAGE_MARKER_MISMATCH',
+        `${testcaseId} coverage_item_refs and required_markers.coverage must match exactly`,
+      );
     }
     const capabilities = caseCapabilities(testcase);
     if (capabilities.length === 0) {
@@ -512,7 +535,7 @@ function uiPrimitive(action, locator, valueExpression = 'value') {
   return mapping[action];
 }
 
-function renderPage(model, selectorEvidence) {
+function renderPage(model, selectorEvidence, paths) {
   const className = `${slugToPascalCase(model.module.slug)}Page`;
   const selectorName = `${slugToCamelCase(model.module.slug)}Selectors`;
   const targetIdentifiers = selectorEvidence.targetKeys.map(targetKey => (
@@ -533,7 +556,7 @@ function renderPage(model, selectorEvidence) {
   const lines = [
     generatedHeader(model).trimEnd(),
     "import type { Locator, Page } from '@playwright/test';",
-    `import { ${selectorName} } from '../selectors/${model.module.slug}.selectors';`,
+    `import { ${selectorName} } from '${relativeImport(paths.page, paths.selector)}';`,
     '',
     `export class ${className} {`,
   ];
@@ -744,13 +767,19 @@ function uiStepCall(step, instance, usage) {
 }
 
 function annotationLines(testcase, indent = '    ') {
-  const markers = [
+  const contractMarkers = [
     testcase.required_markers?.role,
     ...(testcase.required_markers?.rbac || []),
   ].filter(Boolean);
-  return markers.map(marker => (
-    `${indent}test.info().annotations.push({ type: 'contract', description: ${JSON.stringify(marker)} });`
-  ));
+  const coverageMarkers = testcase.required_markers?.coverage || [];
+  return [
+    ...contractMarkers.map(marker => (
+      `${indent}test.info().annotations.push({ type: 'contract', description: ${JSON.stringify(marker)} });`
+    )),
+    ...coverageMarkers.map(marker => (
+      `${indent}test.info().annotations.push({ type: 'source-coverage', description: ${JSON.stringify(marker)} });`
+    )),
+  ];
 }
 
 function renderUiExecutionLines(testcase, context, indent = '    ') {
@@ -919,47 +948,123 @@ function zodFromJsonSchema(schema, required = true) {
   return required ? expression : `${expression}.optional()`;
 }
 
-function apiSchemaName(testcaseId) {
-  return `${identifier(testcaseId, { pascal: true, fallback: 'Testcase' })}ResponseSchema`;
-}
-
-function apiRequestSchemaName(testcaseId) {
-  return `${identifier(testcaseId, { pascal: true, fallback: 'Testcase' })}RequestSchema`;
-}
-
-function renderSchemas(model) {
-  const apiCases = model.testcases.filter(item => item.capabilities.includes('api'));
-  const names = apiCases.map(testcase => [testcase.testcase_id, apiSchemaName(testcase.testcase_id)]);
-  assertUniqueIdentifiers(names, 'API response schemas');
-  const lines = [
-    generatedHeader(model).trimEnd(),
-    "import { z } from 'zod';",
-    '',
-  ];
-  for (const testcase of apiCases) {
-    const api = normalizeApiContract(testcase);
-    if (api.body !== undefined) {
-      const requestSchema = api.request_schema ?? api.body;
-      lines.push(
-        `export const ${apiRequestSchemaName(testcase.testcase_id)} = ${zodFromJsonSchema(requestSchema, true)};`,
-        '',
-      );
-    }
-    const schema = api.expected_schema ?? api.expected_body;
-    const expression = api.expected_status === 204 || api.method === 'HEAD'
-      ? 'z.undefined()'
-      : zodFromJsonSchema(schema, true);
-    lines.push(`export const ${apiSchemaName(testcase.testcase_id)} = ${expression};`, '');
+function stableSchemaValue(value) {
+  if (Array.isArray(value)) return value.map(stableSchemaValue);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, stableSchemaValue(value[key])]));
   }
-  return lines.join('\n');
+  return value;
 }
 
-function renderClient(model, operations) {
+function schemaFingerprint(value) {
+  return contentSha256(JSON.stringify(stableSchemaValue(value ?? null))).slice(0, 8);
+}
+
+function apiResourceSlug(endpoint) {
+  const semantic = String(endpoint || '').split('/').filter(Boolean)
+    .filter(part => !/^\{[^}]+\}$/.test(part))
+    .filter(part => !/^(?:api|v\d+)$/i.test(part));
+  return resolveModuleSlug(semantic[0] || 'root', 'root');
+}
+
+function buildApiSchemaArtifacts(model, operations, projectRoot) {
+  const schemaRoot = moduleSchemaRoot(projectRoot, model.module);
+  const byOperation = new Map();
+  const byTestcase = new Map();
+  for (const testcase of model.testcases.filter(item => item.capabilities.includes('api'))) {
+    const api = normalizeApiContract(testcase);
+    const operationKey = `${api.method} ${api.endpoint}`;
+    const operation = operations.get(operationKey);
+    if (!byOperation.has(operationKey)) {
+      byOperation.set(operationKey, {
+        operationKey,
+        operation,
+        resource: apiResourceSlug(api.endpoint),
+        requests: new Map(),
+        responses: new Map(),
+        testcases: [],
+      });
+    }
+    const record = byOperation.get(operationKey);
+    const requestSchema = api.body === undefined ? null : (api.request_schema ?? api.body);
+    const requestKey = requestSchema === null ? null : schemaFingerprint(requestSchema);
+    const responseSchema = api.expected_schema ?? api.expected_body;
+    const responseExpression = api.expected_status === 204 || api.method === 'HEAD'
+      ? 'z.undefined()'
+      : zodFromJsonSchema(responseSchema, true);
+    const responseKey = `${api.expected_status}:${schemaFingerprint(responseSchema)}`;
+    if (requestKey && !record.requests.has(requestKey)) {
+      record.requests.set(requestKey, { schema: requestSchema, expression: zodFromJsonSchema(requestSchema, true) });
+    }
+    if (!record.responses.has(responseKey)) {
+      record.responses.set(responseKey, {
+        status: api.expected_status,
+        schema: responseSchema,
+        expression: responseExpression,
+      });
+    }
+    record.testcases.push({ testcase, api, requestKey, responseKey });
+  }
+
+  const files = [];
+  for (const record of byOperation.values()) {
+    const operationSlug = resolveModuleSlug(
+      `${record.operation.method} ${record.operation.endpoint}`,
+      'request',
+    );
+    const operationPascal = slugToPascalCase(operationSlug);
+    const filePath = path.join(schemaRoot, record.resource, `${operationSlug}.schema.ts`);
+    const requestEntries = [...record.requests.entries()].sort(([left], [right]) => left.localeCompare(right));
+    const responseEntries = [...record.responses.entries()].sort(([left], [right]) => left.localeCompare(right));
+    const requestNames = new Map(requestEntries.map(([fingerprint], index) => [
+      fingerprint,
+      `${operationPascal}Request${requestEntries.length > 1 ? `Variant${index + 1}` : ''}Schema`,
+    ]));
+    const statusCounts = new Map();
+    for (const [, variant] of responseEntries) {
+      statusCounts.set(variant.status, (statusCounts.get(variant.status) || 0) + 1);
+    }
+    const statusIndexes = new Map();
+    const responseNames = new Map(responseEntries.map(([key, variant]) => {
+      const index = (statusIndexes.get(variant.status) || 0) + 1;
+      statusIndexes.set(variant.status, index);
+      const suffix = statusCounts.get(variant.status) > 1 ? `Variant${index}` : '';
+      return [key, `${operationPascal}Status${variant.status}Response${suffix}Schema`];
+    }));
+    const lines = [generatedHeader(model).trimEnd(), "import { z } from 'zod';", ''];
+    for (const [key, variant] of requestEntries) {
+      lines.push(`export const ${requestNames.get(key)} = ${variant.expression};`, '');
+    }
+    for (const [key, variant] of responseEntries) {
+      lines.push(`export const ${responseNames.get(key)} = ${variant.expression};`, '');
+    }
+    for (const item of record.testcases) {
+      byTestcase.set(item.testcase.testcase_id, {
+        filePath,
+        requestName: item.requestKey ? requestNames.get(item.requestKey) : null,
+        responseName: responseNames.get(item.responseKey),
+        resource: record.resource,
+        operation: operationSlug,
+      });
+    }
+    files.push({
+      kind: 'schema',
+      path: filePath,
+      content: lines.join('\n'),
+      operationKey: record.operationKey,
+      resource: record.resource,
+      operation: operationSlug,
+    });
+  }
+  return { files, byTestcase };
+}
+
+function renderClient(model, operations, paths, projectRoot) {
   const className = `${slugToPascalCase(model.module.slug)}Client`;
   const lines = [
     generatedHeader(model).trimEnd(),
     "import type { APIResponse } from '@playwright/test';",
-    "import type { ApiClient } from '../fixtures/api-client';",
+    `import type { ApiClient } from '${relativeImport(paths.client, path.join(projectRoot, 'fixtures', 'api-client.ts'))}';`,
     '',
     'export type ApiPathValue = string | number;',
     'export type ApiQueryValue = string | number | boolean;',
@@ -1021,6 +1126,8 @@ function apiOptionsExpression(api, testcaseId, usage, bodyExpression = '') {
 function renderApiTestBody(testcase, context) {
   const api = normalizeApiContract(testcase);
   const operation = context.operations.get(`${api.method} ${api.endpoint}`);
+  const schemas = context.schemas.byTestcase.get(testcase.testcase_id);
+  if (!schemas) blocked('API_SCHEMA_MAPPING_MISSING', testcase.testcase_id);
   const requestBody = api.body !== undefined
     ? runtimeValueExpression(api.body, `${testcase.testcase_id}_body`, context.usage)
     : '';
@@ -1033,7 +1140,7 @@ function renderApiTestBody(testcase, context) {
   const lines = [];
   if (requestBody) {
     lines.push(
-      `    const requestBody = ${apiRequestSchemaName(testcase.testcase_id)}.parse(${requestBody});`,
+      `    const requestBody = ${schemas.requestName}.parse(${requestBody});`,
     );
   }
   lines.push(
@@ -1046,11 +1153,11 @@ function renderApiTestBody(testcase, context) {
     );
   }
   if (api.expected_status === 204 || api.method === 'HEAD') {
-    lines.push(`    ${apiSchemaName(testcase.testcase_id)}.parse(undefined);`);
+    lines.push(`    ${schemas.responseName}.parse(undefined);`);
   } else {
     lines.push(
       '    const responseBody: unknown = await response.json();',
-      `    const parsedBody = ${apiSchemaName(testcase.testcase_id)}.parse(responseBody);`,
+      `    const parsedBody = ${schemas.responseName}.parse(responseBody);`,
     );
     if (api.expected_body !== undefined) {
       lines.push(
@@ -1093,19 +1200,24 @@ function apiAuthContract(testcase) {
   };
 }
 
-function renderSpec(model, surface, ui, apiClient, operations) {
-  const fixtureImport = "import { test, expect } from '../../fixtures/pom';";
+function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, projectRoot) {
+  const fixtureImport = `import { test, expect } from '${relativeImport(paths.spec, path.join(projectRoot, 'fixtures', 'pom.ts'))}';`;
   const imports = [generatedHeader(model).trimEnd(), fixtureImport];
-  if (ui) imports.push(`import { ${ui.className} } from '../../pages/${model.module.slug}.page';`);
+  if (ui) imports.push(`import { ${ui.className} } from '${relativeImport(paths.spec, paths.page)}';`);
   if (apiClient) {
-    imports.push(`import { ${apiClient.className} } from '../../clients/${model.module.slug}.client';`);
-    const schemaNames = model.testcases
-      .filter(item => item.capabilities.includes('api'))
-      .flatMap(item => [
-        ...(item.api?.body !== undefined ? [apiRequestSchemaName(item.testcase_id)] : []),
-        apiSchemaName(item.testcase_id),
-      ]);
-    imports.push(`import { ${schemaNames.join(', ')} } from '../../schemas/${model.module.slug}.schema';`);
+    imports.push(`import { ${apiClient.className} } from '${relativeImport(paths.spec, paths.client)}';`);
+    const namesByFile = new Map();
+    for (const testcase of model.testcases.filter(item => item.capabilities.includes('api'))) {
+      const mapping = schemas.byTestcase.get(testcase.testcase_id);
+      const names = namesByFile.get(mapping.filePath) || [];
+      for (const name of [mapping.requestName, mapping.responseName].filter(Boolean)) {
+        if (!names.includes(name)) names.push(name);
+      }
+      namesByFile.set(mapping.filePath, names);
+    }
+    for (const [filePath, names] of namesByFile) {
+      imports.push(`import { ${names.join(', ')} } from '${relativeImport(paths.spec, filePath)}';`);
+    }
   }
   const usage = { runtimeValues: false };
   const body = [
@@ -1159,7 +1271,7 @@ function renderSpec(model, surface, ui, apiClient, operations) {
 
     if (isFunctionalFlow) {
       const api = normalizeApiContract(testcase);
-      const apiContext = { operations, clientInstance, usage };
+      const apiContext = { operations, schemas, clientInstance, usage };
       const apiLines = renderApiTestBody(testcase, apiContext).map(line => line.trimStart());
       const uiCleanupMarker = testcase.required_markers?.cleanup;
       const hasCleanup = Boolean(api.cleanup || uiCleanupMarker);
@@ -1203,7 +1315,7 @@ function renderSpec(model, surface, ui, apiClient, operations) {
       }
     } else if (capability === 'api') {
       const api = normalizeApiContract(testcase);
-      const apiContext = { operations, clientInstance, usage };
+      const apiContext = { operations, schemas, clientInstance, usage };
       const mainLines = renderApiTestBody(testcase, apiContext);
       if (api.cleanup) {
         const cleanup = normalizeApiContract({
@@ -1245,18 +1357,19 @@ function renderSpec(model, surface, ui, apiClient, operations) {
   return [...imports, '', ...runtimeHelperLines(usage), ...body].join('\n');
 }
 
-function renderApiOperationInventory(model, surface, apiClient, operations, specPath) {
+function renderApiOperationInventory(model, surface, apiClient, operations, schemas, specPath, projectRoot, clientPath) {
   const clientInstance = `${slugToCamelCase(model.module.slug)}Client`;
-  const clientSource = `clients/${model.module.slug}.client.ts`;
+  const clientSource = path.relative(projectRoot, clientPath).replaceAll('\\', '/');
   const rows = model.testcases
     .filter(testcase => testcase.capabilities.includes('api'))
     .map(testcase => {
       const api = normalizeApiContract(testcase);
       const operation = operations.get(`${api.method} ${api.endpoint}`);
       const auth = apiAuthContract(testcase);
+      const schemaMapping = schemas.byTestcase.get(testcase.testcase_id);
       const responseSchema = api.expected_status === 204 || api.method === 'HEAD'
         ? null
-        : apiSchemaName(testcase.testcase_id);
+        : schemaMapping.responseName;
       let cleanup;
       if (api.cleanup) {
         const normalizedCleanup = normalizeApiContract({
@@ -1297,7 +1410,10 @@ function renderApiOperationInventory(model, surface, apiClient, operations, spec
         auth: { mode: auth.mode, role: auth.role },
         expected_status: [api.expected_status],
         schemas: {
-          request: api.body !== undefined ? apiRequestSchemaName(testcase.testcase_id) : null,
+          source: path.relative(projectRoot, schemaMapping.filePath).replaceAll('\\', '/'),
+          resource: schemaMapping.resource,
+          operation: schemaMapping.operation,
+          request: api.body !== undefined ? schemaMapping.requestName : null,
           response: api.expected_status >= 400 ? null : responseSchema,
           error: api.expected_status >= 400 ? responseSchema : null,
         },
@@ -1371,13 +1487,18 @@ function generatePomCode({
   const model = loadPomPlans(planPaths);
   const resolvedSurface = resolveBuildSurface(surface, model);
   const capabilities = normalizeCapabilities(resolvedSurface, model.capabilities);
-  const paths = moduleArtifactPaths(resolvedRoot, model.module.slug, resolvedSurface, capabilities);
+  const paths = moduleArtifactPaths(resolvedRoot, model.module, resolvedSurface, capabilities);
   const selectorEvidence = capabilities.includes('ui')
     ? loadSelectorEvidence(selectorEvidencePaths, model)
     : { files: [], records: new Map(), targetKeys: [] };
-  const ui = capabilities.includes('ui') ? renderPage(model, selectorEvidence) : null;
+  const ui = capabilities.includes('ui') ? renderPage(model, selectorEvidence, paths) : null;
   const operations = capabilities.includes('api') ? collectApiOperations(model) : new Map();
-  const apiClient = capabilities.includes('api') ? renderClient(model, operations) : null;
+  const schemas = capabilities.includes('api')
+    ? buildApiSchemaArtifacts(model, operations, resolvedRoot)
+    : { files: [], byTestcase: new Map() };
+  const apiClient = capabilities.includes('api')
+    ? renderClient(model, operations, paths, resolvedRoot)
+    : null;
   const sources = {};
   if (capabilities.includes('ui')) {
     sources.selector = renderSelectors(model, selectorEvidence);
@@ -1385,11 +1506,19 @@ function generatePomCode({
   }
   if (capabilities.includes('api')) {
     sources.client = apiClient.content;
-    sources.schema = renderSchemas(model);
   }
-  sources.spec = renderSpec(model, resolvedSurface, ui, apiClient, operations);
+  sources.spec = renderSpec(
+    model,
+    resolvedSurface,
+    ui,
+    apiClient,
+    operations,
+    schemas,
+    paths,
+    resolvedRoot,
+  );
   const operationInventoryPath = capabilities.includes('api')
-    ? path.join(resolvedRoot, 'operation-inventory', `${model.module.slug}.api-operations.json`)
+    ? moduleOperationInventoryPath(resolvedRoot, model.module)
     : null;
   const operationInventorySource = operationInventoryPath
     ? renderApiOperationInventory(
@@ -1397,11 +1526,21 @@ function generatePomCode({
       resolvedSurface,
       apiClient,
       operations,
+      schemas,
       path.relative(resolvedRoot, paths.spec).replaceAll('\\', '/'),
+      resolvedRoot,
+      paths.client,
     )
     : null;
 
-  for (const filePath of Object.values(paths)) {
+  const generatedArtifacts = [
+    ...Object.entries(paths)
+      .filter(([kind]) => kind !== 'spec')
+      .map(([kind, filePath]) => ({ kind, path: filePath, content: sources[kind] })),
+    ...schemas.files,
+    { kind: 'spec', path: paths.spec, content: sources.spec },
+  ];
+  for (const { path: filePath } of generatedArtifacts) {
     assertPathInsideProject(resolvedRoot, path.resolve(filePath));
     assertOwnedOrAbsent(filePath);
   }
@@ -1410,17 +1549,20 @@ function generatePomCode({
     assertInventoryOwnedOrAbsent(operationInventoryPath);
   }
   const changed = [];
-  for (const [kind, filePath] of Object.entries(paths)) {
-    const didChange = writeIfChanged(filePath, sources[kind]);
-    if (didChange) changed.push(kind);
+  for (const artifact of generatedArtifacts) {
+    const didChange = writeIfChanged(artifact.path, artifact.content);
+    if (didChange) changed.push(
+      artifact.kind === 'schema' ? `schema:${artifact.resource}/${artifact.operation}` : artifact.kind,
+    );
   }
   if (operationInventoryPath && writeIfChanged(operationInventoryPath, operationInventorySource)) {
     changed.push('operation_inventory');
   }
-  const artifactRecords = Object.entries(paths).map(([kind, filePath]) => ({
-    kind,
-    path: path.relative(resolvedRoot, filePath).replaceAll('\\', '/'),
-    sha256: contentSha256(sources[kind]),
+  const artifactRecords = generatedArtifacts.map(artifact => ({
+    kind: artifact.kind,
+    path: path.relative(resolvedRoot, artifact.path).replaceAll('\\', '/'),
+    sha256: contentSha256(artifact.content),
+    ...(artifact.kind === 'schema' ? { resource: artifact.resource, operation: artifact.operation } : {}),
   }));
   const report = {
     schema_version: 1,

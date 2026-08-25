@@ -22,7 +22,9 @@ function writeJson(root, relativePath, value) {
 }
 
 function moduleRecord() {
-  return { group: 'LOGIN', slug: 'login' };
+  return {
+    group: 'LOGIN', domain: 'app', feature: 'login', key: 'app/login', slug: 'login',
+  };
 }
 
 function uiCase(id = 'LOGIN-UI-01', sourceIndex = 0) {
@@ -33,10 +35,12 @@ function uiCase(id = 'LOGIN-UI-01', sourceIndex = 0) {
     capabilities: ['ui'],
     scenario_id: `SCN-${id}`,
     type: 'happy',
+    coverage_item_refs: ['COV-LOGIN-HAPPY'],
     entry: { route: '/login', role_key: 'guest' },
     required_markers: {
       role: `[${id}:ROLE] guest`,
       rbac: [],
+      coverage: [`[${id}:COVERAGE] COV-LOGIN-HAPPY`],
       cleanup: null,
     },
     steps: [{
@@ -157,14 +161,15 @@ test('UI codegen emits one deterministic selector/page/spec set and is idempoten
     });
     assert.deepEqual(first.changed_artifacts, ['selector', 'page', 'spec']);
     assert.deepEqual(first.artifacts.map(item => item.path), [
-      'selectors/login.selectors.ts',
-      'pages/login.page.ts',
-      'tests/ui/login.ui.spec.ts',
+      'src/modules/app/login/ui/login.selectors.ts',
+      'src/modules/app/login/ui/login.page.ts',
+      'tests/ui/app/login.ui.spec.ts',
     ]);
     const snapshot = Object.fromEntries(first.artifacts.map(item => [
       item.path,
       fs.readFileSync(path.join(root, item.path), 'utf8'),
     ]));
+    assert.match(snapshot['tests/ui/app/login.ui.spec.ts'], /\[LOGIN-UI-01:COVERAGE\] COV-LOGIN-HAPPY/);
     const second = generatePomCode({
       planPaths: [planPath],
       selectorEvidencePaths: [evidencePath],
@@ -177,13 +182,13 @@ test('UI codegen emits one deterministic selector/page/spec set and is idempoten
       assert.equal(fs.readFileSync(path.join(root, relativePath), 'utf8'), content);
     }
 
-    const selectors = snapshot['selectors/login.selectors.ts'];
-    const page = snapshot['pages/login.page.ts'];
-    const spec = snapshot['tests/ui/login.ui.spec.ts'];
+    const selectors = snapshot['src/modules/app/login/ui/login.selectors.ts'];
+    const page = snapshot['src/modules/app/login/ui/login.page.ts'];
+    const spec = snapshot['tests/ui/app/login.ui.spec.ts'];
     assert.match(selectors, /"email_input"[\s\S]*strategy: "label"[\s\S]*page\.getByLabel\('Email'\)/);
     assert.match(page, /private readonly emailInputTarget: Locator/);
     assert.match(page, /async fillEmailInput\(value: string\)/);
-    assert.match(spec, /from '\.\.\/\.\.\/fixtures\/pom'/);
+    assert.match(spec, /from '\.\.\/\.\.\/\.\.\/fixtures\/pom'/);
     assert.match(spec, new RegExp(`AUTOMATION_SOURCE:${SOURCE_HASH}`));
     assert.doesNotMatch(spec, /getByLabel|page\.locator|\.first\(\)|\.last\(\)/);
 
@@ -211,27 +216,28 @@ test('API codegen emits client/schema/spec without UI artifacts', () => {
     const planPath = writeJson(root, 'plans/login.pom-plan.json', plan([apiCase()]));
     const result = generatePomCode({ planPaths: [planPath], projectRoot: root, surface: 'api' });
     assert.deepEqual(result.artifacts.map(item => item.path), [
-      'clients/login.client.ts',
-      'schemas/login.schema.ts',
-      'tests/api/login.api.spec.ts',
+      'src/modules/app/login/api/login.client.ts',
+      'src/modules/app/login/api/schemas/auth/post-api-v1-auth-login.schema.ts',
+      'tests/api/app/login.api.spec.ts',
     ]);
-    assert.equal(fs.existsSync(path.join(root, 'pages/login.page.ts')), false);
-    assert.equal(fs.existsSync(path.join(root, 'selectors/login.selectors.ts')), false);
-    const client = fs.readFileSync(path.join(root, 'clients/login.client.ts'), 'utf8');
-    const schema = fs.readFileSync(path.join(root, 'schemas/login.schema.ts'), 'utf8');
-    const spec = fs.readFileSync(path.join(root, 'tests/api/login.api.spec.ts'), 'utf8');
+    assert.equal(fs.existsSync(path.join(root, 'src/modules/app/login/ui/login.page.ts')), false);
+    assert.equal(fs.existsSync(path.join(root, 'src/modules/app/login/ui/login.selectors.ts')), false);
+    const client = fs.readFileSync(path.join(root, 'src/modules/app/login/api/login.client.ts'), 'utf8');
+    const schema = fs.readFileSync(path.join(root, 'src/modules/app/login/api/schemas/auth/post-api-v1-auth-login.schema.ts'), 'utf8');
+    const spec = fs.readFileSync(path.join(root, 'tests/api/app/login.api.spec.ts'), 'utf8');
     assert.match(client, /class LoginClient/);
     assert.match(client, /constructor\(private readonly api: ApiClient\)/);
     assert.match(client, /this\.api\.fetch\("POST", endpoint/);
     assert.match(client, /postApiV1AuthLogin/);
-    assert.match(schema, /LoginApi01ResponseSchema/);
+    assert.match(schema, /PostApiV1AuthLoginStatus200ResponseSchema/);
+    assert.doesNotMatch(schema, /LoginApi01/);
     assert.match(schema, /"access_token": z\.unknown\(\)/);
     assert.match(spec, /requiredRuntimeValue\("LOGIN-API-01_body_password"\)/);
     assert.match(spec, /async \(\{ api \}\)/);
     assert.doesNotMatch(spec, /\{ request \}|new LoginClient\(request/);
     assert.match(spec, /expect\(response\.status\(\)\)\.toBe\(200\)/);
     assert.doesNotMatch(spec, /<valid_password>/);
-    assert.equal(result.api_operation_inventory.path, 'operation-inventory/login.api-operations.json');
+    assert.equal(result.api_operation_inventory.path, 'operation-inventory/app/login.api-operations.json');
     const coverage = verifyApiOperationCoverage({
       projectRoot: root,
       inventoryPath: result.api_operation_inventory.path,
@@ -263,7 +269,7 @@ test('functional codegen requires a composed per-testcase UI+API flow and emits 
     assert.deepEqual(result.artifacts.map(item => item.kind), [
       'selector', 'page', 'client', 'schema', 'spec',
     ]);
-    const spec = fs.readFileSync(path.join(root, 'tests/functional/login.functional.spec.ts'), 'utf8');
+    const spec = fs.readFileSync(path.join(root, 'tests/functional/app/login.functional.spec.ts'), 'utf8');
     assert.match(spec, /async \(\{ page, api \}\)/);
     assert.doesNotMatch(spec, /\brequest\b/);
     assert.ok(spec.indexOf('FUNCTIONAL:API') < spec.indexOf('fillEmailInput'));
@@ -292,6 +298,15 @@ test('codegen blocks oversized/multi-module plans, unsafe selectors, and manual 
     });
     assert.throws(() => loadPomPlans([multiPath]), /PLAN_REQUIRES_EXACTLY_ONE_MODULE/);
 
+    const coverageMismatch = uiCase('LOGIN-UI-COVERAGE', 0);
+    coverageMismatch.required_markers.coverage = [];
+    const coverageMismatchPath = writeJson(
+      root,
+      'plans/coverage-mismatch.json',
+      plan([coverageMismatch]),
+    );
+    assert.throws(() => loadPomPlans([coverageMismatchPath]), /PLAN_COVERAGE_MARKER_MISMATCH/);
+
     const validPath = writeJson(root, 'plans/valid.json', plan([uiCase()]));
     const unsafeEvidence = evidence();
     unsafeEvidence.targets[0].locator = "page.getByLabel('Email').first()";
@@ -307,8 +322,8 @@ test('codegen blocks oversized/multi-module plans, unsafe selectors, and manual 
     );
 
     const evidencePath = writeJson(root, 'selector-evidence/valid.json', evidence());
-    fs.mkdirSync(path.join(root, 'selectors'), { recursive: true });
-    fs.writeFileSync(path.join(root, 'selectors/login.selectors.ts'), 'export const manual = true;\n');
+    fs.mkdirSync(path.join(root, 'src/modules/app/login/ui'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/modules/app/login/ui/login.selectors.ts'), 'export const manual = true;\n');
     assert.throws(
       () => generatePomCode({
         planPaths: [validPath],
@@ -328,7 +343,8 @@ test('codegen blocks output through a symlink or junction that escapes project r
       const planPath = writeJson(root, 'plans/login.json', plan([uiCase()]));
       const evidencePath = writeJson(root, 'selector-evidence/login.json', evidence());
       try {
-        fs.symlinkSync(outside, path.join(root, 'selectors'), process.platform === 'win32' ? 'junction' : 'dir');
+        fs.mkdirSync(path.join(root, 'src/modules/app/login'), { recursive: true });
+        fs.symlinkSync(outside, path.join(root, 'src/modules/app/login/ui'), process.platform === 'win32' ? 'junction' : 'dir');
       } catch (error) {
         t.skip(`Cannot create a test symlink/junction: ${error.code || error.message}`);
         return;

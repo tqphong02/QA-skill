@@ -149,11 +149,11 @@ function normalizeOperation(raw, index) {
   }
   if (clientInstance && (
     !IDENTIFIER.test(clientInstance)
-    || !/^clients\/.+\.client\.ts$/.test(clientSource)
+    || !/^(?:clients\/.+|src\/modules\/[^/]+\/[^/]+\/api\/.+)\.client\.ts$/.test(clientSource)
   )) {
     violations.push(violation(
       'API_MODULE_CLIENT_MAPPING_INVALID',
-      'Module clients require client.instance and clients/*.client.ts source',
+      'Module clients require client.instance and a module-owned *.client.ts source',
       prefix,
     ));
   }

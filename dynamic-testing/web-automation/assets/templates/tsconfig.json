@@ -32,6 +32,7 @@
     "types": ["node", "@playwright/test"]
   },
   "include": [
+    "src/**/*",
     "tests/**/*",
     "pages/**/*",
     "selectors/**/*",

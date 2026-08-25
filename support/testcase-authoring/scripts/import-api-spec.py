@@ -617,6 +617,11 @@ def api_payload(operation, status, contract, headers=None, query=None, body_mark
         'query': sanitize_secrets(query if query is not None else operation['query']),
         'expected_status': status,
     }
+    if operation.get('path_parameters'):
+        payload['path'] = {
+            name: placeholder_for(name)
+            for name in operation['path_parameters']
+        }
     source_body = operation['body'] if not body_marker else body
     if source_body is not None:
         payload['body'] = sanitize_secrets(source_body)
@@ -637,19 +642,62 @@ def build_generator_input(operations, args, source_format, source_name):
     review_required = []
     scenario_counter = 0
 
+    project_id = group_name(args.project_code).replace('_', '-')
+
+    def expected_result(operation, status, contract):
+        parts = [f'API {operation["method"]} {operation["endpoint"]} trả HTTP {status}']
+        if contract.get('description'):
+            parts.append(f'Response đúng mô tả nguồn: {contract["description"]}')
+        if contract.get('schema_fields'):
+            parts.append(
+                'Response chứa các field theo schema: '
+                + ', '.join(map(str, contract['schema_fields']))
+            )
+        return '\n'.join(parts)
+
+    def technique_for(case_type, behavior):
+        if case_type == 'happy':
+            return 'Use Case Testing'
+        if case_type == 'validation':
+            return 'EP'
+        if 'authorization' in behavior.lower():
+            return 'Decision Table'
+        return 'EP'
+
     def add_case(operation, status, case_type, behavior, description, api, precondition):
         nonlocal scenario_counter
         scenario_counter += 1
         req_id = f'API-{scenario_counter:03d}'
-        requirements.append({'id': req_id, 'text': f'{operation["source_ref"]} -> HTTP {status}'})
+        coverage_id = f'COV-{project_id}-API-{scenario_counter:03d}'
+        contract = operation['responses'].get(
+            status,
+            {'description': '', 'schema_fields': [], 'example': None, 'media_type': None},
+        )
+        technique = technique_for(case_type, behavior)
+        requirements.append({
+            'id': req_id,
+            'text': f'{operation["source_ref"]} -> HTTP {status}',
+            'coverage_items': [{
+                'id': coverage_id,
+                'description': description,
+                'source_ref': f'{source_name}#{operation["source_ref"]}/responses/{status}',
+                'expected_result': expected_result(operation, status, contract),
+                'minimum_cases': 1,
+                'required_case_types': [case_type],
+                'required_techniques': [technique],
+            }],
+        })
         slug = group_name(operation['group'])[:8]
         scenario = {
             'scenario_id': f'SCN-API-{slug}-{scenario_counter:03d}',
             'requirement': req_id,
             'scenario_name': behavior,
             'cases': [{
+                'testcase_id': f'{project_id}-API-{scenario_counter:03d}',
                 'type': case_type,
                 'req': req_id,
+                'coverage_item_refs': [coverage_id],
+                'bb_technique': technique,
                 'description': description,
                 'pre_condition': precondition,
                 'priority': 'High' if case_type in ('happy', 'validation', 'negative') else 'Medium',
@@ -667,6 +715,7 @@ def build_generator_input(operations, args, source_format, source_name):
             review_required.append({'source': operation['source_ref'], 'missing': 'documented 2xx expected status'})
             continue
         success_contract = operation['responses'].get(success_status, {'description': '', 'schema_fields': [], 'example': None, 'media_type': None})
+        covered_statuses = {success_status}
         precondition = 'API service khả dụng'
         if operation['secured']:
             precondition += '\nCó credential QA hợp lệ với đúng quyền'
@@ -677,22 +726,11 @@ def build_generator_input(operations, args, source_format, source_name):
             api_payload(operation, success_status, success_contract), precondition,
         )
 
-        for auth_status, token in ((401, '<invalid_token>'), (403, '<token_without_required_permission>')):
-            if operation['secured'] and auth_status in operation['responses']:
-                headers = copy.deepcopy(operation['headers'])
-                auth_key = next((key for key in headers if str(key).lower() == 'authorization'), 'Authorization')
-                headers[auth_key] = f'Bearer {token}'
-                contract = operation['responses'][auth_status]
-                add_case(
-                    operation, auth_status, 'negative', f'API authorization HTTP {auth_status}',
-                    f'Xác minh rằng API từ chối request với authorization không hợp lệ và trả HTTP {auth_status}',
-                    api_payload(operation, auth_status, contract, headers=headers),
-                    'API service khả dụng',
-                )
-
-        validation_status = next((status for status in (400, 422) if status in operation['responses']), None)
-        if validation_status:
+        for validation_status in (400, 422):
+            if validation_status not in operation['responses']:
+                continue
             contract = operation['responses'][validation_status]
+            validation_cases_before = scenario_counter
             for field in operation['required_body']:
                 if not isinstance(operation['body'], dict) or field not in operation['body']:
                     continue
@@ -713,17 +751,53 @@ def build_generator_input(operations, args, source_format, source_name):
                     api_payload(operation, validation_status, contract, query=query),
                     precondition,
                 )
+            if scenario_counter > validation_cases_before:
+                covered_statuses.add(validation_status)
 
         if 404 in operation['responses'] and operation['path_parameters']:
             parameter = operation['path_parameters'][0]
             contract = operation['responses'][404]
             api = api_payload(operation, 404, contract)
-            api['additional_steps'] = [f'Gán path parameter {parameter} = <nonexistent_{parameter}>']
+            api['path'][parameter] = f'<nonexistent_{parameter}>'
             add_case(
                 operation, 404, 'negative', f'API resource {parameter} không tồn tại',
                 f'Xác minh rằng API trả HTTP 404 khi {parameter} không tồn tại',
                 api, precondition,
             )
+            covered_statuses.add(404)
+
+        for auth_status, token in ((401, '<invalid_token>'), (403, '<token_without_required_permission>')):
+            if operation['secured'] and auth_status in operation['responses']:
+                headers = copy.deepcopy(operation['headers'])
+                auth_key = next((
+                    key for key in headers
+                    if str(key).lower() in {'authorization', 'x-api-key', 'api-key', 'apikey'}
+                ), 'Authorization')
+                headers[auth_key] = (
+                    f'Bearer {token}'
+                    if str(auth_key).lower() == 'authorization'
+                    else token
+                )
+                contract = operation['responses'][auth_status]
+                add_case(
+                    operation, auth_status, 'negative', f'API authorization HTTP {auth_status}',
+                    f'Xác minh rằng API từ chối request với authorization không hợp lệ và trả HTTP {auth_status}',
+                    api_payload(operation, auth_status, contract, headers=headers),
+                    'API service khả dụng',
+                )
+                covered_statuses.add(auth_status)
+
+        for status in sorted(operation['responses']):
+            if status in covered_statuses:
+                continue
+            review_required.append({
+                'source': operation['source_ref'],
+                'status': status,
+                'missing': (
+                    f'deterministic request/setup that triggers documented HTTP {status}; '
+                    'do not invent an input or expected path'
+                ),
+            })
 
     sections = [
         {'title': '1.1. USER INTERFACE', 'kind': 'ui', 'groups': []},
@@ -736,6 +810,7 @@ def build_generator_input(operations, args, source_format, source_name):
         },
     ]
     return {
+        'execution_contract': 'required',
         'project': {
             'name': args.project_name,
             'code': args.project_code,
@@ -750,6 +825,12 @@ def build_generator_input(operations, args, source_format, source_name):
         },
         'source_document': source_name,
         'source_format': source_format,
+        'source_inventory': {
+            'operation_count': len(operations),
+            'documented_response_count': sum(len(item.get('responses') or {}) for item in operations),
+            'generated_obligation_count': len(requirements),
+            'unresolved_obligation_count': len(review_required),
+        },
         'requirements': requirements,
         'review_required': review_required,
         'sections': sections,

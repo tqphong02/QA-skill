@@ -40,8 +40,8 @@ test('TC-API-001 | create user @api', async ({ authenticatedApi }) => {
 Why two layers:
 
 - `ApiClient` centralizes base URL, auth, safe request metadata and Playwright transport
-- `clients/<module>.client.ts` owns stable business operation methods and paths
-- `schemas/<module>.schema.ts` validates request and response payloads
+- `src/modules/<domain>/<feature>/api/<feature>.client.ts` owns stable business operation methods and paths
+- `src/modules/<domain>/<feature>/api/schemas/<resource>/<operation>.schema.ts` validates request and response payloads
 - Specs retain status/business assertions and only import `test`/`expect` from `fixtures/pom`
 
 ## 3. Auth/token fixtures
@@ -75,7 +75,7 @@ const UserSchema = z.object({
 const user = ApiClient.validate(UserSchema, await res.json()); // throws on mismatch
 ```
 
-- Generated schemas live in `schemas/<module-slug>.schema.ts`.
+- Generated schemas are resource/operation-owned, never testcase-owned. Status and shape variants use deterministic operation-based exports
 - Reuse schema in UI tests too (when UI reads the same shape) — single source of truth.
 - For arrays: `z.array(UserSchema)`.
 
@@ -117,7 +117,7 @@ test('TC-API-USERS-CREATE-001 | create user @api', async ({ authenticatedApi }) 
 
 ## 7. Operation coverage gate
 
-BUILD writes `operation-inventory/<module-slug>.api-operations.json` from the immutable plan. Before RUN, `verify-api-operation-coverage.mjs` proves each selected Testcase ID maps exactly once to method, path, module client operation, canonical fixture, auth/role, expected status, request/response/error schemas and same-test cleanup when mutating
+BUILD writes `operation-inventory/<domain>/<feature>.api-operations.json` from the immutable plan. Before RUN, `verify-api-operation-coverage.mjs` proves each selected Testcase ID maps exactly once to method, path, module client operation, canonical fixture, auth/role, expected status, request/response/error schemas and same-test cleanup when mutating
 
 ```bash
 node scripts/verify-api-operation-coverage.mjs \

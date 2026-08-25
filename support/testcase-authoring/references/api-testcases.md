@@ -53,7 +53,7 @@ Một scenario chỉ đại diện cho một endpoint, một HTTP operation và 
 |---|---|
 | B | Scenario ID |
 | C | Tên behavior nghiệp vụ của API |
-| D | Testcase ID `[CODE-NN]` do generator tạo |
+| D | Testcase ID ổn định `CODE-API-NNN` do importer tạo và generator giữ nguyên |
 | E | Description bắt đầu bằng `Xác minh rằng` |
 | F | Role, tenant, auth state, test data và dependency cần có |
 | G | Method + endpoint, headers, query, body và bước gửi request |

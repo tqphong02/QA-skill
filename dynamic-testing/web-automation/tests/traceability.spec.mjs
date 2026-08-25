@@ -51,6 +51,18 @@ export class LoginPage {
       roles: [{ key: 'employee', name: 'Nhân viên' }],
       rules: [],
     },
+    requirement_coverage: [{
+      coverage_item_id: 'COV-LOGIN-HAPPY',
+      requirement: 'AC-LOGIN-01',
+      description: 'Valid login',
+      source_ref: 'FRS#AC-LOGIN-01',
+      expected_result: 'Dashboard is visible',
+      minimum_cases: 1,
+      required_case_types: ['happy'],
+      required_techniques: ['Use Case Testing'],
+      testcase_ids: ['TC_LOGIN_01'],
+      status: 'COVERED',
+    }],
     testcases: [{
       testcase_id: 'TC_LOGIN_01',
       testcase_id_display: '[TC_LOGIN_01]',
@@ -62,6 +74,7 @@ export class LoginPage {
       type: 'happy',
       requirement: 'AC-LOGIN-01',
       priority: 'High',
+      coverage_item_refs: ['COV-LOGIN-HAPPY'],
       description: 'Đăng nhập thành công',
       api: null,
       execution: {
@@ -106,6 +119,7 @@ export class LoginPage {
   const [stepOne, stepTwo] = contract.required_markers.steps;
   const stepOneAssertion = contract.required_markers.step_assertions[0][0];
   const outcome = contract.required_markers.outcomes[0];
+  const coverage = contract.required_markers.coverage[0];
 
   fs.writeFileSync(path.join(root, 'tests', 'ui', 'login.ui.spec.ts'), `
 import { test, expect } from '@playwright/test';
@@ -113,6 +127,7 @@ const source = '[AUTOMATION_SOURCE:${manifestHash}]';
 test('TC_LOGIN_01 [happy] — Login thành công @ui', async () => {
   test.info().annotations.push({ type: 'contract', description: '[TC_LOGIN_01:ROLE] employee' });
   test.info().annotations.push({ type: 'contract', description: '[TC_LOGIN_01:RBAC] RBAC-LOGIN-001' });
+  test.info().annotations.push({ type: 'coverage', description: '${coverage}' });
   await test.step('${stepOne}', async () => { await loginPage.fillEmailInput('qa@example.com'); });
   await test.step('${stepOneAssertion}', async () => { await expect(loginPage.emailInput).toHaveValue('qa@example.com'); });
   await test.step('${stepTwo}', async () => { await loginPage.clickLoginSubmit(); });
@@ -214,7 +229,41 @@ test('traceability audit links lossless manifest, behavior markers, RBAC and sel
     assert.equal(report.token_usage.measurement, 'provider_reported');
     assert.equal(report.token_usage.total_tokens, 123);
     assert.deepEqual(report.cases[0].rbac_refs, ['RBAC-LOGIN-001']);
+    assert.deepEqual(report.cases[0].coverage_item_refs, ['COV-LOGIN-HAPPY']);
     assert.ok(report.cases[0].implementation_markers.every(item => item.present));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('automation manifest rejects one-way source coverage links', () => {
+  const fixture = writeFixture();
+  try {
+    const manifest = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+    manifest.requirement_coverage[0].testcase_ids = ['TC_UNKNOWN_01'];
+    fs.writeFileSync(fixture.manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+    assert.throws(
+      () => parseAutomationManifest(fixture.manifestPath),
+      /does not map back|unknown testcase/,
+    );
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('traceability audit blocks generated code that drops a coverage marker', () => {
+  const fixture = writeFixture();
+  try {
+    const specPath = path.join(fixture.root, 'tests', 'ui', 'login.ui.spec.ts');
+    const source = fs.readFileSync(specPath, 'utf8')
+      .replace(/\n\s*test\.info\(\)\.annotations\.push\(\{ type: 'coverage'[^\n]+/, '');
+    fs.writeFileSync(specPath, source, 'utf8');
+    const report = audit(fixture);
+    assert.equal(report.status, 'BLOCKED');
+    assert.ok(report.violations.some(item => (
+      item.code === 'IMPLEMENTATION_MARKER_MISSING'
+      && item.marker === '[TC_LOGIN_01:COVERAGE] COV-LOGIN-HAPPY'
+    )));
   } finally {
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }

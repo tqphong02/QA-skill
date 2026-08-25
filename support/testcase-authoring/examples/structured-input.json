@@ -14,8 +14,36 @@
   },
   "source_document": "spec/login.md",
   "requirements": [
-    { "id": "AC1", "text": "User đăng nhập thành công với tài khoản hợp lệ" },
-    { "id": "AC2", "text": "Người chưa đăng nhập không được truy cập Dashboard" }
+    {
+      "id": "AC1",
+      "text": "User đăng nhập thành công với tài khoản hợp lệ",
+      "coverage_items": [
+        {
+          "id": "COV-AC1-HAPPY",
+          "description": "Luồng đăng nhập chính với tài khoản hợp lệ",
+          "source_ref": "spec/login.md#AC1",
+          "expected_result": "Người dùng đăng nhập thành công và thấy Dashboard",
+          "minimum_cases": 1,
+          "required_case_types": ["happy"],
+          "required_techniques": ["Use Case Testing"]
+        }
+      ]
+    },
+    {
+      "id": "AC2",
+      "text": "Người chưa đăng nhập không được truy cập Dashboard",
+      "coverage_items": [
+        {
+          "id": "COV-AC2-DENY",
+          "description": "Chặn truy cập trực tiếp Dashboard khi chưa có phiên đăng nhập",
+          "source_ref": "spec/login.md#AC2",
+          "expected_result": "Người chưa đăng nhập bị chuyển về màn hình Đăng nhập và không thấy Dashboard",
+          "minimum_cases": 1,
+          "required_case_types": ["negative"],
+          "required_techniques": ["State Transition"]
+        }
+      ]
+    }
   ],
   "rbac": {
     "version": 1,
@@ -69,6 +97,7 @@
                   "type": "happy",
                   "bb_technique": "Use Case Testing",
                   "req": "AC1",
+                  "coverage_item_refs": ["COV-AC1-HAPPY"],
                   "description": "Xác minh rằng người dùng có thể đăng nhập thành công với tài khoản hợp lệ",
                   "priority": "High",
                   "execution": {
@@ -250,6 +279,7 @@
                   "type": "negative",
                   "bb_technique": "State Transition",
                   "req": "AC2",
+                  "coverage_item_refs": ["COV-AC2-DENY"],
                   "description": "Xác minh rằng người chưa đăng nhập không thể truy cập Dashboard",
                   "priority": "High",
                   "execution": {

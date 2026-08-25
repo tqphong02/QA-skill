@@ -26,10 +26,12 @@
   lowercase `kebab-case`; then use `<module-slug>.page.ts` → class
   `<ModuleSlug>Page`. A component uses `<component-slug>.component.ts` →
   `<ComponentSlug>Component`. Final generated module files are
-  `selectors/<module-slug>.selectors.ts`, `pages/<module-slug>.page.ts` and
-  `tests/<surface>/<module-slug>.<surface>.spec.ts`; do not use testcase IDs,
+  `src/modules/<domain>/<feature>/ui/<feature>.selectors.ts`,
+  `src/modules/<domain>/<feature>/ui/<feature>.page.ts` and
+  `tests/<surface>/<domain>/<feature>.<surface>.spec.ts`; do not use testcase IDs,
   route names, timestamps or batch names in those paths.
 - **Forbidden layout:** one global `app.page.ts`/`aifa.page.ts` containing every module, or several `<module-slug>.batch-NN.functional.spec.ts` files for one module.
+- **Shared components:** reusable manual components belong in `src/shared/components/` and require `path`, `kind`, `owner`, and `purpose` in `src/shared/ownership.json`.
 
 ## 2. Locator strategy (priority order)
 

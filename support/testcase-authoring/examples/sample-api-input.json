@@ -11,14 +11,38 @@
     "description": "Kiểm thử API đăng nhập",
     "objective": "Xác minh contract và hành vi xác thực của API đăng nhập"
   },
+  "execution_contract": "required",
   "source_document": "OpenAPI authentication specification",
+  "review_required": [],
   "requirements": [
     {
       "id": "AC-API-1",
+      "coverage_items": [
+        {
+          "id": "COV-API-AUTH-SUCCESS",
+          "description": "API login accepts valid credentials",
+          "source_ref": "OpenAPI authentication specification#POST /api/v1/auth/login/responses/200",
+          "expected_result": "API returns HTTP 200 with access_token, token_type and user",
+          "minimum_cases": 1,
+          "required_case_types": ["happy"],
+          "required_techniques": ["Use Case Testing"]
+        }
+      ],
       "text": "API trả access token khi credentials hợp lệ"
     },
     {
       "id": "AC-API-2",
+      "coverage_items": [
+        {
+          "id": "COV-API-AUTH-INVALID-PASSWORD",
+          "description": "API login rejects an invalid password",
+          "source_ref": "OpenAPI authentication specification#POST /api/v1/auth/login/responses/401",
+          "expected_result": "API returns HTTP 401 with detail",
+          "minimum_cases": 1,
+          "required_case_types": ["negative"],
+          "required_techniques": ["EP"]
+        }
+      ],
       "text": "API từ chối password không hợp lệ"
     }
   ],
@@ -46,8 +70,11 @@
               "scenario_name": "API đăng nhập thành công",
               "cases": [
                 {
+                  "testcase_id": "API-AUTH-001",
                   "type": "happy",
                   "req": "AC-API-1",
+                  "coverage_item_refs": ["COV-API-AUTH-SUCCESS"],
+                  "bb_technique": "Use Case Testing",
                   "description": "Xác minh rằng API trả access token khi credentials hợp lệ",
                   "pre_condition": "Có tài khoản QA đang active",
                   "priority": "High",
@@ -80,8 +107,11 @@
               "scenario_name": "API từ chối password không hợp lệ",
               "cases": [
                 {
+                  "testcase_id": "API-AUTH-002",
                   "type": "negative",
                   "req": "AC-API-2",
+                  "coverage_item_refs": ["COV-API-AUTH-INVALID-PASSWORD"],
+                  "bb_technique": "EP",
                   "description": "Xác minh rằng API từ chối password không hợp lệ",
                   "pre_condition": "Có tài khoản QA đang active",
                   "priority": "High",

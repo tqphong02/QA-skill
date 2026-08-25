@@ -67,21 +67,21 @@ storage state, cookies or tokens and must never be committed.
 
 1. Inventory the complete route/role/state with Browser MCP.
 2. Add the bounded automation manifest and UI-function inventory.
-3. Derive `<module-slug>` only from `testcase.group` as ASCII lowercase
-   `kebab-case`; remove accents, convert `&` to `and`, replace other
-   non-alphanumeric runs with `-`, and prefix a leading digit with `module-`.
-4. Keep selectors in `selectors/<module-slug>.selectors.ts` and actions in
-   `pages/<module-slug>.page.ts`.
+3. Prefer explicit manifest `domain` and `feature`; legacy groups map to
+   `app/<group>` and `Domain / Feature` maps to two canonical path segments.
+4. Keep generated UI/API code in `src/modules/<domain>/<feature>/`. Put only
+   reusable manual components in `src/shared/components/` and register their
+   owner and purpose in `src/shared/ownership.json`.
 5. Add one tagged spec at
-   `tests/<surface>/<module-slug>.<surface>.spec.ts`.
-6. Run `npm run runtime-scaffold`, `npm run module-layout` and the relevant
+   `tests/<surface>/<domain>/<feature>.<surface>.spec.ts`. API schemas are split
+   under `api/schemas/<resource>/<operation>.schema.ts`, never by testcase ID.
+6. Run `npm run runtime-scaffold`, `npm run module-layout`, `npm run complexity-gate` and the relevant
    traceability/coverage commands before opening a pull request.
 
-The same slug is used for `selector-evidence/<module-slug>.json` and
-`plans/<module-slug>.batch-NN.pom-plan.json`. Batch names are intermediate
+The canonical identity is used for generated module paths. Batch names are intermediate
 only; they are forbidden in final source filenames. A module has exactly one
-final Page Object, selector registry and spec. The layout validator blocks
-missing, extra, batch-leaked or colliding artifact names.
+final Page Object, selector registry, client and spec. The layout validator
+blocks missing, extra, batch-leaked, colliding or unowned manual artifacts.
 
 `test-data/` is committed/static data. `runtime-data/` is generated data and
 is not a second source-data folder.

@@ -31,10 +31,14 @@ const fixtures = { api: {}, authenticatedApi: {}, testData: {}, workerAccount: {
   write(root, 'scripts/generate-pom-code.mjs', 'export const generatePomCode = () => ({});\n');
   write(root, 'scripts/execution-lock.mjs', 'export const acquireExecutionLock = () => ({ release() {} });\n');
   write(root, 'scripts/verify-module-artifact-layout.mjs', 'export const inspectModuleArtifactLayout = () => ({ status: "PASS" });\n');
+  write(root, 'scripts/verify-automation-complexity.mjs', 'export const verifyAutomationComplexity = () => ({ status: "PASS" });\n');
   write(root, 'scripts/verify-api-operation-coverage.mjs', 'export const verifyApiOperationCoverage = () => ({ status: "PASS" });\n');
   write(root, 'scripts/verify-allure-contract.mjs', 'export const verifyAllureContract = () => ({ status: "PASS" });\n');
   write(root, 'scripts/qa.mjs', 'export const main = () => 0;\n');
   write(root, 'scripts/merge-allure-results.mjs', 'export const mergeAllureResults = () => ({ status: "PASS" });\n');
+  write(root, 'automation-complexity.json', '{"schema_version":1,"limits":{}}\n');
+  write(root, 'src/shared/ownership.json', '{"schema_version":1,"extensions":[]}\n');
+  write(root, 'src/shared/components/base.component.ts', 'export abstract class BaseComponent {}\n');
   write(root, 'playwright.config.ts', `
 const unifiedEvidence = process.env.QA_UNIFIED_EVIDENCE !== 'false';
 const workers = process.env.PW_WORKERS || 1;

@@ -27,17 +27,20 @@ function projectRoot({ lockfileVersion = 3 } = {}) {
       'qa:merge-allure': 'true',
       'pom-codegen': 'true',
       'module-layout': 'true',
+      'complexity-gate': 'true',
       'api-operation-coverage': 'true',
       'testcase-workflow': 'true',
     },
   }));
   write(root, 'package-lock.json', JSON.stringify({ lockfileVersion, packages: {} }));
   write(root, 'quality-gates.json', JSON.stringify({ version: 1, thresholds: {} }));
+  write(root, 'automation-complexity.json', JSON.stringify({ schema_version: 1, limits: {} }));
   write(root, 'scripts/qa.mjs', 'export {};\n');
   write(root, 'scripts/ci-preflight.mjs', 'export {};\n');
   write(root, 'scripts/execution-lock.mjs', 'export {};\n');
   write(root, 'scripts/generate-pom-code.mjs', 'export {};\n');
   write(root, 'scripts/verify-module-artifact-layout.mjs', 'export {};\n');
+  write(root, 'scripts/verify-automation-complexity.mjs', 'export {};\n');
   write(root, 'scripts/verify-api-operation-coverage.mjs', 'export {};\n');
   write(root, 'scripts/run-testcase-pom.mjs', 'export {};\n');
   write(root, 'fixtures/parallel-pool.js', 'module.exports = {};\n');

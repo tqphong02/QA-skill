@@ -14,15 +14,16 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 ## Mandatory workflow
 
 1. Resolve `UI`, `FUNCTION` or explicit `API` mode. only use API mode when user explicitly requests writing API testcases
-2. Read requirements/AC and build non-empty top-level `requirements[]`; unresolved expected results stop generation
-3. Organize `section → group → scenario → cases`; every FUNCTION group starts with its main successful flow
-4. Keep one scenario per field/behavior/AC; changing it changes Scenario ID and Name
-5. Give each case stable `testcase_id`, valid `type`, matching `req`, `bb_technique` and execution data
-6. New UI/FUNCTION cases use `execution_contract="required"`; read [execution-contract.md](references/execution-contract.md)
-7. Add RBAC only when applicable; unresolved permission expectations remain `UNRESOLVED`
-8. Run `python3 scripts/gen-testcases.py <input.json> <output.xlsx>`
-9. Read Markdown, validate manifest, compare IDs/count/content/design with Excel; I-M remain blank
-10. Fix the JSON source and regenerate on mismatch
+2. Read the complete supplied source and build atomic `requirements[].coverage_items`; read [coverage-contract.md](references/coverage-contract.md). Unresolved expected results stop generation through `review_required`
+3. Reconcile the source inventory before cases: every explicit AC, rule, field constraint, role/state/transition, documented error and in-scope UI/API behavior needs a stable `COV-*` obligation with source ref, expected result, required design and minimum case count
+4. Organize `section → group → scenario → cases`; every FUNCTION group starts with its main successful flow
+5. Keep one scenario per field/behavior/AC; changing it changes Scenario ID and Name
+6. Give each case stable `testcase_id`, valid `type`, matching `req`, `coverage_item_refs`, `bb_technique` and execution data
+7. New UI/FUNCTION cases use `execution_contract="required"`; read [execution-contract.md](references/execution-contract.md)
+8. Add RBAC only when applicable; unresolved permission expectations remain `UNRESOLVED`
+9. Run `python3 scripts/gen-testcases.py <input.json> <output.xlsx>`
+10. Read Markdown, validate the requirement coverage matrix and manifest, compare IDs/count/content/design with Excel; I-M remain blank
+11. Fix the JSON source and regenerate on mismatch
 
 ## Cross-model hard gates
 
@@ -30,7 +31,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 - No emoji/icons
 - Always create `<output>.md` before `<output>.xlsx`
 - Validate the `RBAC Matrix` with `references/rbac-matrix.schema.json` and its `allow_case_ref` links
-- The generator fails closed for `review_required`, missing/unknown requirements, mixed AC, invalid IDs/types/technique/contracts, invalid RBAC or secret placeholders
+- The generator fails closed for `review_required`, missing/uncovered source obligations, unknown requirements, mixed AC, invalid IDs/types/technique/contracts, invalid RBAC or secret placeholders
 
 ## Structure and fields
 
@@ -41,7 +42,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
     └── SCN-LOG-002 | Validation password
 ```
 
-Top level needs `execution_contract="required"`, project metadata, source document, `requirements[]` and `sections[]`. Scenarios need `SCN-*`, name and requirement. Cases need stable ID, type, matching req, Vietnamese description, priority, `bb_technique` and `execution`
+Top level needs `execution_contract="required"`, project metadata, source document, atomic `requirements[].coverage_items` and `sections[]`. Scenarios need `SCN-*`, name and requirement. Cases need stable ID, type, matching req, `coverage_item_refs`, Vietnamese description, priority, `bb_technique` and `execution`
 
 Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Error Guessing` or `Pairwise`. `additional` uses `req=(out-of-spec)` and is not confirmed requirement coverage. Every non-empty FUNCTION group needs a `happy` case before validation/negative-only cases
 
@@ -50,7 +51,7 @@ Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Erro
 - Read Markdown for human review and `.automation.json` for runtime/POM; do not recover execution logic from Excel
 - Reuse genuinely identical flows with `execution_templates`, `execution_ref` and `execution_overrides`; different behavior/AC needs a new scenario
 - Let scripts render all projections; do not ask the model to write Markdown/manifest/Excel separately
-- Optional `case.ui_function_keys`/`case.coverage_refs` map deterministic UI cases to the Browser MCP inventory
+- Optional `case.ui_function_keys` maps deterministic UI cases to the Browser MCP inventory; legacy `case.coverage_refs` is only an alias for that inventory and is not requirement coverage
 
 ## Manual and automation contract
 
@@ -60,6 +61,7 @@ Every UI/FUNCTION procedure states environment, route/screen, business role, sta
 
 | Need | Read |
 |---|---|
+| Source/document coverage and completeness | [coverage-contract.md](references/coverage-contract.md) |
 | UI/FUNCTION contract/templates | [execution-contract.md](references/execution-contract.md) |
 | Black-box techniques | [blackbox-techniques.md](references/blackbox-techniques.md) |
 | UI display-only cases | [ui-testcases.md](references/ui-testcases.md) |
@@ -72,4 +74,4 @@ Every UI/FUNCTION procedure states environment, route/screen, business role, sta
 
 ## Output invariants
 
-Markdown → automation manifest → Excel share basename/date policy (`Asia/Ho_Chi_Minh`, `_DD-MM-YYYY` unless exact filename is requested). IDs, requirements, descriptions, execution content and counts match; scenario/testcase IDs remain stable; columns I-M remain blank; RBAC sheet exists with `N/A` when out of scope; content is Vietnamese with no trailing prose period or emoji/icon. Read back every artifact before handoff
+Markdown → automation manifest → Excel share basename/date policy (`Asia/Ho_Chi_Minh`, `_DD-MM-YYYY` unless exact filename is requested). The source-to-test coverage matrix has no uncovered item; IDs, requirements, descriptions, execution content and counts match; scenario/testcase IDs remain stable; columns I-M remain blank; RBAC sheet exists with `N/A` when out of scope; content is Vietnamese with no trailing prose period or emoji/icon. Read back every artifact before handoff

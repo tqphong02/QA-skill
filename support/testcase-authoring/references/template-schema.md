@@ -6,7 +6,7 @@ Mỗi workbook được generate cùng một file Markdown cùng basename. Markd
 
 Master `assets/Template.xlsx` hiện có 5 sheet: `Cover`, `Test cases_App`, `Note`, `Report`, `Dropdown Keys - Do Not Delete -`. Generator thêm `RBAC Matrix` ngay sau `Test cases_App`, nên workbook đầu ra có 6 sheet
 
-The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/G/H; it never adds a selector or automation column to Excel
+The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/G/H; it never adds a selector or automation column to Excel. The source-to-test coverage matrix lives in Markdown and `.automation.json`; Excel keeps the stable requirement-derived Scenario/Testcase IDs without adding coverage columns
 
 ## Sheet `Cover` — metadata project
 
@@ -100,10 +100,10 @@ Cho project khác: edit trực tiếp Report sheet để thay module codes.
 
 | Phần | Section header (col C) | `kind` | Style | Test case ID format |
 |---|---|---|---|---|
-| **Phần 1 — UI** | `1.1. USER INTERFACE` | `"ui"` | Xanh nhạt (light blue) | `[CODE-UI-NN]` |
-| **Phần 2 — Functional** | `1.2. FUNCTION` | `"function"` | Xanh lá (green) | `[CODE-NN]` |
+| **Phần 1 — UI** | `1.1. USER INTERFACE` | `"ui"` | Xanh nhạt (light blue) | `CODE-UI-NN` |
+| **Phần 2 — Functional** | `1.2. FUNCTION` | `"function"` | Xanh lá (green) | `CODE-NN` |
 
-Khi user yêu cầu testcase API rõ ràng, phần `1.2. FUNCTION` được dùng với `kind: "api"` và vẫn sinh ID `[CODE-NN]`. Không tạo section hoặc cột API riêng. Xem [api-testcases.md](api-testcases.md)
+Khi user yêu cầu testcase API rõ ràng, phần `1.2. FUNCTION` được dùng với `kind: "api"` và importer sinh ID `CODE-API-NNN`. Không tạo section hoặc cột API riêng. Xem [api-testcases.md](api-testcases.md)
 
 Group từ tag OpenAPI/Swagger có thể chưa tồn tại trong template. Generator tự thêm group mới và đủ data rows dưới đúng section; không map tag lạ vào LOGIN/HOME mặc định
 

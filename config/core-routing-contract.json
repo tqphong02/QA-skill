@@ -107,10 +107,21 @@
       "first_action": "Inspect the exact GitHub resource read-only"
     },
     {
+      "id": "testcase-testscript-skill-hardening",
+      "priority": 58,
+      "match": {
+        "all": ["tăng|nâng|cải thiện|thông minh|đúng yêu cầu|improve|harden|enhance", "skill", "testcase|test case", "testscript|test script|automation script"]
+      },
+      "route": ["support-testcase-authoring", "dynamic-web-automation"],
+      "mode": "DESIGN_HARDENING",
+      "requires_brief": false,
+      "first_action": "Audit source coverage through generated testcase and executable script traceability"
+    },
+    {
       "id": "testcase-authoring",
       "priority": 60,
       "match": {
-        "all": ["viết|viếc|tạo|sửa|review|rà soát|write|draft", "testcase|testcasse|test case|scenario"],
+        "all": ["viết|viếc|tạo|sửa|review|rà soát|write|draft|generate|\\bgen\\b|sinh|bao phủ|cover", "testcase|testcasse|test case|scenario"],
         "none": ["chạy|execute|run|automation|playwright|\\bpom\\b|build_and_run"]
       },
       "route": ["support-testcase-authoring"],
@@ -438,7 +449,9 @@
     {"id": "ROUTE-025", "input": "Validate OpenAPI contract với implementation", "expected_route": ["hybrid-api-contract"], "expected_mode": "CONTRACT_VALIDATION", "requires_brief": false},
     {"id": "ROUTE-026", "input": "Test mobile app trên Android và iOS bằng Appium", "expected_route": ["dynamic-mobile"], "expected_mode": "MOBILE_QA", "requires_brief": false},
     {"id": "ROUTE-027", "input": "Phân tích white-box function processPayment và branch coverage", "expected_route": ["hybrid-source-coverage"], "expected_mode": "SOURCE_ANALYSIS", "requires_brief": false},
-    {"id": "ROUTE-028", "input": "Tạo API automation cho POST /orders, chạy test và trả verdict", "expected_route": ["dynamic-web-automation"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true}
+    {"id": "ROUTE-028", "input": "Tạo API automation cho POST /orders, chạy test và trả verdict", "expected_route": ["dynamic-web-automation"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true},
+    {"id": "ROUTE-029", "input": "tôi thấy skill gen testcase nó chưa cover đúng theo tài liệu và chưa cover đầy đủ các case", "expected_route": ["support-testcase-authoring"], "expected_mode": "AUTHOR", "requires_brief": false},
+    {"id": "ROUTE-030", "input": "giúp tôi tăng độ thông minh skill testcase và testscript đi để khi tôi dùng skill nó làm đúng yêu cầu hơn", "expected_route": ["support-testcase-authoring", "dynamic-web-automation"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false}
   ],
   "document_contracts": {
     "AGENTS.md": {

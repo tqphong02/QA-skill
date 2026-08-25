@@ -62,6 +62,7 @@ Every job writes to the same paths:
 | `reports/allure-results/` | Raw canonical Allure results and attachments |
 | `reports/allure-contract.json` | `PASS` or `BLOCKED` contract result |
 | `reports/module-artifact-layout.json` | Surface-aware generated module layout gate |
+| `reports/automation-complexity.json` | Route, selector, action, API operation, schema variant and generated file-length gate |
 | `reports/api-operation-coverage.json` | Exact selected API operation coverage when applicable |
 | `evidence/` | HTML, trace and unified screenshot/video evidence |
 

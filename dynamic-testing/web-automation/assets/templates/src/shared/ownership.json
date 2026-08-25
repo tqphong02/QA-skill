@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "extensions": [
+    {
+      "path": "src/shared/components/base.component.ts",
+      "kind": "component",
+      "owner": "qa-platform",
+      "purpose": "Shared base contract for reusable UI components"
+    }
+  ]
+}

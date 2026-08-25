@@ -19,7 +19,7 @@ when it is explicitly selected and attached to the exact page being inspected
    If no FE repository or contract is available, do not fabricate a test-id. Record the unavailable candidate and continue to the next available strategy
 4. Verify every candidate with Browser MCP in the same runtime page before selecting it. Prove count, visibility and actionability using the MCP-operated page
 5. Save the ordered candidates, selected strategy, locator, Browser MCP provenance and verification evidence in `selector-evidence/<module-slug>.json`
-6. Put only the selected locator in `selectors/<module-slug>.selectors.ts` and expose it through the Page Object only
+6. Put only the selected locator in `src/modules/<domain>/<feature>/ui/<feature>.selectors.ts` and expose it through the Page Object only
 
 The generated project's `scripts/discover-runtime-selectors.mjs` consumes the
 Browser MCP record instead of guessing from testcase prose:

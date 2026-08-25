@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import {
   normalizeBrowserMcpEvidence,
@@ -101,7 +102,7 @@ test('CLI consumes Browser MCP evidence without loading Playwright', () => {
     }, null, 2), 'utf8');
     fs.writeFileSync(mcpPath, JSON.stringify(source(), null, 2), 'utf8');
 
-    const scriptPath = path.resolve('dynamic-testing/web-automation/assets/templates/scripts/discover-runtime-selectors.mjs');
+    const scriptPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../assets/templates/scripts/discover-runtime-selectors.mjs');
     const result = spawnSync(process.execPath, [
       scriptPath,
       '--project-root', root,
