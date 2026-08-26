@@ -335,6 +335,15 @@ function parseAutomationManifest(manifestPath) {
       api: item.api && typeof item.api === 'object' && !Array.isArray(item.api)
         ? item.api
         : null,
+      automation_selection: item.automation_selection && typeof item.automation_selection === 'object' && !Array.isArray(item.automation_selection)
+        ? item.automation_selection
+        : item.automation_selection ?? null,
+      network_interception: item.network_interception && typeof item.network_interception === 'object' && !Array.isArray(item.network_interception)
+        ? item.network_interception
+        : item.network_interception ?? null,
+      db_verification: item.db_verification && typeof item.db_verification === 'object' && !Array.isArray(item.db_verification)
+        ? item.db_verification
+        : item.db_verification ?? null,
       ui_function_keys: uiFunctionKeys,
       target_keys: targetKeys,
       all_target_keys: allTargetKeys,
@@ -355,6 +364,8 @@ function parseAutomationManifest(manifestPath) {
         rbac: rbacRefs.map(ref => `[${id}:RBAC] ${ref}`),
         coverage: coverageItemRefs.map(ref => coverageMarker(id, ref)),
         cleanup: execution?.cleanup != null || execution?.mutates === true ? `[${id}:CLEANUP]` : null,
+        network_interception: item.network_interception ? `[${id}:NETWORK_INTERCEPTION] ${String(item.network_interception.mode || '').toUpperCase()}` : null,
+        db_verification: item.db_verification ? `[${id}:DB_VERIFICATION] ${String(item.db_verification.mode || '').toUpperCase()}` : null,
       },
     };
   });
@@ -947,6 +958,8 @@ function buildTraceability({
         ...(testcase.required_markers?.rbac || []),
         ...(testcase.required_markers?.coverage || []),
         ...(testcase.required_markers?.cleanup ? [testcase.required_markers.cleanup] : []),
+        ...(testcase.required_markers?.network_interception ? [testcase.required_markers.network_interception] : []),
+        ...(testcase.required_markers?.db_verification ? [testcase.required_markers.db_verification] : []),
       ];
       for (const marker of requiredMarkers) {
         const present = implementationText.includes(marker);
@@ -979,6 +992,12 @@ function buildTraceability({
         })),
         ...(testcase.required_markers?.cleanup
           ? [{ marker: testcase.required_markers.cleanup, kind: 'cleanup' }]
+          : []),
+        ...(testcase.required_markers?.network_interception
+          ? [{ marker: testcase.required_markers.network_interception, kind: 'advanced' }]
+          : []),
+        ...(testcase.required_markers?.db_verification
+          ? [{ marker: testcase.required_markers.db_verification, kind: 'advanced' }]
           : []),
       ];
       for (const [index, item] of executableMarkers.entries()) {

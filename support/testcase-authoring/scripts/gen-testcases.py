@@ -1941,6 +1941,9 @@ def build_automation_manifest(data, markdown_path):
             'ui_function_keys': _ui_function_keys(case),
             'execution': execution,
             'api': case.get('api'),
+            'automation_selection': deepcopy(case.get('automation_selection')),
+            'network_interception': deepcopy(case.get('network_interception')),
+            'db_verification': deepcopy(case.get('db_verification')),
         })
 
     with open(markdown_path, 'rb') as markdown_file:

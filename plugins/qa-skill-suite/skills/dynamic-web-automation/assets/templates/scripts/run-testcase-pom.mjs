@@ -16,6 +16,7 @@ import { verifyModuleArtifactLayout } from './verify-module-artifact-layout.mjs'
 import { buildTraceability } from './verify-testcase-traceability.mjs';
 import { buildUiCoverage } from './verify-ui-coverage.mjs';
 import { verifyAllureContract } from './verify-allure-contract.mjs';
+import { verifyAdvancedTestContracts } from './verify-advanced-test-contracts.mjs';
 import { acquireExecutionLock } from './execution-lock.mjs';
 
 const VALID_PHASES = new Set(['plan', 'build', 'execute', 'build-and-run']);
@@ -486,6 +487,34 @@ async function main() {
   try {
     if (phase !== 'execute') writeJson(planPath, plan);
 
+  const advancedContractsPath = resolveOutputFrom(
+    projectRoot,
+    getArg('--advanced-contracts-output'),
+    'reports/advanced-test-contracts.json',
+    '--advanced-contracts-output',
+  );
+  const advancedContracts = verifyAdvancedTestContracts({
+    plan,
+    projectRoot,
+    checkRuntimeAssets: phase !== 'plan',
+  });
+  writeJson(advancedContractsPath, advancedContracts);
+  if (advancedContracts.status !== 'PASS') {
+    if (['plan', 'build'].includes(phase)) {
+      throw new Error(`BLOCKED: advanced testcase contracts are incomplete; see ${advancedContractsPath}`);
+    }
+    const report = untestReport(plan, 'Advanced testcase contracts are incomplete before execution', runId, mode);
+    report.advanced_test_contracts = advancedContractsPath;
+    writeJson(resultPath, report);
+    console.log(JSON.stringify({
+      verdict: report.verdict,
+      output: resultPath,
+      advanced_test_contracts: advancedContractsPath,
+    }, null, 2));
+    process.exitCode = 2;
+    return;
+  }
+
   const appBuild = getArg('--app-build');
   const uiInventoryArg = getArg('--ui-inventory', process.env.QA_UI_FUNCTION_INVENTORY || '');
   const diagnosticSkipUiCoverage = process.argv.includes('--diagnostic-skip-ui-coverage');
@@ -541,6 +570,7 @@ async function main() {
       plan: planPath,
       testcase_count: plan.testcases.length,
       ui_coverage: uiCoveragePath && uiCoverage ? uiCoveragePath : null,
+      advanced_test_contracts: advancedContractsPath,
     }, null, 2));
     return;
   }
@@ -693,6 +723,7 @@ async function main() {
       complexity: complexityPath,
       module_layout: moduleLayoutPath,
       api_operation_coverage: apiOperationCoveragePath,
+      advanced_test_contracts: advancedContractsPath,
       runtime_scaffold: buildRuntimeScaffoldPath,
       testcase_count: plan.testcases.length,
       surface: mode,
@@ -861,6 +892,7 @@ async function main() {
   report.codegen = codegen?.report || null;
   report.module_layout = moduleLayoutPath;
   report.api_operation_coverage = apiOperationCoveragePath;
+  report.advanced_test_contracts = advancedContractsPath;
   report.runner_exit_code = execution.status;
   applyRunnerProcessGate(report, execution);
   applyAllureContractGate(report, allureContract, mode);

@@ -11,6 +11,7 @@ import {
   valueFingerprint,
 } from './verify-testcase-traceability.mjs';
 import { resolveModuleIdentity, resolveModuleSlug } from './artifact-naming.mjs';
+import { selectionEvaluation } from './verify-advanced-test-contracts.mjs';
 
 function getArg(flag, fallback = '') {
   const index = process.argv.indexOf(flag);
@@ -64,10 +65,27 @@ function buildPomPlan(manifestPath, options = {}) {
   const sourceHash = sha256(manifestPath);
   const testcaseIds = new Set(options.testcaseIds || []);
   const group = String(options.group || '').trim().toLowerCase();
-  const selected = parsed.cases.filter(testcase => (
+  const selectionEvaluations = new Map(parsed.cases.map(testcase => [testcase.id, selectionEvaluation(testcase)]));
+  const invalidSelections = parsed.cases.filter(testcase => selectionEvaluations.get(testcase.id).status === 'INVALID');
+  if (invalidSelections.length > 0) {
+    const details = invalidSelections.map(testcase => (
+      `${testcase.id}: ${selectionEvaluations.get(testcase.id).violations.join('; ')}`
+    ));
+    throw new Error(`BLOCKED: invalid automation_selection contract: ${details.join(' | ')}`);
+  }
+  const candidates = parsed.cases.filter(testcase => (
     (testcaseIds.size === 0 || testcaseIds.has(testcase.id))
     && (!group || String(testcase.group || '').trim().toLowerCase() === group)
   ));
+  const explicitlyIneligible = candidates.filter(testcase => (
+    testcaseIds.has(testcase.id) && !selectionEvaluations.get(testcase.id).eligible
+  ));
+  if (explicitlyIneligible.length > 0) {
+    throw new Error(
+      `BLOCKED: explicitly requested testcase is DEFER, REJECT or RETIRED: ${explicitlyIneligible.map(item => item.id).join(', ')}`,
+    );
+  }
+  const selected = candidates.filter(testcase => selectionEvaluations.get(testcase.id).eligible);
   const maxCases = Number(options.maxCases ?? 20);
   if (!Number.isInteger(maxCases) || maxCases < 1 || maxCases > 20) {
     throw new Error('BLOCKED: maxCases must be an integer from 1 to 20');
@@ -135,6 +153,15 @@ function buildPomPlan(manifestPath, options = {}) {
       requested_group: options.group || null,
       selected_count: selected.length,
       total_count: parsed.cases.length,
+      available_testcase_ids: parsed.cases.map(testcase => testcase.id),
+      excluded: candidates
+        .filter(testcase => !selectionEvaluations.get(testcase.id).eligible)
+        .map(testcase => ({
+          testcase_id: testcase.id,
+          decision: selectionEvaluations.get(testcase.id).decision || selectionEvaluations.get(testcase.id).status,
+          retirement_status: selectionEvaluations.get(testcase.id).retirement_status || null,
+          score: selectionEvaluations.get(testcase.id).score,
+        })),
     },
     testcases: selected.map(testcase => ({
       testcase_id: testcase.id,
@@ -183,6 +210,10 @@ function buildPomPlan(manifestPath, options = {}) {
       cleanup: testcase.cleanup,
       mutates: testcase.mutates,
       api: testcase.api,
+      automation_selection: testcase.automation_selection,
+      automation_value_score: selectionEvaluations.get(testcase.id).score,
+      network_interception: testcase.network_interception,
+      db_verification: testcase.db_verification,
       ui_function_keys: testcase.ui_function_keys,
       selector_target_keys: testcase.target_keys,
       selector_target_routes: testcase.target_routes,

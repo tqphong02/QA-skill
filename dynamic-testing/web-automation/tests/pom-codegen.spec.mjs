@@ -211,6 +211,55 @@ test('UI codegen emits one deterministic selector/page/spec set and is idempoten
   });
 });
 
+test('UI codegen wires declared network and DB extension hooks into executable testcase steps', () => {
+  withTempRoot('pom-codegen-advanced-', root => {
+    const testcase = uiCase('LOGIN-ADV-01');
+    testcase.network_interception = {
+      mode: 'MOCK',
+      routes: [{ pattern: '**/api/login', action: 'ABORT' }],
+      real_flow_testcase_id: 'LOGIN-REAL-01',
+      implementation_file: 'src/shared/helpers/login-advanced.ts',
+      implementation_export: 'setupLoginNetwork',
+    };
+    testcase.db_verification = {
+      mode: 'INTERNAL_API',
+      read_only: true,
+      operation_ref: 'GET /internal/login/{id}',
+      proof_kind: 'PERSISTENCE_READ_MODEL',
+      implementation_file: 'src/shared/helpers/login-advanced.ts',
+      implementation_export: 'verifyLoginPersistence',
+    };
+    testcase.required_markers.network_interception = '[LOGIN-ADV-01:NETWORK_INTERCEPTION] MOCK';
+    testcase.required_markers.db_verification = '[LOGIN-ADV-01:DB_VERIFICATION] INTERNAL_API';
+    const helperPath = path.join(root, 'src/shared/helpers/login-advanced.ts');
+    fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+    fs.writeFileSync(helperPath, [
+      'export async function setupLoginNetwork(_context: unknown): Promise<void> {}',
+      'export async function verifyLoginPersistence(_context: unknown): Promise<void> {}',
+      '',
+    ].join('\n'), 'utf8');
+    const planPath = writeJson(root, 'plans/login.pom-plan.json', plan([testcase], {
+      selection: { selected_count: 1, total_count: 2, available_testcase_ids: ['LOGIN-ADV-01', 'LOGIN-REAL-01'] },
+    }));
+    const evidencePath = writeJson(root, 'selector-evidence/login.json', evidence());
+
+    generatePomCode({
+      planPaths: [planPath],
+      selectorEvidencePaths: [evidencePath],
+      projectRoot: root,
+      surface: 'ui',
+    });
+    const spec = fs.readFileSync(path.join(root, 'tests/ui/app/login.ui.spec.ts'), 'utf8');
+    assert.match(spec, /import \* as advancedExtension1 from .*login-advanced/);
+    assert.match(spec, /advancedExtension1\.setupLoginNetwork/);
+    assert.match(spec, /advancedExtension2\.verifyLoginPersistence/);
+    assert.match(spec, /\[LOGIN-ADV-01:NETWORK_INTERCEPTION\] MOCK/);
+    assert.match(spec, /\[LOGIN-ADV-01:DB_VERIFICATION\] INTERNAL_API/);
+    assert.ok(spec.indexOf('setupLoginNetwork') < spec.indexOf('fillEmailInput'));
+    assert.ok(spec.indexOf('verifyLoginPersistence') > spec.indexOf('dashboard_heading'));
+  });
+});
+
 test('API codegen emits client/schema/spec without UI artifacts', () => {
   withTempRoot('pom-codegen-api-', root => {
     const planPath = writeJson(root, 'plans/login.pom-plan.json', plan([apiCase()]));

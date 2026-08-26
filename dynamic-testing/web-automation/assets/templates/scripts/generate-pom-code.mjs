@@ -1200,6 +1200,64 @@ function apiAuthContract(testcase) {
   };
 }
 
+function advancedExtensionHooks(model, paths, projectRoot) {
+  const imports = [];
+  const byTestcase = new Map();
+  const importByKey = new Map();
+  let importIndex = 0;
+  for (const testcase of model.testcases) {
+    const hooks = {};
+    for (const [kind, contract] of [
+      ['network', testcase.network_interception],
+      ['db', testcase.db_verification],
+    ]) {
+      if (!contract) continue;
+      const relativeFile = String(contract.implementation_file || '').trim().replaceAll('\\', '/');
+      const exportName = String(contract.implementation_export || '').trim();
+      if (!relativeFile.startsWith('src/shared/helpers/') || relativeFile.includes('/../')) {
+        blocked('ADVANCED_IMPLEMENTATION_PATH_INVALID', `${testcase.testcase_id}:${relativeFile || 'missing'}`);
+      }
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(exportName)) {
+        blocked('ADVANCED_IMPLEMENTATION_EXPORT_INVALID', `${testcase.testcase_id}:${exportName || 'missing'}`);
+      }
+      const filePath = path.resolve(projectRoot, relativeFile);
+      assertPathInsideProject(projectRoot, filePath);
+      if (!fs.existsSync(filePath)) blocked('ADVANCED_IMPLEMENTATION_MISSING', filePath);
+      const source = fs.readFileSync(filePath, 'utf8');
+      const exportPattern = new RegExp(`\\bexport\\s+(?:async\\s+)?(?:function|const|let|var|class)\\s+${exportName}\\b|\\bexport\\s*\\{[^}]*\\b${exportName}\\b`, 'm');
+      if (!exportPattern.test(source)) {
+        blocked('ADVANCED_IMPLEMENTATION_EXPORT_MISSING', `${relativeFile}:${exportName}`);
+      }
+      const key = `${filePath}:${exportName}`;
+      let record = importByKey.get(key);
+      if (!record) {
+        importIndex += 1;
+        record = { alias: `advancedExtension${importIndex}`, filePath, exportName };
+        importByKey.set(key, record);
+        imports.push(`import * as ${record.alias} from '${relativeImport(paths.spec, filePath)}';`);
+      }
+      hooks[kind] = { ...record, contract };
+    }
+    if (Object.keys(hooks).length > 0) byTestcase.set(testcase.testcase_id, hooks);
+  }
+  return { imports, byTestcase };
+}
+
+function advancedHookLines(testcase, hook, marker, context, indent = '    ') {
+  if (!hook || !marker) return [];
+  const values = [
+    `testcaseId: ${JSON.stringify(testcase.testcase_id)}`,
+    `contract: ${JSON.stringify(hook.contract)}`,
+    ...(context.page ? ['page'] : []),
+    ...(context.client ? [`client: ${context.client}`] : []),
+  ];
+  return [
+    `${indent}await test.step(${JSON.stringify(marker)}, async () => {`,
+    `${indent}  await ${hook.alias}.${hook.exportName}({ ${values.join(', ')} });`,
+    `${indent}});`,
+  ];
+}
+
 function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, projectRoot) {
   const fixtureImport = `import { test, expect } from '${relativeImport(paths.spec, path.join(projectRoot, 'fixtures', 'pom.ts'))}';`;
   const imports = [generatedHeader(model).trimEnd(), fixtureImport];
@@ -1219,6 +1277,8 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       imports.push(`import { ${names.join(', ')} } from '${relativeImport(paths.spec, filePath)}';`);
     }
   }
+  const advancedExtensions = advancedExtensionHooks(model, paths, projectRoot);
+  imports.push(...advancedExtensions.imports);
   const usage = { runtimeValues: false };
   const body = [
     `const AUTOMATION_SOURCE = ${JSON.stringify(model.sourceMarker)};`,
@@ -1268,6 +1328,13 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       }
       body.push(`    const ${clientInstance} = new ${apiClient.className}(${auth.fixture});`);
     }
+    const advancedHooks = advancedExtensions.byTestcase.get(testcase.testcase_id) || {};
+    body.push(...advancedHookLines(
+      testcase,
+      advancedHooks.network,
+      testcase.required_markers?.network_interception,
+      { page: testcase.capabilities.includes('ui'), client: testcase.capabilities.includes('api') ? clientInstance : null },
+    ));
 
     if (isFunctionalFlow) {
       const api = normalizeApiContract(testcase);
@@ -1290,6 +1357,13 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
           }, phaseIndent));
         }
       }
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.db,
+        testcase.required_markers?.db_verification,
+        { page: true, client: clientInstance },
+        phaseIndent,
+      ));
       if (hasCleanup) {
         body.push('    } finally {');
         if (api.cleanup) {
@@ -1324,10 +1398,24 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
         });
         const cleanupOperation = operations.get(`${cleanup.method} ${cleanup.endpoint}`);
         const cleanupOptions = apiOptionsExpression(cleanup, `${testcase.testcase_id}_cleanup`, usage);
-        body.push('    try {', ...mainLines.map(line => `  ${line}`), '    } finally {');
+        body.push('    try {', ...mainLines.map(line => `  ${line}`));
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.db,
+          testcase.required_markers?.db_verification,
+          { page: false, client: clientInstance },
+          '      ',
+        ));
+        body.push('    } finally {');
         body.push(`      await ${clientInstance}.${cleanupOperation.operationName}(${cleanupOptions});`, '    }');
       } else {
         body.push(...mainLines);
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.db,
+          testcase.required_markers?.db_verification,
+          { page: false, client: clientInstance },
+        ));
       }
     } else {
       const cleanupMarker = testcase.required_markers?.cleanup;
@@ -1338,6 +1426,13 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
         ui,
         usage,
       }, indent));
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.db,
+        testcase.required_markers?.db_verification,
+        { page: true, client: null },
+        indent,
+      ));
       if (cleanupMarker) {
         if (!ui.cleanupByTestcase.has(testcase.testcase_id)) {
           blocked('CLEANUP_NOT_MACHINE_EXECUTABLE', testcase.testcase_id);

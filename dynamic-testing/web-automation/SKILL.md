@@ -22,10 +22,10 @@ Turn a bounded `.automation.json` manifest into maintainable Playwright code, ex
 
 ## Canonical workflow
 
-1. Run `npm run testcase-workflow -- --phase plan ...` through `scripts/run-testcase-pom.mjs`; the workflow invokes the `pom-plan` contract. UI coverage is mandatory by default
+1. Run `npm run testcase-workflow -- --phase plan ...` through `scripts/run-testcase-pom.mjs`; the workflow invokes the `pom-plan` and `advanced-contracts` gates. UI coverage is mandatory by default
 2. For UI/functional, create a current-build Browser MCP `UI_FUNCTION_INVENTORY` covering every allowed route, role, and state. For API/functional, require method, path, auth, expected status, schemas, mutation ownership, and cleanup in the manifest
 3. Run `--phase build` or the default `--phase build-and-run`. The deterministic generator emits only the artifacts required by the selected surface
-4. Bootstrap the pinned local toolchain and pass runtime scaffold, module layout, placeholder, TypeScript/ESLint, traceability, UI coverage, and API operation coverage gates as applicable
+4. Bootstrap the pinned local toolchain and pass advanced testcase contracts, runtime scaffold, module layout, placeholder, TypeScript/ESLint, traceability, UI coverage, and API operation coverage gates as applicable
 5. `RUN` requires the immutable BUILD `--plan-input`; reject a manifest hash mismatch
 6. Read the generated codegen, coverage, layout, Allure, and execution reports. Return only `PASS`, `FAILED`, `N/A`, or `UNTEST`
 7. Sheet/Excel write-back uses the exact execution projection and requires write confirmation plus read-back validation
@@ -93,6 +93,9 @@ All deterministic surfaces use the canonical `fixtures/allure-contract.ts` and o
 | Data-driven and parallel isolation | [data-driven-testing.md](references/data-driven-testing.md) |
 | Traceability and token telemetry | [automation-audit.md](references/automation-audit.md) |
 | CI, quality gates, Allure merge, flaky policy | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md), [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
+| Deciding what to automate, automation value formula | [test-selection-strategy.md](references/test-selection-strategy.md) |
+| Network interception, mocking, HAR playback | [network-interception.md](references/network-interception.md) |
+| UI + API + DB cross-layer verification | [db-verification.md](references/db-verification.md) |
 
 Handoff authoring-only work to `support-testcase-authoring`, contract-only validation to `hybrid-api-contract`, exploratory browser QA to `dynamic-web-exploratory`, WCAG to `hybrid-accessibility`, visual design review to `hybrid-ui-ux-review`, and load/performance work to `dynamic-performance`.
 
@@ -101,5 +104,7 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 - UI full runs require 100% UI-function inventory coverage and fresh same-session selector evidence
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
 - Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
+- `AUTOMATE`/`ACTIVE` selection is required when selection metadata exists; `DEFER`, `REJECT`, and `RETIRED` are excluded from the plan and never projected as runtime `N/A`
+- Mock/HAR and DB verification contracts must pass `reports/advanced-test-contracts.json`, including bounded assets, real-flow sibling coverage, read-only SQL, declared drivers, and specialist-skill handoffs
 - Generated specs use the canonical fixture, contain no raw selector/request, and selected tests actually execute
 - Never claim `PASS` from static findings, generated code alone, or missing runtime evidence

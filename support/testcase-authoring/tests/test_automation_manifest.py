@@ -58,6 +58,42 @@ class AutomationManifestTests(unittest.TestCase):
             manifest['source']['markdown_sha256'],
         )
 
+    def test_manifest_preserves_advanced_automation_contracts(self):
+        data = self.data()
+        case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
+        case['automation_selection'] = {
+            'decision': 'AUTOMATE',
+            'execution_frequency': 5,
+            'manual_cost': 4,
+            'business_risk': 5,
+            'maintenance_cost': 2,
+            'rationale': 'Critical release regression',
+        }
+        case['network_interception'] = {
+            'mode': 'MOCK',
+            'routes': [{'pattern': '**/api/upload', 'action': 'ABORT'}],
+            'real_flow_testcase_id': 'DEMO-02',
+            'implementation_file': 'src/shared/helpers/upload-network.ts',
+            'implementation_export': 'setupUploadFailure',
+        }
+        case['db_verification'] = {
+            'mode': 'INTERNAL_API',
+            'read_only': True,
+            'operation_ref': 'GET /internal/upload/{id}',
+            'proof_kind': 'PERSISTENCE_READ_MODEL',
+            'implementation_file': 'src/shared/helpers/upload-db.ts',
+            'implementation_export': 'verifyUploadPersistence',
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            markdown_path = pathlib.Path(temp_dir) / 'advanced.md'
+            self.generator.write_testcase_markdown(data, markdown_path)
+            manifest = self.generator.build_automation_manifest(data, markdown_path)
+
+        emitted = manifest['testcases'][0]
+        self.assertEqual(case['automation_selection'], emitted['automation_selection'])
+        self.assertEqual(case['network_interception'], emitted['network_interception'])
+        self.assertEqual(case['db_verification'], emitted['db_verification'])
+
     def test_required_contract_rejects_missing_stable_testcase_id(self):
         data = self.data()
         case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
