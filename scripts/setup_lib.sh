@@ -938,9 +938,11 @@ verify_installation() {
     local qa_run_tdata="$SKILLS_DIR/dynamic-web-exploratory/lib/tdata.mjs"
     if [[ -f "$qa_run_tdata" ]]; then
       if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
-        log_dry "node -e 'import(\"$qa_run_tdata\")...' (tdata)"
+        log_dry "node -e '<pathToFileURL import smoke>' '$qa_run_tdata' (tdata)"
       else
-        if node -e "import('$qa_run_tdata').then(m => console.log('  dynamic-web-exploratory tdata: ' + m.tdata('setup','smoke')))" 2>/dev/null; then
+        local qa_run_tdata_native
+        qa_run_tdata_native=$(to_win_path "$qa_run_tdata")
+        if node -e "import('node:url').then(({ pathToFileURL }) => import(pathToFileURL(process.argv[1]).href)).then(m => console.log('  dynamic-web-exploratory tdata: ' + m.tdata('setup','smoke')))" "$qa_run_tdata_native" 2>/dev/null; then
           log_ok "Node deps (dynamic-web-exploratory/lib/tdata.mjs)"
         else
           log_warn "dynamic-web-exploratory tdata load fail — kiểm tra cd dynamic-web-exploratory && npm install"
