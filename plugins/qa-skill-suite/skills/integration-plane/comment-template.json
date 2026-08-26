@@ -1,0 +1,11 @@
+{
+  "ref": "PROJ-150",
+  "result": "PASS",
+  "conclusion": [
+    "Bug đã được sửa và kết quả đúng kỳ vọng"
+  ],
+  "evidence": [
+    "evidence/retest-step-1.png",
+    "evidence/retest-result.png"
+  ]
+}

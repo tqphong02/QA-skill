@@ -10,22 +10,22 @@ test('explicit project root has priority over npm and cwd values', () => {
     INIT_CWD: '/tmp/npm-project',
   }
 
-  assert.equal(resolveInvocationRoot(env, '/tmp/current-directory'), '/tmp/caller-project')
+  assert.equal(resolveInvocationRoot(env, '/tmp/current-directory'), path.resolve('/tmp/caller-project'))
 })
 
 test('npm preserves the original caller project through INIT_CWD', () => {
   const env = { INIT_CWD: '/tmp/npm-project' }
 
-  assert.equal(resolveInvocationRoot(env, '/tmp/qa-skill'), '/tmp/npm-project')
+  assert.equal(resolveInvocationRoot(env, '/tmp/qa-skill'), path.resolve('/tmp/npm-project'))
 })
 
 test('direct invocation falls back to the current working directory', () => {
-  assert.equal(resolveInvocationRoot({}, '/tmp/direct-project'), '/tmp/direct-project')
+  assert.equal(resolveInvocationRoot({}, '/tmp/direct-project'), path.resolve('/tmp/direct-project'))
 })
 
 test('readiness reports are rooted in the invoking project', () => {
   assert.equal(
     resolveReadinessOutputDir({}, '/tmp/caller-project'),
-    path.join('/tmp/caller-project', 'evidence', 'skill-readiness'),
+    path.join(path.resolve('/tmp/caller-project'), 'evidence', 'skill-readiness'),
   )
 })

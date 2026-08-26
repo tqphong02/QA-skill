@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI & API Automation POM"
+  short_description: "Build UI/API POM sạch, chạy test và trả verdict"
+  default_prompt: "Use $dynamic-web-automation to deterministically build and run a bounded UI, API, or functional automation manifest through its canonical fixtures, enforce surface coverage and evidence gates, and return only PASS, FAILED, N/A, or UNTEST."

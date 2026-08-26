@@ -1,0 +1,451 @@
+name: QA automation
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  # Safe default for repository-wide static test accounts/data. Include ref or
+  # environment only after each concurrent run receives a dedicated pool.
+  group: qa-static-pool-${{ github.repository }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+  CI: 'true'
+  PW_RETRIES: '1'
+  # The quickstart copies the automation project to <repository>/qa.
+  # Set this to '.' when package.json lives at the repository root.
+  QA_PROJECT_DIR: qa
+
+jobs:
+  preflight:
+    name: Validate QA project layout
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check package and lockfile
+        shell: bash
+        run: |
+          set -euo pipefail
+          qa_dir="$QA_PROJECT_DIR"
+          test -f "$qa_dir/package.json" || { echo "::error title=CI project missing::$qa_dir/package.json was not found"; exit 1; }
+          test -f "$qa_dir/package-lock.json" || { echo "::error title=Lockfile missing::Commit $qa_dir/package-lock.json; CI uses npm ci"; exit 1; }
+          test -f "$qa_dir/dependency-versions.json" || { echo "::error title=Toolchain manifest missing::$qa_dir/dependency-versions.json was not found"; exit 1; }
+          test -f "$qa_dir/quality-gates.json" || { echo "::error title=Quality gate missing::$qa_dir/quality-gates.json was not found"; exit 1; }
+          test -f "$qa_dir/.eslintrc.cjs" || { echo "::error title=ESLint config missing::$qa_dir/.eslintrc.cjs was not found"; exit 1; }
+          test -f "$qa_dir/scripts/qa.mjs" || { echo "::error title=QA runner missing::$qa_dir/scripts/qa.mjs was not found"; exit 1; }
+          test -f "$qa_dir/scripts/ci-preflight.mjs" || { echo "::error title=CI preflight missing::$qa_dir/scripts/ci-preflight.mjs was not found"; exit 1; }
+          test -f "$qa_dir/scripts/execution-lock.mjs" || { echo "::error title=Execution lock missing::$qa_dir/scripts/execution-lock.mjs was not found"; exit 1; }
+          test -f "$qa_dir/fixtures/parallel-pool.js" || { echo "::error title=Parallel pool contract missing::$qa_dir/fixtures/parallel-pool.js was not found"; exit 1; }
+
+      - name: Check unresolved placeholders
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          node scripts/check-placeholders.mjs
+
+  lint:
+    name: Lint and typecheck
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.QA_PROJECT_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run toolchain:check
+          npm ci
+
+      - name: Validate quality-gate configuration
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run quality-gate:config
+
+      - name: Lint and typecheck
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:lint
+
+  test-ui:
+    name: UI (${{ matrix.browser }})
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: [preflight, lint]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      # Account/data pools are shared secrets. Serialize browser jobs and keep
+      # parallelism inside one Playwright invocation where parallelIndex owns a slot.
+      max-parallel: 1
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.QA_PROJECT_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm ci
+
+      - name: Install browser
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:install:browsers -- --browser ${{ matrix.browser }} --with-deps
+
+      - name: Validate UI CI inputs
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:preflight -- --surface ui --require-auth
+
+      - name: Run UI tests
+        id: tests
+        continue-on-error: true
+        env:
+          QA_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-ui-${{ matrix.browser }}
+          RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-ui-${{ matrix.browser }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:test:ui -- --project=${{ matrix.browser }}
+
+      - name: Evaluate quality gate
+        id: quality
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:quality -- --surface ui --project=${{ matrix.browser }}
+
+      - name: Validate canonical Allure result
+        id: contract
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:contract -- --mode ui
+
+      - name: Upload UI evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-ui-${{ matrix.browser }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ env.QA_PROJECT_DIR }}/reports/
+            ${{ env.QA_PROJECT_DIR }}/evidence/
+            ${{ env.QA_PROJECT_DIR }}/test-results/
+            ${{ env.QA_PROJECT_DIR }}/quality-gates.json
+
+      - name: Validate required UI artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
+      - name: Fail UI job on test or quality failure
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
+        run: exit 1
+
+  test-functional:
+    name: Functional (${{ matrix.browser }})
+    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [preflight, lint, test-ui]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        browser: [chromium, firefox]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.QA_PROJECT_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm ci
+
+      - name: Install browser
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:install:browsers -- --browser ${{ matrix.browser }} --with-deps
+
+      - name: Validate functional CI inputs
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:preflight -- --surface functional --require-auth
+
+      - name: Run functional tests
+        id: tests
+        continue-on-error: true
+        env:
+          QA_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-functional-${{ matrix.browser }}
+          RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-functional-${{ matrix.browser }}
+          BASE_URL: ${{ secrets.BASE_URL }}
+          UI_BASE_URL: ${{ secrets.UI_BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:test:functional -- --project=${{ matrix.browser }}
+
+      - name: Evaluate quality gate
+        id: quality
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:quality -- --surface functional --project=${{ matrix.browser }}
+
+      - name: Validate canonical Allure result
+        id: contract
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:contract -- --mode functional
+
+      - name: Upload functional evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-functional-${{ matrix.browser }}-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ env.QA_PROJECT_DIR }}/reports/
+            ${{ env.QA_PROJECT_DIR }}/evidence/
+            ${{ env.QA_PROJECT_DIR }}/test-results/
+            ${{ env.QA_PROJECT_DIR }}/quality-gates.json
+
+      - name: Validate required functional artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
+      - name: Fail functional job on test or quality failure
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
+        run: exit 1
+
+  test-api:
+    name: API
+    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    needs: [preflight, lint, test-functional]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.QA_PROJECT_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm ci
+
+      - name: Validate API CI inputs
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:preflight -- --surface api --require-auth
+
+      - name: Run API tests
+        id: tests
+        continue-on-error: true
+        env:
+          QA_RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-api-chromium
+          RUN_ID: gha-${{ github.run_id }}-${{ github.run_attempt }}-api-chromium
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          TEST_USER: ${{ secrets.TEST_USER }}
+          TEST_PASS: ${{ secrets.TEST_PASS }}
+          TEST_ACCOUNTS_JSON: ${{ secrets.TEST_ACCOUNTS_JSON }}
+          TEST_DATASETS_JSON: ${{ secrets.TEST_DATASETS_JSON }}
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:test:api -- --project=chromium
+
+      - name: Evaluate quality gate
+        id: quality
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:quality -- --surface api --project=chromium
+
+      - name: Validate canonical Allure result
+        id: contract
+        if: always()
+        continue-on-error: true
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:contract -- --mode api
+
+      - name: Upload API evidence
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-api-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ env.QA_PROJECT_DIR }}/reports/
+            ${{ env.QA_PROJECT_DIR }}/evidence/
+            ${{ env.QA_PROJECT_DIR }}/test-results/
+            ${{ env.QA_PROJECT_DIR }}/quality-gates.json
+
+      - name: Validate required API artifacts
+        id: artifacts
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          test -f reports/playwright.json
+          test -f reports/junit.xml
+          test -f reports/quality-gate.json
+          test -f reports/allure-contract.json
+          find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+
+      - name: Fail API job on test or quality failure
+        if: always() && (steps.tests.outcome == 'failure' || steps.quality.outcome == 'failure' || steps.contract.outcome == 'failure' || steps.artifacts.outcome == 'failure')
+        run: exit 1
+
+  report:
+    name: Merge and publish Allure
+    needs: [test-ui, test-functional, test-api]
+    if: ${{ always() && (needs.test-ui.result != 'skipped' || needs.test-functional.result != 'skipped' || needs.test-api.result != 'skipped') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ env.QA_PROJECT_DIR }}/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm ci
+
+      - name: Download test artifacts
+        uses: actions/download-artifact@v5
+        with:
+          pattern: qa-*
+          path: ${{ env.QA_PROJECT_DIR }}/ci-artifacts
+          merge-multiple: false
+
+      - name: Merge Allure results
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:merge-allure -- \
+            --input ci-artifacts \
+            --output reports/allure-results \
+            --summary reports/allure-merge.json \
+            --expect-artifact qa-ui-chromium-${{ github.run_id }} \
+            --expect-artifact qa-ui-firefox-${{ github.run_id }} \
+            --expect-artifact qa-functional-chromium-${{ github.run_id }} \
+            --expect-artifact qa-functional-firefox-${{ github.run_id }} \
+            --expect-artifact qa-api-${{ github.run_id }}
+
+      - name: Generate unified Allure report
+        run: |
+          cd "$QA_PROJECT_DIR"
+          npm run qa:report -- --mode mixed
+
+      - name: Upload unified report
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: qa-allure-${{ github.run_id }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            ${{ env.QA_PROJECT_DIR }}/reports/
+            ${{ env.QA_PROJECT_DIR }}/evidence/

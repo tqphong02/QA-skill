@@ -1,0 +1,4 @@
+interface:
+  display_name: "Phân tích nghiệp vụ QA"
+  short_description: "Vẽ luồng hệ thống liên kết và tạo Q&A senior"
+  default_prompt: "Dùng $static-requirements-analysis để phân tích tài liệu, tạo XMind luồng hệ thống end-to-end có điều kiện tiên quyết và liên kết chức năng, cùng bộ Q&A Markdown và Excel bằng tiếng Việt"

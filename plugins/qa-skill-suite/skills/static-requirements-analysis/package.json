@@ -1,0 +1,12 @@
+{
+  "name": "qa-static-requirements-analysis-skill",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "xmindmark": "0.3.2"
+  },
+  "overrides": {
+    "tar-fs": "2.1.4",
+    "ws": "8.21.1"
+  }
+}

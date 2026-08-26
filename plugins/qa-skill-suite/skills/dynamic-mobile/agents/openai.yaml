@@ -1,0 +1,10 @@
+interface:
+  display_name: "Mobile QA"
+  short_description: "Run Appium and mobile network QA"
+  default_prompt: "Use $dynamic-mobile to test this mobile app with Appium, inspect authorized network traffic, capture evidence, and report verified findings."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "appium-mcp"
+      description: "Appium MCP for mobile device discovery, automation, evidence, and test generation"

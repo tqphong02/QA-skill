@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-skill.local/schemas/ui-requirement-traceability.schema.json",
+  "title": "UI requirement registry and traceability contract",
+  "type": "object",
+  "required": ["requirements"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "project": { "type": "string" },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "source_ref"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "text": { "type": "string", "minLength": 1 },
+          "source_ref": { "type": "string", "minLength": 1 },
+          "page": { "type": "string" },
+          "actor": { "type": "string" },
+          "state": { "type": "string" },
+          "expected_behavior": { "type": "string" },
+          "fact_status": { "enum": ["verified", "inferred", "unresolved"] },
+          "human_confirmed": { "type": "boolean" },
+          "ui": {
+            "type": "object",
+            "properties": {
+              "item_ids": { "type": "array", "items": { "type": "string" } },
+              "labels": { "type": "array", "items": { "type": "string" } },
+              "selectors": { "type": "array", "items": { "type": "string" } },
+              "intents": { "type": "array", "items": { "type": "string" } },
+              "categories": { "type": "array", "items": { "type": "string" } }
+            },
+            "additionalProperties": false
+          },
+          "expected": {
+            "type": "object",
+            "properties": {
+              "required": { "type": "boolean" },
+              "enabled": { "type": "boolean" },
+              "visible_roles": { "type": "array", "items": { "type": "string" } },
+              "hidden_roles": { "type": "array", "items": { "type": "string" } },
+              "allowed_values": { "type": "array", "items": { "type": ["string", "number", "boolean"] } },
+              "forbidden_values": { "type": "array", "items": { "type": ["string", "number", "boolean"] } },
+              "confirmation_required": { "type": "boolean" },
+              "state_transition": {
+                "type": "object",
+                "properties": {
+                  "from": { "type": "string" },
+                  "to": { "type": "string" }
+                },
+                "additionalProperties": false
+              },
+              "api": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "source_refs": { "type": "array", "items": { "type": "string" } },
+          "testcase_ids": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "mapping_status": {
+      "enum": ["MAPPED", "UI_ONLY", "REQ_ONLY", "CONFLICT", "AMBIGUOUS", "UNREACHABLE", "NOT_APPLICABLE"]
+    },
+    "evidence_level": {
+      "enum": ["ui_observed", "document_supported", "source_derived", "runtime_verified", "human_confirmed"]
+    }
+  }
+}

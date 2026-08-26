@@ -1,0 +1,13 @@
+interface:
+  display_name: "GitHub MCP QA"
+  short_description: "GitHub, Actions và CI/CD cho QA"
+  default_prompt: "Use $integration-github for this GitHub resource. Inspect a bare GitHub URL read-only; perform a write only when the request explicitly names that mutation."
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "github"
+      description: "Official GitHub MCP server with all toolsets"
+      transport: "streamable_http"
+      url: "https://api.githubcopilot.com/mcp/"
+policy:
+  allow_implicit_invocation: true

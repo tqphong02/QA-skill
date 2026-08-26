@@ -1,0 +1,50 @@
+# Google Drive authentication recovery
+
+For first-time Google Cloud project, API, consent screen, scope, Desktop client, Codex, Antigravity, macOS, Linux, and Windows setup, follow [GOOGLE_CLOUD_OAUTH_SETUP.md](GOOGLE_CLOUD_OAUTH_SETUP.md) before using this recovery guide
+
+## MCP authentication
+
+Symptoms include `authorization required`, `not connected`, or no `google-drive` MCP tools in the session.
+
+1. Confirm the `google-drive` MCP is configured and enabled with `codex mcp get google-drive` or Antigravity `/mcp`.
+2. Confirm `GOOGLE_DRIVE_OAUTH_CREDENTIALS` points to a local Desktop OAuth client JSON and `GOOGLE_DRIVE_MCP_SCOPES` includes the requested Drive, Docs, Sheets, or Slides scope.
+3. Complete OAuth consent when the MCP requests it.
+4. Start a new thread or restart the active host if the tool list does not refresh.
+5. Retry the exact file or folder request.
+
+The skill cannot repair MCP OAuth by editing Markdown files.
+
+If an External OAuth app remains in `Testing`, Google can expire its refresh token after 7 days. Use `Internal` for users in the same Google Workspace organization or complete the appropriate production and verification process for stable External use
+
+For Antigravity, enable the credential-free `google-drive` template entry only after the OAuth credential path and scopes are supplied through the local host environment. Never commit the OAuth client JSON or generated tokens
+
+## Local uploader authentication
+
+Run:
+
+```bash
+python3 scripts/drive_auth_doctor.py --refresh
+```
+
+Expected files by default:
+
+- OAuth client: `~/.config/drive-oauth-client.json`
+- Cached user token: `~/.config/drive-uploader-token.json`
+
+Outcomes:
+
+- Missing client: create a Desktop OAuth client and save the downloaded JSON at the configured path.
+- Missing token: the first upload starts browser consent.
+- Expired access token plus refresh token: `--refresh` refreshes and rewrites the cache.
+- `invalid_grant` or missing refresh token: consent must be repeated. Run the upload command with `--reauth`; the old token is preserved with an `.expired-<timestamp>` suffix.
+- `403` on a folder: confirm the authenticated user can edit that folder.
+
+The local `drive.file` scope only accesses files created or explicitly opened through this app. Use the MCP with the required scopes for broad Drive CRUD.
+
+Python uploader dependencies:
+
+```bash
+python3 -m pip install google-auth google-auth-oauthlib google-api-python-client
+```
+
+Install them only when the local uploader route is needed; the Google Drive MCP does not use these local packages.

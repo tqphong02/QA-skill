@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^24.0.0",
+    "allure-commandline": "^2.27.0",
+    "allure-playwright": "^3.10.2",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "prettier": "^3.3.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.8.0",
+    "zod": "^4.4.3"
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "execution_contract": "required",
+  "project": {
+    "name": "Demo Web",
+    "code": "DEMO",
+    "device": "Web",
+    "version": "v1.0",
+    "priority": "High",
+    "test_date": "2026-08-03",
+    "author": "QA Team",
+    "reviewer": "Lead QA",
+    "description": "Structured testcase example",
+    "objective": "Verify a business flow can be executed manually and automated deterministically"
+  },
+  "source_document": "spec/login.md",
+  "requirements": [
+    {
+      "id": "AC1",
+      "text": "User đăng nhập thành công với tài khoản hợp lệ",
+      "coverage_items": [
+        {
+          "id": "COV-AC1-HAPPY",
+          "description": "Luồng đăng nhập chính với tài khoản hợp lệ",
+          "source_ref": "spec/login.md#AC1",
+          "expected_result": "Người dùng đăng nhập thành công và thấy Dashboard",
+          "minimum_cases": 1,
+          "required_case_types": ["happy"],
+          "required_techniques": ["Use Case Testing"]
+        }
+      ]
+    },
+    {
+      "id": "AC2",
+      "text": "Người chưa đăng nhập không được truy cập Dashboard",
+      "coverage_items": [
+        {
+          "id": "COV-AC2-DENY",
+          "description": "Chặn truy cập trực tiếp Dashboard khi chưa có phiên đăng nhập",
+          "source_ref": "spec/login.md#AC2",
+          "expected_result": "Người chưa đăng nhập bị chuyển về màn hình Đăng nhập và không thấy Dashboard",
+          "minimum_cases": 1,
+          "required_case_types": ["negative"],
+          "required_techniques": ["State Transition"]
+        }
+      ]
+    }
+  ],
+  "rbac": {
+    "version": 1,
+    "sources": {
+      "requirement": "spec/login.md#AC2",
+      "source_code": "Chưa cung cấp",
+      "runtime": "Chưa thực thi"
+    },
+    "roles": [
+      { "key": "employee", "name": "Nhân viên" },
+      { "key": "unauthenticated", "name": "Người chưa đăng nhập" }
+    ],
+    "rules": [
+      {
+        "id": "RBAC-DASH-001",
+        "module": "LOGIN",
+        "resource": "Dashboard",
+        "action": "Truy cập",
+        "data_scope": "Theo phiên đăng nhập",
+        "condition": "Tài khoản Nhân viên đang hoạt động và đã đăng nhập",
+        "requirement": "AC2",
+        "expectations": {
+          "employee": "ALLOW",
+          "unauthenticated": "DENY"
+        },
+        "allow_case_refs": ["LOGIN_EMPLOYEE_SUCCESS"],
+        "deny_case_refs": ["DASHBOARD_UNAUTHENTICATED_DENY"],
+        "coverage_required": true,
+        "verification": "REQUIREMENT_ONLY",
+        "evidence": ["spec/login.md#AC2"],
+        "notes": "Cần đối chiếu source và xác minh runtime"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "title": "1.2. FUNCTION",
+      "kind": "function",
+      "groups": [
+        {
+          "name": "LOGIN",
+          "scenarios": [
+            {
+              "scenario_id": "SCN-LOG-001",
+              "requirement": "AC1",
+              "scenario_name": "Đăng nhập thành công",
+              "cases": [
+                {
+                  "testcase_id": "DEMO-01",
+                  "case_ref": "LOGIN_EMPLOYEE_SUCCESS",
+                  "type": "happy",
+                  "bb_technique": "Use Case Testing",
+                  "req": "AC1",
+                  "coverage_item_refs": ["COV-AC1-HAPPY"],
+                  "description": "Xác minh rằng người dùng có thể đăng nhập thành công với tài khoản hợp lệ",
+                  "priority": "High",
+                  "execution": {
+                    "version": 1,
+                    "mutates": false,
+                    "entry": {
+                      "environment": "UAT tại <BASE_URL>",
+                      "screen": "Đăng nhập",
+                      "route": "<BASE_URL>/login",
+                      "role": "Nhân viên",
+                      "role_key": "employee",
+                      "rbac_refs": ["RBAC-DASH-001"],
+                      "state": [
+                        "Tài khoản kiểm thử đang hoạt động",
+                        "Trình duyệt chưa có phiên đăng nhập"
+                      ],
+                      "permissions": [
+                        "Được phép sử dụng chức năng Đăng nhập"
+                      ],
+                      "data": [
+                        {
+                          "name": "Email",
+                          "value": "qa.login@example.com",
+                          "condition": "Thuộc tài khoản đang hoạt động"
+                        },
+                        {
+                          "name": "Mật khẩu",
+                          "value": "Bộ dữ liệu Login_Valid_01",
+                          "condition": "Lấy giá trị từ kho dữ liệu kiểm thử bảo mật"
+                        }
+                      ]
+                    },
+                    "steps": [
+                      {
+                        "id": "S01",
+                        "action": "navigate",
+                        "instruction": "Mở trình duyệt và truy cập trang đăng nhập: <BASE_URL>/login",
+                        "target": {
+                          "key": "login_page",
+                          "kind": "page",
+                          "name": "Trang đăng nhập",
+                          "route": "/login"
+                        },
+                        "wait_for": {
+                          "kind": "url",
+                          "value": "/login",
+                          "text": "Chờ màn hình Đăng nhập hiển thị đầy đủ"
+                        },
+                        "assertions": [
+                          { "kind": "visible", "target": "login_form", "text": "Biểu mẫu đăng nhập hiển thị" }
+                        ]
+                      },
+                      {
+                        "id": "S02",
+                        "action": "click",
+                        "instruction": "Nhấp vào ô Email",
+                        "target": {
+                          "key": "email_input",
+                          "kind": "field",
+                          "name": "Email",
+                          "role": "textbox",
+                          "label": "Email"
+                        },
+                        "wait_for": {
+                          "kind": "visible",
+                          "target": "email_input",
+                          "text": "Chờ ô Email sẵn sàng để nhập dữ liệu"
+                        },
+                        "assertions": [
+                          { "kind": "state", "target": "email_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Email" }
+                        ]
+                      },
+                      {
+                        "id": "S03",
+                        "action": "fill",
+                        "instruction": "Tại ô Email, nhập giá trị qa.login@example.com",
+                        "target": {
+                          "key": "email_input",
+                          "kind": "field",
+                          "name": "Email",
+                          "role": "textbox",
+                          "label": "Email"
+                        },
+                        "value": "qa.login@example.com",
+                        "wait_for": {
+                          "kind": "value",
+                          "value": "qa.login@example.com",
+                          "text": "Kiểm tra ô Email hiển thị đúng giá trị qa.login@example.com"
+                        },
+                        "assertions": [
+                          { "kind": "value", "target": "email_input", "value": "qa.login@example.com", "text": "Ô Email hiển thị đúng giá trị qa.login@example.com" }
+                        ]
+                      },
+                      {
+                        "id": "S04",
+                        "action": "click",
+                        "instruction": "Nhấp vào ô Mật khẩu",
+                        "target": {
+                          "key": "password_input",
+                          "kind": "field",
+                          "name": "Mật khẩu",
+                          "role": "textbox",
+                          "label": "Mật khẩu"
+                        },
+                        "wait_for": {
+                          "kind": "visible",
+                          "target": "password_input",
+                          "text": "Chờ ô Mật khẩu sẵn sàng để nhập dữ liệu"
+                        },
+                        "assertions": [
+                          { "kind": "state", "target": "password_input", "value": "focused", "text": "Con trỏ nhập liệu đặt tại ô Mật khẩu" }
+                        ]
+                      },
+                      {
+                        "id": "S05",
+                        "action": "fill",
+                        "instruction": "Tại ô Mật khẩu, nhập giá trị trong bộ dữ liệu Login_Valid_01",
+                        "target": {
+                          "key": "password_input",
+                          "kind": "field",
+                          "name": "Mật khẩu",
+                          "role": "textbox",
+                          "label": "Mật khẩu"
+                        },
+                        "value": {
+                          "data_ref": "Login_Valid_01",
+                          "field": "Mật khẩu"
+                        },
+                        "wait_for": {
+                          "kind": "value",
+                          "value": "<masked_password>",
+                          "text": "Kiểm tra ô Mật khẩu đã nhận dữ liệu và đang che nội dung"
+                        },
+                        "assertions": [
+                          { "kind": "state", "target": "password_input", "value": "masked", "text": "Ô Mật khẩu đã nhận dữ liệu và đang che nội dung" }
+                        ]
+                      },
+                      {
+                        "id": "S06",
+                        "action": "click",
+                        "instruction": "Nhấp nút Đăng nhập",
+                        "target": {
+                          "key": "login_submit",
+                          "kind": "button",
+                          "name": "Đăng nhập",
+                          "role": "button"
+                        },
+                        "wait_for": {
+                          "kind": "url",
+                          "value": "/dashboard",
+                          "text": "Chờ hệ thống hoàn tất đăng nhập và chuyển trang"
+                        },
+                        "assertions": [
+                          { "kind": "state", "target": "session", "value": "authenticated", "text": "Người dùng đăng nhập thành công" }
+                        ]
+                      }
+                    ],
+                    "outcome": {
+                      "state": "Đã đăng nhập",
+                      "route": "/dashboard",
+                      "assertions": [
+                        { "kind": "url", "value": "/dashboard", "text": "Trang chuyển đến Dashboard" },
+                        { "kind": "visible", "target": "dashboard_heading", "text": "Tiêu đề Dashboard hiển thị" }
+                      ]
+                    },
+                    "cleanup": "Đăng xuất và đóng phiên kiểm thử nếu môi trường yêu cầu"
+                  }
+                }
+              ]
+            },
+            {
+              "scenario_id": "SCN-LOG-002",
+              "requirement": "AC2",
+              "scenario_name": "Chặn truy cập Dashboard khi chưa đăng nhập",
+              "cases": [
+                {
+                  "testcase_id": "DEMO-02",
+                  "case_ref": "DASHBOARD_UNAUTHENTICATED_DENY",
+                  "type": "negative",
+                  "bb_technique": "State Transition",
+                  "req": "AC2",
+                  "coverage_item_refs": ["COV-AC2-DENY"],
+                  "description": "Xác minh rằng người chưa đăng nhập không thể truy cập Dashboard",
+                  "priority": "High",
+                  "execution": {
+                    "version": 1,
+                    "mutates": false,
+                    "entry": {
+                      "environment": "UAT tại <BASE_URL>",
+                      "screen": "Trình duyệt chưa mở ứng dụng",
+                      "route": "<BASE_URL>/dashboard",
+                      "role": "Người chưa đăng nhập",
+                      "role_key": "unauthenticated",
+                      "rbac_refs": ["RBAC-DASH-001"],
+                      "state": [
+                        "Trình duyệt chưa có phiên đăng nhập"
+                      ],
+                      "permissions": [
+                        "Không có quyền truy cập Dashboard"
+                      ],
+                      "data": "Không yêu cầu dữ liệu chuẩn bị"
+                    },
+                    "steps": [
+                      {
+                        "id": "S01",
+                        "action": "navigate",
+                        "instruction": "Mở trình duyệt và truy cập màn hình Dashboard: <BASE_URL>/dashboard",
+                        "target": {
+                          "key": "dashboard_page",
+                          "kind": "page",
+                          "name": "Dashboard",
+                          "route": "/dashboard"
+                        },
+                        "wait_for": {
+                          "kind": "url",
+                          "value": "/login",
+                          "text": "Chờ hệ thống chuyển về màn hình Đăng nhập"
+                        },
+                        "assertions": [
+                          { "kind": "url", "value": "/login", "text": "Trình duyệt chuyển về màn hình Đăng nhập" }
+                        ]
+                      }
+                    ],
+                    "outcome": {
+                      "state": "Chưa đăng nhập",
+                      "route": "/login",
+                      "assertions": [
+                        { "kind": "visible", "target": "login_form", "text": "Biểu mẫu đăng nhập hiển thị" },
+                        { "kind": "hidden", "target": "dashboard_heading", "text": "Nội dung Dashboard không hiển thị" }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

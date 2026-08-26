@@ -1,0 +1,34 @@
+{
+  "name": "qa-skill-suite",
+  "version": "1.0.0",
+  "description": "Cross-platform QE, security, automation, analysis, and integration skill suite",
+  "author": {
+    "name": "tqphong02",
+    "url": "https://github.com/tqphong02"
+  },
+  "homepage": "https://github.com/tqphong02/QA-skill#readme",
+  "repository": "https://github.com/tqphong02/QA-skill",
+  "license": "ISC",
+  "keywords": [
+    "qa",
+    "testing",
+    "playwright",
+    "security",
+    "automation",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "QA Skill Suite",
+    "shortDescription": "QE, security, automation, and integration workflows",
+    "longDescription": "Twenty-three maintainable QA skills for test design, deterministic execution, security, analysis, governance, and integrations.",
+    "developerName": "tqphong02",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Write"
+    ],
+    "defaultPrompt": "Route my QA request to the right workflow, preserve traceability, and produce maintainable evidence-backed outputs.",
+    "brandColor": "#2563EB"
+  }
+}

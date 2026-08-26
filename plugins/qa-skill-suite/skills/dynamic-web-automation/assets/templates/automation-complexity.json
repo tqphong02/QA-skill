@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "limits": {
+    "routes_per_module": 8,
+    "selectors_per_module": 40,
+    "actions_per_page": 40,
+    "api_operations_per_client": 30,
+    "schema_variants_per_operation": 8,
+    "lines_per_generated_file": 500
+  }
+}

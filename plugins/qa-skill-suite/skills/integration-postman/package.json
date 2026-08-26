@@ -1,0 +1,16 @@
+{
+  "name": "qa-skill-postman-runtime",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pinned local Postman CLI and Newman runtimes for the postman skill",
+  "scripts": {
+    "doctor": "python3 scripts/runner.py doctor"
+  },
+  "dependencies": {
+    "newman": "6.2.2",
+    "postman-cli": "1.44.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

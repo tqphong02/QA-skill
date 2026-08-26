@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "requiredTags": ["@ui", "@api", "@functional"],
+  "surfaceTags": {
+    "ui": "@ui",
+    "api": "@api",
+    "functional": "@functional"
+  },
+  "evidenceTags": ["@ui", "@functional"],
+  "browsers": ["chromium", "firefox"],
+  "thresholds": {
+    "minExecuted": 1,
+    "maxFailed": 0,
+    "maxFlakeRate": 0.02,
+    "maxDurationSeconds": 900,
+    "minEvidenceRate": 1,
+    "minBranchCoverage": 0
+  }
+}

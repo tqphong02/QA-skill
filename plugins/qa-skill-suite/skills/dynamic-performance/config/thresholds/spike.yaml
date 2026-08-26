@@ -1,0 +1,5 @@
+thresholds:
+  p95Ms: 2000
+  p99Ms: 4000
+  maxErrorRate: 0.05
+  minRequestsPerSecond: 1

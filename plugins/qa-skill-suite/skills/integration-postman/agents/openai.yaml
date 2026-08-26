@@ -1,0 +1,15 @@
+interface:
+  display_name: "Postman"
+  short_description: "Run Postman through MCP, CLI, and Newman"
+  default_prompt: "Use $integration-postman to connect Postman, verify both CLIs, and run this collection."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "postman"
+      description: "Official Postman MCP server"
+      transport: "streamable_http"
+      url: "https://mcp.postman.com/minimal"
+
+policy:
+  allow_implicit_invocation: true

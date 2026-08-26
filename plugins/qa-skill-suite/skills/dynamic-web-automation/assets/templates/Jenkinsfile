@@ -1,0 +1,145 @@
+// Jenkinsfile — Declarative Pipeline (generic).
+// Pipeline UI + API + functional qua một Playwright run có tag, archive artifact + publish Allure.
+// Yêu cầu Jenkins: NodeJS plugin (tool name 'Node-24'), Allure plugin (tuỳ chọn).
+
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    // Static CI account/data pools must not be leased by two builds at once.
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+    timeout(time: 30, unit: 'MINUTES')
+    ansiColor('xterm')
+  }
+
+  tools {
+    nodejs 'Node-24' // cấu hình tên NodeJS installation trong Jenkins > Global Tool Configuration
+  }
+
+  // Secrets từ Jenkins Credentials — KHÔNG hardcode.
+  environment {
+    CI = 'true'
+    PW_RETRIES = '1'
+    QA_RUN_ID = "${env.BUILD_TAG}"
+    RUN_ID = "${env.BUILD_TAG}"
+    // Quickstart đặt automation project trong repository/qa. Đổi thành '.'
+    // nếu package.json nằm ở repository root.
+    QA_PROJECT_DIR = 'qa'
+    BASE_URL     = credentials('base-url')
+    API_BASE_URL = credentials('api-base-url')
+    TEST_USER    = credentials('test-user')
+    TEST_PASS    = credentials('test-pass')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+
+    stage('Validate QA project layout') {
+      steps {
+        sh '''
+          set -eu
+          test -f "$QA_PROJECT_DIR/package.json" || { echo "CI project missing: $QA_PROJECT_DIR/package.json"; exit 1; }
+          test -f "$QA_PROJECT_DIR/package-lock.json" || { echo "Lockfile missing: commit $QA_PROJECT_DIR/package-lock.json because CI uses npm ci"; exit 1; }
+          test -f "$QA_PROJECT_DIR/dependency-versions.json" || { echo "Toolchain manifest missing: $QA_PROJECT_DIR/dependency-versions.json"; exit 1; }
+          test -f "$QA_PROJECT_DIR/quality-gates.json" || { echo "Quality gate missing: $QA_PROJECT_DIR/quality-gates.json"; exit 1; }
+          test -f "$QA_PROJECT_DIR/.eslintrc.cjs" || { echo "ESLint config missing: $QA_PROJECT_DIR/.eslintrc.cjs"; exit 1; }
+          test -f "$QA_PROJECT_DIR/scripts/qa.mjs" || { echo "QA runner missing: $QA_PROJECT_DIR/scripts/qa.mjs"; exit 1; }
+          test -f "$QA_PROJECT_DIR/scripts/ci-preflight.mjs" || { echo "CI preflight missing: $QA_PROJECT_DIR/scripts/ci-preflight.mjs"; exit 1; }
+          test -f "$QA_PROJECT_DIR/scripts/execution-lock.mjs" || { echo "Execution lock missing: $QA_PROJECT_DIR/scripts/execution-lock.mjs"; exit 1; }
+          test -f "$QA_PROJECT_DIR/fixtures/parallel-pool.js" || { echo "Parallel pool contract missing: $QA_PROJECT_DIR/fixtures/parallel-pool.js"; exit 1; }
+          cd "$QA_PROJECT_DIR"
+          node scripts/check-placeholders.mjs
+        '''
+      }
+    }
+
+    stage('Install') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") {
+          sh 'npm run toolchain:check'
+          sh 'npm ci'
+          sh 'npm run qa:install:browsers -- --browser chromium --with-deps'
+        }
+      }
+    }
+
+    stage('Lint') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") { sh 'npm run qa:lint' }
+      }
+    }
+
+    stage('Quality gate configuration') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") { sh 'npm run quality-gate:config' }
+      }
+    }
+
+    stage('Placeholder check') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") { sh 'npm run placeholder-check' }
+      }
+    }
+
+    stage('CI input preflight') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") {
+          sh 'npm run qa:preflight -- --surface all --require-auth'
+        }
+      }
+    }
+
+    // Một Playwright invocation tránh UI/API ghi đè reports trong cùng workspace.
+    // Playwright workers vẫn chạy file song song theo account/data capacity an toàn.
+    stage('Test (UI + API + functional)') {
+      steps {
+        dir("${env.QA_PROJECT_DIR}") {
+          sh 'npm run qa:test -- --surface all --project=chromium'
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      script {
+        def qualityStatus
+        def reportStatus
+        def artifactStatus
+        dir("${env.QA_PROJECT_DIR}") {
+          qualityStatus = sh(script: 'npm run qa:quality -- --surface all --project=chromium', returnStatus: true)
+          reportStatus = sh(script: 'npm run qa:report', returnStatus: true)
+          artifactStatus = sh(
+            script: '''
+              set -eu
+              test -f reports/playwright.json
+              test -f reports/junit.xml
+              test -f reports/quality-gate.json
+              test -f reports/allure-contract.json
+              find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+            ''',
+            returnStatus: true
+          )
+        }
+        if (qualityStatus != 0 || reportStatus != 0 || artifactStatus != 0) {
+          currentBuild.result = 'FAILURE'
+        }
+      }
+      // Archive trace + screenshot + report khi fail
+      archiveArtifacts artifacts: "${env.QA_PROJECT_DIR}/reports/**, ${env.QA_PROJECT_DIR}/evidence/**, ${env.QA_PROJECT_DIR}/test-results/**, ${env.QA_PROJECT_DIR}/quality-gates.json", allowEmptyArchive: false
+      // JUnit report — hiển thị test results trong Jenkins UI
+      junit testResults: "${env.QA_PROJECT_DIR}/reports/junit.xml", allowEmptyResults: false
+      // Allure report qua Allure Jenkins plugin (cài plugin + allure commandline):
+      // allure includeProperties: false, results: [[path: 'reports/allure-results']]
+      // Clean workspace khi xong (tuỳ chọn)
+      // cleanWs()
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────

@@ -1,0 +1,67 @@
+engine: auto
+testType: load
+# For a volume run, change testType to volume and add dataProfile below
+# dataProfile:
+#   datasetReference: PERF-DATA-100K
+#   records: 100000
+#   cleanup: remove the isolated tenant after the run
+#   integrityCheck: compare count and checksum with the seed manifest
+# For a scalability run, change testType to scalability and add one profile
+# per approved capacity comparison group
+# scalability:
+#   comparisonGroup: checkout-capacity-v1
+#   profile: baseline-2-replicas
+#   resourceReference: 2 application replicas and 4 vCPU
+#   expectedCapacity:
+#     minUsers: 100
+
+target:
+  environment: qa
+  baseUrl: https://qa.example.com
+  owner: system-owner
+  authorizationReference: PERF-APPROVAL-001
+  production: false
+
+workload:
+  model: concurrent-users
+  users: 10
+  rampUp: 30s
+  holdDuration: 2m
+  rampDown: 30s
+  thinkTime: 1s
+
+thresholds:
+  p95Ms: 1000
+  p99Ms: 2000
+  maxErrorRate: 0.01
+  minRequestsPerSecond: 1
+  abortOnFailure: false
+
+testData:
+  file: data/users.csv
+  variables: email,password
+  uniquePerUser: true
+
+script:
+  path: null
+
+requests:
+  - name: Health
+    method: GET
+    path: /health
+    expectedStatus: 200
+    responseContains: ok
+
+safety:
+  maxUsers: 100
+  abortConditions:
+    - error rate exceeds the agreed limit
+    - service health check fails
+  cleanup: no mutated test data
+  monitoring: service dashboard
+
+report:
+  html: true
+  markdown: true
+  json: true
+  keepRawResult: true

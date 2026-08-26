@@ -1,0 +1,21 @@
+{
+  "android": {
+    "platformName": "Android",
+    "appium:automationName": "UiAutomator2",
+    "appium:deviceName": "Android Device",
+    "appium:udid": "REPLACE_WITH_RUNTIME_DEVICE_ID",
+    "appium:app": "/absolute/path/to/app.apk",
+    "appium:noReset": false,
+    "appium:newCommandTimeout": 120,
+    "appium:autoGrantPermissions": false
+  },
+  "ios": {
+    "platformName": "iOS",
+    "appium:automationName": "XCUITest",
+    "appium:deviceName": "iPhone Simulator or Device",
+    "appium:udid": "REPLACE_WITH_RUNTIME_DEVICE_ID",
+    "appium:app": "/absolute/path/to/app.app",
+    "appium:noReset": false,
+    "appium:newCommandTimeout": 120
+  }
+}

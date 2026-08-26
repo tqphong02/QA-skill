@@ -1,0 +1,28 @@
+{
+  "_comment": "Mẫu input chuẩn cho work-items/log-bug.py. Không ghi mật khẩu, API key, cookie hoặc token. Luôn chạy --dry-run trước khi tạo.",
+  "url": "https://plane.example.com/workspace-slug/projects/project-uuid/issues/",
+  "project_id": "project-uuid",
+  "assignees": ["assignee-user-uuid"],
+  "cycle_id": "cycle-uuid",
+  "evidence_dir": "evidence",
+  "bugs": [
+    {
+      "sprint": "W25",
+      "module": "Catalog",
+      "symptom": "Danh sách dữ liệu trống dù vẫn có bản ghi",
+      "priority": "high",
+      "os": "Windows 11",
+      "browser": "Chrome 126",
+      "environment": "UAT",
+      "url": "https://uat.example.com/items",
+      "test_account": "qa-user@example.com",
+      "test_data": "Có ít nhất một bản ghi đang hoạt động",
+      "precondition": ["Đã đăng nhập bằng tài khoản QA", "Dữ liệu test đã tồn tại"],
+      "steps": ["Mở trang danh sách", "Quan sát giao diện và tab Network"],
+      "expected": ["Danh sách hiển thị đầy đủ dữ liệu", "Nếu tải lỗi thì hiển thị thông báo và nút thử lại"],
+      "actual": ["Danh sách trống dù dữ liệu vẫn tồn tại", "API danh sách trả lỗi"],
+      "technical_note": "GET /api/items trả 500.",
+      "evidence": ["W25-10_items_empty.png"]
+    }
+  ]
+}

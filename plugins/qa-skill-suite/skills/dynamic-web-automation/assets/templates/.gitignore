@@ -1,0 +1,93 @@
+# ─────────────────────────────────────────────────────────────
+# Dependencies
+# ─────────────────────────────────────────────────────────────
+node_modules/
+.pnp/
+.pnp.js
+
+# ─────────────────────────────────────────────────────────────
+# Build output
+# ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# ─────────────────────────────────────────────────────────────
+# Test output (runtime-generated)
+# ─────────────────────────────────────────────────────────────
+# Playwright reports
+reports/
+ci-artifacts/
+test-results/
+evidence/
+playwright-report/
+blob-report/
+
+# Allure results (raw data, regenerate report from these)
+reports/allure-results/
+# Coverage
+coverage/
+*.lcov
+.nyc_output/
+
+# ─────────────────────────────────────────────────────────────
+# Sessions & runtime data (generated; may contain secrets/data)
+# ─────────────────────────────────────────────────────────────
+sessions/
+runtime-data/
+
+# ─────────────────────────────────────────────────────────────
+# Environment & secrets
+# ─────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+
+# Secrets files
+*.pem
+*.key
+*.p12
+secrets/
+
+# ─────────────────────────────────────────────────────────────
+# IDE & OS
+# ─────────────────────────────────────────────────────────────
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────────────────────────────────────
+# Logs
+# ─────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─────────────────────────────────────────────────────────────
+# Cache
+# ─────────────────────────────────────────────────────────────
+.cache/
+.parcel-cache/
+.eslintcache
+.turbo/
+.rpt2_cache/
+
+# ─────────────────────────────────────────────────────────────
+# Playwright-specific
+# ─────────────────────────────────────────────────────────────
+playwright/.cache/
+playwright/.last-run.json

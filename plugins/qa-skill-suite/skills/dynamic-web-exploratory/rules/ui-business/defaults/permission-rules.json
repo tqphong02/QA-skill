@@ -1,0 +1,21 @@
+{
+  "ruleCategory": "permission",
+  "rules": [
+    {
+      "id": "PERM-001",
+      "name": "Approve Button Role Visibility",
+      "intent": "APPROVE",
+      "allowedRoles": ["ADMIN", "MANAGER"],
+      "forbiddenRoles": ["STAFF", "GUEST"],
+      "policyWhenForbidden": "HIDE_OR_DISABLE",
+      "questionTemplate": "Role {userRole} có được phép nhìn thấy nút {label} không, hay button phải bị ẩn/disabled"
+    },
+    {
+      "id": "PERM-002",
+      "name": "Sidebar Menu Permission Match",
+      "intent": "NAVIGATE",
+      "policyWhenForbidden": "HIDE",
+      "questionTemplate": "Menu {label} có yêu cầu permission guard ở backend không và role nào được phép xem"
+    }
+  ]
+}

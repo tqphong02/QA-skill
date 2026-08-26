@@ -1,0 +1,53 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test output (Playwright)
+test-results/
+playwright-report/
+playwright/.cache/
+blob-report/
+playwright/.auth/
+/playwright/.last-run.json
+
+# Allure
+allure-results/
+allure-report/
+
+# Screenshots / video / traces
+screenshots/
+videos/
+traces/
+evidence/
+
+# Secret (defensive)
+.env
+.env.local
+*.env
+auth.json
+*service-account*.json
+*credentials*.json
+
+# CI/CD secrets (template nếu lỡ commit)
+.github/workflows/*.local.yml
+secrets/
+
+# Backup
+*.bak
+*.tmp
+*.orig

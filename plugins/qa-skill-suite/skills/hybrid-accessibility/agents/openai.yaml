@@ -1,0 +1,4 @@
+interface:
+  display_name: "Accessibility QA"
+  short_description: "Test WCAG, keyboard, focus, and screen readers"
+  default_prompt: "Use $hybrid-accessibility to audit this user flow for WCAG and keyboard accessibility."

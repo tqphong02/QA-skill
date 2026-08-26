@@ -1,0 +1,12 @@
+# Local credentials and configuration
+.env
+.env.*
+!.env.example
+config.env
+
+# Browser authentication state
+auth.json
+*.auth.json
+storage-state*.json
+*.storage-state.json
+plane-browser-state*.json

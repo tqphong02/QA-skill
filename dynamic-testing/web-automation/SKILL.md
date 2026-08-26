@@ -1,6 +1,6 @@
 ---
 name: dynamic-web-automation
-description: Build and run deterministic manifest-driven Playwright automation for UI, API, and composed functional flows with maintainable POM/module clients, exact coverage, canonical evidence, and PASS, FAILED, N/A, or UNTEST verdicts. Trigger on deterministic testcase, Excel, Sheet, Playwright, POM, API automation, BUILD, RUN, or BUILD_AND_RUN. Do not use for authoring-only testcases, contract-only API validation, exploratory QA, accessibility, visual design review, or performance testing.
+description: Build and run deterministic manifest-driven Playwright automation for UI, API, and composed functional flows with maintainable POM/module clients, exact coverage, canonical evidence, and PASS, FAILED, N/A, or UNTEST verdicts. Trigger on deterministic testcase, Excel, Sheet, Playwright, POM, API automation, BUILD, RUN, or BUILD_AND_RUN. Auto-route; do not require the skill name. Do not use for authoring-only testcases, contract-only API validation, exploratory QA, accessibility, visual design review, or performance testing.
 mode: dynamic
 surface: web
 role: executor
@@ -22,7 +22,7 @@ Turn a bounded `.automation.json` manifest into maintainable Playwright code, ex
 
 ## Canonical workflow
 
-1. Run `npm run testcase-workflow -- --phase plan ...`. UI coverage is mandatory by default
+1. Run `npm run testcase-workflow -- --phase plan ...` through `scripts/run-testcase-pom.mjs`; the workflow invokes the `pom-plan` contract. UI coverage is mandatory by default
 2. For UI/functional, create a current-build Browser MCP `UI_FUNCTION_INVENTORY` covering every allowed route, role, and state. For API/functional, require method, path, auth, expected status, schemas, mutation ownership, and cleanup in the manifest
 3. Run `--phase build` or the default `--phase build-and-run`. The deterministic generator emits only the artifacts required by the selected surface
 4. Bootstrap the pinned local toolchain and pass runtime scaffold, module layout, placeholder, TypeScript/ESLint, traceability, UI coverage, and API operation coverage gates as applicable

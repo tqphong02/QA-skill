@@ -65,7 +65,7 @@ REQUIRED = {
         "Postman MCP",
         "mcp_not_configured",
         "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
-        "Deterministic Sheet execution = unified POM BUILD_AND_RUN",
+        "Deterministic Sheet/API automation execution = unified POM BUILD_AND_RUN",
         "Generic browser task",
         "no business brief is required",
         "deterministic Sheet/testcase routes exit to `dynamic-web-automation`",
@@ -93,7 +93,7 @@ REQUIRED = {
         "Postman MCP",
         "mcp_not_configured",
         "`DISCOVERY_CORE` = Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
-        "Deterministic Sheet execution = unified POM BUILD_AND_RUN",
+        "Deterministic Sheet/API automation execution = unified POM BUILD_AND_RUN",
         "Generic browser task",
         "không cần business brief",
         "deterministic Sheet/testcase chuyển sang `dynamic-web-automation`",
@@ -118,7 +118,7 @@ REQUIRED = {
         "Chrome DevTools or k6 MCP",
         "exact failing layer",
         "`DISCOVERY_CORE` is Scoped Business Discovery + Exploratory + Ad-hoc + UI/UX",
-        "Deterministic Sheet/testcase execution uses the single `dynamic-web-automation` BUILD_AND_RUN workflow",
+        "Deterministic Sheet/testcase and API automation execution uses the single `dynamic-web-automation` BUILD_AND_RUN workflow",
         "UI-first exploratory/ad-hoc",
         "brief is optional enrichment",
         "READY` Business Execution Brief",
@@ -337,7 +337,7 @@ REQUIRED = {
         "AUTOMATION_SOURCE",
         "RBAC",
         "BUILD_AND_RUN",
-        "PASS`, `FAILED`, `N/A` or `UNTEST",
+        "PASS`, `FAILED`, `N/A`, or `UNTEST",
         "scripts/run-testcase-pom.mjs",
     ],
     "dynamic-testing/web-automation/assets/templates/scripts/run-testcase-pom.mjs": [
@@ -812,16 +812,6 @@ REQUIRED = {
         '"${1:-}"',
         "sys.argv[1]",
         "sys.argv[2]",
-    ],
-    "dynamic-testing/web-automation/assets/templates/tests/performance/k6-load-test.js": [
-        "PERFORMANCE_CONTRACT",
-        "K6_LOAD_APPROVED",
-        "target: 1",
-        "authorization_reference",
-        "abort_conditions",
-    ],
-    "dynamic-testing/web-automation/assets/templates/package.json": [
-        '"@axe-core/playwright"',
     ],
 }
 

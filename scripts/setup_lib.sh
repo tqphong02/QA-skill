@@ -141,7 +141,7 @@ detect_os() {
 # ==== Python check (no abort — print version + warn) ====
 # Returns: python_version string ("3.11.9" / "9.9" / "")
 check_python() {
-  local candidates=("python3.12" "python3.11" "python3.10" "python3" "/usr/bin/python3" "/usr/local/bin/python3")
+  local candidates=("python3.12" "python3.11" "python3.10" "python3" "python" "/usr/bin/python3" "/usr/local/bin/python3")
   for py in "${candidates[@]}"; do
     if command -v "$py" >/dev/null 2>&1; then
       local v
@@ -652,7 +652,7 @@ requires_python_packages() {
 
 install_python_deps() {
   local py_bin=""
-  for py in python3.11 python3.12 python3.10 python3 "/usr/bin/python3"; do
+  for py in python3.11 python3.12 python3.10 python3 python "/usr/bin/python3"; do
     if command -v "$py" >/dev/null 2>&1; then
       local v
       v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
@@ -783,7 +783,7 @@ setup_selected_integrations() {
 
   local py_bin=""
   local py
-  for py in python3.11 python3.12 python3.10 python3; do
+  for py in python3.11 python3.12 python3.10 python3 python; do
     command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
   done
 
@@ -909,7 +909,7 @@ verify_installation() {
 
   # 1. AI provider status (works as long as python3 anywhere)
   local py_bin=""
-  for py in python3.11 python3.12 python3.10 python3; do
+  for py in python3.11 python3.12 python3.10 python3 python; do
     command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
   done
   if [[ -n "$py_bin" ]] && [[ -f "$REPO_DIR/scripts/ai_provider.py" ]] && [[ -z "${TARGET_AGENT:-}" || "$TARGET_AGENT" == "auto" ]]; then

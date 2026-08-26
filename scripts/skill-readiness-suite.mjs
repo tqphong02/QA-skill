@@ -38,6 +38,51 @@ const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-senior-'))
 const RUN_ID = `${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}-${process.pid}`
 const DEFAULT_OUTPUT_DIR = resolveReadinessOutputDir()
 
+function executableWorks(command, args = ['--version']) {
+  if (!command) return false
+  const probe = spawnSync(command, args, { encoding: 'utf8', windowsHide: true })
+  return !probe.error && probe.status === 0
+}
+
+function resolvePythonRuntime() {
+  const candidates = process.platform === 'win32'
+    ? [
+        { command: process.env.QA_SKILL_PYTHON, prefix: [] },
+        { command: 'python', prefix: [] },
+        { command: 'py', prefix: ['-3'] },
+      ]
+    : [
+        { command: process.env.QA_SKILL_PYTHON, prefix: [] },
+        { command: 'python3', prefix: [] },
+        { command: 'python', prefix: [] },
+      ]
+  return candidates.find(candidate => executableWorks(candidate.command, [...candidate.prefix, '--version'])) || null
+}
+
+function resolveBashRuntime() {
+  const candidates = process.platform === 'win32'
+    ? [process.env.QA_SKILL_BASH, 'C:\\Program Files\\Git\\bin\\bash.exe', 'C:\\Program Files\\Git\\usr\\bin\\bash.exe']
+    : [process.env.QA_SKILL_BASH, 'bash']
+  return candidates.find(candidate => executableWorks(candidate, ['--version'])) || null
+}
+
+function resolveNodePackageRuntime(name) {
+  if (process.platform !== 'win32') return { command: name, prefix: [] }
+  const configured = process.env[`QA_SKILL_${name.toUpperCase()}_CLI`]
+  const candidates = [
+    configured,
+    path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', `${name}-cli.js`),
+    path.join('C:\\Program Files\\nodejs', 'node_modules', 'npm', 'bin', `${name}-cli.js`),
+  ].filter(Boolean)
+  const cli = candidates.find(candidate => fs.existsSync(candidate))
+  return cli ? { command: process.execPath, prefix: [cli] } : { command: name, prefix: [] }
+}
+
+const PYTHON_RUNTIME = resolvePythonRuntime()
+const BASH_RUNTIME = resolveBashRuntime()
+const NPM_RUNTIME = resolveNodePackageRuntime('npm')
+const NPX_RUNTIME = resolveNodePackageRuntime('npx')
+
 function parseArgs(argv) {
   const args = { outputDir: DEFAULT_OUTPUT_DIR, strictLive: false }
   for (let index = 0; index < argv.length; index += 1) {
@@ -86,7 +131,21 @@ function compactOutput(value, maxLines = 12) {
 
 function runCommand(command, args = [], options = {}) {
   const started = Date.now()
-  const result = spawnSync(command, args, {
+  let resolvedCommand = command
+  let resolvedArgs = args
+  if (command === 'python3' && PYTHON_RUNTIME) {
+    resolvedCommand = PYTHON_RUNTIME.command
+    resolvedArgs = [...PYTHON_RUNTIME.prefix, ...args]
+  } else if (command === 'bash' && BASH_RUNTIME) {
+    resolvedCommand = BASH_RUNTIME
+  } else if (command === 'npm') {
+    resolvedCommand = NPM_RUNTIME.command
+    resolvedArgs = [...NPM_RUNTIME.prefix, ...args]
+  } else if (command === 'npx') {
+    resolvedCommand = NPX_RUNTIME.command
+    resolvedArgs = [...NPX_RUNTIME.prefix, ...args]
+  }
+  const result = spawnSync(resolvedCommand, resolvedArgs, {
     cwd: options.cwd || ROOT,
     env: options.env || safeEnv(),
     encoding: 'utf8',
@@ -96,7 +155,7 @@ function runCommand(command, args = [], options = {}) {
   })
   const output = [result.stdout, result.stderr].filter(Boolean).join('\n')
   return {
-    command: [command, ...args].join(' '),
+    command: [resolvedCommand, ...resolvedArgs].join(' '),
     code: result.error ? (result.error.code || 'SPAWN_ERROR') : result.status,
     signal: result.signal || null,
     elapsedMs: Date.now() - started,
@@ -153,9 +212,20 @@ function parseSkillFrontmatter(content) {
   const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)
   if (!match) return null
   const frontmatter = {}
-  for (const line of match[1].split('\n')) {
-    const field = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/)
-    if (field) frontmatter[field[1]] = field[2].trim().replace(/^['"]|['"]$/g, '')
+  const lines = match[1].split(/\r?\n/)
+  for (let index = 0; index < lines.length; index += 1) {
+    const field = lines[index].match(/^([A-Za-z0-9_-]+):\s*(.*)$/)
+    if (!field) continue
+    let value = field[2].trim()
+    if (/^[>|][-+]?$/u.test(value)) {
+      const continuation = []
+      while (index + 1 < lines.length && (/^\s+/.test(lines[index + 1]) || lines[index + 1].trim() === '')) {
+        continuation.push(lines[index + 1].trim())
+        index += 1
+      }
+      value = continuation.filter(Boolean).join(' ')
+    }
+    frontmatter[field[1]] = value.replace(/^['"]|['"]$/g, '')
   }
   return { values: frontmatter, body: content.slice(match[0].length) }
 }
@@ -480,7 +550,24 @@ function pomChecks(skill) {
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
   const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: skillPath('dynamic-web-automation'), env: safeEnv({ npm_config_offline: 'true' }), timeout: 90000 })
   commandPass(skill, 'POM template TypeScript compile', tsc, 'template-only compile')
-  const qualityGate = runCommand(process.execPath, [path.join(templateRoot, 'scripts/quality-gate.mjs'), '--config', path.join(templateRoot, 'quality-gates.json'), '--report', path.join(templateRoot, 'reports/playwright.sample.json'), '--output', path.join(TMP_ROOT, 'quality-gate.json')], { cwd: ROOT, timeout: 30000 })
+  const qualityFixture = path.join(TMP_ROOT, 'playwright.quality-gate.json')
+  const qualityTests = []
+  for (const projectName of ['chromium', 'firefox']) {
+    for (const surface of ['ui', 'api', 'functional']) {
+      qualityTests.push({
+        title: `TC-${projectName}-${surface} @${surface}`,
+        testId: `${projectName}-${surface}`,
+        projectName,
+        results: [{
+          status: 'passed',
+          duration: 10,
+          attachments: surface === 'api' ? [] : [{ name: 'evidence-image', path: `${projectName}-${surface}.png` }],
+        }],
+      })
+    }
+  }
+  fs.writeFileSync(qualityFixture, `${JSON.stringify({ suites: [{ title: 'readiness', tests: qualityTests }] }, null, 2)}\n`)
+  const qualityGate = runCommand(process.execPath, [path.join(templateRoot, 'scripts/quality-gate.mjs'), '--config', path.join(templateRoot, 'quality-gates.json'), '--report', qualityFixture, '--output', path.join(TMP_ROOT, 'quality-gate.json')], { cwd: ROOT, timeout: 30000 })
   commandPass(skill, 'automation quality gate fixture', qualityGate, 'failed/flaky/evidence/duration/coverage gate fixture')
   runNodeTestFiles(skill, [skillPath('dynamic-web-automation', 'tests')], ROOT)
   addIntegration(skill, 'BLOCKED', 'no application URL, test account or approved browser target was supplied; template compilation is not a live UI certification')

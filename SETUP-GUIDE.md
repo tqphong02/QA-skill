@@ -14,6 +14,36 @@ Các runner như k6, JMeter, Appium và MCP server chỉ cần cài khi task tư
 
 ## 2. Clone repository
 
+### Private plugin + standalone IDE skills + cleanup tự động
+
+Luồng khuyến nghị cho laptop cá nhân mới là chạy từ thư mục cha của clone:
+
+```bash
+git clone git@github.com:tqphong02/QA-skill.git QA-skill
+node QA-skill/scripts/install-private-plugin.mjs --cleanup-source
+```
+
+Trên Windows PowerShell dùng cùng luồng:
+
+```powershell
+git clone git@github.com:tqphong02/QA-skill.git QA-skill
+node .\QA-skill\scripts\install-private-plugin.mjs --cleanup-source
+```
+
+Installer tạo bản plugin bền vững tại `$HOME/plugins/qa-skill-suite`, đăng ký marketplace riêng tại `$HOME/.agents/plugins/marketplace.json`, cài plugin bằng Codex CLI và đồng thời copy 23 standalone skills vào `$HOME/.agents/skills` cho Codex IDE. Folder clone chỉ bị xóa sau khi toàn bộ kiểm tra thành công và `git status` chứng minh clone không chứa file sửa, untracked hoặc ignored.
+
+Plugin không được public. Codex CLI/Desktop dùng plugin sau khi mở phiên mới; Codex IDE extension dùng standalone skills global vì IDE không hỗ trợ plugin.
+
+Để kiểm tra trước mà không thay đổi filesystem:
+
+```bash
+node QA-skill/scripts/install-private-plugin.mjs --dry-run
+```
+
+Để giữ clone phục vụ `git pull` và cập nhật sau này, không truyền `--cleanup-source`.
+
+### Clone để phát triển hoặc cài thủ công
+
 ```bash
 git clone git@github.com:tqphong02/QA-skill.git
 cd QA-skill

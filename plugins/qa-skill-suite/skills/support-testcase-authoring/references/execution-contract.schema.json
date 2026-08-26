@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://qa-skill.local/schemas/testcase-execution-contract-v1.json",
+  "title": "Testcase execution contract",
+  "type": "object",
+  "required": ["version", "mutates", "entry", "steps", "outcome"],
+  "properties": {
+    "version": { "const": 1 },
+    "mutates": { "type": "boolean" },
+    "entry": {
+      "type": "object",
+      "required": ["environment", "screen", "route", "role", "state", "permissions", "data"],
+      "properties": {
+        "environment": { "type": "string", "minLength": 1 },
+        "screen": { "type": "string", "minLength": 1 },
+        "route": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "role_key": { "type": "string", "pattern": "^[a-z][a-z0-9_-]*$" },
+        "rbac_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "state": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+          ]
+        },
+        "permissions": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1 }
+          ]
+        },
+        "data": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "array", "minItems": 1 },
+            { "type": "object", "minProperties": 1 }
+          ]
+        },
+        "setup": { "type": ["array", "string"] }
+      },
+      "additionalProperties": true
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "action", "instruction"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^S[0-9]{2,}$" },
+          "action": {
+            "enum": ["navigate", "fill", "clear", "select", "check", "uncheck", "click", "press", "upload", "wait", "observe", "assert"]
+          },
+          "instruction": { "type": "string", "minLength": 1 },
+          "target": {
+            "type": "object",
+            "required": ["key", "kind", "name"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "kind": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 },
+              "role": { "type": "string" },
+              "label": { "type": "string" },
+              "placeholder": { "type": "string" },
+              "test_id": { "type": "string" },
+              "id": { "type": "string" },
+              "route": { "type": "string" },
+              "selector_evidence": { "$ref": "#/$defs/selectorEvidence" }
+            },
+            "additionalProperties": true
+          },
+          "value": {},
+          "wait_for": {
+            "type": "object",
+            "required": ["kind", "text"],
+            "properties": {
+              "kind": { "type": "string", "minLength": 1 },
+              "text": { "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": true
+          },
+          "assertions": {
+            "type": "array",
+            "items": { "$ref": "#/$defs/assertion" }
+          }
+        },
+        "additionalProperties": true,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": { "enum": ["fill", "select", "press", "upload"] }
+              },
+              "required": ["action"]
+            },
+            "then": { "required": ["value"] }
+          }
+        ]
+      }
+    },
+    "outcome": {
+      "type": "object",
+      "required": ["assertions"],
+      "properties": {
+        "state": { "type": "string" },
+        "route": { "type": "string" },
+        "assertions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/assertion" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "cleanup": {}
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "assertion": {
+      "type": "object",
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "type": "string" },
+        "target": { "type": "string" },
+        "target_name": { "type": "string" },
+        "value": {},
+        "expected": {},
+        "text": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "selectorEvidence": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["unresolved", "runtime_verified", "not_applicable"] },
+        "strategy": { "type": "string" },
+        "locator": { "type": "string" },
+        "reason": { "type": "string" },
+        "verification": {
+          "type": "object",
+          "properties": {
+            "count": { "const": 1 },
+            "visible": { "type": "boolean" },
+            "actionable": { "type": "boolean" }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mutates": { "const": true } }, "required": ["mutates"] },
+      "then": { "required": ["cleanup"] }
+    }
+  ]
+}

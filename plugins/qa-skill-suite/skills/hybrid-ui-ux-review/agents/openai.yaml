@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI/UX Design QA"
+  short_description: "Review UI/UX and measurable usability"
+  default_prompt: "Use $hybrid-ui-ux-review to audit design intent, responsive states, visual evidence, and structured usability tasks with success, time, error and comprehension metrics."

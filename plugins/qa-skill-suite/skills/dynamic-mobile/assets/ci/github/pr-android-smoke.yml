@@ -1,0 +1,102 @@
+name: PR Android Smoke
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-android-smoke-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      EXECUTION_TARGET: ci-emulator
+      ANDROID_UDID: emulator-5554
+      ANDROID_APP_PATH: ${{ github.workspace }}/artifacts/app-debug.apk
+      APPIUM_HOME: ${{ github.workspace }}/.appium
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install test dependencies
+        run: npm ci
+
+      - name: Build authorized Android test app
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ ! -x scripts/build-android-test-app.sh ]; then
+            echo "BLOCKED: scripts/build-android-test-app.sh is missing or not executable"
+            exit 1
+          fi
+          mkdir -p "$(dirname "$ANDROID_APP_PATH")"
+          scripts/build-android-test-app.sh "$ANDROID_APP_PATH"
+          if [ ! -s "$ANDROID_APP_PATH" ]; then
+            echo "BLOCKED: build adapter did not create $ANDROID_APP_PATH"
+            exit 1
+          fi
+          shasum -a 256 "$ANDROID_APP_PATH"
+
+      - name: Install Appium Android driver
+        run: npx appium driver install uiautomator2
+
+      - name: Enable KVM permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' |
+            sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Boot emulator and run smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          emulator-options: >-
+            -no-window
+            -no-snapshot
+            -no-audio
+            -no-boot-anim
+          disable-animations: true
+          script: |
+            chmod +x scripts/check-device-target.sh
+            scripts/check-device-target.sh
+            npm run test:mobile:smoke
+
+      - name: Upload mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-smoke-evidence-${{ github.run_id }}
+          path: |
+            artifacts/
+            reports/
+            screenshots/
+            logs/
+          retention-days: 14
+          if-no-files-found: warn

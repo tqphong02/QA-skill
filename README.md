@@ -141,6 +141,33 @@ Evaluation cases và pass criteria nằm trong [MODEL-COMPATIBILITY.md](./MODEL-
 
 ## Cài đặt (máy mới)
 
+### Cài private plugin và tự dọn bản clone
+
+Chạy từ thư mục cha, không `cd` vào repository. Repository GitHub phải để private:
+
+```bash
+git clone git@github.com:tqphong02/QA-skill.git QA-skill
+node QA-skill/scripts/install-private-plugin.mjs --cleanup-source
+```
+
+Lệnh này thực hiện theo thứ tự:
+
+1. Xác minh bundle có đúng 23 skill và khớp registry
+2. Cài standalone skills vào `$HOME/.agents/skills` để Codex IDE tự dùng
+3. Cài private plugin vào `$HOME/plugins/qa-skill-suite`
+4. Đăng ký personal marketplace và chạy `codex plugin add qa-skill-suite@personal`
+5. Chỉ xóa folder `QA-skill` vừa clone khi plugin, marketplace và 23 standalone skills đều đã được xác minh
+
+Nếu clone có file sửa, file untracked hoặc file ignored, cleanup sẽ bị từ chối để tránh mất dữ liệu. Codex IDE extension không hỗ trợ plugin nên dùng standalone skills đã cài ở bước 2; Codex CLI/Desktop dùng plugin. Mở phiên Codex mới sau khi cài.
+
+Muốn giữ repository để cập nhật bằng `git pull`, bỏ `--cleanup-source`:
+
+```bash
+node QA-skill/scripts/install-private-plugin.mjs
+```
+
+### Cài standalone skills theo cách truyền thống
+
 ```bash
 # 1. Clone
 git clone git@github.com:tqphong02/QA-skill.git

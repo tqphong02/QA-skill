@@ -1,0 +1,52 @@
+{
+  "name": "API smoke and load (engine fixture)",
+  "base_url": "https://staging.example.com",
+  "threads": 1,
+  "ramp_up_seconds": 1,
+  "loops": 1,
+  "duration_seconds": 0,
+  "think_time_ms": 250,
+  "think_time_variation_ms": 100,
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+  },
+  "csv": {
+    "filename": "data/users.csv",
+    "variable_names": "email,password",
+    "delimiter": ",",
+    "recycle": true,
+    "stop_thread": false,
+    "share_mode": "shareMode.all"
+  },
+  "requests": [
+    {
+      "name": "Login",
+      "method": "POST",
+      "path": "/api/login",
+      "body": {
+        "email": "${email}",
+        "password": "${password}"
+      },
+      "expected_status": 200,
+      "response_contains": "access_token",
+      "json_extractors": [
+        {
+          "name": "access_token",
+          "json_path": "$.access_token",
+          "match_number": 1,
+          "default": "NOT_FOUND"
+        }
+      ]
+    },
+    {
+      "name": "Current user",
+      "method": "GET",
+      "path": "/api/me",
+      "headers": {
+        "Authorization": "Bearer ${access_token}"
+      },
+      "expected_status": 200
+    }
+  ]
+}

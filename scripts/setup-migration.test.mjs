@@ -8,9 +8,46 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SETUP = path.join(ROOT, 'scripts', 'setup.sh')
+const TEMP_BASE = process.env.QA_SKILL_TEST_TMP
+  ? path.resolve(process.env.QA_SKILL_TEST_TMP)
+  : process.platform === 'win32'
+    ? path.join(ROOT, '.tmp')
+    : os.tmpdir()
+fs.mkdirSync(TEMP_BASE, { recursive: true })
+
+function makeTempRoot(prefix) {
+  return fs.mkdtempSync(path.join(TEMP_BASE, prefix))
+}
+
+function resolveBash() {
+  const candidates = process.platform === 'win32'
+    ? [
+        process.env.QA_SKILL_BASH,
+        path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Git', 'bin', 'bash.exe'),
+        path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Git', 'bin', 'bash.exe'),
+      ]
+    : [process.env.QA_SKILL_BASH, 'bash']
+
+  for (const candidate of candidates) {
+    if (!candidate) continue
+    if (path.isAbsolute(candidate) && !fs.existsSync(candidate)) continue
+    const probe = spawnSync(candidate, ['--version'], { encoding: 'utf8' })
+    if (!probe.error && probe.status === 0) return candidate
+  }
+  throw new Error('Bash runtime not found')
+}
+
+const BASH = resolveBash()
+
+function toBashPath(value) {
+  if (process.platform !== 'win32') return value
+  const normalized = path.resolve(value).replaceAll('\\', '/')
+  const match = /^([A-Za-z]):\/(.*)$/.exec(normalized)
+  return match ? `/${match[1].toLowerCase()}/${match[2]}` : normalized
+}
 
 test('single-skill setup migrates only its legacy alias and installs the canonical skill', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-migration-'))
+  const tempRoot = makeTempRoot('qa-skill-migration-')
   const skillsDir = path.join(tempRoot, 'skills')
   fs.mkdirSync(path.join(skillsDir, 'qa-run'), { recursive: true })
   fs.mkdirSync(path.join(skillsDir, 'plane-qa'), { recursive: true })
@@ -18,12 +55,12 @@ test('single-skill setup migrates only its legacy alias and installs the canonic
   fs.writeFileSync(path.join(skillsDir, 'plane-qa', 'SKILL.md'), 'legacy plane-qa\n')
 
   try {
-    const result = spawnSync('bash', [
-      SETUP,
+    const result = spawnSync(BASH, [
+      toBashPath(SETUP),
       '--agent=codex',
       '--profile=full',
       '--only=dynamic-web-exploratory',
-      `--skills-dir=${skillsDir}`,
+      `--skills-dir=${toBashPath(skillsDir)}`,
       '--skip-deps',
       '--skip-mcp-setup',
       '--yes',
@@ -52,7 +89,7 @@ test('single-skill setup migrates only its legacy alias and installs the canonic
 })
 
 test('dependency SKILL manifests are quarantined outside host discovery', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-nested-'))
+  const tempRoot = makeTempRoot('qa-skill-nested-')
   const skillRoot = path.join(tempRoot, 'dynamic-web-exploratory')
   const nestedRoot = path.join(skillRoot, 'node_modules', 'playwright-core', 'lib', 'tools', 'trace')
   fs.mkdirSync(nestedRoot, { recursive: true })
@@ -68,7 +105,7 @@ test('dependency SKILL manifests are quarantined outside host discovery', () => 
       'source "$REPO_DIR/scripts/setup_lib.sh"',
       'quarantine_nested_skill_manifests "$SKILLS_DIR/dynamic-web-exploratory"',
     ].join('; ')
-    const result = spawnSync('bash', ['-c', script, '_', ROOT, tempRoot], {
+    const result = spawnSync(BASH, ['-c', script, '_', toBashPath(ROOT), toBashPath(tempRoot)], {
       cwd: ROOT,
       encoding: 'utf8',
       env: { ...process.env, NO_COLOR: '1' },
@@ -84,7 +121,7 @@ test('dependency SKILL manifests are quarantined outside host discovery', () => 
 })
 
 test('unchanged dependency manifests reuse node_modules across skill updates', () => {
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-deps-reuse-'))
+  const tempRoot = makeTempRoot('qa-skill-deps-reuse-')
   const skillsDir = path.join(tempRoot, 'skills')
   const installed = path.join(skillsDir, 'dynamic-web-exploratory')
   const source = path.join(ROOT, 'dynamic-testing', 'web-exploratory')
@@ -97,12 +134,12 @@ test('unchanged dependency manifests reuse node_modules across skill updates', (
   fs.writeFileSync(path.join(nested, 'SKILL.md'), 'dependency skill\n')
 
   try {
-    const result = spawnSync('bash', [
-      SETUP,
+    const result = spawnSync(BASH, [
+      toBashPath(SETUP),
       '--agent=codex',
       '--profile=full',
       '--only=dynamic-web-exploratory',
-      `--skills-dir=${skillsDir}`,
+      `--skills-dir=${toBashPath(skillsDir)}`,
       '--skip-deps',
       '--skip-mcp-setup',
       '--yes',

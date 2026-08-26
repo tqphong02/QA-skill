@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "Node16",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "node16",
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "useUnknownInCatchVariables": true,
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    "types": ["node", "@playwright/test"]
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "pages/**/*",
+    "selectors/**/*",
+    "fixtures/**/*",
+    "scripts/**/*",
+    "test-data/**/*",
+    "utils/**/*",
+    "*.ts"
+  ],
+  "exclude": ["node_modules", "reports", "evidence", "sessions", "runtime-data", "test-results", "playwright-report"]
+}

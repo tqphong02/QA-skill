@@ -1,0 +1,26 @@
+{
+  "ruleCategory": "state_transition",
+  "rules": [
+    {
+      "id": "STATE-001",
+      "name": "Direct Status Select vs Workflow",
+      "disallowedDirectEdits": ["APPROVED", "COMPLETED"],
+      "questionTemplate": "Status {status} được thay đổi trực tiếp qua dropdown hay bắt buộc qua action buttons theo quy trình"
+    },
+    {
+      "id": "STATE-002",
+      "name": "Save Draft vs Submit State Distinction",
+      "intents": ["SAVE_DRAFT", "SUBMIT"],
+      "questionTemplate": "Nút Save Draft và Submit tạo ra trạng thái khác nhau như thế nào và field nào là bắt buộc"
+    },
+    {
+      "id": "STATE-003",
+      "name": "Forbidden Completed State Jump",
+      "forbiddenJumps": [
+        { "from": "DRAFT", "to": "COMPLETED" },
+        { "from": "REJECTED", "to": "COMPLETED" }
+      ],
+      "questionTemplate": "Trạng thái Completed có thể đạt được trực tiếp từ {from} không hay bắt buộc qua APPROVED"
+    }
+  ]
+}
