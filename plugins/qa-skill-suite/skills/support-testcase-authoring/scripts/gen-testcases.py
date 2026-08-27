@@ -37,6 +37,20 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
 from openpyxl.formatting.rule import CellIsRule
 
+
+def configure_cli_streams():
+    """Emit deterministic UTF-8 logs when Windows inherits a legacy code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, 'reconfigure', None)
+        if not callable(reconfigure):
+            continue
+        try:
+            reconfigure(encoding='utf-8', errors='replace')
+        except (AttributeError, OSError, ValueError):
+            # Redirected or host-owned streams may not support reconfiguration.
+            pass
+
+
 # Canonical black-box display/execution order — cases are sorted in this order
 # within each scenario. Alternative is optional; when absent the visible order
 # starts with Happy Path, Validation, then Edge Case.
@@ -2589,4 +2603,5 @@ def main():
     print(f"   Cover metadata updated (code={project_code}).")
 
 if __name__ == '__main__':
+    configure_cli_streams()
     main()

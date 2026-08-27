@@ -64,11 +64,14 @@ function normalizeAction(value) {
 function normalizeRoute(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
+  const withoutBasePlaceholder = raw
+    .replace(/^<BASE_URL>/i, '')
+    .replace(/^\{\{BASE_URL\}\}/i, '');
   try {
-    const parsed = new URL(raw);
+    const parsed = new URL(withoutBasePlaceholder);
     return parsed.pathname.replace(/\/+$/, '') || '/';
   } catch {
-    return raw.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
+    return withoutBasePlaceholder.split(/[?#]/, 1)[0].replace(/\/+$/, '') || '/';
   }
 }
 

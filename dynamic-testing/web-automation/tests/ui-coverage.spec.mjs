@@ -84,6 +84,23 @@ test('UI coverage passes when every Browser MCP function maps to a POM target/ac
   }
 });
 
+test('UI coverage normalizes the canonical BASE_URL placeholder to the observed route', () => {
+  const fixture = writeFixture();
+  try {
+    const manifest = JSON.parse(fs.readFileSync(fixture.manifestPath, 'utf8'));
+    manifest.testcases[0].execution.steps[0].target.route = '<BASE_URL>/login';
+    fs.writeFileSync(fixture.manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+    const report = buildUiCoverage({
+      manifestPath: fixture.manifestPath,
+      inventoryPath: fixture.inventoryPath,
+      expectedAppBuild: 'build-001',
+    });
+    assert.equal(report.status, 'PASS', JSON.stringify(report.violations, null, 2));
+  } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
 test('explicit ui_function_keys provide release-grade function mapping', () => {
   const fixture = writeFixture();
   try {

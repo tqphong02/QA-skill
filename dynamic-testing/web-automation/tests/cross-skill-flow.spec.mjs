@@ -18,6 +18,79 @@ function fileSha256(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function writeUiInventory(root) {
+  const inventoryPath = path.join(root, 'ui-function-inventory.json');
+  fs.writeFileSync(inventoryPath, JSON.stringify({
+    schema_version: 1,
+    artifact: 'UI_FUNCTION_INVENTORY',
+    provider: 'playwright-mcp',
+    browser_driver: 'playwright-mcp',
+    browser_observer: 'playwright-mcp',
+    tools_used: ['browser_navigate', 'browser_snapshot', 'browser_evaluate'],
+    mcp: { session_id: 'cross-skill-fixture-session', tools_used: [] },
+    run_id: 'cross-skill-fixture-run',
+    app_build: 'cross-skill-fixture-build',
+    captured_at: new Date().toISOString(),
+    functions: [
+      {
+        function_key: 'LOGIN_PAGE_OPEN',
+        name: 'Open login page',
+        route: '/login',
+        state: 'logged_out',
+        role_key: 'employee',
+        target_keys: ['login_page'],
+        actions: ['navigate'],
+      },
+      {
+        function_key: 'LOGIN_EMAIL_INPUT',
+        name: 'Enter email',
+        route: '/login',
+        state: 'logged_out',
+        role_key: 'employee',
+        target_keys: ['email_input'],
+        actions: ['click', 'fill'],
+      },
+      {
+        function_key: 'LOGIN_FORM_VISIBLE',
+        name: 'Observe login form',
+        route: '/login',
+        state: 'logged_out',
+        role_key: 'employee',
+        target_keys: ['login_form'],
+        actions: ['assert'],
+      },
+      {
+        function_key: 'LOGIN_PASSWORD_INPUT',
+        name: 'Enter password',
+        route: '/login',
+        state: 'logged_out',
+        role_key: 'employee',
+        target_keys: ['password_input'],
+        actions: ['click', 'fill'],
+      },
+      {
+        function_key: 'LOGIN_SUBMIT',
+        name: 'Submit login',
+        route: '/login',
+        state: 'logged_out',
+        role_key: 'employee',
+        target_keys: ['login_submit'],
+        actions: ['click'],
+      },
+      {
+        function_key: 'DASHBOARD_HEADING_VISIBLE',
+        name: 'Observe dashboard heading',
+        route: '/dashboard',
+        state: 'authenticated',
+        role_key: 'employee',
+        target_keys: ['dashboard_heading'],
+        actions: ['assert'],
+      },
+    ],
+  }, null, 2), 'utf8');
+  return inventoryPath;
+}
+
 function resolvePythonCommand() {
   const configured = process.env.PYTHON || process.env.PYTHON3;
   const candidates = configured
@@ -109,6 +182,7 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
       REPO_ROOT,
       'dynamic-testing/web-automation/assets/templates/scripts/run-testcase-pom.mjs',
     );
+    const uiInventoryPath = writeUiInventory(root);
     const unifiedPlanOutput = path.join(root, 'reports', 'testcase-pom-plan.json');
     const unifiedPlan = spawnSync('node', [
       unifiedRunner,
@@ -117,9 +191,19 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
       '--manifest', manifestPath,
       '--testcase-id', 'DEMO-01',
       '--max-cases', '1',
+      '--ui-inventory', uiInventoryPath,
+      '--app-build', 'cross-skill-fixture-build',
       '--plan-output', unifiedPlanOutput,
     ], { encoding: 'utf8' });
-    assert.equal(unifiedPlan.status, 0, `${unifiedPlan.stdout}\n${unifiedPlan.stderr}`);
+    const uiCoverageOutput = path.join(root, 'reports', 'ui-function-coverage.json');
+    const uiCoverageDiagnostics = fs.existsSync(uiCoverageOutput)
+      ? fs.readFileSync(uiCoverageOutput, 'utf8')
+      : '';
+    assert.equal(
+      unifiedPlan.status,
+      0,
+      `${unifiedPlan.stdout}\n${unifiedPlan.stderr}\n${uiCoverageDiagnostics}`,
+    );
     assert.equal(JSON.parse(fs.readFileSync(unifiedPlanOutput, 'utf8')).testcases[0].testcase_id, 'DEMO-01');
     assert.ok(plan.testcases[0].outcome_assertions.some(item => item.assertion.target === 'dashboard_heading'));
     assert.deepEqual(plan.testcases[0].rbac_refs, ['RBAC-DASH-001']);
@@ -136,6 +220,9 @@ test('structured testcase generates a lossless POM plan and passes strict fixtur
         specLines.push(`  test.info().annotations.push({ type: 'contract', description: '${testcase.required_markers.role}' });`);
       }
       for (const marker of testcase.required_markers.rbac) {
+        specLines.push(`  test.info().annotations.push({ type: 'contract', description: '${marker}' });`);
+      }
+      for (const marker of testcase.required_markers.coverage) {
         specLines.push(`  test.info().annotations.push({ type: 'contract', description: '${marker}' });`);
       }
       for (const step of testcase.steps) {

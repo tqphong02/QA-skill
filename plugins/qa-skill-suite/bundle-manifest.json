@@ -15,15 +15,15 @@
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
       "file_count": 21,
-      "source_sha256": "da6c125148cc32f2aee32bbe11f4ed778a524122ac9e59f264cb6c5f043d67a6",
-      "bundled_sha256": "21aa60047795415a7e4559ce978f8b4b6c0101e258823b7d325cd70807972fc7"
+      "source_sha256": "24328e9abafc541dd9d539483be15dfd2e023ddcca2be2c6697847d0e41696e2",
+      "bundled_sha256": "64f9ef3f88af2f203e4c1868c0bbb70a11503c73c895b00c887170f0dbca4d55"
     },
     {
       "id": "dynamic-web-automation",
       "source_path": "dynamic-testing/web-automation",
       "file_count": 72,
-      "source_sha256": "f1bbd870cb2b1cea75c814b0d190a29ad3f32b86d611e19976fea712351981a6",
-      "bundled_sha256": "158189c62090daf8325a40005960e9f8c4292f88dd8fe6c1b1b41cfb9698df43"
+      "source_sha256": "2d4cf71e8f3844b66b192db9e2e2d2395796441d72b8b0e1468b68d49af951b7",
+      "bundled_sha256": "df2385a0ed6abe4874771b656bd7e4638501ada465f8cb5b8554b5fa8693e6f9"
     },
     {
       "id": "support-document-conversion",
