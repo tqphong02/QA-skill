@@ -6,7 +6,9 @@ import path from 'node:path';
 
 import { buildPomPlan } from '../assets/templates/scripts/generate-pom-plan.mjs';
 import {
+  inspectHarArtifact,
   selectionEvaluation,
+  stripSqlCommentsAndStrings,
   verifyAdvancedTestContracts,
 } from '../assets/templates/scripts/verify-advanced-test-contracts.mjs';
 
@@ -81,7 +83,7 @@ test('network and direct SQL contracts pass only with bounded runtime assets and
         automation_selection: selection('AUTOMATE'),
         network_interception: {
           mode: 'MOCK',
-          routes: [{ pattern: '**/api/payment', action: 'FULFILL', fixture_file: 'test-data/fixtures/payment-error.json' }],
+          routes: [{ pattern: '**/api/payment', action: 'FULFILL', status: 503, fixture_file: 'test-data/fixtures/payment-error.json' }],
           real_flow_testcase_id: 'TC_REAL_01',
           implementation_file: 'src/shared/helpers/payment-network.ts',
           implementation_export: 'setupPaymentFailure',
@@ -103,6 +105,15 @@ test('network and direct SQL contracts pass only with bounded runtime assets and
 
     const report = verifyAdvancedTestContracts({ plan, projectRoot: root, checkRuntimeAssets: true });
     assert.equal(report.status, 'PASS', JSON.stringify(report.violations, null, 2));
+
+    const missingCredential = verifyAdvancedTestContracts({
+      plan, projectRoot: root, checkRuntimeAssets: true, checkCredentials: true, env: {},
+    });
+    assert.ok(missingCredential.violations.some(item => item.code === 'DB_CREDENTIAL_MISSING'));
+    const availableCredential = verifyAdvancedTestContracts({
+      plan, projectRoot: root, checkRuntimeAssets: true, checkCredentials: true, env: { QA_DB_URL: 'redacted-test-value' },
+    });
+    assert.equal(availableCredential.status, 'PASS', JSON.stringify(availableCredential.violations, null, 2));
 
     write(root, 'test-data/sql/order-by-id.sql', 'DELETE FROM orders WHERE id = $1\n');
     const blocked = verifyAdvancedTestContracts({ plan, projectRoot: root, checkRuntimeAssets: true });
@@ -136,4 +147,111 @@ test('HAR contract requires sanitization, service-worker blocking and a real-flo
   assert.ok(codes.has('HAR_SERVICE_WORKERS_NOT_BLOCKED'));
   assert.ok(codes.has('REAL_FLOW_TESTCASE_REQUIRED'));
   assert.ok(codes.has('HAR_PATH_INVALID'));
+  assert.ok(codes.has('HAR_ALLOWED_HOSTS_INVALID'));
+});
+
+test('HAR inspection accepts approved hosts and rejects secrets without exposing their values', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-har-inspection-'));
+  try {
+    const safeHar = write(root, 'test-data/hars/safe.har', JSON.stringify({
+      log: {
+        entries: [{
+          request: {
+            url: 'https://staging.example.test/api/orders?id=42',
+            headers: [{ name: 'accept', value: 'application/json' }],
+            cookies: [],
+            queryString: [{ name: 'id', value: '42' }],
+          },
+          response: {
+            headers: [{ name: 'content-type', value: 'application/json' }],
+            cookies: [],
+            content: { text: '{"id":42,"status":"PAID"}' },
+          },
+        }],
+      },
+    }));
+    const safe = inspectHarArtifact(safeHar, { allowedHosts: ['staging.example.test'] });
+    assert.equal(safe.status, 'PASS', JSON.stringify(safe.findings, null, 2));
+    assert.equal(safe.entry_count, 1);
+
+    const unsafeHar = write(root, 'test-data/hars/unsafe.har', JSON.stringify({
+      log: {
+        entries: [{
+          request: {
+            url: 'https://production.example.test/api/orders?access_token=do-not-print-this',
+            headers: [{ name: 'Authorization', value: 'Bearer do-not-print-this' }],
+            cookies: [{ name: 'session', value: 'do-not-print-this' }],
+            queryString: [{ name: 'access_token', value: 'do-not-print-this' }],
+          },
+          response: {
+            headers: [{ name: 'set-cookie', value: 'session=do-not-print-this' }],
+            cookies: [],
+            content: { text: '{"refresh_token":"do-not-print-this"}' },
+          },
+        }],
+      },
+    }));
+    const unsafe = inspectHarArtifact(unsafeHar, { allowedHosts: ['staging.example.test'] });
+    const codes = new Set(unsafe.findings.map(item => item.code));
+    assert.equal(unsafe.status, 'BLOCKED');
+    assert.ok(codes.has('HAR_HOST_NOT_ALLOWED'));
+    assert.ok(codes.has('HAR_SENSITIVE_QUERY'));
+    assert.ok(codes.has('HAR_SENSITIVE_HEADER'));
+    assert.ok(codes.has('HAR_COOKIE_PRESENT'));
+    assert.ok(codes.has('HAR_SENSITIVE_BODY_FIELD'));
+    assert.equal(JSON.stringify(unsafe).includes('do-not-print-this'), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('network mode/action combinations fail closed', () => {
+  const report = verifyAdvancedTestContracts({
+    plan: {
+      selection: { available_testcase_ids: ['TC_NET_01'] },
+      testcases: [{
+        testcase_id: 'TC_NET_01',
+        capabilities: ['ui'],
+        network_interception: {
+          mode: 'OBSERVE',
+          routes: [{ pattern: '**/api/**', action: 'ABORT' }],
+          implementation_file: 'src/shared/helpers/network.ts',
+          implementation_export: 'observeNetwork',
+        },
+      }],
+    },
+  });
+  assert.ok(report.violations.some(item => item.code === 'NETWORK_MODE_ACTION_MISMATCH'));
+});
+
+test('SQL safety ignores comments/string content but rejects multiple executable statements', () => {
+  const normalized = stripSqlCommentsAndStrings("SELECT 'delete and update' AS note FROM orders WHERE id = $1 -- drop table orders");
+  assert.equal(/\b(?:delete|update|drop)\b/i.test(normalized), false);
+  const executableAfterString = stripSqlCommentsAndStrings("SELECT '-- not a comment'; DELETE FROM orders WHERE id = $1");
+  assert.equal(/\bdelete\b/i.test(executableAfterString), true);
+
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-sql-safety-'));
+  try {
+    write(root, 'package.json', JSON.stringify({ dependencies: { pg: '^8.0.0' } }));
+    write(root, 'test-data/sql/order.sql', "SELECT 'delete' AS note FROM orders WHERE id = $1; SELECT id FROM orders WHERE id = $1\n");
+    write(root, 'src/shared/helpers/order-db.ts', 'export async function verifyOrderDb() {}\n');
+    const report = verifyAdvancedTestContracts({
+      projectRoot: root,
+      checkRuntimeAssets: true,
+      plan: {
+        testcases: [{
+          testcase_id: 'TC_SQL_01',
+          db_verification: {
+            mode: 'DIRECT_SQL', read_only: true, driver: 'pg', credential_env: 'QA_DB_URL',
+            query_file: 'test-data/sql/order.sql', parameterized: true,
+            implementation_file: 'src/shared/helpers/order-db.ts', implementation_export: 'verifyOrderDb',
+          },
+        }],
+      },
+    });
+    assert.ok(report.violations.some(item => item.code === 'DB_MULTIPLE_STATEMENTS_FORBIDDEN'));
+    assert.equal(report.violations.some(item => item.code === 'DB_WRITE_SQL_FORBIDDEN'), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });

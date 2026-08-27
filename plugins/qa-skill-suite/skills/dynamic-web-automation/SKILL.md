@@ -110,6 +110,6 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
 - Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
 - `AUTOMATE`/`ACTIVE` selection is required when selection metadata exists; `DEFER`, `REJECT`, and `RETIRED` are excluded from the plan and never projected as runtime `N/A`
-- Mock/HAR and DB verification contracts must pass `reports/advanced-test-contracts.json`, including bounded assets, real-flow sibling coverage, read-only SQL, declared drivers, and specialist-skill handoffs
+- Mock/HAR and DB verification contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, declared helper exports, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs
 - Generated specs use the canonical fixture, contain no raw selector/request, and selected tests actually execute
 - Never claim `PASS` from static findings, generated code alone, or missing runtime evidence

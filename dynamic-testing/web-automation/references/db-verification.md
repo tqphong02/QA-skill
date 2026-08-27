@@ -65,7 +65,7 @@ WHERE o.id = $1
 
 - Use a dedicated read-only account scoped to the test schema or tenant
 - Store only the environment variable name in the manifest; never store a connection string or password
-- Keep credentials in environment/CI secrets and fail closed when they are missing
+- Keep credentials in environment/CI secrets. BUILD validates only the environment-variable name; RUN and BUILD_AND_RUN fail closed when its value is missing
 - Redact connection data from logs, traces, screenshots, and Allure parameters
 - Do not use SQL writes for setup or cleanup; use approved application/API flows
 - Register manually owned helpers below `src/shared/helpers/` in `src/shared/ownership.json`
@@ -85,4 +85,4 @@ await expect.poll(
 
 Use this contract for bounded record or cross-table assertions that belong to one functional testcase. Route source-to-target reconciliation, freshness, completeness, schema drift, or large dataset comparison to `dynamic-data-quality`
 
-The executable advanced contract gate verifies read-only intent, helper/query paths, driver declaration, bounded polling, parameterized SELECT-only SQL, and the handoff boundary before RUN
+The executable advanced contract gate verifies read-only intent, the declared helper export, query paths, driver declaration, bounded polling, one parameterized SELECT statement, and the handoff boundary. SQL comments and string literals are ignored during the write-keyword scan; executable write/admin keywords or multiple statements remain blocked. Credential values are checked only when execution will start and are never written to reports

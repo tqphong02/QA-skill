@@ -32,8 +32,8 @@ BUILD imports the declared export and calls it before testcase actions with `{ p
 ## Route rules
 
 - Every handler must resolve with `route.fulfill()`, `route.abort()`, or `route.continue()`
-- `FULFILL` fixtures must be JSON files below `test-data/fixtures/`
-- Use `CONTINUE` only when the real request is intentionally part of the test
+- `MOCK` accepts only `FULFILL` or `ABORT`; every `FULFILL` route declares an HTTP `status` from 100 to 599 and a JSON fixture below `test-data/fixtures/`
+- `HAR` accepts only `HAR`; `OBSERVE` accepts only `CONTINUE`
 - Use `ABORT` for an explicit network failure such as `route.abort('timedout')`
 - Assert the UI or API business outcome after interception; installing a route is not a testcase assertion
 - Page-scoped routes are automatically removed when the isolated page closes; manually remove handlers if the page/context is reused
@@ -69,6 +69,7 @@ HAR manifest example
     "routes": [{ "pattern": "**/api/**", "action": "HAR" }],
     "har_file": "test-data/hars/checkout.har",
     "sanitized": true,
+    "allowed_hosts": ["staging.example.test"],
     "service_workers": "block",
     "real_flow_testcase_id": "TC_CHECKOUT_REAL_001",
     "implementation_file": "src/shared/helpers/checkout-har.ts",
@@ -77,10 +78,12 @@ HAR manifest example
 }
 ```
 
-Before committing a HAR, remove cookies, authorization headers, tokens, personal data, production hosts, and response bodies outside the testcase scope. `sanitized: true` is an explicit review assertion, not an automatic sanitizer
+Before committing a HAR, remove cookies, authorization headers, tokens, personal data, production hosts, and response bodies outside the testcase scope. `allowed_hosts` contains exact approved host names, without paths or wildcards
+
+The gate reads `.har` JSON and rejects embedded credentials, cookies, sensitive headers/query fields/JSON keys, invalid URLs, and hosts outside `allowed_hosts`. `sanitized: true` remains a reviewer assertion and never replaces this inspection. Compressed `.zip` HAR files are not accepted because their contents cannot pass the dependency-free deterministic inspection; extract and review them as `.har` first
 
 ## Fail-closed checks
 
-The advanced contract gate blocks unsafe paths, missing fixtures/HAR files, absent helper implementations, unknown real-flow testcase IDs, unconfirmed HAR sanitization, and HAR playback without `service_workers=block`
+The advanced contract gate blocks mode/action mismatches, invalid fulfill status, unsafe paths, missing fixtures/HAR files, missing declared helper exports, unknown real-flow testcase IDs, unconfirmed or unsafe HAR content, and HAR playback without `service_workers=block`
 
 Evidence requirements do not change: mocked UI tests still need the canonical screenshot/video and same-session trace. A mock proves error handling behavior; the real-flow sibling proves integration behavior

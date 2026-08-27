@@ -497,6 +497,7 @@ async function main() {
     plan,
     projectRoot,
     checkRuntimeAssets: phase !== 'plan',
+    checkCredentials: ['execute', 'build-and-run'].includes(phase),
   });
   writeJson(advancedContractsPath, advancedContracts);
   if (advancedContracts.status !== 'PASS') {
