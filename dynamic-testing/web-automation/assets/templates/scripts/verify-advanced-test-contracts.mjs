@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 const SELECTION_DECISIONS = new Set(['AUTOMATE', 'DEFER', 'REJECT']);
 const RETIREMENT_STATUSES = new Set(['ACTIVE', 'RETIRED']);
+const TEST_LAYERS = new Set(['UNIT', 'COMPONENT', 'API', 'UI']);
 const NETWORK_MODES = new Set(['MOCK', 'HAR', 'OBSERVE']);
 const ROUTE_ACTIONS = new Set(['FULFILL', 'ABORT', 'CONTINUE', 'HAR']);
 const DB_MODES = new Set(['INTERNAL_API', 'DIRECT_SQL']);
@@ -16,6 +17,7 @@ const SENSITIVE_NAMES = new Set([
   'access_token', 'apikey', 'api_key', 'auth', 'authorization', 'cookie', 'password',
   'proxy-authorization', 'refresh_token', 'secret', 'session', 'set-cookie', 'token', 'x-api-key',
 ]);
+const AUTOMATION_TAG_RE = /^@[a-z][a-z0-9-]*$/;
 
 function text(value) {
   return String(value ?? '').trim();
@@ -50,6 +52,30 @@ function selectionEvaluation(testcase) {
     if (!Number.isInteger(value) || value < 1 || value > 5) violations.push(`${factor} must be an integer from 1 to 5`);
   }
   if (!text(contract.rationale)) violations.push('rationale is required');
+  const recommendedLayer = text(contract.recommended_layer).toUpperCase();
+  if (recommendedLayer && !TEST_LAYERS.has(recommendedLayer)) {
+    violations.push('recommended_layer must be UNIT, COMPONENT, API or UI');
+  }
+  if (recommendedLayer && !text(contract.layer_rationale)) {
+    violations.push('layer_rationale is required when recommended_layer is provided');
+  }
+  const extendedRoi = contract.extended_roi;
+  const extendedFields = [
+    'build_cost', 'infrastructure_cost', 'feedback_speed_value',
+    'defect_prevention_value', 'coverage_value', 'reliability_confidence',
+  ];
+  if (extendedRoi !== undefined && extendedRoi !== null) {
+    if (!extendedRoi || typeof extendedRoi !== 'object' || Array.isArray(extendedRoi)) {
+      violations.push('extended_roi must be an object');
+    } else {
+      for (const field of extendedFields) {
+        const value = Number(extendedRoi[field]);
+        if (!Number.isInteger(value) || value < 1 || value > 5) {
+          violations.push(`extended_roi.${field} must be an integer from 1 to 5`);
+        }
+      }
+    }
+  }
   const retirement = contract.retirement;
   let retirementStatus = 'ACTIVE';
   if (retirement !== undefined && retirement !== null) {
@@ -68,18 +94,112 @@ function selectionEvaluation(testcase) {
   const score = factors.every(factor => Number.isInteger(Number(contract[factor]))) && maintenance > 0
     ? Number(((Number(contract.execution_frequency) * Number(contract.manual_cost) * Number(contract.business_risk)) / maintenance).toFixed(2))
     : null;
+  let extendedScore = null;
+  if (extendedRoi && extendedFields.every(field => Number.isInteger(Number(extendedRoi[field])))) {
+    const benefitAverage = (
+      Number(extendedRoi.feedback_speed_value)
+      + Number(extendedRoi.defect_prevention_value)
+      + Number(extendedRoi.coverage_value)
+      + Number(extendedRoi.reliability_confidence)
+    ) / 4;
+    const totalCost = Number(extendedRoi.build_cost) + maintenance + Number(extendedRoi.infrastructure_cost);
+    extendedScore = Number((
+      Number(contract.execution_frequency)
+      * Number(contract.manual_cost)
+      * Number(contract.business_risk)
+      * benefitAverage
+      / totalCost
+    ).toFixed(2));
+  }
   return {
     status: violations.length > 0 ? 'INVALID' : decision,
     eligible: violations.length === 0 && decision === 'AUTOMATE' && retirementStatus !== 'RETIRED',
     decision,
     retirement_status: retirementStatus,
     score,
+    extended_score: extendedScore,
+    recommended_layer: recommendedLayer || null,
     violations,
   };
 }
 
 function violation(violations, testcaseId, code, message) {
   violations.push({ testcase_id: testcaseId, code, message });
+}
+
+function validateAutomationTags(testcase, violations) {
+  if (testcase.automation_tags === undefined || testcase.automation_tags === null) return;
+  const id = testcase.testcase_id || testcase.id;
+  if (!Array.isArray(testcase.automation_tags)) {
+    violation(violations, id, 'AUTOMATION_TAGS_INVALID', 'automation_tags must be an array');
+    return;
+  }
+  const tags = testcase.automation_tags.map(text);
+  if (tags.some(tag => !AUTOMATION_TAG_RE.test(tag))) {
+    violation(violations, id, 'AUTOMATION_TAG_INVALID', 'automation tags must use @lowercase-kebab-case');
+  }
+  if (new Set(tags).size !== tags.length) {
+    violation(violations, id, 'AUTOMATION_TAG_DUPLICATE', 'automation_tags must be unique');
+  }
+  if (tags.some(tag => ['@ui', '@api', '@functional'].includes(tag))) {
+    violation(violations, id, 'AUTOMATION_TAG_RESERVED', 'surface tags are generated automatically');
+  }
+}
+
+function validateLifecycleHooks(testcase, context, violations) {
+  const contract = testcase.lifecycle_hooks;
+  if (contract === undefined || contract === null) return;
+  const id = testcase.testcase_id || testcase.id;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    violation(violations, id, 'LIFECYCLE_CONTRACT_INVALID', 'lifecycle_hooks must be an object');
+    return;
+  }
+  const hookNames = ['before_test', 'after_test'];
+  if (!hookNames.some(name => contract[name] !== undefined && contract[name] !== null)) {
+    violation(violations, id, 'LIFECYCLE_HOOKS_MISSING', 'lifecycle_hooks requires before_test or after_test');
+  }
+  for (const name of hookNames) {
+    const hook = contract[name];
+    if (hook === undefined || hook === null) continue;
+    if (!hook || typeof hook !== 'object' || Array.isArray(hook)) {
+      violation(violations, id, 'LIFECYCLE_HOOK_INVALID', `lifecycle_hooks.${name} must be an object`);
+      continue;
+    }
+    const implementationPathValid = safeRelativePath(
+      hook.implementation_file,
+      ['src/shared/helpers/'],
+      ['.ts', '.js', '.mjs'],
+    );
+    if (!implementationPathValid) {
+      violation(
+        violations,
+        id,
+        'LIFECYCLE_IMPLEMENTATION_PATH_INVALID',
+        `lifecycle_hooks.${name}.implementation_file must stay below src/shared/helpers/`,
+      );
+    } else if (context.checkRuntimeAssets) {
+      const implementationPath = path.resolve(context.projectRoot, hook.implementation_file);
+      if (!fs.existsSync(implementationPath)) {
+        violation(violations, id, 'LIFECYCLE_IMPLEMENTATION_MISSING', `${hook.implementation_file} does not exist`);
+      } else if (/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(text(hook.implementation_export))
+        && !implementationExports(implementationPath, text(hook.implementation_export))) {
+        violation(
+          violations,
+          id,
+          'LIFECYCLE_IMPLEMENTATION_EXPORT_MISSING',
+          `${hook.implementation_export} is not exported by ${hook.implementation_file}`,
+        );
+      }
+    }
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(text(hook.implementation_export))) {
+      violation(
+        violations,
+        id,
+        'LIFECYCLE_IMPLEMENTATION_EXPORT_INVALID',
+        `lifecycle_hooks.${name}.implementation_export must be a valid exported identifier`,
+      );
+    }
+  }
 }
 
 function normalizeSensitiveName(value) {
@@ -454,8 +574,18 @@ function verifyAdvancedTestContracts({
     if (testcase.automation_selection && !selection.eligible) {
       violation(violations, testcase.testcase_id, 'SELECTION_NOT_AUTOMATABLE', 'selected testcase must use decision=AUTOMATE and must not be RETIRED');
     }
+    if (selection.eligible && ['UNIT', 'COMPONENT'].includes(selection.recommended_layer)) {
+      violation(
+        violations,
+        testcase.testcase_id,
+        'SELECTION_LAYER_HANDOFF_REQUIRED',
+        `${selection.recommended_layer} coverage must be implemented by the source/unit coverage workflow, not Playwright POM`,
+      );
+    }
     validateNetwork(testcase, context, violations);
     validateDb(testcase, context, violations);
+    validateAutomationTags(testcase, violations);
+    validateLifecycleHooks(testcase, context, violations);
   }
   return {
     schema_version: 1,
@@ -467,6 +597,8 @@ function verifyAdvancedTestContracts({
       selection: testcases.filter(item => item.automation_selection).length,
       network_interception: testcases.filter(item => item.network_interception).length,
       db_verification: testcases.filter(item => item.db_verification).length,
+      automation_tags: testcases.filter(item => Array.isArray(item.automation_tags) && item.automation_tags.length > 0).length,
+      lifecycle_hooks: testcases.filter(item => item.lifecycle_hooks).length,
     },
     violations,
   };

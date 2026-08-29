@@ -109,6 +109,39 @@ class ManualExecutionContractTests(unittest.TestCase):
 
         self.assertIn('AIFA_UPLOAD_VALID_20260812.xlsx', rendered)
 
+    def test_browser_event_actions_and_iframe_hint_are_machine_readable(self):
+        steps = [
+            {
+                'action': 'download',
+                'instruction': 'Tải xuống báo cáo từ nút Xuất',
+                'target': {'key': 'export_button', 'name': 'nút Xuất'},
+            },
+            {
+                'action': 'dialog_accept',
+                'instruction': 'Tại nút Xóa, chấp nhận hộp thoại xác nhận',
+                'target': {'key': 'delete_button', 'name': 'nút Xóa'},
+            },
+            {
+                'action': 'dialog_dismiss',
+                'instruction': 'Tại nút Hủy, đóng hộp thoại xác nhận',
+                'target': {'key': 'cancel_button', 'name': 'nút Hủy'},
+            },
+            {
+                'action': 'popup',
+                'instruction': 'Tại liên kết biên nhận, mở cửa sổ mới',
+                'target': {'key': 'receipt_link', 'name': 'liên kết biên nhận'},
+            },
+        ]
+        for index, step in enumerate(steps):
+            with self.subTest(action=step['action']):
+                self.generator._validate_atomic_instruction(step, index)
+
+        hints = self.generator._execution_target_hints({
+            'key': 'card_number',
+            'frame': '#payment-frame',
+        })
+        self.assertIn('frame=#payment-frame', hints)
+
     def test_manual_projection_avoids_repeating_context_around_data_ref(self):
         step = {
             'action': 'click',

@@ -43,10 +43,10 @@ function source(overrides = {}) {
       xpath: '//form[@aria-label="Login"]//input[@name="email"]',
       reason: 'Stable form/name relationship was unique in the live DOM',
       candidates: [
+        { strategy: 'role', available: false },
         { strategy: 'testid', available: false },
         { strategy: 'id', available: false },
         { strategy: 'css', available: false },
-        { strategy: 'role', available: false },
         { strategy: 'xpath', available: true, count: 1, verified: true },
       ],
       verification: {

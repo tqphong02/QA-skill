@@ -31,6 +31,7 @@
     "WINDOWS-SETUP.md": true,
     "package-lock.json": true,
     "package.json": true,
+    "plugins/qa-skill-suite/skills": true,
     "retest_w27_results.json": true,
     "vendor": true,
     "wiki": true

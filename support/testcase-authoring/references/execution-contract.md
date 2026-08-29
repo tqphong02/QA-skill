@@ -12,12 +12,25 @@ Set top-level `execution_contract="required"`. Every new UI/FUNCTION case has:
 2. `execution.version=1` and boolean `mutates`
 3. `entry`: environment, visible screen, route, business role, starting state, permissions and named test data
 4. Ordered atomic `steps` with stable `S##`, `action`, Vietnamese `instruction` and semantic `target`
-5. Target `key`, `kind`, human-facing `name`; add role/label/test-id hints only when verified or supplied
+5. Target `key`, `kind`, human-facing `name`; add role/label/test-id hints only when verified or supplied; use `frame` for a control inside an iframe
 6. Exact `value` for `fill`, `select`, `press`, `upload`; `fill` and `clear` immediately follow a separate click/focus step for the same target. A structured `data_ref` may remain in the machine value, but the manual projection must render a safe sample value; keep exact fixture filenames unchanged
 7. `wait_for` with machine kind plus Vietnamese text, or an observable step assertion
 8. Non-empty final `outcome.assertions`
 9. `cleanup` when `mutates=true`
 10. `entry.role_key` and `entry.rbac_refs` for RBAC-linked cases
+
+Browser-event actions are first-class: `download` waits for and saves the owned
+download artifact, `dialog_accept`/`dialog_dismiss` handle a dialog raised by the
+target control, and `popup` waits for the new page. Keep each as one atomic step
+with the trigger control as its target. An iframe control keeps its ordinary
+action such as `fill`; its target supplies the stable `frame` selector
+
+Optional testcase-level `lifecycle_hooks.before_test` and `after_test` may name
+an exported `.ts`, `.js`, or `.mjs` helper below `src/shared/helpers/`. Use them
+only for explicit automation setup/teardown that the structured execution or
+canonical fixture cannot own. The automation generator emits stable lifecycle
+markers and runs `after_test` in `finally`; never embed credentials, inline
+implementation code, hidden assertions, or shared-worker mutation in a hook
 
 At group level, define the complete successful business flow as a `happy` case before validation, edge, negative or error coverage. Every non-empty FUNCTION group must have at least one `happy` case; the generator orders scenarios by their earliest case type so the first visible testcase under each function header is the happy path
 

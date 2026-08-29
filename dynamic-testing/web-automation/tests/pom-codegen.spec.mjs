@@ -211,6 +211,71 @@ test('UI codegen emits one deterministic selector/page/spec set and is idempoten
   });
 });
 
+test('UI codegen supports download, dialogs, popup, iframe locators and custom tags', () => {
+  withTempRoot('pom-codegen-browser-events-', root => {
+    const testcase = uiCase('LOGIN-EVENTS-01');
+    testcase.automation_tags = ['@smoke', '@regression'];
+    testcase.steps = [
+      {
+        id: 'S01', marker: '[LOGIN-EVENTS-01:S01] download export_button', action: 'download',
+        required_method: 'downloadExportButton', target_key: 'export_button', target_hints: { key: 'export_button' },
+        value: null, wait_for: null, assertions: [],
+      },
+      {
+        id: 'S02', marker: '[LOGIN-EVENTS-01:S02] dialog_accept delete_button', action: 'dialog_accept',
+        required_method: 'dialogAcceptDeleteButton', target_key: 'delete_button', target_hints: { key: 'delete_button' },
+        value: null, wait_for: null, assertions: [],
+      },
+      {
+        id: 'S03', marker: '[LOGIN-EVENTS-01:S03] dialog_dismiss cancel_button', action: 'dialog_dismiss',
+        required_method: 'dialogDismissCancelButton', target_key: 'cancel_button', target_hints: { key: 'cancel_button' },
+        value: null, wait_for: null, assertions: [],
+      },
+      {
+        id: 'S04', marker: '[LOGIN-EVENTS-01:S04] popup receipt_link', action: 'popup',
+        required_method: 'popupReceiptLink', target_key: 'receipt_link', target_hints: { key: 'receipt_link' },
+        value: null, wait_for: null, assertions: [],
+      },
+      {
+        id: 'S05', marker: '[LOGIN-EVENTS-01:S05] fill card_number', action: 'fill',
+        required_method: 'fillCardNumber', target_key: 'card_number', target_hints: { key: 'card_number', frame: '#payment-frame' },
+        value: '4111111111111111', wait_for: null, assertions: [],
+      },
+    ];
+    testcase.selector_target_keys = [
+      'export_button', 'delete_button', 'cancel_button', 'receipt_link', 'card_number', 'dashboard_heading',
+    ];
+    const eventEvidence = evidence();
+    eventEvidence.targets = [
+      { target_key: 'export_button', status: 'runtime_verified', strategy: 'role', locator: "page.getByRole('button', { name: 'Export' })", verification: { count: 1, visible: true, actionable: true } },
+      { target_key: 'delete_button', status: 'runtime_verified', strategy: 'role', locator: "page.getByRole('button', { name: 'Delete' })", verification: { count: 1, visible: true, actionable: true } },
+      { target_key: 'cancel_button', status: 'runtime_verified', strategy: 'role', locator: "page.getByRole('button', { name: 'Cancel' })", verification: { count: 1, visible: true, actionable: true } },
+      { target_key: 'receipt_link', status: 'runtime_verified', strategy: 'role', locator: "page.getByRole('link', { name: 'Receipt' })", verification: { count: 1, visible: true, actionable: true } },
+      { target_key: 'card_number', status: 'runtime_verified', strategy: 'label', locator: "page.frameLocator('#payment-frame').getByLabel('Card number')", verification: { count: 1, visible: true, actionable: true } },
+      evidence().targets[1],
+    ];
+    const planPath = writeJson(root, 'plans/login-events.pom-plan.json', plan([testcase]));
+    const evidencePath = writeJson(root, 'selector-evidence/login-events.json', eventEvidence);
+
+    generatePomCode({
+      planPaths: [planPath], selectorEvidencePaths: [evidencePath], projectRoot: root, surface: 'ui',
+    });
+    const page = fs.readFileSync(path.join(root, 'src/modules/app/login/ui/login.page.ts'), 'utf8');
+    const selectors = fs.readFileSync(path.join(root, 'src/modules/app/login/ui/login.selectors.ts'), 'utf8');
+    const spec = fs.readFileSync(path.join(root, 'tests/ui/app/login.ui.spec.ts'), 'utf8');
+
+    assert.match(page, /waitForEvent\('download'\)[\s\S]*download\.saveAs\(outputPath\)/);
+    assert.match(page, /waitForEvent\('dialog'\)[\s\S]*dialog\.accept\(\)/);
+    assert.match(page, /waitForEvent\('dialog'\)[\s\S]*dialog\.dismiss\(\)/);
+    assert.match(page, /waitForEvent\('popup'\)[\s\S]*popup\.waitForLoadState/);
+    assert.match(selectors, /page\.frameLocator\('#payment-frame'\)\.getByLabel\('Card number'\)/);
+    assert.match(spec, /@ui @smoke @regression/);
+    assert.match(spec, /async \(\{ page \}, testInfo\)/);
+    assert.match(spec, /testInfo\.outputPath\("LOGIN-EVENTS-01-S01-download"\)/);
+    assert.match(spec, /testInfo\.attach\("download-LOGIN-EVENTS-01-S01"/);
+  });
+});
+
 test('UI codegen wires declared network and DB extension hooks into executable testcase steps', () => {
   withTempRoot('pom-codegen-advanced-', root => {
     const testcase = uiCase('LOGIN-ADV-01');
@@ -229,13 +294,27 @@ test('UI codegen wires declared network and DB extension hooks into executable t
       implementation_file: 'src/shared/helpers/login-advanced.ts',
       implementation_export: 'verifyLoginPersistence',
     };
+    testcase.lifecycle_hooks = {
+      before_test: {
+        implementation_file: 'src/shared/helpers/login-advanced.ts',
+        implementation_export: 'prepareLoginTest',
+      },
+      after_test: {
+        implementation_file: 'src/shared/helpers/login-advanced.ts',
+        implementation_export: 'releaseLoginTest',
+      },
+    };
     testcase.required_markers.network_interception = '[LOGIN-ADV-01:NETWORK_INTERCEPTION] MOCK';
     testcase.required_markers.db_verification = '[LOGIN-ADV-01:DB_VERIFICATION] INTERNAL_API';
+    testcase.required_markers.lifecycle_before = '[LOGIN-ADV-01:LIFECYCLE] BEFORE_TEST';
+    testcase.required_markers.lifecycle_after = '[LOGIN-ADV-01:LIFECYCLE] AFTER_TEST';
     const helperPath = path.join(root, 'src/shared/helpers/login-advanced.ts');
     fs.mkdirSync(path.dirname(helperPath), { recursive: true });
     fs.writeFileSync(helperPath, [
       'export async function setupLoginNetwork(_context: unknown): Promise<void> {}',
       'export async function verifyLoginPersistence(_context: unknown): Promise<void> {}',
+      'export async function prepareLoginTest(_context: unknown): Promise<void> {}',
+      'export async function releaseLoginTest(_context: unknown): Promise<void> {}',
       '',
     ].join('\n'), 'utf8');
     const planPath = writeJson(root, 'plans/login.pom-plan.json', plan([testcase], {
@@ -253,10 +332,14 @@ test('UI codegen wires declared network and DB extension hooks into executable t
     assert.match(spec, /import \* as advancedExtension1 from .*login-advanced/);
     assert.match(spec, /advancedExtension1\.setupLoginNetwork/);
     assert.match(spec, /advancedExtension2\.verifyLoginPersistence/);
+    assert.match(spec, /prepareLoginTest/);
+    assert.match(spec, /releaseLoginTest/);
     assert.match(spec, /\[LOGIN-ADV-01:NETWORK_INTERCEPTION\] MOCK/);
     assert.match(spec, /\[LOGIN-ADV-01:DB_VERIFICATION\] INTERNAL_API/);
     assert.ok(spec.indexOf('setupLoginNetwork') < spec.indexOf('fillEmailInput'));
     assert.ok(spec.indexOf('verifyLoginPersistence') > spec.indexOf('dashboard_heading'));
+    assert.ok(spec.indexOf('prepareLoginTest') < spec.indexOf('setupLoginNetwork'));
+    assert.match(spec, /try \{[\s\S]*prepareLoginTest[\s\S]*fillEmailInput[\s\S]*\} finally \{[\s\S]*releaseLoginTest/);
   });
 });
 
@@ -296,6 +379,41 @@ test('API codegen emits client/schema/spec without UI artifacts', () => {
     const second = generatePomCode({ planPaths: [planPath], projectRoot: root, surface: 'api' });
     assert.deepEqual(second.changed_artifacts, []);
     assert.equal(second.report_changed, false);
+  });
+});
+
+test('API lifecycle after hook still runs when owned cleanup throws', () => {
+  withTempRoot('pom-codegen-api-lifecycle-', root => {
+    const testcase = apiCase('LOGIN-API-LIFECYCLE-01');
+    testcase.api.mutates = true;
+    testcase.api.cleanup = {
+      method: 'DELETE',
+      endpoint: '/api/v1/test-session',
+      expected_status: 204,
+    };
+    testcase.lifecycle_hooks = {
+      after_test: {
+        implementation_file: 'src/shared/helpers/api-lifecycle.ts',
+        implementation_export: 'releaseApiTest',
+      },
+    };
+    testcase.required_markers.lifecycle_after = '[LOGIN-API-LIFECYCLE-01:LIFECYCLE] AFTER_TEST';
+    const helperPath = path.join(root, 'src/shared/helpers/api-lifecycle.ts');
+    fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+    fs.writeFileSync(
+      helperPath,
+      'export async function releaseApiTest(_context: unknown): Promise<void> {}\n',
+      'utf8',
+    );
+    const planPath = writeJson(root, 'plans/login-api-lifecycle.pom-plan.json', plan([testcase]));
+
+    generatePomCode({ planPaths: [planPath], projectRoot: root, surface: 'api' });
+    const spec = fs.readFileSync(path.join(root, 'tests/api/app/login.api.spec.ts'), 'utf8');
+
+    assert.match(
+      spec,
+      /\} finally \{\s+try \{[\s\S]*deleteApiV1TestSession[\s\S]*\} finally \{[\s\S]*releaseApiTest/,
+    );
   });
 });
 

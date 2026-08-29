@@ -1,4 +1,4 @@
 interface:
   display_name: "Phân tích nghiệp vụ QA"
-  short_description: "Vẽ luồng hệ thống liên kết và tạo Q&A senior"
-  default_prompt: "Dùng $static-requirements-analysis để phân tích tài liệu, tạo XMind luồng hệ thống end-to-end có điều kiện tiên quyết và liên kết chức năng, cùng bộ Q&A Markdown và Excel bằng tiếng Việt"
+  short_description: "Dựng flow bám nguồn và Q&A có điểm dừng"
+  default_prompt: "Dùng $static-requirements-analysis để phân tích closed-world theo đúng tài liệu, reconcile flow và Q&A bằng semantic key ổn định, tạo XMind cùng Markdown/Excel đồng bộ rồi kết thúc với DONE hoặc DONE_WITH_OPEN_QA"

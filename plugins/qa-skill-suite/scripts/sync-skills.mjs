@@ -157,6 +157,20 @@ function replaceAll(value, search, replacement) {
   return search && search !== replacement ? value.split(search).join(replacement) : value;
 }
 
+function replaceRepositoryPath(value, search, replacement) {
+  if (!search || search === replacement) return value;
+  let cursor = 0;
+  let output = "";
+  while (cursor < value.length) {
+    const index = value.indexOf(search, cursor);
+    if (index === -1) return output + value.slice(cursor);
+    output += value.slice(cursor, index);
+    output += index > 0 && value[index - 1] === "." ? search : replacement;
+    cursor = index + search.length;
+  }
+  return output;
+}
+
 function rewriteCrossSkillPaths(contents, sourceFile, bundleFile, entries) {
   const replacements = [];
 
@@ -166,17 +180,19 @@ function rewriteCrossSkillPaths(contents, sourceFile, bundleFile, entries) {
     const repositoryRelative = toPosix(target.path).replace(/^\.\//, "");
 
     if (sourceRelative !== ".") {
-      replacements.push([sourceRelative, bundledTarget]);
-      replacements.push([sourceRelative.replaceAll("/", "\\"), bundledTarget]);
+      replacements.push([sourceRelative, bundledTarget, false]);
+      replacements.push([sourceRelative.replaceAll("/", "\\"), bundledTarget, false]);
     }
-    replacements.push([repositoryRelative, bundledTarget]);
-    replacements.push([repositoryRelative.replaceAll("/", "\\"), bundledTarget]);
+    replacements.push([repositoryRelative, bundledTarget, true]);
+    replacements.push([repositoryRelative.replaceAll("/", "\\"), bundledTarget, true]);
   }
 
   replacements.sort((left, right) => right[0].length - left[0].length);
   let rewritten = contents;
-  for (const [search, replacement] of replacements) {
-    rewritten = replaceAll(rewritten, search, replacement);
+  for (const [search, replacement, repositoryPath] of replacements) {
+    rewritten = repositoryPath
+      ? replaceRepositoryPath(rewritten, search, replacement)
+      : replaceAll(rewritten, search, replacement);
   }
   return rewritten;
 }

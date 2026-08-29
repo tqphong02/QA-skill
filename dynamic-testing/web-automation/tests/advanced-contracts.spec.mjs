@@ -67,6 +67,40 @@ test('selection contract fails closed on incomplete scoring metadata', () => {
   assert.ok(result.violations.some(item => item.includes('rationale')));
 });
 
+test('extended ROI, recommended layer and custom automation tags fail closed', () => {
+  const contract = selection('AUTOMATE');
+  contract.recommended_layer = 'API';
+  contract.layer_rationale = 'Stable service contract is the cheapest reliable layer';
+  contract.extended_roi = {
+    build_cost: 2,
+    infrastructure_cost: 2,
+    feedback_speed_value: 5,
+    defect_prevention_value: 5,
+    coverage_value: 4,
+    reliability_confidence: 5,
+  };
+  const evaluation = selectionEvaluation({ automation_selection: contract });
+  assert.equal(evaluation.status, 'AUTOMATE');
+  assert.equal(evaluation.score, 50);
+  assert.equal(evaluation.extended_score, 79.17);
+  assert.equal(evaluation.recommended_layer, 'API');
+
+  const valid = verifyAdvancedTestContracts({
+    plan: { testcases: [{ testcase_id: 'TC_ROI_01', automation_selection: contract, automation_tags: ['@smoke', '@regression'] }] },
+  });
+  assert.equal(valid.status, 'PASS', JSON.stringify(valid.violations, null, 2));
+
+  const sourceLayer = structuredClone(contract);
+  sourceLayer.recommended_layer = 'UNIT';
+  const blocked = verifyAdvancedTestContracts({
+    plan: { testcases: [{ testcase_id: 'TC_ROI_02', automation_selection: sourceLayer, automation_tags: ['@ui', 'Smoke'] }] },
+  });
+  const codes = new Set(blocked.violations.map(item => item.code));
+  assert.ok(codes.has('SELECTION_LAYER_HANDOFF_REQUIRED'));
+  assert.ok(codes.has('AUTOMATION_TAG_INVALID'));
+  assert.ok(codes.has('AUTOMATION_TAG_RESERVED'));
+});
+
 test('network and direct SQL contracts pass only with bounded runtime assets and declared driver', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-advanced-contracts-'));
   try {
@@ -75,12 +109,27 @@ test('network and direct SQL contracts pass only with bounded runtime assets and
     write(root, 'test-data/sql/order-by-id.sql', 'SELECT id, status FROM orders WHERE id = $1\n');
     write(root, 'src/shared/helpers/payment-network.ts', 'export async function setupPaymentFailure() {}\n');
     write(root, 'src/shared/helpers/order-db.ts', 'export async function verifyOrderDb() {}\n');
+    write(root, 'src/shared/helpers/test-lifecycle.ts', [
+      'export async function prepareTest() {}',
+      'export async function releaseTest() {}',
+      '',
+    ].join('\n'));
     const plan = {
       selection: { available_testcase_ids: ['TC_ADV_01', 'TC_REAL_01'] },
       testcases: [{
         testcase_id: 'TC_ADV_01',
         capabilities: ['ui'],
         automation_selection: selection('AUTOMATE'),
+        lifecycle_hooks: {
+          before_test: {
+            implementation_file: 'src/shared/helpers/test-lifecycle.ts',
+            implementation_export: 'prepareTest',
+          },
+          after_test: {
+            implementation_file: 'src/shared/helpers/test-lifecycle.ts',
+            implementation_export: 'releaseTest',
+          },
+        },
         network_interception: {
           mode: 'MOCK',
           routes: [{ pattern: '**/api/payment', action: 'FULFILL', status: 503, fixture_file: 'test-data/fixtures/payment-error.json' }],
@@ -105,6 +154,7 @@ test('network and direct SQL contracts pass only with bounded runtime assets and
 
     const report = verifyAdvancedTestContracts({ plan, projectRoot: root, checkRuntimeAssets: true });
     assert.equal(report.status, 'PASS', JSON.stringify(report.violations, null, 2));
+    assert.equal(report.contracts.lifecycle_hooks, 1);
 
     const missingCredential = verifyAdvancedTestContracts({
       plan, projectRoot: root, checkRuntimeAssets: true, checkCredentials: true, env: {},
@@ -122,6 +172,27 @@ test('network and direct SQL contracts pass only with bounded runtime assets and
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('lifecycle hooks reject unsafe paths, invalid exports and empty contracts', () => {
+  const report = verifyAdvancedTestContracts({
+    plan: {
+      testcases: [
+        { testcase_id: 'TC_HOOK_01', lifecycle_hooks: {} },
+        {
+          testcase_id: 'TC_HOOK_02',
+          lifecycle_hooks: {
+            before_test: { implementation_file: '../outside.ts', implementation_export: 'beforeTest' },
+            after_test: { implementation_file: 'src/shared/helpers/lifecycle.ts', implementation_export: 'not-valid!' },
+          },
+        },
+      ],
+    },
+  });
+  const codes = new Set(report.violations.map(item => item.code));
+  assert.ok(codes.has('LIFECYCLE_HOOKS_MISSING'));
+  assert.ok(codes.has('LIFECYCLE_IMPLEMENTATION_PATH_INVALID'));
+  assert.ok(codes.has('LIFECYCLE_IMPLEMENTATION_EXPORT_INVALID'));
 });
 
 test('HAR contract requires sanitization, service-worker blocking and a real-flow sibling', () => {

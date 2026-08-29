@@ -67,7 +67,28 @@ class AutomationManifestTests(unittest.TestCase):
             'manual_cost': 4,
             'business_risk': 5,
             'maintenance_cost': 2,
+            'recommended_layer': 'API',
+            'layer_rationale': 'Service contract is the cheapest stable layer',
+            'extended_roi': {
+                'build_cost': 2,
+                'infrastructure_cost': 2,
+                'feedback_speed_value': 5,
+                'defect_prevention_value': 5,
+                'coverage_value': 4,
+                'reliability_confidence': 5,
+            },
             'rationale': 'Critical release regression',
+        }
+        case['automation_tags'] = ['@smoke', '@regression']
+        case['lifecycle_hooks'] = {
+            'before_test': {
+                'implementation_file': 'src/shared/helpers/upload-lifecycle.ts',
+                'implementation_export': 'prepareUploadTest',
+            },
+            'after_test': {
+                'implementation_file': 'src/shared/helpers/upload-lifecycle.ts',
+                'implementation_export': 'releaseUploadTest',
+            },
         }
         case['network_interception'] = {
             'mode': 'MOCK',
@@ -91,8 +112,22 @@ class AutomationManifestTests(unittest.TestCase):
 
         emitted = manifest['testcases'][0]
         self.assertEqual(case['automation_selection'], emitted['automation_selection'])
+        self.assertEqual(case['automation_tags'], emitted['automation_tags'])
+        self.assertEqual(case['lifecycle_hooks'], emitted['lifecycle_hooks'])
         self.assertEqual(case['network_interception'], emitted['network_interception'])
         self.assertEqual(case['db_verification'], emitted['db_verification'])
+
+    def test_manifest_rejects_invalid_or_reserved_automation_tags(self):
+        for tags in (['Smoke'], ['@ui'], ['@smoke', '@smoke']):
+            with self.subTest(tags=tags):
+                data = self.data()
+                case = data['sections'][0]['groups'][0]['scenarios'][0]['cases'][0]
+                case['automation_tags'] = tags
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    markdown_path = pathlib.Path(temp_dir) / 'invalid-tags.md'
+                    self.generator.write_testcase_markdown(data, markdown_path)
+                    with self.assertRaisesRegex(ValueError, 'automation_tags'):
+                        self.generator.build_automation_manifest(data, markdown_path)
 
     def test_required_contract_rejects_missing_stable_testcase_id(self):
         data = self.data()

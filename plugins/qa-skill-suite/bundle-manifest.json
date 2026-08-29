@@ -35,9 +35,9 @@
     {
       "id": "static-requirements-analysis",
       "source_path": "static-testing/requirements-analysis",
-      "file_count": 11,
-      "source_sha256": "95f4908cc2e1de72d1b830c1e22eaa5d03f3f155e04486be4725cc8e624807d7",
-      "bundled_sha256": "fa681efb8034057a3b186f27dc8991e05763ecd99a0b07ca88ff688890b4649d"
+      "file_count": 13,
+      "source_sha256": "e9bdace2378d761d468b4e007dc27e24864dbd3797b57f581d8bc3fe97690e7c",
+      "bundled_sha256": "bb1de174d632beaa03349cad31634b242c76a7cfccb096b41abe816b7d302d53"
     },
     {
       "id": "dynamic-security-pentest",

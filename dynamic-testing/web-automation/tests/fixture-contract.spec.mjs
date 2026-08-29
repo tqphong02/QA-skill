@@ -23,6 +23,8 @@ test('fixtures/pom is the only public generated-spec fixture entrypoint', () => 
   assert.doesNotMatch(auth, /export const test\b|test as base|\.extend</);
   assert.doesNotMatch(dataDriven, /export const test\b|test as base|\.extend</);
   assert.match(dataDriven, /export function createTestData/);
+  assert.match(dataDriven, /build<T extends Record<string, unknown>>\(defaults: T, overrides\?: Partial<T>\): T/);
+  assert.match(dataDriven, /return \{ \.\.\.defaults, \.\.\.overrides \};/);
   assert.match(auth, /export function resolveWorkerAccount/);
 });
 

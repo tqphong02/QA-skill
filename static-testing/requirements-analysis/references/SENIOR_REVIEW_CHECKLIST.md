@@ -1,6 +1,11 @@
 # Senior fullstack QA/QC review checklist
 
-Review every area below before generating outputs. Do not mark an area `checked` merely because the document does not mention it. Create a Q&A item or mark it `blocked` when the missing information can change implementation or testing
+Review every area below before generating outputs. These areas are lenses for the stated scope, not a completeness template for inventing requirements
+
+- Mark `checked` only when the source sufficiently covers the area for an in-scope flow
+- Mark `blocked` only when one missing material decision prevents implementation or deterministic testing; reference the existing root Q&A item
+- Mark `not_applicable` when the source and stated scope do not require the area
+- Do not create Q&A merely because a document is silent about a generic quality attribute
 
 ## 1. Scope and actors
 
@@ -112,11 +117,14 @@ Review every area below before generating outputs. Do not mark an area `checked`
 
 ## Question quality gate
 
-Each Q&A item must identify:
+Admit a Q&A item only when all conditions are true:
 
-- Exact source reference or missing source
-- The unclear or conflicting statement
-- Risk if unanswered
+- An existing in-scope flow or atomic requirement is impacted
+- An exact `source_ref` and `source_excerpt` establish the parent behavior
+- Alternative answers change an observable outcome, state, permission, calculation, data contract or acceptance criterion
+- No existing question has the same root `decision_key`
 - One direct question answerable by BA, PO, Dev, Architect or another owner
 - Proposed assumption clearly labeled as a proposal
 - Priority and status
+
+Zero questions is a valid high-quality result. Do not split one root decision into several questions for different checklist areas, and do not create follow-up questions solely because the first question remains unanswered

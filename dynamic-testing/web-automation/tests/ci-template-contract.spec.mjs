@@ -72,6 +72,23 @@ test('Jenkins template avoids concurrent reporters in one workspace and runs eve
   assert.match(pipeline, /archiveArtifacts artifacts: .*reports\/\*\*.*evidence\/\*\*/);
 });
 
+test('GitLab template runs the stable all-surface contract and always retains evidence', () => {
+  const pipeline = fs.readFileSync(path.join(TEMPLATE_ROOT, '.gitlab-ci.yml'), 'utf8');
+
+  assert.match(pipeline, /mcr\.microsoft\.com\/playwright:v1\.62\.0-noble/);
+  assert.match(pipeline, /PW_RETRIES:\s*"1"/);
+  assert.match(pipeline, /resource_group:\s*qa-static-test-pool/);
+  assert.match(pipeline, /npm run toolchain:check/);
+  assert.match(pipeline, /npm run qa:preflight -- --surface all --require-auth/);
+  assert.match(pipeline, /npm run qa:test -- --surface all --project=chromium/);
+  assert.match(pipeline, /npm run qa:quality -- --surface all --project=chromium/);
+  assert.match(pipeline, /npm run qa:report -- --mode mixed/);
+  assert.match(pipeline, /when:\s*always/);
+  assert.match(pipeline, /reports\/junit\.xml/);
+  assert.doesNotMatch(pipeline, /TEST_PASS:\s*[^$]/);
+  assert.doesNotMatch(pipeline, /\bk6\b/);
+});
+
 test('repository release workflow requires the web-automation contract suite', () => {
   const repositoryRoot = path.resolve(HERE, '../../..');
   const workflow = fs.readFileSync(

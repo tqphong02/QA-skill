@@ -156,11 +156,11 @@ export const loginSelectors = {
         strategy: 'label',
         locator: "page.getByLabel('Email')",
         candidates: [
+          { strategy: 'role', available: false },
+          { strategy: 'label', available: true, count: 1 },
           { strategy: 'testid', available: false, reason: 'No FE-owned test-id' },
           { strategy: 'id', available: false },
           { strategy: 'css', available: false },
-          { strategy: 'role', available: false },
-          { strategy: 'label', available: true, count: 1 },
         ],
         verification: { count: 1, visible: true, actionable: true, url: '/login' },
       },
@@ -170,10 +170,10 @@ export const loginSelectors = {
         strategy: 'role',
         locator: "page.getByRole('button', { name: 'Đăng nhập' })",
         candidates: [
+          { strategy: 'role', available: true, count: 1 },
           { strategy: 'testid', available: false, reason: 'No FE-owned test-id' },
           { strategy: 'id', available: false },
           { strategy: 'css', available: false },
-          { strategy: 'role', available: true, count: 1 },
         ],
         verification: { count: 1, visible: true, actionable: true, url: '/login' },
       },
@@ -183,10 +183,10 @@ export const loginSelectors = {
         strategy: 'role',
         locator: "page.getByRole('heading', { name: 'Dashboard' })",
         candidates: [
+          { strategy: 'role', available: true, count: 1 },
           { strategy: 'testid', available: false, reason: 'No FE-owned test-id' },
           { strategy: 'id', available: false },
           { strategy: 'css', available: false },
-          { strategy: 'role', available: true, count: 1 },
         ],
         verification: { count: 1, visible: true, actionable: false, url: '/dashboard' },
         route: '/dashboard'
@@ -417,7 +417,7 @@ test('traceability audit blocks a lower-priority locator when a higher-priority 
   try {
     const evidencePath = path.join(fixture.root, 'selector-evidence', 'login.json');
     const evidence = JSON.parse(fs.readFileSync(evidencePath, 'utf8'));
-    evidence.targets[0].candidates[0] = { strategy: 'testid', available: true, source: 'FE contract', count: 1 };
+    evidence.targets[0].candidates[0] = { strategy: 'role', available: true, count: 1 };
     fs.writeFileSync(evidencePath, JSON.stringify(evidence, null, 2), 'utf8');
     const report = audit(fixture);
     assert.equal(report.status, 'BLOCKED');

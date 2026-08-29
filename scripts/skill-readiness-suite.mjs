@@ -369,6 +369,7 @@ function apiChecks(skill) {
 }
 
 function businessChecks(skill) {
+  runPythonUnitTests(skill, 'static-requirements-analysis')
   const outputDir = path.join(TMP_ROOT, 'static-requirements-analysis')
   const result = runCommand('bash', [skillPath('static-requirements-analysis', 'scripts', 'generate.sh'), skillPath('static-requirements-analysis', 'examples', 'sample-analysis.json'), outputDir, 'readiness'], { timeout: 180000 })
   const expected = [
@@ -376,6 +377,7 @@ function businessChecks(skill) {
     'readiness_Q&A.md',
     'readiness_Q&A.xlsx',
     path.join('.static-testing', 'requirements-analysis', 'readiness_Requirements.json'),
+    path.join('.static-testing', 'requirements-analysis', 'readiness_Analysis_State.json'),
   ]
   const missing = expected.filter(file => !fs.existsSync(path.join(outputDir, file)))
   const ok = result.code === 0 && missing.length === 0

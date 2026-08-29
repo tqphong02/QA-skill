@@ -9,7 +9,7 @@ import sys
 
 
 ALLOWED_KEYS = {
-    "id", "text", "source_ref", "page", "actor", "state", "expected_behavior",
+    "id", "text", "source_ref", "source_excerpt", "page", "actor", "state", "expected_behavior",
     "fact_status", "human_confirmed", "ui", "expected", "source_refs", "testcase_ids",
 }
 

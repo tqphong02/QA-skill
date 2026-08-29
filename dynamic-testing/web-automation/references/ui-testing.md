@@ -37,15 +37,18 @@
 
 Prefer locators selected from observed FE/live DOM evidence. Browser MCP
 (Playwright MCP by default) must provide the live accessibility/DOM observation
-before POM generation. Use this exact order:
+before POM generation. Use this exact order. Prefer the control identity that a
+user or assistive technology perceives, while retaining an FE-owned test-id as
+the stable fallback when semantic identity is unavailable or ambiguous:
 
-1. `getByTestId('login-submit')` — first only when an existing FE-owned test-id is present in the FE source/contract or live DOM and is runtime-verified
-2. Stable `id` — only after runtime uniqueness verification
-3. Stable CSS attributes/classes — for example `[name="email"]` or `[type="password"]`; never use generated classes
-4. `getByRole(role, { name })`, `getByLabel(text)`, `getByPlaceholder(text)` and `getByText(text)` — semantic alternatives when the first three are unavailable or ambiguous
-5. Short anchored XPath — last resort, with a recorded reason and live verification
+1. `getByRole(role, { name })` or `getByLabel(text)` when the accessible identity is unique and stable
+2. `getByTestId('login-submit')` only when an existing FE-owned test-id is present in the FE source/contract or live DOM and is runtime-verified
+3. Stable `id` — only after runtime uniqueness verification
+4. Stable CSS attributes/classes — for example `[name="email"]` or `[type="password"]`; never use generated classes
+5. `getByPlaceholder(text)` or `getByText(text)` when they are the best observable identity
+6. Short anchored XPath — last resort, with a recorded reason and live verification
 
-If no FE repository or contract is available, do not invent or inject `data-testid`; record that the test-id candidate is unavailable and continue with `id → CSS → semantic → XPath`. If the live DOM already exposes a test-id, it still must pass the same verification gate
+If no FE repository or contract is available, do not invent or inject `data-testid`; record that the test-id candidate is unavailable and continue with semantic → id → CSS → XPath. If the live DOM already exposes a test-id, it still must pass the same verification gate
 
 **`data-testid` convention:** an existing FE-owned `<component>-<element>` value (e.g. `login-email`, `cart-total`). Adding a new test-id is a separate FE change, not an automation fallback
 
@@ -117,6 +120,20 @@ trace/media and classify the real outcome: an unmet product expectation is
 when a page uses skeletons, polling or asynchronous hydration, and wait for the
 smallest observable signal that proves the requested business state is ready.
 
+### Browser events and iframe controls
+
+The manifest uses `download`, `dialog_accept`, `dialog_dismiss`, and `popup` for
+events that must be armed before clicking their trigger. Generated Page Objects
+call `waitForEvent()` first, then click. Downloads are saved below the current
+test's `testInfo.outputPath()` and attached as evidence. Dialog messages and
+popup URLs are retained as test annotations; observable business assertions
+remain in the spec
+
+For a control inside an iframe, keep the ordinary action (`fill`, `click`, and
+so on) and add a stable `target.frame`. Selector evidence then records a locator
+such as `page.frameLocator('#payment-frame').getByLabel('Card number')`. The
+frame and inner control must both come from the same live Browser MCP session
+
 ## 5. Spec file structure
 
 ```typescript
@@ -136,6 +153,17 @@ test.describe('Feature @ui', () => {
 - **One intent per test.** Don't bundle "login + create + delete" into one test — split.
 - **`beforeEach` for shared setup** (navigation, seed data). **`beforeAll`** for expensive setup (auth token).
 - **Assertions in the spec**, reading data returned by page methods.
+
+### Manifest lifecycle hooks
+
+Use testcase-level `lifecycle_hooks.before_test` or `lifecycle_hooks.after_test`
+only when setup/teardown cannot be expressed by the canonical fixture, API
+cleanup contract, or Page Object cleanup. Each hook names an exported helper
+below `src/shared/helpers/`; inline code and paths outside that boundary are
+blocked. The generated spec invokes `before_test` before network setup and test
+actions, and invokes `after_test` from `finally`, so teardown still runs after
+an action, assertion, or setup failure. Keep hooks small, idempotent, scoped to
+the current testcase, and free of hidden assertions or cross-worker state
 
 ## 6. Fixtures (auth, data)
 
@@ -206,7 +234,7 @@ mandatory evidence contract, prefer `on-first-retry` when retries are enabled or
 | Anti-pattern | Fix |
 |---|---|
 | `expect()` inside page object | Move assertion to spec; page returns data |
-| Raw CSS / `:nth-child` locators | Apply `testid → id → CSS → semantic → XPath`; reject generated CSS and positional selectors |
+| Raw CSS / `:nth-child` locators | Apply `role/label → testid → id → CSS → placeholder/text → XPath`; reject generated CSS and positional selectors |
 | Guessed XPath or selector copied from testcase prose | Inspect live DOM, verify uniqueness/actionability and record selector evidence |
 | `page.waitForTimeout(3000)` | Wait for a signal: `waitForResponse`, `expect(locator).toBeVisible()` |
 | Login inside every test | Use `storageState` fixture |

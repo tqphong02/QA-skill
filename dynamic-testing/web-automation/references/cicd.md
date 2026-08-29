@@ -1,6 +1,6 @@
 # CI/CD contract for deterministic Playwright POM
 
-Read this reference for GitHub Actions, Jenkins, scheduled execution, Allure
+Read this reference for GitHub Actions, GitLab CI, Jenkins, scheduled execution, Allure
 publication or flaky-test handling. The copyable templates live under
 `assets/templates/`.
 
@@ -212,6 +212,20 @@ builds from leasing the same static backend pools, and `BUILD_TAG` supplies the
 run namespace. Configure the `Node-24` NodeJS
 installation and credential IDs in Jenkins; do not change the test contract per
 platform.
+
+## GitLab CI
+
+`assets/templates/.gitlab-ci.yml` provides the same stable project interface for
+merge requests, pushes, schedules and manual pipelines. It uses a pinned
+Playwright image, `npm ci`, static preflight, lint, one all-surface Chromium run,
+the quality gate, the Allure contract/report and `artifacts: when: always`
+
+`resource_group: qa-static-test-pool` serializes jobs that share the same finite
+account/data pool. Remove or partition that resource group only when each
+concurrent pipeline receives separately leased accounts, datasets and cleanup
+ownership. Store `BASE_URL`, `UI_BASE_URL`, `API_BASE_URL`, account pools and
+credentials as protected or environment-scoped GitLab CI variables; never put
+their values in the YAML
 
 ## Flaky policy and cross-skill handoff
 

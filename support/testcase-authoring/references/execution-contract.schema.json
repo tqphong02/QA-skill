@@ -53,7 +53,7 @@
         "properties": {
           "id": { "type": "string", "pattern": "^S[0-9]{2,}$" },
           "action": {
-            "enum": ["navigate", "fill", "clear", "select", "check", "uncheck", "click", "press", "upload", "wait", "observe", "assert"]
+            "enum": ["navigate", "fill", "clear", "select", "check", "uncheck", "click", "press", "upload", "download", "dialog_accept", "dialog_dismiss", "popup", "wait", "observe", "assert"]
           },
           "instruction": { "type": "string", "minLength": 1 },
           "target": {
@@ -69,6 +69,7 @@
               "test_id": { "type": "string" },
               "id": { "type": "string" },
               "route": { "type": "string" },
+              "frame": { "type": "string", "minLength": 1 },
               "selector_evidence": { "$ref": "#/$defs/selectorEvidence" }
             },
             "additionalProperties": true

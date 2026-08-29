@@ -82,7 +82,8 @@ SENSITIVE_PAYLOAD_KEYS = {
 }
 EXECUTION_ACTIONS = {
     'navigate', 'fill', 'clear', 'select', 'check', 'uncheck', 'click',
-    'press', 'upload', 'wait', 'observe', 'assert'
+    'press', 'upload', 'download', 'dialog_accept', 'dialog_dismiss', 'popup',
+    'wait', 'observe', 'assert'
 }
 EXECUTION_SELECTOR_STATUSES = {'unresolved', 'runtime_verified', 'not_applicable'}
 TESTCASE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9]*(?:[-_][A-Za-z0-9]+)+$')
@@ -120,6 +121,20 @@ EXECUTION_ENTRY_FIELDS = (
     'environment', 'screen', 'route', 'role', 'state', 'permissions', 'data'
 )
 EXECUTION_VALUE_ACTIONS = {'fill', 'select', 'press', 'upload'}
+
+
+def _automation_tags(case):
+    tags = case.get('automation_tags') or []
+    if not isinstance(tags, list):
+        raise ValueError('case.automation_tags must be an array')
+    normalized = [str(tag).strip() for tag in tags]
+    if any(not re.fullmatch(r'@[a-z][a-z0-9-]*', tag) for tag in normalized):
+        raise ValueError('case.automation_tags must use @lowercase-kebab-case')
+    if len(set(normalized)) != len(normalized):
+        raise ValueError('case.automation_tags must be unique')
+    if any(tag in {'@ui', '@api', '@functional'} for tag in normalized):
+        raise ValueError('case.automation_tags cannot repeat generated surface tags')
+    return normalized
 
 
 def _deep_merge(base, override):
@@ -171,6 +186,10 @@ MANUAL_ACTION_PATTERNS = {
     'click': re.compile(r'\b(nhấp|bấm|click|nhấn(?=\s+(?:vào\s+)?(?:nút|ô|liên kết)))\b', re.IGNORECASE),
     'press': re.compile(r'\b(nhấn phím|press)\b', re.IGNORECASE),
     'upload': re.compile(r'\b(tải lên|upload)\b', re.IGNORECASE),
+    'download': re.compile(r'\b(tải xuống|download)\b', re.IGNORECASE),
+    'dialog_accept': re.compile(r'\b(chấp nhận|accept)\b.*\b(hộp thoại|dialog)\b', re.IGNORECASE),
+    'dialog_dismiss': re.compile(r'\b(hủy|đóng|dismiss)\b.*\b(hộp thoại|dialog)\b', re.IGNORECASE),
+    'popup': re.compile(r'\b(cửa sổ mới|popup)\b', re.IGNORECASE),
     'wait': re.compile(r'\b(chờ|đợi|wait)\b', re.IGNORECASE),
     'observe': re.compile(r'\b(quan sát|kiểm tra|xác nhận|observe)\b', re.IGNORECASE),
     'assert': re.compile(r'\b(kiểm tra|xác nhận|assert)\b', re.IGNORECASE),
@@ -305,7 +324,10 @@ def _validate_atomic_instruction(step, index):
     for value_token in _manual_strings(manual_value):
         action_text = action_text.replace(value_token, '')
     detected = _detected_manual_actions(action_text)
-    equivalent = {'observe', 'assert'} if action in {'observe', 'assert'} else {action}
+    if action in {'download', 'dialog_accept', 'dialog_dismiss', 'popup'}:
+        equivalent = {action, 'click', 'observe', 'assert'}
+    else:
+        equivalent = {'observe', 'assert'} if action in {'observe', 'assert'} else {action}
     if not detected.intersection(equivalent):
         raise ValueError(
             f'execution.steps[{index}].instruction must clearly describe action={action}'
@@ -1655,6 +1677,7 @@ def _execution_target_hints(target):
         ('placeholder', 'placeholder'),
         ('test_id', 'test_id'),
         ('id', 'id'),
+        ('frame', 'frame'),
     )
     return '; '.join(
         f'{label}={_markdown_cell(target.get(key))}'
@@ -1950,6 +1973,8 @@ def build_automation_manifest(data, markdown_path):
                 or ('(out-of-spec)' if case.get('type') == 'additional' else 'UNRESOLVED')
             ).strip(),
             'priority': human_text(case.get('priority') or 'N/A', 'priority'),
+            'automation_tags': _automation_tags(case),
+            'lifecycle_hooks': deepcopy(case.get('lifecycle_hooks')),
             'description': human_text(case.get('description') or '', 'description'),
             'coverage_item_refs': _coverage_item_refs(case),
             'ui_function_keys': _ui_function_keys(case),

@@ -63,7 +63,7 @@ Parallel mutation requires one isolated account/storage state and dataset/cleanu
 For UI/POM work, read [selector-discovery.md](references/selector-discovery.md) and [ui-coverage-discovery.md](references/ui-coverage-discovery.md). Resolve selectors from the same Browser MCP page/session and current app build using this priority:
 
 ```text
-existing testid -> stable id -> stable CSS -> role/label/placeholder/text -> short anchored XPath
+role/label -> existing testid -> stable id -> stable CSS -> placeholder/text -> short anchored XPath
 ```
 
 Never invent `data-testid`. Reject generated classes, positional CSS, `.first()`, `.last()`, absolute/positional XPath, ambiguous matches, stale evidence, and a lower-priority locator when a verified higher-priority candidate exists. Prove count, visibility, and actionability in the intended route/role/state, then promote only the selected locator into `selectors/`.
@@ -86,13 +86,13 @@ All deterministic surfaces use the canonical `fixtures/allure-contract.ts` and o
 | Need | Reference |
 |---|---|
 | BUILD/RUN/Sheet integration | [testcase-execution.md](references/testcase-execution.md) |
-| UI/POM and waits | [ui-testing.md](references/ui-testing.md) |
+| UI/POM, browser events, iframe and waits | [ui-testing.md](references/ui-testing.md) |
 | Browser MCP selectors | [selector-discovery.md](references/selector-discovery.md) |
 | Complete UI-function coverage | [ui-coverage-discovery.md](references/ui-coverage-discovery.md) |
 | API automation | [api-testing.md](references/api-testing.md) |
 | Data-driven and parallel isolation | [data-driven-testing.md](references/data-driven-testing.md) |
 | Traceability and token telemetry | [automation-audit.md](references/automation-audit.md) |
-| CI, quality gates, Allure merge, flaky policy | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md), [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
+| GitHub/GitLab/Jenkins CI, quality gates, Allure merge, flaky policy | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md), [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
 | Deciding what to automate, automation value formula | [test-selection-strategy.md](references/test-selection-strategy.md) |
 | Network interception, mocking, HAR playback | [network-interception.md](references/network-interception.md) |
 | UI + API + DB cross-layer verification | [db-verification.md](references/db-verification.md) |
@@ -105,6 +105,6 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
 - Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
 - `AUTOMATE`/`ACTIVE` selection is required when selection metadata exists; `DEFER`, `REJECT`, and `RETIRED` are excluded from the plan and never projected as runtime `N/A`
-- Mock/HAR and DB verification contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, declared helper exports, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs
+- Mock/HAR, DB verification, custom tag, ROI/layer and lifecycle-hook contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, bounded declared helper exports, `after_test` teardown in `finally`, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs
 - Generated specs use the canonical fixture, contain no raw selector/request, and selected tests actually execute
 - Never claim `PASS` from static findings, generated code alone, or missing runtime evidence

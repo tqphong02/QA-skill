@@ -1,0 +1,60 @@
+stages:
+  - preflight
+  - test
+
+variables:
+  QA_PROJECT_DIR: "qa"
+  PW_RETRIES: "1"
+  PW_WORKERS: "1"
+  NPM_CONFIG_CACHE: "$CI_PROJECT_DIR/.npm"
+  QA_RUN_ID: "gitlab-$CI_PIPELINE_ID-$CI_JOB_ID"
+  RUN_ID: "gitlab-$CI_PIPELINE_ID-$CI_JOB_ID"
+
+default:
+  image: mcr.microsoft.com/playwright:v1.62.0-noble
+  cache:
+    key:
+      files:
+        - $QA_PROJECT_DIR/package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - cd "$QA_PROJECT_DIR"
+
+preflight:
+  stage: preflight
+  script:
+    - npm run toolchain:check
+    - npm ci
+    - npm run qa:lint
+    - npm run qa:preflight -- --surface all --require-auth
+
+test-all:
+  stage: test
+  needs: [preflight]
+  resource_group: qa-static-test-pool
+  script:
+    - npm ci
+    - |
+      test_status=0
+      quality_status=0
+      report_status=0
+      npm run qa:test -- --surface all --project=chromium || test_status=$?
+      npm run qa:quality -- --surface all --project=chromium || quality_status=$?
+      npm run qa:report -- --mode mixed || report_status=$?
+      if [ "$test_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$report_status" -ne 0 ]; then
+        exit 1
+      fi
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - $QA_PROJECT_DIR/reports/
+      - $QA_PROJECT_DIR/evidence/
+    reports:
+      junit: $QA_PROJECT_DIR/reports/junit.xml
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"

@@ -51,7 +51,7 @@ STATUS_VI = {
     "verified": "Đã xác nhận", "inferred": "Suy luận", "unresolved": "Chưa làm rõ",
 }
 QUESTION_HEADERS = [
-    "Mã câu hỏi", "Nhóm vấn đề", "Module / Luồng", "Điểm chưa rõ / Thiếu",
+    "Mã câu hỏi", "Nhóm vấn đề", "Module / Luồng", "Nguồn", "ID bị ảnh hưởng", "Điểm chưa rõ / Thiếu",
     "Rủi ro nếu chưa trả lời", "Câu hỏi",
     "Giả định đề xuất", "Người trả lời", "Mức ưu tiên", "Trạng thái", "Câu trả lời",
 ]
@@ -104,9 +104,64 @@ def slugify(value):
     return text or "business"
 
 
-def normalize_questions(items):
+def normalize_evidence_text(value):
+    return re.sub(r"\s+", " ", str(value or "")).strip().casefold()
+
+
+def load_source_documents(data, input_path):
+    documents = {}
+    for index, raw in enumerate(data.get("source_markdown") or []):
+        value = str(raw or "").strip()
+        if not value:
+            fail(f"source_markdown[{index}] must not be empty")
+        candidates = [Path(value)]
+        if not Path(value).is_absolute():
+            candidates.append(input_path.parent / value)
+        source_path = next((candidate.resolve() for candidate in candidates if candidate.is_file()), None)
+        if source_path is None:
+            fail(f"Source Markdown not found: {value}")
+        if source_path.suffix.lower() not in {".md", ".markdown"}:
+            fail(f"Source must be Markdown after conversion: {value}")
+        key = source_path.name.casefold()
+        if key in documents:
+            fail(f"Duplicate source Markdown basename: {source_path.name}")
+        documents[key] = {
+            "path": source_path,
+            "content": normalize_evidence_text(source_path.read_text(encoding="utf-8")),
+        }
+    return documents
+
+
+def validate_evidence(item, label, documents):
+    source_ref = str(item.get("source_ref") or "").strip()
+    excerpt = str(item.get("source_excerpt") or "").strip()
+    if not source_ref:
+        fail(f"{label}.source_ref is required")
+    ref_file = source_ref.split("#", 1)[0].replace("\\", "/")
+    if Path(ref_file).is_absolute():
+        fail(f"{label}.source_ref must be logical, not an absolute path")
+    source = documents.get(Path(ref_file).name.casefold())
+    if source is None:
+        fail(f"{label}.source_ref does not match source_markdown: {source_ref}")
+    if not excerpt:
+        fail(f"{label}.source_excerpt is required")
+    normalized_excerpt = normalize_evidence_text(excerpt)
+    if normalized_excerpt not in source["content"]:
+        fail(f"{label}.source_excerpt was not found in {Path(ref_file).name}")
+
+
+def validate_key(value, label):
+    key = str(value or "").strip()
+    if not re.fullmatch(r"[a-z0-9][a-z0-9._-]*", key):
+        fail(f"{label} must use lowercase letters, digits, dot, underscore or hyphen")
+    return key
+
+
+def normalize_questions(items, documents, known_impact_ids):
     questions = []
     seen = set()
+    decision_keys = set()
+    normalized_texts = set()
     for index, raw in enumerate(items or [], 1):
         item = dict(raw)
         qid = clean(item.get("id") or f"QA-{index:03d}", f"questions[{index}].id")
@@ -124,16 +179,39 @@ def normalize_questions(items):
             fail(f"{qid}.question is required")
         if item["status"] == "Answered" and not clean(item.get("answer"), f"{qid}.answer"):
             fail(f"{qid}.answer is required when status is Answered")
+        decision_key = validate_key(item.get("decision_key"), f"{qid}.decision_key")
+        if decision_key in decision_keys:
+            fail(f"Duplicate question decision_key: {decision_key}")
+        decision_keys.add(decision_key)
+        item["decision_key"] = decision_key
+        basis = str(item.get("basis") or "").strip()
+        if basis not in {"ambiguous_text", "contradiction", "missing_required_rule", "untestable_acceptance", "unclear_ownership"}:
+            fail(f"{qid}.basis is invalid")
+        impact_ids = item.get("impact_ids")
+        if not isinstance(impact_ids, list) or not impact_ids:
+            fail(f"{qid}.impact_ids must contain at least one flow or requirement ID")
+        unknown_impacts = sorted({str(value) for value in impact_ids} - known_impact_ids)
+        if unknown_impacts:
+            fail(f"{qid}.impact_ids contains unknown IDs: {unknown_impacts}")
+        item["impact_ids"] = [clean(value, f"{qid}.impact_ids") for value in impact_ids]
+        validate_evidence(item, qid, documents)
+        normalized_question = normalize_evidence_text(item.get("question"))
+        if normalized_question in normalized_texts:
+            fail(f"Duplicate question text: {qid}")
+        normalized_texts.add(normalized_question)
         questions.append(item)
     return questions
 
 
-def validate(data):
-    for field in ["project", "scope", "analysis_date", "source_markdown", "review_coverage", "modules", "questions", "flow_links", "sanity_journeys"]:
+def validate(data, input_path):
+    for field in ["schema_version", "project", "scope", "analysis_date", "source_markdown", "review_coverage", "modules", "questions", "flow_links", "sanity_journeys"]:
         if field not in data or data[field] in (None, ""):
             fail(f"Missing required field: {field}")
+    if str(data["schema_version"]) != "2.0":
+        fail("schema_version must be 2.0")
     if not isinstance(data["source_markdown"], list) or not data["source_markdown"]:
         fail("source_markdown must be a non-empty list")
+    documents = load_source_documents(data, input_path)
     if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(data["analysis_date"])):
         fail("analysis_date must use YYYY-MM-DD")
     coverage = data["review_coverage"]
@@ -152,12 +230,83 @@ def validate(data):
             fail(f"{area}.notes is required for {status}")
     if not isinstance(data["modules"], list):
         fail("modules must be a list")
+    flow_ids = set()
+    semantic_keys = set()
+    for module_index, module in enumerate(data["modules"]):
+        flows = module.get("flows") if isinstance(module, dict) else None
+        if not isinstance(flows, list):
+            fail(f"modules[{module_index}].flows must be a list")
+        for flow_index, flow in enumerate(flows):
+            label = f"modules[{module_index}].flows[{flow_index}]"
+            for field in ["id", "semantic_key", "name", "actor", "status", "source_ref", "source_excerpt", "entry_state", "exit_state", "trigger"]:
+                if not str(flow.get(field) or "").strip():
+                    fail(f"{label}.{field} is required")
+            flow_id = clean(flow["id"], f"{label}.id")
+            if flow_id in flow_ids:
+                fail(f"Duplicate flow ID: {flow_id}")
+            flow_ids.add(flow_id)
+            semantic_key = validate_key(flow.get("semantic_key"), f"{label}.semantic_key")
+            if semantic_key in semantic_keys:
+                fail(f"Duplicate flow semantic_key: {semantic_key}")
+            semantic_keys.add(semantic_key)
+            validate_evidence(flow, label, documents)
+            if str(flow.get("status")) not in {"verified", "inferred", "unresolved"}:
+                fail(f"{label}.status is invalid")
+            for field in ["preconditions", "steps", "outcomes", "alternate_flows", "exceptions", "business_rules", "dependencies", "sanity_checks", "unresolved"]:
+                if not isinstance(flow.get(field), list):
+                    fail(f"{label}.{field} must be a list")
+            if not flow["steps"] or not flow["outcomes"] or not flow["sanity_checks"]:
+                fail(f"{label} must contain sourced steps, outcomes and sanity_checks")
     if not isinstance(data["flow_links"], list):
         fail("flow_links must be a list")
-    if not isinstance(data["sanity_journeys"], list) or not data["sanity_journeys"]:
-        fail("sanity_journeys must be a non-empty list")
+    for index, link in enumerate(data["flow_links"]):
+        if link.get("from_flow") not in flow_ids or link.get("to_flow") not in flow_ids:
+            fail(f"flow_links[{index}] references an unknown flow")
+    if not isinstance(data["sanity_journeys"], list):
+        fail("sanity_journeys must be a list")
+    if flow_ids and not data["sanity_journeys"]:
+        fail("sanity_journeys must contain at least one path when flows exist")
+    if not flow_ids and data["sanity_journeys"]:
+        fail("sanity_journeys must be empty when no flows exist")
+    for journey_index, journey in enumerate(data["sanity_journeys"]):
+        sequence = journey.get("flow_sequence")
+        if not isinstance(sequence, list) or not sequence:
+            fail(f"sanity_journeys[{journey_index}].flow_sequence must be non-empty")
+        for step_index, step in enumerate(sequence):
+            if step.get("flow_id") not in flow_ids:
+                fail(f"sanity_journeys[{journey_index}].flow_sequence[{step_index}] references an unknown flow")
+            if not clean(step.get("transition_condition")) or not clean(step.get("checkpoint")):
+                fail(f"sanity_journeys[{journey_index}].flow_sequence[{step_index}] requires transition_condition and checkpoint")
+    requirement_ids = set()
+    requirements = data.get("requirements") or []
+    if not isinstance(requirements, list):
+        fail("requirements must be a list")
+    for index, requirement in enumerate(requirements):
+        label = f"requirements[{index}]"
+        requirement_id = clean(requirement.get("id"), f"{label}.id")
+        if not requirement_id:
+            fail(f"{label}.id is required")
+        if requirement_id in requirement_ids:
+            fail(f"Duplicate requirement ID: {requirement_id}")
+        requirement_ids.add(requirement_id)
+        validate_evidence(requirement, label, documents)
+    questions = normalize_questions(data["questions"], documents, flow_ids | requirement_ids)
+    question_ids = {item["id"] for item in questions}
+    for area, item in area_map.items():
+        ids = item.get("question_ids") or []
+        if not isinstance(ids, list):
+            fail(f"{area}.question_ids must be a list")
+        unknown = sorted(set(ids) - question_ids)
+        if unknown:
+            fail(f"{area}.question_ids contains unknown IDs: {unknown}")
+        status = str(item.get("status") or "").lower()
+        if status == "blocked" and not ids:
+            fail(f"{area}.question_ids is required when status is blocked")
+        if status == "not_applicable" and ids:
+            fail(f"{area}.question_ids must be empty when status is not_applicable")
     reject_secrets(data)
-    return normalize_questions(data["questions"])
+    completion = "DONE_WITH_OPEN_QA" if any(item["status"] in {"Open", "Blocked"} for item in questions) else "DONE"
+    return questions, completion
 
 
 def md_cell(value):
@@ -167,13 +316,14 @@ def md_cell(value):
 def question_row(item):
     return [
         item["id"], clean(item.get("category")), clean(item.get("module_flow")),
+        clean(item.get("source_ref")), ", ".join(item.get("impact_ids") or []),
         clean(item.get("ambiguity_gap")), clean(item.get("risk")),
         clean(item.get("question")), clean(item.get("proposed_assumption")), clean(item.get("owner")),
         item["priority"], vi_status(item["status"]), clean(item.get("answer")),
     ]
 
 
-def write_markdown(data, questions, output_path):
+def write_markdown(data, questions, completion, output_path):
     priority_counts = Counter(item["priority"] for item in questions)
     status_counts = Counter(vi_status(item["status"]) for item in questions)
     lines = [
@@ -181,7 +331,8 @@ def write_markdown(data, questions, output_path):
         "## Thông tin phân tích", "",
         f"- Dự án: {clean(data['project'])}",
         f"- Phạm vi: {clean(data['scope'])}",
-        f"- Ngày phân tích: {clean(data['analysis_date'])}", "",
+        f"- Ngày phân tích: {clean(data['analysis_date'])}",
+        f"- Kết quả: {completion}", "",
         "## Tóm tắt", "", clean(data.get("executive_summary") or "Chưa có nội dung tóm tắt được xác nhận"), "",
         "## Tổng quan câu hỏi", "",
         "| Tổng số | P0 | P1 | P2 | P3 | Mở | Đã trả lời | Bị chặn | Đã huỷ |",
@@ -204,6 +355,8 @@ def write_markdown(data, questions, output_path):
         lines.extend([
             f"### {item['id']} — {clean(item.get('category') or 'Chung')}", "",
             f"- Module / Luồng: {clean(item.get('module_flow'))}",
+            f"- Nguồn: {clean(item.get('source_ref'))}",
+            f"- ID bị ảnh hưởng: {', '.join(item.get('impact_ids') or [])}",
             f"- Điểm chưa rõ / Thiếu: {clean(item.get('ambiguity_gap'))}",
             f"- Rủi ro nếu chưa trả lời: {clean(item.get('risk'))}",
             f"- Câu hỏi: {clean(item.get('question'))}",
@@ -244,7 +397,7 @@ def add_table(ws, display_name, ref):
     ws.add_table(table)
 
 
-def write_excel(data, questions, output_path):
+def write_excel(data, questions, completion, output_path):
     wb = Workbook()
     overview = wb.active
     overview.title = "Tổng quan"
@@ -259,7 +412,7 @@ def write_excel(data, questions, output_path):
     overview.row_dimensions[1].height = 34
     meta = [
         ("Dự án", clean(data["project"])), ("Phạm vi", clean(data["scope"])),
-        ("Ngày phân tích", clean(data["analysis_date"])),
+        ("Ngày phân tích", clean(data["analysis_date"])), ("Kết quả", completion),
     ]
     for row_index, (label, value) in enumerate(meta, 3):
         overview.cell(row_index, 1, label)
@@ -316,26 +469,26 @@ def write_excel(data, questions, output_path):
     style_header(ws)
     style_body(ws)
     ws.freeze_panes = "A2"
-    ws.auto_filter.ref = f"A1:K{max(ws.max_row, 1)}"
-    widths = [14, 26, 28, 38, 38, 48, 38, 18, 12, 16, 42]
+    ws.auto_filter.ref = f"A1:M{max(ws.max_row, 1)}"
+    widths = [14, 26, 28, 30, 28, 38, 38, 48, 38, 18, 12, 16, 42]
     for index, width in enumerate(widths, 1):
         ws.column_dimensions[chr(64 + index)].width = width
     if ws.max_row >= 2:
-        add_table(ws, "BangCauHoiNghiepVu", f"A1:K{ws.max_row}")
+        add_table(ws, "BangCauHoiNghiepVu", f"A1:M{ws.max_row}")
     priority_dv = DataValidation(type="list", formula1='"P0,P1,P2,P3"', allow_blank=False)
     status_dv = DataValidation(type="list", formula1='"Mở,Đã trả lời,Bị chặn,Đã huỷ"', allow_blank=False)
     ws.add_data_validation(priority_dv)
     ws.add_data_validation(status_dv)
-    priority_dv.add(f"I2:I{max(ws.max_row, 1000)}")
-    status_dv.add(f"J2:J{max(ws.max_row, 1000)}")
+    priority_dv.add(f"K2:K{max(ws.max_row, 1000)}")
+    status_dv.add(f"L2:L{max(ws.max_row, 1000)}")
     color_rules = [
-        ('$I2="P0"', "F4CCCC"), ('$I2="P1"', "FCE4D6"),
-        ('$I2="P2"', "FFF2CC"), ('$I2="P3"', "E2F0D9"),
-        ('$J2="Đã trả lời"', "C6E0B4"), ('$J2="Bị chặn"', "F8CBAD"),
+        ('$K2="P0"', "F4CCCC"), ('$K2="P1"', "FCE4D6"),
+        ('$K2="P2"', "FFF2CC"), ('$K2="P3"', "E2F0D9"),
+        ('$L2="Đã trả lời"', "C6E0B4"), ('$L2="Bị chặn"', "F8CBAD"),
     ]
     for formula, color in color_rules:
         ws.conditional_formatting.add(
-            f"A2:K{max(ws.max_row, 2)}",
+            f"A2:M{max(ws.max_row, 2)}",
             FormulaRule(formula=[formula], fill=PatternFill("solid", fgColor=color)),
         )
 
@@ -363,6 +516,20 @@ def write_excel(data, questions, output_path):
 def check_outputs(md_path, xlsx_path):
     markdown = md_path.read_text(encoding="utf-8")
     md_ids = re.findall(r"^### (QA-[A-Za-z0-9_-]+)\s+—", markdown, flags=re.M)
+    md_details = {}
+    current_id = None
+    for line in markdown.splitlines():
+        heading = re.match(r"^### (QA-[A-Za-z0-9_-]+)\s+—", line)
+        if heading:
+            current_id = heading.group(1)
+            md_details[current_id] = {}
+        elif current_id and line.startswith("- Nguồn: "):
+            md_details[current_id]["source_ref"] = line.removeprefix("- Nguồn: ")
+        elif current_id and line.startswith("- ID bị ảnh hưởng: "):
+            md_details[current_id]["impact_ids"] = line.removeprefix("- ID bị ảnh hưởng: ")
+    completion_match = re.search(r"^- Kết quả: (DONE|DONE_WITH_OPEN_QA)$", markdown, flags=re.M)
+    if not completion_match:
+        fail("Q&A Markdown is missing a terminal analysis result")
     wb = load_workbook(xlsx_path, read_only=True, data_only=False)
     required = {"Tổng quan", "Q&A", "Phạm vi review"}
     if not required.issubset(set(wb.sheetnames)):
@@ -374,6 +541,15 @@ def check_outputs(md_path, xlsx_path):
     xlsx_ids = [row[0] for row in ws.iter_rows(min_row=2, values_only=True) if row[0]]
     if md_ids != xlsx_ids:
         fail(f"Question ID mismatch: markdown={md_ids}, excel={xlsx_ids}")
+    xlsx_details = {
+        row[0]: {"source_ref": str(row[3] or ""), "impact_ids": str(row[4] or "")}
+        for row in ws.iter_rows(min_row=2, values_only=True) if row[0]
+    }
+    if md_details != xlsx_details:
+        fail(f"Question provenance mismatch: markdown={md_details}, excel={xlsx_details}")
+    overview = wb["Tổng quan"]
+    if overview["B6"].value != completion_match.group(1):
+        fail("Terminal analysis result mismatch between Markdown and Excel")
     print(f"Q&A PASS: {md_path} and {xlsx_path} with {len(md_ids)} matching IDs")
 
 
@@ -389,16 +565,17 @@ def main():
     input_path = Path(args[0]).resolve()
     output_dir = Path(args[1]).resolve()
     data = json.loads(input_path.read_text(encoding="utf-8"))
-    questions = validate(data)
+    questions, completion = validate(data, input_path)
     base = args[2] if len(args) > 2 else slugify(data["project"])
     output_dir.mkdir(parents=True, exist_ok=True)
     md_path = output_dir / f"{base}_Q&A.md"
     xlsx_path = output_dir / f"{base}_Q&A.xlsx"
-    write_markdown(data, questions, md_path)
-    write_excel(data, questions, xlsx_path)
+    write_markdown(data, questions, completion, md_path)
+    write_excel(data, questions, completion, xlsx_path)
     check_outputs(md_path, xlsx_path)
     print(f"Q&A MARKDOWN WRITTEN: {md_path}")
     print(f"Q&A EXCEL WRITTEN: {xlsx_path}")
+    print(f"ANALYSIS COMPLETION: {completion}")
 
 
 if __name__ == "__main__":

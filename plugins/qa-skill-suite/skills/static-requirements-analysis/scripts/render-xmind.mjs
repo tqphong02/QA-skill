@@ -31,7 +31,7 @@ function addMarked(lines, level, value, field, markers = []) {
 function listBranch(lines, level, title, values, field) {
   add(lines, level, title, field)
   const items = Array.isArray(values) ? values : []
-  if (!items.length) add(lines, level + 1, 'Chưa xác định', field)
+  if (!items.length) add(lines, level + 1, 'Tài liệu không mô tả', field)
   items.forEach((item, index) => add(lines, level + 1, item, `${field}[${index}]`))
 }
 
@@ -50,15 +50,6 @@ function normalizeLinks(data, flows) {
   const known = new Set(flows.map(item => item.id))
   const links = Array.isArray(data.flow_links) ? data.flow_links : []
   return links.filter(link => known.has(link.from_flow) && known.has(link.to_flow))
-}
-
-function deriveSanityChecks(flow) {
-  const checks = []
-  for (const step of flow.steps || []) {
-    if (step.state_change) checks.push(`${step.action}: ${step.state_change}`)
-  }
-  for (const outcome of flow.outcomes || []) checks.push(outcome)
-  return checks.length ? checks : ['Luồng hoàn tất với đúng trạng thái và dữ liệu mong đợi']
 }
 
 function addMarker(markers, key, marker) {
@@ -81,10 +72,10 @@ function addFlowDetails(lines, level, node, links, flowById) {
   const { linked, transitionCondition, checkpoint } = node
   if (transitionCondition) add(lines, level, `Điều kiện chuyển bước: ${transitionCondition}`, 'journey.transition_condition')
   if (checkpoint) add(lines, level, `Điểm kiểm soát nghiệp vụ: ${checkpoint}`, 'journey.checkpoint')
-  add(lines, level, `Trạng thái vào: ${linked.flow.entry_state || 'Chưa xác định'}`, 'flow.entry_state')
-  add(lines, level, `Trạng thái ra: ${linked.flow.exit_state || 'Chưa xác định'}`, 'flow.exit_state')
+  add(lines, level, `Trạng thái vào: ${linked.flow.entry_state || 'Tài liệu không mô tả'}`, 'flow.entry_state')
+  add(lines, level, `Trạng thái ra: ${linked.flow.exit_state || 'Tài liệu không mô tả'}`, 'flow.exit_state')
   listBranch(lines, level, 'Điều kiện tiên quyết', linked.flow.preconditions, 'flow.preconditions')
-  listBranch(lines, level, 'Kết quả cần bảo đảm', linked.flow.sanity_checks || deriveSanityChecks(linked.flow), 'flow.sanity_checks')
+  listBranch(lines, level, 'Kết quả cần bảo đảm', linked.flow.sanity_checks, 'flow.sanity_checks')
   listBranch(lines, level, 'Chức năng liên quan', relatedFunctionNames(linked.id, linked.flow, links, flowById), 'flow.related')
 }
 
@@ -105,6 +96,7 @@ function buildUnifiedMark(data, flows, links) {
     const steps = (journey.flow_sequence || []).map((item, stepIndex) => {
       const linked = flowById.get(item.flow_id)
       if (!linked) fail(`Unknown flow in ${journeyId}: ${item.flow_id}`)
+      if (!item.transition_condition || !item.checkpoint) fail(`Incomplete sourced journey step in ${journeyId}: ${item.flow_id}`)
       usedFlowIds.add(linked.id)
       const key = `${journeyId}:step:${stepIndex}`
       const title = `${String(stepIndex + 1).padStart(2, '0')} ${linked.module.name} — ${linked.flow.name}`
@@ -112,8 +104,8 @@ function buildUnifiedMark(data, flows, links) {
         key,
         title,
         linked,
-        transitionCondition: item.transition_condition || 'Bước trước hoàn tất thành công',
-        checkpoint: item.checkpoint || 'Trạng thái và dữ liệu đầu ra đúng',
+        transitionCondition: item.transition_condition,
+        checkpoint: item.checkpoint,
       }
       if (!flowOccurrences.has(linked.id)) flowOccurrences.set(linked.id, [])
       flowOccurrences.get(linked.id).push(node)
@@ -159,7 +151,7 @@ function buildUnifiedMark(data, flows, links) {
     add(lines, 0, visibleTitle, `sanity_journeys[${journeyIndex}].name`)
     addMarked(lines, 1, 'Điều kiện chuẩn bị', 'journey.preconditions', markers.get(prepKey) || [])
     const preconditions = Array.isArray(journey.preconditions) ? journey.preconditions : []
-    if (!preconditions.length) add(lines, 2, 'Chưa xác định', 'journey.preconditions')
+    if (!preconditions.length) add(lines, 2, 'Tài liệu không mô tả', 'journey.preconditions')
     preconditions.forEach((item, index) => add(lines, 2, item, `journey.preconditions[${index}]`))
     steps.forEach(node => {
       addMarked(lines, 1, node.title, 'journey.sequence', markers.get(node.key) || [])
@@ -167,7 +159,7 @@ function buildUnifiedMark(data, flows, links) {
     })
     addMarked(lines, 1, 'Kết quả cuối', 'journey.expected_results', markers.get(resultKey) || [])
     const results = Array.isArray(journey.expected_results) ? journey.expected_results : []
-    if (!results.length) add(lines, 2, 'Chưa xác định', 'journey.expected_results')
+    if (!results.length) add(lines, 2, 'Tài liệu không mô tả', 'journey.expected_results')
     results.forEach((item, index) => add(lines, 2, item, `journey.expected_results[${index}]`))
   })
 

@@ -23,7 +23,7 @@ const MAX_CASES_PER_PLAN = 20;
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 const UI_ACTIONS = new Set([
   'navigate', 'fill', 'clear', 'select', 'check', 'uncheck', 'click', 'press',
-  'upload', 'wait', 'observe',
+  'upload', 'download', 'dialog_accept', 'dialog_dismiss', 'popup', 'wait', 'observe',
 ]);
 const TYPESCRIPT_RESERVED = new Set([
   'any', 'as', 'async', 'await', 'boolean', 'break', 'case', 'catch', 'class',
@@ -312,7 +312,7 @@ function normalizeLocatorExpression(locator, targetKey) {
     blocked('SELECTOR_LOCATOR_UNSAFE', `${targetKey}: generated CSS class is forbidden`);
   }
   const withoutOwner = source.replace(/^(?:this\.)?page\./, '');
-  if (!/^(?:getByTestId|getByRole|getByLabel|getByPlaceholder|getByText|locator)\([\s\S]+\)$/.test(withoutOwner)) {
+  if (!/^(?:frameLocator\([\s\S]+?\)\.)?(?:getByTestId|getByRole|getByLabel|getByPlaceholder|getByText|locator)\([\s\S]+\)$/.test(withoutOwner)) {
     blocked('SELECTOR_LOCATOR_UNSUPPORTED', `${targetKey}: ${source}`);
   }
   return `page.${withoutOwner}`;
@@ -390,7 +390,7 @@ function loadSelectorEvidence(evidenceInputs, model) {
         blocked('SELECTOR_COUNT_NOT_ONE', targetKey);
       }
       const requiresActionable = (requirements.actions.get(targetKey) || [])
-        .some(action => ['click', 'fill', 'clear', 'select', 'check', 'uncheck', 'press', 'upload'].includes(action));
+        .some(action => ['click', 'fill', 'clear', 'select', 'check', 'uncheck', 'press', 'upload', 'download', 'dialog_accept', 'dialog_dismiss', 'popup'].includes(action));
       if (requiresActionable && record.verification?.actionable !== true) {
         blocked('SELECTOR_NOT_ACTIONABLE', targetKey);
       }
@@ -513,7 +513,9 @@ function normalizeUiCleanup(cleanup, testcaseId, failOnText = true) {
     }
     const action = String(step.action || '').trim().toLowerCase();
     const targetKey = String(step.target_key || step.target?.key || '').trim();
-    if (!UI_ACTIONS.has(action) || ['navigate', 'wait', 'observe'].includes(action) || !targetKey) {
+    if (!UI_ACTIONS.has(action)
+      || ['navigate', 'wait', 'observe', 'download', 'dialog_accept', 'dialog_dismiss', 'popup'].includes(action)
+      || !targetKey) {
       blocked('CLEANUP_STEP_INVALID', `${testcaseId} cleanup step ${index + 1}`);
     }
     return { action, target_key: targetKey, value: step.value };
@@ -625,6 +627,47 @@ function renderPage(model, selectorEvidence, paths) {
       continue;
     }
     if (!locator) blocked('UI_TARGET_MISSING', operation.method);
+    if (operation.action === 'download') {
+      lines.push(
+        `  async ${operation.method}(outputPath: string): Promise<string> {`,
+        "    const downloadPromise = this.page.waitForEvent('download');",
+        `    await ${locator}.click();`,
+        '    const download = await downloadPromise;',
+        '    await download.saveAs(outputPath);',
+        '    return download.suggestedFilename();',
+        '  }',
+        '',
+      );
+      continue;
+    }
+    if (['dialog_accept', 'dialog_dismiss'].includes(operation.action)) {
+      const resolution = operation.action === 'dialog_accept' ? 'accept' : 'dismiss';
+      lines.push(
+        `  async ${operation.method}(): Promise<string> {`,
+        "    const dialogPromise = this.page.waitForEvent('dialog');",
+        `    await ${locator}.click();`,
+        '    const dialog = await dialogPromise;',
+        '    const message = dialog.message();',
+        `    await dialog.${resolution}();`,
+        '    return message;',
+        '  }',
+        '',
+      );
+      continue;
+    }
+    if (operation.action === 'popup') {
+      lines.push(
+        `  async ${operation.method}(): Promise<string> {`,
+        "    const popupPromise = this.page.waitForEvent('popup');",
+        `    await ${locator}.click();`,
+        '    const popup = await popupPromise;',
+        "    await popup.waitForLoadState('domcontentloaded');",
+        '    return popup.url();',
+        '  }',
+        '',
+      );
+      continue;
+    }
     const valueAction = ['fill', 'select', 'press', 'upload'].includes(operation.action);
     const valueType = operation.action === 'upload' ? 'string | string[]' : 'string';
     lines.push(`  async ${operation.method}(${valueAction ? `value: ${valueType}` : ''}): Promise<void> {`);
@@ -782,6 +825,17 @@ function annotationLines(testcase, indent = '    ') {
   ];
 }
 
+function automationTitleTags(testcase) {
+  const tags = Array.isArray(testcase.automation_tags) ? testcase.automation_tags.map(String) : [];
+  if (tags.some(tag => !/^@[a-z][a-z0-9-]*$/.test(tag))) {
+    blocked('AUTOMATION_TAG_INVALID', testcase.testcase_id);
+  }
+  if (new Set(tags).size !== tags.length || tags.some(tag => ['@ui', '@api', '@functional'].includes(tag))) {
+    blocked('AUTOMATION_TAG_INVALID', testcase.testcase_id);
+  }
+  return tags;
+}
+
 function renderUiExecutionLines(testcase, context, indent = '    ') {
   const { instance, ui, usage } = context;
   const lines = [];
@@ -792,7 +846,26 @@ function renderUiExecutionLines(testcase, context, indent = '    ') {
   for (const step of testcase.steps || []) {
     if (!step.marker) blocked('IMPLEMENTATION_MARKER_MISSING', `${testcase.testcase_id}:${step.id}`);
     lines.push(`${indent}await test.step(${JSON.stringify(step.marker)}, async () => {`);
-    lines.push(`${indent}  ${uiStepCall(step, instance, usage)}`);
+    const action = String(step.action || '').toLowerCase();
+    if (action === 'download') {
+      const downloadPath = identifier(`${testcase.testcase_id}_${step.id}_download_path`);
+      const suggestedName = identifier(`${testcase.testcase_id}_${step.id}_suggested_name`);
+      const attachmentName = `download-${testcase.testcase_id}-${step.id}`;
+      lines.push(
+        `${indent}  const ${downloadPath} = testInfo.outputPath(${JSON.stringify(`${testcase.testcase_id}-${step.id}-download`)});`,
+        `${indent}  const ${suggestedName} = await ${instance}.${step.required_method}(${downloadPath});`,
+        `${indent}  test.info().annotations.push({ type: 'download', description: ${suggestedName} });`,
+        `${indent}  await testInfo.attach(${JSON.stringify(attachmentName)}, { path: ${downloadPath} });`,
+      );
+    } else if (['dialog_accept', 'dialog_dismiss', 'popup'].includes(action)) {
+      const eventValue = identifier(`${testcase.testcase_id}_${step.id}_${action}`);
+      lines.push(
+        `${indent}  const ${eventValue} = await ${instance}.${step.required_method}();`,
+        `${indent}  test.info().annotations.push({ type: ${JSON.stringify(action)}, description: ${eventValue} });`,
+      );
+    } else {
+      lines.push(`${indent}  ${uiStepCall(step, instance, usage)}`);
+    }
     const waitLine = renderWaitFor(step.wait_for, {
       instance,
       page: 'page',
@@ -1210,6 +1283,8 @@ function advancedExtensionHooks(model, paths, projectRoot) {
     for (const [kind, contract] of [
       ['network', testcase.network_interception],
       ['db', testcase.db_verification],
+      ['lifecycleBefore', testcase.lifecycle_hooks?.before_test],
+      ['lifecycleAfter', testcase.lifecycle_hooks?.after_test],
     ]) {
       if (!contract) continue;
       const relativeFile = String(contract.implementation_file || '').trim().replaceAll('\\', '/');
@@ -1244,7 +1319,8 @@ function advancedExtensionHooks(model, paths, projectRoot) {
 }
 
 function advancedHookLines(testcase, hook, marker, context, indent = '    ') {
-  if (!hook || !marker) return [];
+  if (!hook) return [];
+  if (!marker) blocked('ADVANCED_MARKER_MISSING', testcase.testcase_id);
   const values = [
     `testcaseId: ${JSON.stringify(testcase.testcase_id)}`,
     `contract: ${JSON.stringify(hook.contract)}`,
@@ -1289,7 +1365,10 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
   for (const testcase of model.testcases) {
     const isFunctionalFlow = testcase.capabilities.length === 2;
     const capability = testcase.capabilities[0];
-    const titleTag = isFunctionalFlow ? '@functional @ui @api' : `@${surface}`;
+    const titleTag = [
+      ...(isFunctionalFlow ? ['@functional', '@ui', '@api'] : [`@${surface}`]),
+      ...automationTitleTags(testcase),
+    ].join(' ');
     const title = `${testcase.testcase_id} | ${testcase.scenario_id || testcase.case_ref || testcase.type || 'case'} ${titleTag}`;
     const auth = testcase.capabilities.includes('api') ? apiAuthContract(testcase) : null;
     const fixtures = isFunctionalFlow
@@ -1297,7 +1376,8 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       : capability === 'ui'
         ? 'page'
         : auth.fixture;
-    body.push(`  test(${JSON.stringify(title)}, async ({ ${fixtures} }) => {`);
+    const needsTestInfo = (testcase.steps || []).some(step => String(step.action || '').toLowerCase() === 'download');
+    body.push(`  test(${JSON.stringify(title)}, async ({ ${fixtures} }${needsTestInfo ? ', testInfo' : ''}) => {`);
     body.push("    test.info().annotations.push({ type: 'automation-source', description: AUTOMATION_SOURCE });");
     body.push(...annotationLines(testcase));
 
@@ -1329,21 +1409,29 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       body.push(`    const ${clientInstance} = new ${apiClient.className}(${auth.fixture});`);
     }
     const advancedHooks = advancedExtensions.byTestcase.get(testcase.testcase_id) || {};
-    body.push(...advancedHookLines(
-      testcase,
-      advancedHooks.network,
-      testcase.required_markers?.network_interception,
-      { page: testcase.capabilities.includes('ui'), client: testcase.capabilities.includes('api') ? clientInstance : null },
-    ));
 
     if (isFunctionalFlow) {
       const api = normalizeApiContract(testcase);
       const apiContext = { operations, schemas, clientInstance, usage };
       const apiLines = renderApiTestBody(testcase, apiContext).map(line => line.trimStart());
       const uiCleanupMarker = testcase.required_markers?.cleanup;
-      const hasCleanup = Boolean(api.cleanup || uiCleanupMarker);
-      if (hasCleanup) body.push('    try {');
-      const phaseIndent = hasCleanup ? '      ' : '    ';
+      const needsFinally = Boolean(api.cleanup || uiCleanupMarker || advancedHooks.lifecycleAfter);
+      if (needsFinally) body.push('    try {');
+      const phaseIndent = needsFinally ? '      ' : '    ';
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.lifecycleBefore,
+        testcase.required_markers?.lifecycle_before,
+        { page: true, client: clientInstance },
+        phaseIndent,
+      ));
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.network,
+        testcase.required_markers?.network_interception,
+        { page: true, client: clientInstance },
+        phaseIndent,
+      ));
       for (const phase of testcase.capability_order) {
         if (phase === 'api') {
           body.push(`${phaseIndent}await test.step(${JSON.stringify(`[${testcase.testcase_id}:FUNCTIONAL:API] ${api.method} ${api.endpoint}`)}, async () => {`);
@@ -1364,8 +1452,11 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
         { page: true, client: clientInstance },
         phaseIndent,
       ));
-      if (hasCleanup) {
+      if (needsFinally) {
         body.push('    } finally {');
+        const hasOwnedCleanup = Boolean(api.cleanup || uiCleanupMarker);
+        const cleanupIndent = advancedHooks.lifecycleAfter && hasOwnedCleanup ? '        ' : '      ';
+        if (advancedHooks.lifecycleAfter && hasOwnedCleanup) body.push('      try {');
         if (api.cleanup) {
           const cleanup = normalizeApiContract({
             testcase_id: `${testcase.testcase_id}:cleanup`,
@@ -1373,32 +1464,51 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
           });
           const cleanupOperation = operations.get(`${cleanup.method} ${cleanup.endpoint}`);
           const cleanupOptions = apiOptionsExpression(cleanup, `${testcase.testcase_id}_cleanup`, usage);
-          body.push(`      await ${clientInstance}.${cleanupOperation.operationName}(${cleanupOptions});`);
+          body.push(`${cleanupIndent}await ${clientInstance}.${cleanupOperation.operationName}(${cleanupOptions});`);
         }
         if (uiCleanupMarker) {
           if (!ui.cleanupByTestcase.has(testcase.testcase_id)) {
             blocked('CLEANUP_NOT_MACHINE_EXECUTABLE', testcase.testcase_id);
           }
           body.push(
-            `      await test.step(${JSON.stringify(uiCleanupMarker)}, async () => {`,
-            `        await ${pageInstance}.cleanup(${JSON.stringify(testcase.testcase_id)});`,
-            '      });',
+            `${cleanupIndent}await test.step(${JSON.stringify(uiCleanupMarker)}, async () => {`,
+            `${cleanupIndent}  await ${pageInstance}.cleanup(${JSON.stringify(testcase.testcase_id)});`,
+            `${cleanupIndent}});`,
           );
         }
+        if (advancedHooks.lifecycleAfter && hasOwnedCleanup) body.push('      } finally {');
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.lifecycleAfter,
+          testcase.required_markers?.lifecycle_after,
+          { page: true, client: clientInstance },
+          advancedHooks.lifecycleAfter && hasOwnedCleanup ? '        ' : '      ',
+        ));
+        if (advancedHooks.lifecycleAfter && hasOwnedCleanup) body.push('      }');
         body.push('    }');
       }
     } else if (capability === 'api') {
       const api = normalizeApiContract(testcase);
       const apiContext = { operations, schemas, clientInstance, usage };
       const mainLines = renderApiTestBody(testcase, apiContext);
-      if (api.cleanup) {
-        const cleanup = normalizeApiContract({
-          testcase_id: `${testcase.testcase_id}:cleanup`,
-          api: { ...api.cleanup, expected_status: api.cleanup.expected_status ?? 204 },
-        });
-        const cleanupOperation = operations.get(`${cleanup.method} ${cleanup.endpoint}`);
-        const cleanupOptions = apiOptionsExpression(cleanup, `${testcase.testcase_id}_cleanup`, usage);
-        body.push('    try {', ...mainLines.map(line => `  ${line}`));
+      const needsFinally = Boolean(api.cleanup || advancedHooks.lifecycleAfter);
+      if (needsFinally) {
+        body.push('    try {');
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.lifecycleBefore,
+          testcase.required_markers?.lifecycle_before,
+          { page: false, client: clientInstance },
+          '      ',
+        ));
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.network,
+          testcase.required_markers?.network_interception,
+          { page: false, client: clientInstance },
+          '      ',
+        ));
+        body.push(...mainLines.map(line => `  ${line}`));
         body.push(...advancedHookLines(
           testcase,
           advancedHooks.db,
@@ -1407,8 +1517,40 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
           '      ',
         ));
         body.push('    } finally {');
-        body.push(`      await ${clientInstance}.${cleanupOperation.operationName}(${cleanupOptions});`, '    }');
+        if (advancedHooks.lifecycleAfter && api.cleanup) body.push('      try {');
+        if (api.cleanup) {
+          const cleanup = normalizeApiContract({
+            testcase_id: `${testcase.testcase_id}:cleanup`,
+            api: { ...api.cleanup, expected_status: api.cleanup.expected_status ?? 204 },
+          });
+          const cleanupOperation = operations.get(`${cleanup.method} ${cleanup.endpoint}`);
+          const cleanupOptions = apiOptionsExpression(cleanup, `${testcase.testcase_id}_cleanup`, usage);
+          const cleanupIndent = advancedHooks.lifecycleAfter ? '        ' : '      ';
+          body.push(`${cleanupIndent}await ${clientInstance}.${cleanupOperation.operationName}(${cleanupOptions});`);
+        }
+        if (advancedHooks.lifecycleAfter && api.cleanup) body.push('      } finally {');
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.lifecycleAfter,
+          testcase.required_markers?.lifecycle_after,
+          { page: false, client: clientInstance },
+          advancedHooks.lifecycleAfter && api.cleanup ? '        ' : '      ',
+        ));
+        if (advancedHooks.lifecycleAfter && api.cleanup) body.push('      }');
+        body.push('    }');
       } else {
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.lifecycleBefore,
+          testcase.required_markers?.lifecycle_before,
+          { page: false, client: clientInstance },
+        ));
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.network,
+          testcase.required_markers?.network_interception,
+          { page: false, client: clientInstance },
+        ));
         body.push(...mainLines);
         body.push(...advancedHookLines(
           testcase,
@@ -1419,8 +1561,23 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       }
     } else {
       const cleanupMarker = testcase.required_markers?.cleanup;
-      if (cleanupMarker) body.push('    try {');
-      const indent = cleanupMarker ? '      ' : '    ';
+      const needsFinally = Boolean(cleanupMarker || advancedHooks.lifecycleAfter);
+      if (needsFinally) body.push('    try {');
+      const indent = needsFinally ? '      ' : '    ';
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.lifecycleBefore,
+        testcase.required_markers?.lifecycle_before,
+        { page: true, client: null },
+        indent,
+      ));
+      body.push(...advancedHookLines(
+        testcase,
+        advancedHooks.network,
+        testcase.required_markers?.network_interception,
+        { page: true, client: null },
+        indent,
+      ));
       body.push(...renderUiExecutionLines(testcase, {
         instance: pageInstance,
         ui,
@@ -1433,17 +1590,30 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
         { page: true, client: null },
         indent,
       ));
-      if (cleanupMarker) {
-        if (!ui.cleanupByTestcase.has(testcase.testcase_id)) {
-          blocked('CLEANUP_NOT_MACHINE_EXECUTABLE', testcase.testcase_id);
+      if (needsFinally) {
+        body.push('    } finally {');
+        if (advancedHooks.lifecycleAfter && cleanupMarker) body.push('      try {');
+        if (cleanupMarker) {
+          if (!ui.cleanupByTestcase.has(testcase.testcase_id)) {
+            blocked('CLEANUP_NOT_MACHINE_EXECUTABLE', testcase.testcase_id);
+          }
+          const cleanupIndent = advancedHooks.lifecycleAfter ? '        ' : '      ';
+          body.push(
+            `${cleanupIndent}await test.step(${JSON.stringify(cleanupMarker)}, async () => {`,
+            `${cleanupIndent}  await ${pageInstance}.cleanup(${JSON.stringify(testcase.testcase_id)});`,
+            `${cleanupIndent}});`,
+          );
         }
-        body.push(
-          '    } finally {',
-          `      await test.step(${JSON.stringify(cleanupMarker)}, async () => {`,
-          `        await ${pageInstance}.cleanup(${JSON.stringify(testcase.testcase_id)});`,
-          '      });',
-          '    }',
-        );
+        if (advancedHooks.lifecycleAfter && cleanupMarker) body.push('      } finally {');
+        body.push(...advancedHookLines(
+          testcase,
+          advancedHooks.lifecycleAfter,
+          testcase.required_markers?.lifecycle_after,
+          { page: true, client: null },
+          advancedHooks.lifecycleAfter && cleanupMarker ? '        ' : '      ',
+        ));
+        if (advancedHooks.lifecycleAfter && cleanupMarker) body.push('      }');
+        body.push('    }');
       }
     }
     body.push('  });', '');

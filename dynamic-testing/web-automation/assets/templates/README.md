@@ -25,8 +25,8 @@ npm run qa:clean
 npm run qa:preflight -- --surface all --require-auth
 ```
 
-Commit the generated `package-lock.json` after the first install. The GitHub
-and Jenkins templates intentionally use `npm ci` for reproducible builds and
+Commit the generated `package-lock.json` after the first install. The GitHub,
+GitLab and Jenkins templates intentionally use `npm ci` for reproducible builds and
 fail early when the lockfile is missing or invalid. `qa:preflight` checks the
 project layout, npm scripts, URLs and (when requested) CI authentication
 inputs without printing secret values.
@@ -36,6 +36,10 @@ Additional Playwright flags are passed after `--`:
 ```bash
 npm run qa:test:ui -- --project=firefox --grep @smoke
 ```
+
+CI templates are available for GitHub Actions (`github-actions-ci.yml`), GitLab
+CI (`.gitlab-ci.yml`) and Jenkins (`Jenkinsfile`). Set `QA_PROJECT_DIR` to the
+directory containing this generated automation project
 
 Parallelism is worker-level inside one `qa:*` invocation. When `PW_WORKERS` is
 omitted, the config uses at most four workers and only up to the unique capacity
