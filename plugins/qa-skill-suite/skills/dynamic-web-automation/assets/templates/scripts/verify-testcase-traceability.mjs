@@ -39,8 +39,12 @@ const ACTIONABLE_ACTIONS = new Set([
   'hover',
   'drag',
   'upload',
+  'download',
+  'dialog_accept',
+  'dialog_dismiss',
+  'popup',
 ]);
-const SELECTOR_PRIORITY = ['testid', 'id', 'css', 'role', 'label', 'placeholder', 'text', 'xpath'];
+const SELECTOR_PRIORITY = ['role', 'label', 'testid', 'id', 'css', 'placeholder', 'text', 'xpath'];
 const BROWSER_MCP_PROVIDERS = new Set(['playwright-mcp', 'chrome-devtools-mcp']);
 const BROWSER_MCP_TOOLS = Object.freeze({
   'playwright-mcp': ['browser_navigate', 'browser_snapshot', 'browser_evaluate'],
@@ -324,6 +328,10 @@ function parseAutomationManifest(manifestPath) {
       description: item.description || null,
       coverage_item_refs: coverageItemRefs,
       priority: item.priority || null,
+      automation_tags: Array.isArray(item.automation_tags) ? item.automation_tags.map(String) : [],
+      lifecycle_hooks: item.lifecycle_hooks && typeof item.lifecycle_hooks === 'object' && !Array.isArray(item.lifecycle_hooks)
+        ? item.lifecycle_hooks
+        : item.lifecycle_hooks ?? null,
       entry,
       role_key: entry.role_key || null,
       rbac_refs: rbacRefs,
@@ -366,6 +374,8 @@ function parseAutomationManifest(manifestPath) {
         cleanup: execution?.cleanup != null || execution?.mutates === true ? `[${id}:CLEANUP]` : null,
         network_interception: item.network_interception ? `[${id}:NETWORK_INTERCEPTION] ${String(item.network_interception.mode || '').toUpperCase()}` : null,
         db_verification: item.db_verification ? `[${id}:DB_VERIFICATION] ${String(item.db_verification.mode || '').toUpperCase()}` : null,
+        lifecycle_before: item.lifecycle_hooks?.before_test ? `[${id}:LIFECYCLE] BEFORE_TEST` : null,
+        lifecycle_after: item.lifecycle_hooks?.after_test ? `[${id}:LIFECYCLE] AFTER_TEST` : null,
       },
     };
   });
@@ -726,6 +736,10 @@ function pageMethodActionEvidence(files, methodName, action) {
     uncheck: /\.uncheck\s*\(/,
     press: /\.press\s*\(/,
     upload: /\.(?:setInputFiles|upload)\s*\(/,
+    download: /\.waitForEvent\s*\(\s*['"]download['"]\s*\)/,
+    dialog_accept: /\.waitForEvent\s*\(\s*['"]dialog['"]\s*\)/,
+    dialog_dismiss: /\.waitForEvent\s*\(\s*['"]dialog['"]\s*\)/,
+    popup: /\.waitForEvent\s*\(\s*['"]popup['"]\s*\)/,
     hover: /\.hover\s*\(/,
     drag: /\.dragTo\s*\(/,
     wait: /\.wait(?:For[A-Za-z0-9_]*)?\s*\(/,
@@ -960,6 +974,8 @@ function buildTraceability({
         ...(testcase.required_markers?.cleanup ? [testcase.required_markers.cleanup] : []),
         ...(testcase.required_markers?.network_interception ? [testcase.required_markers.network_interception] : []),
         ...(testcase.required_markers?.db_verification ? [testcase.required_markers.db_verification] : []),
+        ...(testcase.required_markers?.lifecycle_before ? [testcase.required_markers.lifecycle_before] : []),
+        ...(testcase.required_markers?.lifecycle_after ? [testcase.required_markers.lifecycle_after] : []),
       ];
       for (const marker of requiredMarkers) {
         const present = implementationText.includes(marker);
@@ -998,6 +1014,12 @@ function buildTraceability({
           : []),
         ...(testcase.required_markers?.db_verification
           ? [{ marker: testcase.required_markers.db_verification, kind: 'advanced' }]
+          : []),
+        ...(testcase.required_markers?.lifecycle_before
+          ? [{ marker: testcase.required_markers.lifecycle_before, kind: 'advanced' }]
+          : []),
+        ...(testcase.required_markers?.lifecycle_after
+          ? [{ marker: testcase.required_markers.lifecycle_after, kind: 'advanced' }]
           : []),
       ];
       for (const [index, item] of executableMarkers.entries()) {
@@ -1191,13 +1213,13 @@ function buildTraceability({
           if (record.status === 'runtime_verified') {
             const candidates = Array.isArray(record.candidates) ? record.candidates : [];
             if (candidates.length === 0) {
-              addViolation(violations, 'SELECTOR_PRIORITY_EVIDENCE_MISSING', `Evidence của ${targetKey} chưa ghi ordered candidates theo testid → id → CSS → semantic → XPath`, {
+              addViolation(violations, 'SELECTOR_PRIORITY_EVIDENCE_MISSING', `Evidence của ${targetKey} chưa ghi ordered candidates theo role/label → testid → id → CSS → placeholder/text → XPath`, {
                 testcase_id: testcase.id,
                 target_key: targetKey,
               });
             } else {
-              if (normalizeStrategy(candidates[0]?.strategy) !== 'testid') {
-                addViolation(violations, 'SELECTOR_TESTID_CANDIDATE_MISSING', `Ordered candidates của ${targetKey} phải bắt đầu bằng testid, kể cả khi available=false`, {
+              if (!candidates.some(candidate => normalizeStrategy(candidate?.strategy) === 'testid')) {
+                addViolation(violations, 'SELECTOR_TESTID_CANDIDATE_MISSING', `Ordered candidates của ${targetKey} phải ghi testid, kể cả khi available=false`, {
                   testcase_id: testcase.id,
                   target_key: targetKey,
                 });
@@ -1210,7 +1232,7 @@ function buildTraceability({
                 .map(candidate => selectorPriorityIndex(candidate?.strategy))
                 .filter(index => index >= 0);
               if (candidateIndexes.some((index, indexPosition) => indexPosition > 0 && index < candidateIndexes[indexPosition - 1])) {
-                addViolation(violations, 'SELECTOR_PRIORITY_ORDER_INVALID', `Ordered candidates của ${targetKey} không theo testid → id → CSS → semantic → XPath`, {
+                addViolation(violations, 'SELECTOR_PRIORITY_ORDER_INVALID', `Ordered candidates của ${targetKey} không theo role/label → testid → id → CSS → placeholder/text → XPath`, {
                   testcase_id: testcase.id,
                   target_key: targetKey,
                 });

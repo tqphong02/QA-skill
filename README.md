@@ -1,5 +1,39 @@
 # QA-skill
 
+## Quản lý report theo từng lần chạy
+
+Mọi skill tạo file local dùng một thư mục run riêng, có timestamp và không ghi đè lịch sử:
+
+```text
+qa-runs/
+├── LATEST.md
+├── INDEX.md
+├── latest.json
+└── <skill-name>/
+    ├── latest.json
+    └── 2026-08-29_21-30-15_<scope>/
+        ├── run.json
+        ├── report.md
+        └── evidence/
+```
+
+- Mở `qa-runs/LATEST.md` để xem lần chạy mới nhất
+- Mở `qa-runs/INDEX.md` để xem lịch sử tất cả skill theo thứ tự mới → cũ
+- Mỗi thư mục timestamp là immutable; run mới không ghi đè run cũ
+- Nếu user yêu cầu chính xác một output path, hoặc skill có vị trí bắt buộc vì an toàn, vị trí đó được ưu tiên và index chỉ ghi link
+
+CLI dùng chung:
+
+```bash
+node scripts/qa-runs.mjs start --skill dynamic-web-exploratory --label login-admin
+node scripts/qa-runs.mjs finish --run-dir <run-dir> --status PASS --primary report.md
+npm run runs
+npm run runs:rebuild
+npm run runs:legacy
+```
+
+`npm run runs:legacy` tạo `qa-runs/LEGACY.md`, sắp các artifact cũ theo thời gian sửa đổi nhưng không di chuyển hoặc đổi tên file cũ
+
 Bộ skill QA và Security Engineering đa model cho **QA team** (MIT), dùng được với Codex, Claude Code, Gemini/Antigravity, Cursor, Windsurf và Copilot.
 
 ## 23 skill public + nested/bundled skill trong scope

@@ -50,7 +50,7 @@ function planSurface(capabilities) {
 
 function targetHints(target) {
   if (!target || typeof target !== 'object' || Array.isArray(target)) return null;
-  const fields = ['key', 'kind', 'name', 'role', 'label', 'placeholder', 'test_id', 'id', 'route'];
+  const fields = ['key', 'kind', 'name', 'role', 'label', 'placeholder', 'test_id', 'id', 'route', 'frame'];
   const hints = {};
   for (const field of fields) {
     if (target[field] !== undefined && target[field] !== null && target[field] !== '') {
@@ -180,6 +180,8 @@ function buildPomPlan(manifestPath, options = {}) {
       description: testcase.description,
       coverage_item_refs: testcase.coverage_item_refs,
       priority: testcase.priority,
+      automation_tags: testcase.automation_tags,
+      lifecycle_hooks: testcase.lifecycle_hooks,
       role_key: testcase.role_key,
       rbac_refs: testcase.rbac_refs,
       entry: testcase.entry,
@@ -212,6 +214,7 @@ function buildPomPlan(manifestPath, options = {}) {
       api: testcase.api,
       automation_selection: testcase.automation_selection,
       automation_value_score: selectionEvaluations.get(testcase.id).score,
+      automation_extended_roi_score: selectionEvaluations.get(testcase.id).extended_score,
       network_interception: testcase.network_interception,
       db_verification: testcase.db_verification,
       ui_function_keys: testcase.ui_function_keys,

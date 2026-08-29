@@ -13,6 +13,18 @@ Data-driven testing has two separate layers:
 
 Case data describes **what to test**. Runtime data identifies **what this specific attempt owns**. Do not put generated emails, record IDs, tokens, or mutable objects in a module-level case array.
 
+Use `testData.build(defaults, overrides)` as the framework-level typed builder.
+Domain factories such as `buildPayment()` may wrap it in module-local test data
+when business defaults deserve a named reusable contract. Build a fresh object
+inside each test and keep uniqueness fields from `testData`
+
+```typescript
+const payment = testData.build(
+  { amount: 100_000, currency: 'VND', orderId: testData.caseKey('payment') },
+  { amount: 50_000 },
+);
+```
+
 ## 2. Generate one test per case
 
 Use a synchronous `for...of` at module collection time:

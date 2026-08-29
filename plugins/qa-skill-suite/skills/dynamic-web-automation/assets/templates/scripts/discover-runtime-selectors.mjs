@@ -17,7 +17,7 @@ import { pathToFileURL } from 'node:url';
 import { resolveModuleSlug } from './artifact-naming.mjs';
 import { parseAutomationManifest } from './verify-testcase-traceability.mjs';
 
-const STRATEGY_ORDER = ['testid', 'id', 'css', 'role', 'label', 'placeholder', 'text', 'xpath'];
+const STRATEGY_ORDER = ['role', 'label', 'testid', 'id', 'css', 'placeholder', 'text', 'xpath'];
 const BROWSER_MCP_PROVIDERS = new Set(['playwright-mcp', 'chrome-devtools-mcp']);
 const BROWSER_MCP_TOOLS = Object.freeze({
   'playwright-mcp': ['browser_navigate', 'browser_snapshot', 'browser_evaluate'],
@@ -25,6 +25,7 @@ const BROWSER_MCP_TOOLS = Object.freeze({
 });
 const ACTIONABLE_ACTIONS = new Set([
   'click', 'fill', 'clear', 'select', 'check', 'uncheck', 'press', 'upload',
+  'download', 'dialog_accept', 'dialog_dismiss', 'popup',
 ]);
 const INTERACTIVE_SELECTOR = [
   'button', 'a[href]', 'input', 'textarea', 'select', 'summary', '[role]',
@@ -203,14 +204,20 @@ function browserMcpValidationError(source, target, context, expectedProvider) {
     if (!clean(target.reason)) return 'XPath evidence must explain why higher-priority locators were unavailable or ambiguous';
   }
   const candidates = Array.isArray(target.candidates) ? target.candidates : [];
-  if (candidates.length === 0 || normalizeStrategy(candidates[0]?.strategy) !== 'testid') {
-    return 'Browser MCP evidence must keep the ordered candidates beginning with testid';
+  const candidatePriorities = candidates.map(candidate => STRATEGY_ORDER.indexOf(normalizeStrategy(candidate?.strategy)));
+  if (candidates.length === 0 || candidatePriorities.some(index => index < 0)
+    || candidatePriorities.some((index, position) => position > 0 && index < candidatePriorities[position - 1])) {
+    return 'Browser MCP evidence must keep ordered semantic candidates before testid/id/CSS fallbacks';
   }
   const selectedCandidate = candidates.find(candidate => (
     normalizeStrategy(candidate?.strategy) === normalizeStrategy(target.strategy)
   ));
   if (!selectedCandidate || selectedCandidate.available !== true) {
     return 'Browser MCP evidence must mark the selected candidate available=true';
+  }
+  const firstAvailable = candidates.find(candidate => candidate?.available === true);
+  if (normalizeStrategy(firstAvailable?.strategy) !== normalizeStrategy(target.strategy)) {
+    return 'Browser MCP evidence must select the first available candidate in semantic-first priority order';
   }
   return '';
 }
@@ -415,15 +422,18 @@ function makeCandidate(strategy, locator, reason, extra = {}) {
 function candidateSpecs(target) {
   const names = targetNames(target);
   const role = targetRole(target);
+  const frame = clean(target?.frame, 500);
+  const owner = frame ? `page.frameLocator(${quote(frame)})` : 'page';
+  const scope = page => frame ? page.frameLocator(frame) : page;
   const candidates = [
     target?.test_id
-      ? makeCandidate('testid', `page.getByTestId(${quote(target.test_id)})`, 'FE-owned test-id supplied by the execution contract', {
-        build: page => page.getByTestId(String(target.test_id)),
+      ? makeCandidate('testid', `${owner}.getByTestId(${quote(target.test_id)})`, 'FE-owned test-id supplied by the execution contract', {
+        build: page => scope(page).getByTestId(String(target.test_id)),
       })
       : makeCandidate('testid', null, 'No FE-owned test-id was supplied or observed; do not invent one'),
     target?.id
-      ? makeCandidate('id', `page.locator(${quote(`#${escapeCss(target.id)}`)})`, 'Stable id supplied by the execution contract', {
-        build: page => page.locator(`#${escapeCss(target.id)}`),
+      ? makeCandidate('id', `${owner}.locator(${quote(`#${escapeCss(target.id)}`)})`, 'Stable id supplied by the execution contract', {
+        build: page => scope(page).locator(`#${escapeCss(target.id)}`),
       })
       : null,
   ];
@@ -433,37 +443,37 @@ function candidateSpecs(target) {
     const selector = tag === '*'
       ? `[name="${escapeCss(target.name_attribute)}"]`
       : `${tag}[name="${escapeCss(target.name_attribute)}"]`;
-    candidates.push(makeCandidate('css', `page.locator(${quote(selector)})`, 'Stable live DOM name attribute supplied by the target contract', {
-      build: page => page.locator(selector),
+    candidates.push(makeCandidate('css', `${owner}.locator(${quote(selector)})`, 'Stable live DOM name attribute supplied by the target contract', {
+      build: page => scope(page).locator(selector),
     }));
   }
 
   if (role && names.length > 0) {
     for (const name of [target.name, target.label, target.placeholder].filter(Boolean)) {
-      candidates.push(makeCandidate('role', `page.getByRole(${quote(role)}, { name: ${quote(name)}, exact: true })`, 'Observed semantic role and accessible name', {
-        build: page => page.getByRole(role, { name, exact: true }),
+      candidates.push(makeCandidate('role', `${owner}.getByRole(${quote(role)}, { name: ${quote(name)}, exact: true })`, 'Observed semantic role and accessible name', {
+        build: page => scope(page).getByRole(role, { name, exact: true }),
       }));
       break;
     }
   } else if (role) {
-    candidates.push(makeCandidate('role', `page.getByRole(${quote(role)})`, 'Observed semantic role without an accessible-name hint', {
-      build: page => page.getByRole(role),
+    candidates.push(makeCandidate('role', `${owner}.getByRole(${quote(role)})`, 'Observed semantic role without an accessible-name hint', {
+      build: page => scope(page).getByRole(role),
     }));
   }
 
   if (target?.label) {
-    candidates.push(makeCandidate('label', `page.getByLabel(${quote(target.label)}, { exact: true })`, 'Observed live label association', {
-      build: page => page.getByLabel(target.label, { exact: true }),
+    candidates.push(makeCandidate('label', `${owner}.getByLabel(${quote(target.label)}, { exact: true })`, 'Observed live label association', {
+      build: page => scope(page).getByLabel(target.label, { exact: true }),
     }));
   }
   if (target?.placeholder) {
-    candidates.push(makeCandidate('placeholder', `page.getByPlaceholder(${quote(target.placeholder)}, { exact: true })`, 'Observed live placeholder', {
-      build: page => page.getByPlaceholder(target.placeholder, { exact: true }),
+    candidates.push(makeCandidate('placeholder', `${owner}.getByPlaceholder(${quote(target.placeholder)}, { exact: true })`, 'Observed live placeholder', {
+      build: page => scope(page).getByPlaceholder(target.placeholder, { exact: true }),
     }));
   }
   for (const name of [target?.name, target?.text].filter(Boolean)) {
-    candidates.push(makeCandidate('text', `page.getByText(${quote(name)}, { exact: true })`, 'Observed visible text in the live DOM', {
-      build: page => page.getByText(name, { exact: true }),
+    candidates.push(makeCandidate('text', `${owner}.getByText(${quote(name)}, { exact: true })`, 'Observed visible text in the live DOM', {
+      build: page => scope(page).getByText(name, { exact: true }),
     }));
     break;
   }

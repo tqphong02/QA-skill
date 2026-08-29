@@ -44,6 +44,8 @@ function run(command, args, cwd = ROOT) {
 try {
   const python = resolvePython();
   run(process.execPath, ['--test', 'scripts/invocation-paths.test.mjs']);
+  run(process.execPath, ['--test', 'scripts/qa-runs.test.mjs']);
+  run(process.execPath, ['scripts/sync-output-contract.mjs', '--check']);
   run(process.execPath, ['--test', 'scripts/setup-migration.test.mjs']);
   run(process.execPath, ['--test', 'scripts/core-skill-router.test.mjs']);
   run(process.execPath, [

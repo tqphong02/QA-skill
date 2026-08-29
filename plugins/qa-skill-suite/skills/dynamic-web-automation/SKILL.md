@@ -12,6 +12,19 @@ legacy_aliases: playwright-pom-automation
 When this skill is loaded from QA Skill Suite, treat the directory containing this `SKILL.md` as `SKILL_ROOT` and its parent as `PLUGIN_SKILLS_ROOT`. Resolve bundled scripts, references, templates, and sibling skills from those directories. Do not copy plugin assets into the user's project. Invoke a bundled script by its resolved absolute path while keeping the user's project as the working directory, unless that script explicitly requires another working directory.
 
 
+<!-- qa-runs-contract:start -->
+## Local run organization
+
+When this workflow creates local reports, evidence, logs, converted intermediates, or other non-source deliverables and the user did not request an exact output path:
+
+1. Start a fresh run with `node <skill-root>/scripts/qa-runs.mjs start --skill <skill-name> --label <short-scope>` when the bundled helper exists. In a QA-skill source checkout use `<repo-root>/scripts/qa-runs.mjs`. If neither helper exists, create the same layout manually
+2. Keep every run-owned file under the returned `<project-root>/qa-runs/<skill-name>/<timestamp>_<scope>/` directory. Never emit generated files into the project root or overwrite an earlier run
+3. Put the primary human-readable summary at `report.md` when the output format permits. Preserve required machine-readable and native filenames inside the same run directory
+4. Finish the run with `qa-runs.mjs finish --run-dir <run-dir> --status <status> [--primary <report-path>]` so `LATEST.md`, `INDEX.md`, root `latest.json`, and per-skill `latest.json` point to the newest run
+5. In the final response, link the primary report, the timestamped run directory, and `qa-runs/INDEX.md`; identify the run ID and status explicitly
+
+An exact user path, a source-code deliverable that belongs in the target repository, or a safety-mandated location overrides this layout. Register or link the result without copying secrets or sensitive evidence into the index
+<!-- qa-runs-contract:end -->
 # Deterministic UI and API automation
 
 Turn a bounded `.automation.json` manifest into maintainable Playwright code, execute the selected cases, and return evidence-backed verdicts. Use the scripts as the source of truth; do not recreate their naming, planning, coverage, or report logic in prose.
@@ -68,7 +81,7 @@ Parallel mutation requires one isolated account/storage state and dataset/cleanu
 For UI/POM work, read [selector-discovery.md](references/selector-discovery.md) and [ui-coverage-discovery.md](references/ui-coverage-discovery.md). Resolve selectors from the same Browser MCP page/session and current app build using this priority:
 
 ```text
-existing testid -> stable id -> stable CSS -> role/label/placeholder/text -> short anchored XPath
+role/label -> existing testid -> stable id -> stable CSS -> placeholder/text -> short anchored XPath
 ```
 
 Never invent `data-testid`. Reject generated classes, positional CSS, `.first()`, `.last()`, absolute/positional XPath, ambiguous matches, stale evidence, and a lower-priority locator when a verified higher-priority candidate exists. Prove count, visibility, and actionability in the intended route/role/state, then promote only the selected locator into `selectors/`.
@@ -91,13 +104,13 @@ All deterministic surfaces use the canonical `fixtures/allure-contract.ts` and o
 | Need | Reference |
 |---|---|
 | BUILD/RUN/Sheet integration | [testcase-execution.md](references/testcase-execution.md) |
-| UI/POM and waits | [ui-testing.md](references/ui-testing.md) |
+| UI/POM, browser events, iframe and waits | [ui-testing.md](references/ui-testing.md) |
 | Browser MCP selectors | [selector-discovery.md](references/selector-discovery.md) |
 | Complete UI-function coverage | [ui-coverage-discovery.md](references/ui-coverage-discovery.md) |
 | API automation | [api-testing.md](references/api-testing.md) |
 | Data-driven and parallel isolation | [data-driven-testing.md](references/data-driven-testing.md) |
 | Traceability and token telemetry | [automation-audit.md](references/automation-audit.md) |
-| CI, quality gates, Allure merge, flaky policy | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md), [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
+| GitHub/GitLab/Jenkins CI, quality gates, Allure merge, flaky policy | [cicd.md](references/cicd.md), [AUTOMATION-QUALITY-GATES.md](references/AUTOMATION-QUALITY-GATES.md), [FLAKY-TEST-MANAGEMENT.md](references/FLAKY-TEST-MANAGEMENT.md), [allure-playwright-mapping.md](references/allure-playwright-mapping.md) |
 | Deciding what to automate, automation value formula | [test-selection-strategy.md](references/test-selection-strategy.md) |
 | Network interception, mocking, HAR playback | [network-interception.md](references/network-interception.md) |
 | UI + API + DB cross-layer verification | [db-verification.md](references/db-verification.md) |
@@ -110,6 +123,6 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
 - Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
 - `AUTOMATE`/`ACTIVE` selection is required when selection metadata exists; `DEFER`, `REJECT`, and `RETIRED` are excluded from the plan and never projected as runtime `N/A`
-- Mock/HAR and DB verification contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, declared helper exports, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs
+- Mock/HAR, DB verification, custom tag, ROI/layer and lifecycle-hook contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, bounded declared helper exports, `after_test` teardown in `finally`, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs
 - Generated specs use the canonical fixture, contain no raw selector/request, and selected tests actually execute
 - Never claim `PASS` from static findings, generated code alone, or missing runtime evidence

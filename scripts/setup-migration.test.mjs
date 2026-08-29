@@ -77,6 +77,10 @@ test('single-skill setup migrates only its legacy alias and installs the canonic
       fs.readFileSync(path.join(skillsDir, 'dynamic-web-exploratory', 'SKILL.md'), 'utf8'),
       fs.readFileSync(path.join(ROOT, 'dynamic-testing', 'web-exploratory', 'SKILL.md'), 'utf8'),
     )
+    assert.equal(
+      fs.readFileSync(path.join(skillsDir, 'dynamic-web-exploratory', 'scripts', 'qa-runs.mjs'), 'utf8'),
+      fs.readFileSync(path.join(ROOT, 'scripts', 'qa-runs.mjs'), 'utf8'),
+    )
 
     const backupRoot = path.join(tempRoot, 'qa-skill-backups')
     const legacyBackups = fs.readdirSync(backupRoot, { recursive: true })

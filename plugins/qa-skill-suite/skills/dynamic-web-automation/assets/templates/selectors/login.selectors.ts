@@ -1,67 +1,48 @@
 import type { Page } from '@playwright/test';
 
 /**
- * Centralized selectors cho Login — SINGLE SOURCE OF TRUTH cho mọi locator.
- * Khi UI đổi → sửa Ở ĐÂY; page object + spec import từ đây, tự cập nhật.
+ * Centralized Login selector examples. This file demonstrates shape only;
+ * it is not runtime selector evidence
  *
- * Strategy ưu tiên (top → bottom):
- *   1. existing FE-owned data-testid (chỉ dùng sau khi source/live DOM verify)
- *   2. stable id
- *   3. stable CSS attribute/class (không dùng generated class)
- *   4. role / label / placeholder / text
- *   5. short anchored XPath (last resort, phải có reason + runtime evidence)
+ * Candidate priority:
+ *   1. role / label
+ *   2. existing FE-owned data-testid
+ *   3. stable id
+ *   4. stable CSS attribute/class
+ *   5. placeholder / text
+ *   6. short anchored XPath with a recorded reason
  *
- * READONLY PATTERN:
- *   `as const`          → mọi giá trị tự động thành readonly literal string.
- *                         TypeScript ngăn gán đè tại compile time:
- *                         loginSelectors.emailInputId = '...' → ERROR ✗
- *   Tương đương Java:   public static final String EMAIL_ID = "#email";
- *
- * IMPORTANT: These raw values are illustrative placeholders only. Before
- * committing a project selector, map each testcase target.key to the live DOM,
- * verify count=1/visible/actionable, and record selector-evidence/<feature>.json
+ * Never invent a test-id. Verify each selected locator against the live DOM and
+ * record selector-evidence/<feature>.json before using it in generated POM code
  */
-
-// ─────────────────────────────────────────────────────────────
-// RAW selector strings — IMMUTABLE via `as const`
-// ─────────────────────────────────────────────────────────────
 export const loginSelectors = {
-  // id — candidate thứ hai sau FE-owned data-testid
-  emailInputId:    '#email',
+  emailInputId: '#email',
   passwordInputId: '#password',
-  submitButtonId:  '#login-submit',
-  errorMessageId:  '#login-error',
-
-  // xpath — chỉ sau testid/id/CSS/semantic đều unavailable hoặc ambiguous AND runtime evidence proves it
+  submitButtonId: '#login-submit',
+  errorMessageId: '#login-error',
   rememberCheckboxXpath: '//label[contains(.,"Remember")]/input[@type="checkbox"]',
 } as const;
 
-// Expose kiểu readonly tường minh để dùng khi cần type annotation
 export type LoginSelectorKeys = keyof typeof loginSelectors;
 
-// ─────────────────────────────────────────────────────────────
-// LOCATOR factory — build Playwright Locator từ page.
-// Candidate order: testid → id → CSS → semantic → XPath.
-// Chỉ chọn một candidate đã runtime-verified; không dùng tất cả như fallback mù.
-// ─────────────────────────────────────────────────────────────
 export const buildLoginLocators = (page: Page) => ({
-  // Candidate 1 — chỉ tồn tại nếu FE đã cung cấp test-id này và evidence xác nhận
+  // Candidate 1: semantic identity
+  emailInput: page.getByRole('textbox', { name: /email/i }),
+  passwordInput: page.getByLabel(/password|mật khẩu/i),
+  submitButton: page.getByRole('button', { name: /sign in|log in|đăng nhập/i }),
+  errorMessage: page.getByRole('alert'),
+
+  // Candidate 2: existing FE-owned test-id only
   emailInputByTestId: page.getByTestId('login-email'),
 
-  // Candidate 2 — stable id
-  emailInputById:    page.locator(loginSelectors.emailInputId),
-  submitById:        page.locator(loginSelectors.submitButtonId),
+  // Candidate 3: stable id
+  emailInputById: page.locator(loginSelectors.emailInputId),
+  submitById: page.locator(loginSelectors.submitButtonId),
 
-  // Candidate 3 — stable CSS attributes/classes (add only after runtime verification)
+  // Candidate 4: stable CSS observed in the live DOM
   emailInputByCss: page.locator('[name="email"]'),
 
-  // Candidate 4 — semantic locators
-  emailInput:    page.getByRole('textbox', { name: /email/i }),
-  passwordInput: page.getByLabel(/password|mật khẩu/i),
-  submitButton:  page.getByRole('button', { name: /sign in|log in|đăng nhập/i }),
-  errorMessage:  page.getByRole('alert'),
-
-  // Candidate 5 — XPath last resort
+  // Candidate 6: XPath last resort
   rememberByXpath: page.locator(loginSelectors.rememberCheckboxXpath),
 });
 

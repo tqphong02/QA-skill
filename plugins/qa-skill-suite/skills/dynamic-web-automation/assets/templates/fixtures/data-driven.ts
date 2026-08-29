@@ -18,6 +18,7 @@ export type TestData = Readonly<{
   uniqueString(prefix?: string): string;
   uuid(): string;
   caseKey(caseId: string): string;
+  build<T extends Record<string, unknown>>(defaults: T, overrides?: Partial<T>): T;
 }>;
 
 function safeSegment(value: string, maxLength = 80): string {
@@ -71,6 +72,9 @@ export function createTestData(runtime: PomRuntimeContext, testInfo: TestInfo): 
     },
     caseKey(caseId: string): string {
       return `${safeSegment(caseId, 40)}-${shortHash(runtime.namespace)}-${nextSequence()}`;
+    },
+    build<T extends Record<string, unknown>>(defaults: T, overrides: Partial<T> = {}): T {
+      return { ...defaults, ...overrides };
     },
   });
 }

@@ -70,7 +70,7 @@ The audit is a consistency gate; it is not a substitute for a live browser check
 7. The same locator expression is present in `selectors/` and is used through a Page Object
 8. The generated test reaches the intended state and passes its business assertion
 
-The audit expects the selected strategy to follow `testid → id → CSS → role/label/placeholder/text → XPath`. Evidence should record every ordered candidate, including unavailable test-id when no FE source/contract exists. XPath is a last resort and must include a reason in evidence. Absolute XPath, generated CSS classes and positional selectors are blocked by the audit
+The audit expects the selected strategy to follow `role/label → testid → id → CSS → placeholder/text → XPath`. Evidence should record every ordered candidate, including unavailable semantic and test-id candidates. XPath is a last resort and must include a reason in evidence. Absolute XPath, generated CSS classes and positional selectors are blocked by the audit
 
 After audit PASS, run [testcase-execution.md](testcase-execution.md). Traceability PASS authorizes the selected implementation to execute but is not the testcase verdict; only the evidence-gated Playwright run returns `PASS`, `FAILED`, `N/A` or `UNTEST`.
 

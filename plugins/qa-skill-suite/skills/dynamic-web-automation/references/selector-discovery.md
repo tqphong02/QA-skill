@@ -11,10 +11,11 @@ when it is explicitly selected and attached to the exact page being inspected
 1. Use the same Browser MCP session to open the declared route in the requested environment with the correct role and test data
 2. Inspect the live accessibility snapshot and DOM after the page reaches its ready state
 3. Use the Browser MCP DOM-evaluation tool to generate candidate locators from observed properties in this exact order:
+   - `getByRole(role, { name })` and `getByLabel(label)` from observed accessible identity
    - `getByTestId(test_id)` only when an existing FE-owned test-id is found in FE source/contract or already present in the live DOM
    - `#id` when the runtime ID is stable and unique
    - stable CSS attributes/classes such as `[name="email"]` or `[type="password"]`; reject generated classes
-   - `getByRole(role, { name })`, `getByLabel(label)`, `getByPlaceholder(placeholder)` and `getByText(text)` from observed semantic evidence
+   - `getByPlaceholder(placeholder)` and `getByText(text)` from observed semantic evidence
    - a short anchored XPath only as a last resort
    If no FE repository or contract is available, do not fabricate a test-id. Record the unavailable candidate and continue to the next available strategy
 4. Verify every candidate with Browser MCP in the same runtime page before selecting it. Prove count, visibility and actionability using the MCP-operated page

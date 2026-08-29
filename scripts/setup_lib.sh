@@ -529,6 +529,12 @@ copy_skill() {
   # Only the selected top-level skill is public. Bundled examples, templates or
   # third-party sources must not register additional user-selectable skills.
   find "$dst" -mindepth 2 -type f -name 'SKILL.md' -delete 2>/dev/null || true
+  # Ship the shared run organizer with every installed skill so local reports
+  # have one sortable history even when skills are installed independently.
+  if [[ -f "$REPO_DIR/scripts/qa-runs.mjs" ]]; then
+    mkdir -p "$dst/scripts"
+    cp "$REPO_DIR/scripts/qa-runs.mjs" "$dst/scripts/qa-runs.mjs"
+  fi
   if [[ -n "$dependency_cache" && -d "$dependency_cache" ]]; then
     mv "$dependency_cache" "$dst/node_modules"
     quarantine_nested_skill_manifests "$dst" || return 1

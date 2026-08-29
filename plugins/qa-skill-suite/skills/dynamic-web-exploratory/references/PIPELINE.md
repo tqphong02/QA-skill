@@ -58,14 +58,14 @@ Activated when the user requests: `Infer flow from UI`, `Reconcile UI with backe
 node scripts/orchestrators/ui-business-reconciliation.mjs \
   --url https://app.example.com/orders/123 \
   --page order-detail \
-  --requirements .../../static-requirements-analysis/project_Requirements.json \
+  --requirements .static-testing/requirements-analysis/project_Requirements.json \
   --role Staff
 
 # Deterministic snapshot reconciliation
 node scripts/orchestrators/ui-business-reconciliation.mjs \
   --snapshot fixtures/order-detail-components.json \
   --page order-detail \
-  --requirements .../../static-requirements-analysis/project_Requirements.json
+  --requirements .static-testing/requirements-analysis/project_Requirements.json
 ```
 
 Both browser/snapshot input and the requirement registry are mandatory. The pipeline does not silently substitute demo data. Each observed component receives a stable `uiItemId`, and every UI item and requirement must appear in the traceability result
@@ -76,7 +76,7 @@ Runtime verification is a separate state-changing gate. Run it only after author
 node scripts/orchestrators/ui-business-reconciliation.mjs \
   --url https://app.example.com/orders/123 \
   --page order-detail \
-  --requirements .../../static-requirements-analysis/project_Requirements.json \
+  --requirements .static-testing/requirements-analysis/project_Requirements.json \
   --verify-runtime \
   --runtime-action-selector '#submit' \
   --runtime-expected-state SUBMITTED

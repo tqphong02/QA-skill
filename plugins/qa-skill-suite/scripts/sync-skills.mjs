@@ -11,6 +11,7 @@ const REPOSITORY_ROOT = path.resolve(PLUGIN_ROOT, "..", "..");
 const SKILLS_ROOT = path.join(PLUGIN_ROOT, "skills");
 const REGISTRY_PATH = path.join(REPOSITORY_ROOT, "config", "skill-registry.json");
 const MANIFEST_PATH = path.join(PLUGIN_ROOT, "bundle-manifest.json");
+const QA_RUNS_HELPER_PATH = path.join(REPOSITORY_ROOT, "scripts", "qa-runs.mjs");
 const CHECK_ONLY = process.argv.includes("--check");
 
 const IGNORED_DIRECTORIES = new Set([
@@ -231,6 +232,10 @@ function expectedBundle(entry, entries) {
       contents = Buffer.from(text, "utf8");
     }
     files.set(toPosix(relative), contents);
+  }
+  const helperPath = "scripts/qa-runs.mjs";
+  if (!files.has(helperPath)) {
+    files.set(helperPath, fs.readFileSync(QA_RUNS_HELPER_PATH));
   }
   return files;
 }

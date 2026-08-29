@@ -19,7 +19,8 @@ const BROWSER_MCP_TOOLS = Object.freeze({
 });
 const COVERAGE_ACTIONS = new Set([
   'click', 'fill', 'select', 'select_option', 'check', 'uncheck', 'press',
-  'hover', 'drag', 'upload', 'navigate', 'assert', 'wait', 'observe',
+  'hover', 'drag', 'upload', 'download', 'dialog_accept', 'dialog_dismiss',
+  'popup', 'navigate', 'assert', 'wait', 'observe',
 ]);
 const ACTION_ALIASES = Object.freeze({
   input: 'fill',

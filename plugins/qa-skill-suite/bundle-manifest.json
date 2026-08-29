@@ -7,163 +7,163 @@
     {
       "id": "dynamic-web-exploratory",
       "source_path": "dynamic-testing/web-exploratory",
-      "file_count": 130,
-      "source_sha256": "0510caa2d74284ca106416689224084ca1c53c4ea88987535ec7d8883d137c38",
-      "bundled_sha256": "e6e18b9f33e7809d858d6dfa4ba02fc5510e465654144ebff9fd03373f03f9ee"
+      "file_count": 131,
+      "source_sha256": "d64162c6c573f7b806dece533ae4d5a7837918df49864976fb9b186ddfe668ee",
+      "bundled_sha256": "805c24c76ab5d41d14e3b10ecd148e418f4efd9e6c9bf0e30a6b5cac7b443da7"
     },
     {
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
-      "file_count": 21,
-      "source_sha256": "24328e9abafc541dd9d539483be15dfd2e023ddcca2be2c6697847d0e41696e2",
-      "bundled_sha256": "64f9ef3f88af2f203e4c1868c0bbb70a11503c73c895b00c887170f0dbca4d55"
+      "file_count": 22,
+      "source_sha256": "425c8f7638735a520036b15d352e4162823333a2392157845df1cac86e410f1a",
+      "bundled_sha256": "370b080c2357598d19fdb2fd863405626bb07ca22ba10daa6750f31380b9136b"
     },
     {
       "id": "dynamic-web-automation",
       "source_path": "dynamic-testing/web-automation",
-      "file_count": 72,
-      "source_sha256": "2d4cf71e8f3844b66b192db9e2e2d2395796441d72b8b0e1468b68d49af951b7",
-      "bundled_sha256": "df2385a0ed6abe4874771b656bd7e4638501ada465f8cb5b8554b5fa8693e6f9"
+      "file_count": 74,
+      "source_sha256": "89dcf287e92421700b7556c710fe4c2af18f8de9a5b273d8744603c3894cb8a2",
+      "bundled_sha256": "c08af1d23d9bcef13910173846cbb4ce54209b708db1ff6ec9c7158b48aeb496"
     },
     {
       "id": "support-document-conversion",
       "source_path": "support/document-conversion",
-      "file_count": 3,
-      "source_sha256": "09da1e5d6ea85bcc3a845d98e70ab9a2f466b43738ea87169ef17d1fbdf61220",
-      "bundled_sha256": "b105b77455c5807bf5cafbb073850c4401aca1d5d4c873a884c485023f6e3a84"
+      "file_count": 4,
+      "source_sha256": "135a3ad496e8e2568a9fc81917a0adedfc50155483705fef5043550d4fdf07ff",
+      "bundled_sha256": "a6474ffbe0d8a6f6233bbcde687fa16077b0be621908d957167edbe46a211944"
     },
     {
       "id": "static-requirements-analysis",
       "source_path": "static-testing/requirements-analysis",
-      "file_count": 13,
-      "source_sha256": "e9bdace2378d761d468b4e007dc27e24864dbd3797b57f581d8bc3fe97690e7c",
-      "bundled_sha256": "bb1de174d632beaa03349cad31634b242c76a7cfccb096b41abe816b7d302d53"
+      "file_count": 14,
+      "source_sha256": "6ae1ea7c1d9813d775bc8155d829d438a26564760bb2f96201c4c5860f8cbd31",
+      "bundled_sha256": "2d4cceffa962452900e834a0e2bf746fa3acb514c81a4242926af21dc0ca47bd"
     },
     {
       "id": "dynamic-security-pentest",
       "source_path": "dynamic-testing/security-pentest",
-      "file_count": 22,
-      "source_sha256": "ffbb16b7a5f7fd3f88bc72cf20eed85dd457cfa81528b9dbb09921c712528bbd",
-      "bundled_sha256": "cd488d2a88d5c2f2bf333a6c636a901ec2e96a9777d6c806ab9d00812c62d2e3"
+      "file_count": 23,
+      "source_sha256": "c174c1b54640f6e501184fab38c46664b3573cc983bd7e75f5971155c7877651",
+      "bundled_sha256": "25d50232312c2826685213cfba620574d16f02011fe8c8a3233e42c57d759b0b"
     },
     {
       "id": "integration-plane",
       "source_path": "integration/plane",
-      "file_count": 33,
-      "source_sha256": "1673114fc753ecf61058e74246eb761eddb3985f1c0dc765bbdafbde3e7d1da0",
-      "bundled_sha256": "6ff09b2e3e77911978ca1c83688c5517ce09167f0a1af43f2773e11b45209b97"
+      "file_count": 34,
+      "source_sha256": "0f4dc19f8fee07f4b8a778a9105011a29c4540562bb4099be1e57cc81d41d75d",
+      "bundled_sha256": "4c6d89dc00f40e5579640cdc8c10fa43000d9ee8ea7fd35f1b466332e98cb39c"
     },
     {
       "id": "integration-google-drive",
       "source_path": "integration/google-drive",
-      "file_count": 17,
-      "source_sha256": "3bd8179b71b537a2e0b94da88fe1f3a23a00e7a789867c2af68494259ec5f348",
-      "bundled_sha256": "0c42f03b3499c3b9dc075f31c9e00c710d8c86c2bb4edbdb6c4c9265ac5bc898"
+      "file_count": 18,
+      "source_sha256": "745a0a1fe98bf1547e76119eae13d7a6e16915537e7f73e2cecaaa5c081a9b25",
+      "bundled_sha256": "09ffe65bc5675c6c062d43b1246bb65729ea35cf7a1e206407231e2835bf48d9"
     },
     {
       "id": "dynamic-data-quality",
       "source_path": "dynamic-testing/data-quality",
-      "file_count": 7,
-      "source_sha256": "7d95b26dd6889b5d4b416333175f772da8ae99e14ba747f008a2cbab140e236e",
-      "bundled_sha256": "f024d74ab6d9e126bb350655350c0b526bbe343f827dbccb1244ac61cf6afb44"
+      "file_count": 8,
+      "source_sha256": "c25167d2874bedf6e3d6f46459079f873a44bcf0f07a78244a8f726bbbe879fb",
+      "bundled_sha256": "524efb2991b5238cfa2316b0b40f172276bfe99243b67eaba7bad157776ed868"
     },
     {
       "id": "dynamic-ai-evaluation",
       "source_path": "dynamic-testing/ai-evaluation",
-      "file_count": 4,
-      "source_sha256": "4a9f56a58604b04800f843a330bcbf8b03d1b7c5e671cd1df678b6785556a1a4",
-      "bundled_sha256": "2d536c3d55f65ca05fb0393191872cde5883af0d64e1e6198e4b51b967002673"
+      "file_count": 5,
+      "source_sha256": "2d00b7e130241faf55597733f4aaa54de8a9c6664f6b8b25d1da96c0941d0192",
+      "bundled_sha256": "8c1b8fe2211c09c67558a15d347ef193632a9dba88302b95da1240f6b86d683c"
     },
     {
       "id": "hybrid-accessibility",
       "source_path": "hybrid-testing/accessibility",
-      "file_count": 4,
-      "source_sha256": "0578a6ce151e75366da4875dabcb5688bf6fae9aa70f927324c523443f0be971",
-      "bundled_sha256": "cffb48a2e5ccf32472b8ba65500f09ad76783cf6d8b2bce0a59365628411f5a6"
+      "file_count": 5,
+      "source_sha256": "a3f66168244c1cc14719fd08133b62c3616b433a2fd201e6e1ecd914fe8e7fb8",
+      "bundled_sha256": "7f150a23fd7130a4477a621c423fe76cc85fab2344bcfa4a97ed6b47cad3e6ee"
     },
     {
       "id": "dynamic-performance",
       "source_path": "dynamic-testing/performance",
-      "file_count": 43,
-      "source_sha256": "4f12eddbb1167ffc373814d53f5edde447b925eb190a1ce4b623f19591453545",
-      "bundled_sha256": "36d26bf87f0015b5a97c2d8897b95bf3600ec1850f667fbc7deba498cce1f72b"
+      "file_count": 44,
+      "source_sha256": "6207c2d8a84ae080e3223ef0f625064ccfbc91e12f826e00a347a5bba5f04c75",
+      "bundled_sha256": "ecd997f3a31e0490496de837d250b3947062a678bfbd046fac684c7e5d5bcc7f"
     },
     {
       "id": "hybrid-api-contract",
       "source_path": "hybrid-testing/api-contract",
-      "file_count": 6,
-      "source_sha256": "86dd9de178475bd0c5eab2312ac06b3fabfa932e377939d199d9a79332227e9d",
-      "bundled_sha256": "3dcc9bff3603c68068b57379803002a492b20245c50fa387fa297cecc8f753c3"
+      "file_count": 7,
+      "source_sha256": "85fb37843238edda1f5ee3501d6e6f9ad91b1b99ca8fb4969e6266fcdb429f79",
+      "bundled_sha256": "4a4be103274c541dd0fe5a21ff9dc19cf81e9b81d2d802c5291f091ff30d928f"
     },
     {
       "id": "integration-postman",
       "source_path": "integration/postman",
-      "file_count": 7,
-      "source_sha256": "0b260eef9dad99f813f5b3adecd34ce60d9013ec8a578fed249ab7803df15fee",
-      "bundled_sha256": "2118027c3ceb194c0de51ccf1db65b94a6cfabcfe120e3490764be54462cdc09"
+      "file_count": 8,
+      "source_sha256": "4425da5436dd1f82db37d3caf5494b53b6edc0d6f8bded1101ac8135cc2f270b",
+      "bundled_sha256": "1c958f1eb7aba1909b8fca5614c1507c8570c21c5ce72d59dba60cdcf441811c"
     },
     {
       "id": "dynamic-mobile",
       "source_path": "dynamic-testing/mobile",
-      "file_count": 33,
-      "source_sha256": "182fc20f4714401e2bdfb6df1b1f5b29bfae7e7a1404f864b46ecb02e2074c37",
-      "bundled_sha256": "1d91bfa87b3225ab24d3710c5993580348b392f76d703b88528773d38c580ba6"
+      "file_count": 34,
+      "source_sha256": "6a6ea4ff3900622c45f0d6816611038b9f1e9626c70c55125665f4406a06fbca",
+      "bundled_sha256": "db475ab90ef67e0c20df5ef54a8206dc8866c7a6cc41de7dd7cb0eb0abfa533a"
     },
     {
       "id": "hybrid-source-coverage",
       "source_path": "hybrid-testing/source-coverage",
-      "file_count": 43,
-      "source_sha256": "3b02b63c157cabbf45252b2376ac81eb7d7a1c4134b56620b3ed1d9588b591e4",
-      "bundled_sha256": "ca1514a5cc8142d005e0bb67a45a9cdd130a7cdac5d67320aa08fab0e33a21e3"
+      "file_count": 44,
+      "source_sha256": "eaeb4e9d317b92c2f4467e5cffcb6546186582f50cbcc99b23feb3a61946b7b6",
+      "bundled_sha256": "a3c68efa93e988e6c62c35b273c22a8c3a89fc00f5737faf9df8306a58da38af"
     },
     {
       "id": "integration-github",
       "source_path": "integration/github",
-      "file_count": 10,
-      "source_sha256": "fe43f0007dd04b9319e2ec1a496d856aed6734a05d3ee7e71dfe7f42edb0e5f2",
-      "bundled_sha256": "def4599a79fa86a4882fde679580b52102c6fff4146167fdbb1f93204a1bb154"
+      "file_count": 11,
+      "source_sha256": "0e424a362b094d01faac19b408e19a907504ba2e78826447e96e93f2d77d47af",
+      "bundled_sha256": "f8beffd5d8c1b79da63d94d773e945dc6511606a07362483f458cd398133a7e5"
     },
     {
       "id": "adapter-browser-session",
       "source_path": "adapter/browser-session",
-      "file_count": 9,
-      "source_sha256": "46a31a9e97ee9dd3f47fa089e9121d823343ae55d9f74210eb58be09aedd4ef4",
-      "bundled_sha256": "4b02e548cf7376e46e9a90029a2d0f0e2d57475e790b4ef7e6fe41e2b2f72708"
+      "file_count": 10,
+      "source_sha256": "b735b37270730ed3409a6bd17f5bc26c29e4600c88f7bf850636f58a98bd8b0e",
+      "bundled_sha256": "8fad93bcbc3ac6504c45640c7962bb8a6c3bc87899a8f9953229ee429f46220b"
     },
     {
       "id": "hybrid-ui-ux-review",
       "source_path": "hybrid-testing/ui-ux-review",
-      "file_count": 6,
-      "source_sha256": "35b330fd03c826f06a2820f86715a9d2ea70ac144ee6c894f5b52106d43748b0",
-      "bundled_sha256": "6456f7dfc3379e6ced1634c72dd2d67e4e7b6f437928f1a8e6d24f9da2bb6c70"
+      "file_count": 7,
+      "source_sha256": "fcab3efba70ebbfb22a1a348e699d26fcc8ada8b339159b088ebbae91a3f46ab",
+      "bundled_sha256": "479908441e3a67012c314e0d5dfc92f8b4649590c6671cfd21b2588772c857b6"
     },
     {
       "id": "governance-release-quality",
       "source_path": "governance/release-quality",
-      "file_count": 4,
-      "source_sha256": "1be71aa15e025836d6127b47f0bffd83262bfacda48c9d04f4292213c053b463",
-      "bundled_sha256": "fe3c25b77cde3c343278c0eca5c164c2480388460915e9074c194707cdc77dd9"
+      "file_count": 5,
+      "source_sha256": "691be6fcb0899db2f8370f9b17c854aafb13c2d849ffb2fb56806fa962f8772b",
+      "bundled_sha256": "08f7fd6b7d29c3f03164c06becda14df2cf3f582ea16c1b92cd5698a9ca07e5d"
     },
     {
       "id": "static-supply-chain-security",
       "source_path": "static-testing/supply-chain-security",
-      "file_count": 4,
-      "source_sha256": "1ddfaea397422a559b6210cfe86d941742dd992c847bd89ad91eb590b99e7148",
-      "bundled_sha256": "c4c3d291d89b044f49ea273404c872114e949a986d2fa38e2e78f51d80fa8264"
+      "file_count": 5,
+      "source_sha256": "7a05985cb4e4bb69959ddc7d34b3aaf2ccb266a58d27cdadc887c4a05aa74d96",
+      "bundled_sha256": "382a2f6f0caa59cbf8b79103f81b443df2f475de81e77aa715ab12f9b0473f57"
     },
     {
       "id": "dynamic-resilience",
       "source_path": "dynamic-testing/resilience",
-      "file_count": 4,
-      "source_sha256": "b3087b7f60be0a469e505ce709d84e0f6a5015ddc65b76ed922c48d05d9ecfa4",
-      "bundled_sha256": "d0cd16addb2123aa7d994b30a5cfa5b266cb6f22265f785dd0bc2cabdf80dc09"
+      "file_count": 5,
+      "source_sha256": "93abfaa6ad542308d299c1a84c4b4e37eb8ff192e612d4b0ec4d55a5584b4a5c",
+      "bundled_sha256": "643224ae569b2ce167ece80ac41c588bad88929f7bf34007e805fafa74c81a7f"
     },
     {
       "id": "dynamic-compatibility",
       "source_path": "dynamic-testing/compatibility",
-      "file_count": 4,
-      "source_sha256": "c069b762f0f8b0f08b171ce5705bf107282164a478619ea7ee6d520718be9b0b",
-      "bundled_sha256": "68445f7d25bc66609c2e03589b7103af1569ea4a35e5a537ad681bd0cb4a5941"
+      "file_count": 5,
+      "source_sha256": "0e3f3ae67441c76f511b388fc09f933df5334258a57fe2bff287264dd40aaf98",
+      "bundled_sha256": "6b8a67b1ffd742be9c7386d2083b82589e53fdccb2b32f0629bc7cebf25e5324"
     }
   ]
 }

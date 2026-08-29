@@ -79,6 +79,10 @@ Use exact `{{PLANE_DESCRIPTION_IMAGE_N}}` and `{{PLANE_COMMENT_IMAGE_N}}` placeh
 7. Do not claim `PASS` without the required runtime evidence. Preserve `PASS`, `FAILED`, `N/A`, `UNTEST`; exploratory/ad-hoc has no fifth user-facing verdict
 8. Business analysis must answer important Q&A or mark assumptions before testcase generation
 
+### Local run organization
+
+For any local report, evidence, log, converted intermediate or other non-source deliverable, follow the `Local run organization` contract in the selected `SKILL.md`. Unless the user supplied an exact path or the skill requires a safety-specific location, create one immutable timestamped directory under `qa-runs/<skill-name>/`, then update `qa-runs/LATEST.md` and `qa-runs/INDEX.md` with `scripts/qa-runs.mjs`. Never emit generated files into the project root or overwrite an earlier run
+
 ### Browser and model boundary
 
 `playwright-runtime`/Playwright MCP is the default live browser. Gemini/Antigravity is a host model, not a browser override: never use Gemini-in-Chrome or `antigravity-native`; Antigravity must use Playwright runtime/MCP and returns `UNTEST` when unavailable. Network, console and page-error evidence must be observed in the same page/session as the UI action. `adapter-browser-session` is a separate real-login driver, not a Playwright fallback; run its doctor first and never perform destructive real-session actions without confirmation

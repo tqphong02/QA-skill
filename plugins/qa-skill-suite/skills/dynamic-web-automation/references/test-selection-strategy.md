@@ -30,6 +30,29 @@ The score supports the decision; it does not replace engineering judgement. Reco
 }
 ```
 
+For a release-critical suite, add `recommended_layer`, `layer_rationale`, and
+`extended_roi`. The extended score includes build and infrastructure cost plus
+feedback speed, defect prevention, behavior coverage, and reliability confidence:
+
+```json
+{
+  "recommended_layer": "API",
+  "layer_rationale": "The contract is stable and the UI adds no unique risk",
+  "extended_roi": {
+    "build_cost": 2,
+    "infrastructure_cost": 2,
+    "feedback_speed_value": 5,
+    "defect_prevention_value": 5,
+    "coverage_value": 4,
+    "reliability_confidence": 5
+  }
+}
+```
+
+The executable gate reports both the backward-compatible base score and the
+extended score. `UNIT` or `COMPONENT` recommendations are explicit handoffs to
+the source/unit coverage workflow and cannot silently become Playwright tests
+
 Allowed decisions are `AUTOMATE`, `DEFER`, and `REJECT`. Each factor must be an integer from 1 to 5 and `rationale` is mandatory
 
 ## Selection behavior
@@ -80,4 +103,4 @@ Route load testing to `dynamic-performance`, large data reconciliation to `dynam
 
 Retire automation when the feature is removed, equivalent lower-level coverage is approved, or the execution trigger no longer exists. Do not silently delete a testcase referenced by a ticket or test plan
 
-The executable gate is `scripts/verify-advanced-test-contracts.mjs`; it validates selection metadata and the POM planner performs the exclusion
+The executable gate is `scripts/verify-advanced-test-contracts.mjs`; it validates selection, layer and extended ROI metadata, and the POM planner performs the exclusion
