@@ -10,6 +10,7 @@ Retries are diagnostic evidence, not a way to turn a failure green
 - Quarantine only with an owner, issue ID, reason, expiry date and replacement coverage
 - Do not quarantine critical-path, security, payment or data-integrity tests without an explicit risk acceptance
 - Remove quarantine when the test passes the agreed stability window, for example 20 consecutive executions across the supported matrix
+- New API/functional automation must pass its manifest `stability_gate` before CI promotion; the runner preserves every repeat attempt in `reports/stability-gate.json`
 
 ## Flake review thresholds
 

@@ -375,6 +375,89 @@ function untestReport(plan, reason, runId, mode) {
   };
 }
 
+export function stabilityRepeatCount(plan) {
+  return Math.max(1, ...(plan?.testcases || []).map(testcase => (
+    Number(testcase?.stability_gate?.repeat_count) || 1
+  )));
+}
+
+export function verifyStabilityGate(playwrightReport, plan) {
+  const tests = collectTests(playwrightReport?.suites);
+  const cases = (plan?.testcases || [])
+    .filter(testcase => testcase?.stability_gate)
+    .map(testcase => {
+      const idPattern = new RegExp(`(?:^|[^A-Za-z0-9_-])${escapeRegex(testcase.testcase_id)}(?:$|[^A-Za-z0-9_-])`);
+      const matches = tests.filter(item => idPattern.test(String(item.title || item.testId || '')));
+      const attempts = matches.map((item, index) => {
+        const statuses = (item.results || []).map(result => String(result.status || 'unknown'));
+        const cleanPass = statuses.length === 1 && statuses[0] === 'passed';
+        const flaky = statuses.includes('passed') && statuses.some(status => status !== 'passed');
+        return {
+          repeat_index: Number.isInteger(item.repeatEachIndex) ? item.repeatEachIndex : index,
+          statuses,
+          clean_pass: cleanPass,
+          flaky,
+        };
+      }).sort((left, right) => left.repeat_index - right.repeat_index);
+      let consecutivePasses = 0;
+      for (let index = attempts.length - 1; index >= 0 && attempts[index].clean_pass; index -= 1) {
+        consecutivePasses += 1;
+      }
+      const flakyCount = attempts.filter(attempt => attempt.flaky).length;
+      const flakeRate = attempts.length === 0 ? 0 : Number((flakyCount / attempts.length).toFixed(4));
+      const gate = testcase.stability_gate;
+      const violations = [];
+      if (attempts.length < Number(gate.repeat_count)) violations.push('STABILITY_ATTEMPTS_INCOMPLETE');
+      if (consecutivePasses < Number(gate.required_consecutive_passes)) violations.push('STABILITY_CONSECUTIVE_PASS_NOT_MET');
+      if (flakeRate > Number(gate.max_flaky_rate)) violations.push('STABILITY_FLAKY_RATE_EXCEEDED');
+      return {
+        testcase_id: testcase.testcase_id,
+        status: violations.length === 0 ? 'PASS' : 'BLOCKED',
+        repeat_count: Number(gate.repeat_count),
+        required_consecutive_passes: Number(gate.required_consecutive_passes),
+        actual_execution_count: attempts.length,
+        consecutive_clean_passes: consecutivePasses,
+        max_flaky_rate: Number(gate.max_flaky_rate),
+        actual_flaky_rate: flakeRate,
+        attempts,
+        violations,
+      };
+    });
+  return {
+    schema_version: 1,
+    status: cases.every(item => item.status === 'PASS') ? 'PASS' : 'BLOCKED',
+    testcase_count: cases.length,
+    cases,
+  };
+}
+
+function applyStabilityGate(report, stability) {
+  if (!stability || stability.status === 'PASS') return report;
+  const blockedById = new Map(stability.cases
+    .filter(item => item.status !== 'PASS')
+    .map(item => [item.testcase_id, item]));
+  report.results = report.results.map(result => {
+    const blocked = blockedById.get(result.testcase_id);
+    if (!blocked || result.verdict === 'FAILED') return result;
+    return {
+      ...result,
+      verdict: 'UNTEST',
+      sheet_result: 'Untest',
+      note: `Pre-CI stability gate BLOCKED: ${blocked.violations.join(', ')}`,
+    };
+  });
+  report.verdict = overallVerdict(report.results);
+  report.summary = {
+    total: report.results.length,
+    pass: report.results.filter(item => item.verdict === 'PASS').length,
+    failed: report.results.filter(item => item.verdict === 'FAILED').length,
+    not_applicable: report.results.filter(item => item.verdict === 'N/A').length,
+    untest: report.results.filter(item => item.verdict === 'UNTEST').length,
+    flaky: report.results.filter(item => item.flaky).length,
+  };
+  return report;
+}
+
 function applyAllureContractGate(report, contract, mode) {
   if (contract.status === 'PASS') return report;
   const reason = contract.violations?.[0]?.message
@@ -830,6 +913,8 @@ async function main() {
   ];
   const project = getArg('--browser-project', 'chromium');
   if (project) playwrightArgs.push('--project', project);
+  const repeatCount = stabilityRepeatCount(plan);
+  if (repeatCount > 1) playwrightArgs.push('--repeat-each', String(repeatCount));
   const playwrightReportPath = resolveOutputFrom(
     projectRoot,
     getArg('--playwright-report'),
@@ -880,7 +965,17 @@ async function main() {
     return;
   }
 
-  const report = normalizePlaywrightReport(readJson(playwrightReportPath), plan, { projectRoot, mode, runId });
+  const rawPlaywrightReport = readJson(playwrightReportPath);
+  const report = normalizePlaywrightReport(rawPlaywrightReport, plan, { projectRoot, mode, runId });
+  const stabilityGatePath = resolveOutputFrom(
+    projectRoot,
+    getArg('--stability-gate-output'),
+    'reports/stability-gate.json',
+    '--stability-gate-output',
+  );
+  const stabilityGate = verifyStabilityGate(rawPlaywrightReport, plan);
+  writeJson(stabilityGatePath, stabilityGate);
+  applyStabilityGate(report, stabilityGate);
   const allureContract = verifyAllureContract({ resultsDir: allureResultsPath, mode });
   writeJson(allureContractPath, allureContract);
   report.traceability = traceabilityPath;
@@ -894,6 +989,7 @@ async function main() {
   report.module_layout = moduleLayoutPath;
   report.api_operation_coverage = apiOperationCoveragePath;
   report.advanced_test_contracts = advancedContractsPath;
+  report.stability_gate = stabilityGatePath;
   report.runner_exit_code = execution.status;
   applyRunnerProcessGate(report, execution);
   applyAllureContractGate(report, allureContract, mode);

@@ -1,6 +1,6 @@
 ---
 name: static-requirements-analysis
-description: Analyze BRD, SRS, FRS, requirements, and system documents into source-grounded business flows, bounded clarification Q&A, editable XMind, and synchronized Markdown/Excel. Trigger on BRD, SRS, FRS, requirements, business-flow, ambiguity, or clarification analysis requests. Use support-document-conversion for local non-Markdown files and integration-google-drive for Drive sources. Auto-route; do not require the skill name.
+description: Analyze BRD, SRS, FRS, business and API requirements into source-grounded goals, rules, validations, dependencies, risks, flows, bounded clarification Q&A, editable XMind, and synchronized Markdown/Excel. Trigger on requirement analysis, static testing of requirements, business-flow, ambiguity, missing requirements, or BA/Dev clarification requests. Use support-document-conversion for local non-Markdown files and integration-google-drive for Drive sources. Auto-route; do not require the skill name.
 mode: static
 surface: requirements
 role: analysis
@@ -26,15 +26,17 @@ Build a closed-world model from the supplied requirement sources, reconcile it w
 
 ## Hard gates
 
-1. Resolve the exact source files and output folder. Route Drive URLs/IDs to `integration-google-drive`
-2. For PDF/DOCX/PPTX/XLSX/HTML/image input, run `support/document-conversion/scripts/convert.sh` first and analyze only the resulting Markdown
-3. Read existing canonical analysis/Q&A plus `qa-knowledge/merged/system-business-guide.md`, `system-qna.json` and reconciliation/runtime/Graphify artifacts when present; preserve conflicts and never promote runtime or Graphify evidence to a documented requirement
-4. Read [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), but treat its 18 areas as review lenses, never as a quota for flows or questions
-5. Build one `.static-testing/requirements-analysis/<project-name>_Analysis_Source.json` from [INPUT_SCHEMA.md](references/INPUT_SCHEMA.md). Every flow needs a stable `semantic_key`, exact `source_ref`, and `source_excerpt` that exists in a supplied Markdown source
-6. Use closed-world extraction: include only behavior stated by a source or the minimum connective inference needed to represent a stated end-to-end flow. Mark connective inference `inferred`; never invent generic UI, security, audit, retry, concurrency, performance, migration, API or exception logic because a checklist mentions it
-7. Create Q&A only for one material decision that changes an in-scope outcome, state, permission, calculation, data contract or acceptance criterion. Each question needs one stable `decision_key`, exact source evidence and existing impacted flow/requirement IDs. Zero questions is valid
-8. Reconcile by semantic identity, never append blindly. Reuse IDs, update matching records in place, close answered items, retire unsupported items, and merge multiple review observations that share one root decision
-9. Run `scripts/generate.sh`, read back Markdown/Excel/XMind and fail closed on source drift, unsupported evidence, unchanged-source growth, dependency, ID or output mismatch
+1. Run `node scripts/doctor.mjs`; report `runtime_missing` instead of attempting generation when Bash, Python/openpyxl, Node or xmindmark is unavailable
+2. Resolve the exact source files and output folder. Route Drive URLs/IDs to `integration-google-drive`
+3. For PDF/DOCX/PPTX/XLSX/HTML/image input, run `support/document-conversion/scripts/convert.sh` first and analyze only the resulting Markdown
+4. Read existing canonical analysis/Q&A plus `qa-knowledge/merged/system-business-guide.md`, `system-qna.json` and reconciliation/runtime/Graphify artifacts when present; preserve conflicts and never promote runtime or Graphify evidence to a documented requirement
+5. Read [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), but treat its 18 areas as review lenses, never as a quota for flows or questions
+6. Build one `.static-testing/requirements-analysis/<project-name>_Analysis_Source.json` from [INPUT_SCHEMA.md](references/INPUT_SCHEMA.md). Every goal, atomic requirement, rule, dependency, risk, API operation and flow needs a stable semantic identity plus exact source evidence
+7. Use closed-world extraction: include only behavior stated by a source or the minimum connective inference needed to represent a stated end-to-end flow. Mark connective inference `inferred`; never invent generic UI, security, audit, retry, concurrency, performance, migration, API or exception logic because a checklist mentions it
+8. Create Q&A only for one material decision that changes an in-scope outcome, state, permission, calculation, data contract or acceptance criterion. Each question needs one stable `decision_key`, exact source evidence and existing impacted flow/requirement IDs. Zero questions is valid
+9. Reconcile by semantic identity, never append blindly. Reuse IDs, update matching records in place, close answered items, retire unsupported items, and merge multiple review observations that share one root decision
+10. When the source defines an API, read [API_REQUIREMENTS.md](references/API_REQUIREMENTS.md), capture only documented API behavior and export the contract handoff. Static analysis does not prove implementation behavior; route spec-versus-runtime validation to `hybrid-api-contract`
+11. Run `scripts/generate.sh`, read back Markdown/Excel/XMind and fail closed on source drift, unsupported evidence, unchanged-source growth, dependency, ID or output mismatch
 
 ## Workflow
 
@@ -50,9 +52,9 @@ Keep converted Markdown beside the outputs and preserve headings/requirement IDs
 
 ### 2. Extract a bounded model
 
-Start from explicit scope, actors, named capabilities and acceptance statements in the source. Create a flow only when its `source_excerpt` proves the capability exists. A flow may contain sourced steps plus clearly marked connective inference, but it must not grow auxiliary behavior from generic domain expectations
+Start from explicit business goals, scope, actors, named capabilities and acceptance statements in the source. Create a flow only when its `source_excerpt` proves the capability exists. A flow may contain sourced steps plus clearly marked connective inference, but it must not grow auxiliary behavior from generic domain expectations
 
-For each sourced flow, capture actors/permissions, entry and exit state, prerequisites, ordered functions, transitions, outcomes, controls, side effects and relevant `flow_links`. Include at least one `sanity_journeys` path that uses existing flow IDs; the journey is a view of those flows, not a source of new logic
+Model functional requirements, business rules, validation rules, dependencies and risks as stable source-grounded records linked by IDs. For each sourced flow, capture actors/permissions, entry and exit state, prerequisites, ordered functions, transitions, outcomes, controls, side effects and relevant `flow_links`. Include at least one `sanity_journeys` path that uses existing flow IDs; the journey is a view of those flows, not a source of new logic
 
 Mark facts `verified`, `inferred` or `unresolved`. An inference cannot become `verified` without a source excerpt or an authority-supplied answer added to the source set
 
@@ -60,7 +62,7 @@ Mark facts `verified`, `inferred` or `unresolved`. An inference cannot become `v
 
 On the first run, establish stable `semantic_key` and `decision_key` values. On later runs, rebuild from the current sources and reconcile:
 
-- Same source snapshot: preserve or reduce the semantic flow/question set; do not add a new key
+- Same source snapshot: preserve or reduce every semantic entity set; do not add a new key
 - Changed source snapshot: add a key only when the changed source contains its evidence
 - Authority answer: update the existing question and affected facts in place; if it introduces new behavior, save the answer as a new Markdown source before adding a flow
 - Removed or superseded source: remove unsupported flow logic and mark obsolete questions `Cancelled` instead of retaining them as active gaps
@@ -85,7 +87,9 @@ Required outputs:
 <project-name>_Q&A.xlsx
 ```
 
-The generator also writes internal convergence state and exports `.static-testing/requirements-analysis/<project-name>_Requirements.json` when `requirements` exists. XMind uses exactly one `Luồng hệ thống` sheet and renders only the flows and relationships present in the validated JSON
+The generator also writes internal convergence state and always refreshes `.static-testing/requirements-analysis/<project-name>_Requirements.json` plus `<project-name>_API_Contract_Handoff.json`, including empty registries, so stale data cannot survive a newer source snapshot. XMind uses exactly one `Luồng hệ thống` sheet and renders only the flows and relationships present in the validated JSON
+
+Markdown and Excel include a synchronized requirement matrix covering `Business Goal`, `Functional Requirement`, `Business Rule`, `Validation Rule`, `Dependency`, `Risk`, `Missing Requirement` and `Questions for BA/Dev`. API handoff rows are documented expectations with `coverage_status: not_covered`, never runtime evidence
 
 Every run ends after one validated render with exactly one execution result:
 
@@ -97,7 +101,7 @@ Every run ends after one validated render with exactly one execution result:
 
 ### 5. Read back
 
-- Compare Question IDs, counts, source refs and impacted IDs across Markdown and Excel
+- Compare complete requirement-matrix, API-operation and Q&A rows across canonical JSON, Markdown and Excel
 - Run `node scripts/render-xmind.mjs --check <file.xmind> <analysis.json>` and verify journey/relationship counts
 - Keep unanswered questions `Open` with empty Answer; use `Answered` only for authority-supplied answers
 - Report the generator's terminal result and the fixed counts of flows and active questions
@@ -117,4 +121,4 @@ Only when requested, read [GRAPHIFY-EFFECTIVE-HTML.md](../../dynamic-testing/web
 
 ## Resources
 
-[INPUT_SCHEMA.md](references/INPUT_SCHEMA.md), [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), [scripts/generate.sh](scripts/generate.sh), [scripts/convergence.py](scripts/convergence.py), [scripts/render-qa.py](scripts/render-qa.py), [scripts/render-xmind.mjs](scripts/render-xmind.mjs), [scripts/export-requirements.py](scripts/export-requirements.py), [examples/sample-analysis.json](examples/sample-analysis.json)
+[INPUT_SCHEMA.md](references/INPUT_SCHEMA.md), [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), [API_REQUIREMENTS.md](references/API_REQUIREMENTS.md), [scripts/doctor.mjs](scripts/doctor.mjs), [scripts/generate.sh](scripts/generate.sh), [scripts/convergence.py](scripts/convergence.py), [scripts/render-qa.py](scripts/render-qa.py), [scripts/render-xmind.mjs](scripts/render-xmind.mjs), [scripts/export-requirements.py](scripts/export-requirements.py), [examples/sample-analysis.json](examples/sample-analysis.json)

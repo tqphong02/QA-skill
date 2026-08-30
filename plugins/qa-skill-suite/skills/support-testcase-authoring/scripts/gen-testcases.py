@@ -73,6 +73,11 @@ ICON_RE = re.compile(r'[\U0001F300-\U0001FAFF\u2600-\u27BF]')
 DATE_SUFFIX_RE = re.compile(r'_\d{2}-\d{2}-\d{4}$')
 PLACEHOLDER_RE = re.compile(r'<[^<>]+>')
 ALLOWED_HTTP_METHODS = {'GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'}
+MANUAL_VERIFICATION_STATUSES = {'PASS', 'FAILED', 'BLOCKED', 'WAIVED'}
+API_SIDE_EFFECT_TYPES = {
+    'READ_AFTER_WRITE', 'DATABASE_STATE', 'EVENT_PUBLISHED', 'WEBHOOK_SENT',
+    'TRANSACTION_ROLLBACK', 'NO_UNEXPECTED_MUTATION'
+}
 SENSITIVE_HEADER_NAMES = {
     'authorization', 'cookie', 'proxy-authorization', 'x-api-key', 'api-key'
 }
@@ -624,6 +629,115 @@ def _coverage_item_refs(case):
     return refs
 
 
+def _validate_api_automation_metadata(case):
+    """Validate optional governance metadata before preserving it in the manifest."""
+    manual = case.get('manual_verification')
+    if manual is not None:
+        if not isinstance(manual, dict):
+            raise ValueError('case.manual_verification must be an object')
+        status = str(manual.get('status') or '').strip().upper()
+        if status not in MANUAL_VERIFICATION_STATUSES:
+            raise ValueError(
+                'case.manual_verification.status must be PASS, FAILED, BLOCKED or WAIVED'
+            )
+        if not str(manual.get('environment') or '').strip():
+            raise ValueError('case.manual_verification.environment is required')
+        evidence = manual.get('evidence')
+        if not isinstance(evidence, list) or any(not str(item or '').strip() for item in evidence):
+            raise ValueError('case.manual_verification.evidence must be an array of non-empty refs')
+        if status in {'PASS', 'FAILED'}:
+            if not evidence:
+                raise ValueError(f'case.manual_verification.evidence is required when status={status}')
+            verified_at = str(manual.get('verified_at') or '').strip()
+            if not re.fullmatch(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z', verified_at):
+                raise ValueError(
+                    'case.manual_verification.verified_at must be an ISO-8601 UTC timestamp when status is PASS or FAILED'
+                )
+        if status == 'WAIVED' and not str(manual.get('waiver_reason') or '').strip():
+            raise ValueError('case.manual_verification.waiver_reason is required when status=WAIVED')
+
+    risk = case.get('risk_profile')
+    if risk is not None:
+        if not isinstance(risk, dict):
+            raise ValueError('case.risk_profile must be an object')
+        for field in ('criticality', 'money_or_data_impact', 'recovery_sensitivity'):
+            value = risk.get(field)
+            if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 5:
+                raise ValueError(f'case.risk_profile.{field} must be an integer from 1 to 5')
+        for field in ('third_party_dependency', 'async_behavior'):
+            if type(risk.get(field)) is not bool:
+                raise ValueError(f'case.risk_profile.{field} must be a boolean')
+        dependencies = risk.get('dependency_refs')
+        if not isinstance(dependencies, list) or any(not str(item or '').strip() for item in dependencies):
+            raise ValueError('case.risk_profile.dependency_refs must be an array of non-empty refs')
+        if len(set(map(str, dependencies))) != len(dependencies):
+            raise ValueError('case.risk_profile.dependency_refs cannot contain duplicates')
+        if risk.get('third_party_dependency') and not dependencies:
+            raise ValueError(
+                'case.risk_profile.dependency_refs is required when third_party_dependency=true'
+            )
+        if not str(risk.get('rationale') or '').strip():
+            raise ValueError('case.risk_profile.rationale is required')
+
+    stability = case.get('stability_gate')
+    if stability is not None:
+        if not isinstance(stability, dict):
+            raise ValueError('case.stability_gate must be an object')
+        repeat_count = stability.get('repeat_count')
+        required_passes = stability.get('required_consecutive_passes')
+        max_flaky_rate = stability.get('max_flaky_rate')
+        if isinstance(repeat_count, bool) or not isinstance(repeat_count, int) or not 2 <= repeat_count <= 20:
+            raise ValueError('case.stability_gate.repeat_count must be an integer from 2 to 20')
+        if (
+            isinstance(required_passes, bool)
+            or not isinstance(required_passes, int)
+            or not 2 <= required_passes <= repeat_count
+        ):
+            raise ValueError(
+                'case.stability_gate.required_consecutive_passes must be from 2 to repeat_count'
+            )
+        if isinstance(max_flaky_rate, bool) or not isinstance(max_flaky_rate, (int, float)) or not 0 <= max_flaky_rate <= 1:
+            raise ValueError('case.stability_gate.max_flaky_rate must be a number from 0 to 1')
+
+    api = case.get('api')
+    if isinstance(api, dict):
+        effects = api.get('expected_side_effects')
+        if effects is not None:
+            if not isinstance(effects, list):
+                raise ValueError('case.api.expected_side_effects must be an array')
+            seen_ids = set()
+            for index, effect in enumerate(effects, 1):
+                if not isinstance(effect, dict):
+                    raise ValueError(f'case.api.expected_side_effects[{index}] must be an object')
+                effect_id = str(effect.get('id') or '').strip()
+                if not re.fullmatch(r'SE[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*', effect_id):
+                    raise ValueError(f'case.api.expected_side_effects[{index}].id must use SE-<ID>')
+                if effect_id in seen_ids:
+                    raise ValueError(f'Duplicate API side-effect ID: {effect_id}')
+                seen_ids.add(effect_id)
+                effect_type = str(effect.get('type') or '').strip().upper()
+                if effect_type not in API_SIDE_EFFECT_TYPES:
+                    raise ValueError(
+                        f'case.api.expected_side_effects[{index}].type must be one of {sorted(API_SIDE_EFFECT_TYPES)}'
+                    )
+                if not str(effect.get('description') or '').strip():
+                    raise ValueError(f'case.api.expected_side_effects[{index}].description is required')
+                if 'expected' not in effect:
+                    raise ValueError(f'case.api.expected_side_effects[{index}].expected is required')
+                implementation_file = str(effect.get('implementation_file') or '').replace('\\', '/')
+                if not re.fullmatch(r'src/shared/helpers/.+\.(?:ts|js|mjs)', implementation_file):
+                    raise ValueError(
+                        f'case.api.expected_side_effects[{index}].implementation_file must stay below src/shared/helpers/'
+                    )
+                if not re.fullmatch(
+                    r'[A-Za-z_$][A-Za-z0-9_$]*',
+                    str(effect.get('implementation_export') or ''),
+                ):
+                    raise ValueError(
+                        f'case.api.expected_side_effects[{index}].implementation_export is invalid'
+                    )
+
+
 def _validate_resolved_expected_result(value, field):
     """Reject explicit uncertainty so generated cases never choose an oracle for the source."""
     rendered = str(value or '').strip()
@@ -808,6 +922,8 @@ def iter_testcases(data):
                     key=lambda item: type_rank(item.get('type')),
                 ):
                     counter += 1
+                    if case.get('api') is not None:
+                        _validate_api_automation_metadata(case)
                     explicit_id = case.get('testcase_id')
                     case_type = str(case.get('type') or '').strip().lower()
                     if execution_required and case_type not in TYPE_ORDER:
@@ -1638,6 +1754,11 @@ def render_api_case(case):
         expected.append(f'Response body khớp: {compact_json(api["expected_body"])}')
     if api.get('side_effect'):
         expected.append(str(api['side_effect']))
+    for effect in api.get('expected_side_effects') or []:
+        expected.append(
+            f'Side effect {effect["id"]} ({effect["type"]}): '
+            f'{effect["description"]}; oracle = {compact_json(effect["expected"])}'
+        )
     for extra_expected in api.get('additional_expected') or []:
         expected.append(str(extra_expected))
 
@@ -1981,6 +2102,9 @@ def build_automation_manifest(data, markdown_path):
             'execution': execution,
             'api': case.get('api'),
             'automation_selection': deepcopy(case.get('automation_selection')),
+            'manual_verification': deepcopy(case.get('manual_verification')),
+            'risk_profile': deepcopy(case.get('risk_profile')),
+            'stability_gate': deepcopy(case.get('stability_gate')),
             'network_interception': deepcopy(case.get('network_interception')),
             'db_verification': deepcopy(case.get('db_verification')),
         })

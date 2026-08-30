@@ -461,6 +461,11 @@ REQUIRED = {
         ".static-testing/requirements-analysis",
         "flow_links",
         "sanity_journeys",
+        "API_REQUIREMENTS.md",
+        "API_Contract_Handoff.json",
+        "Business Goal",
+        "Validation Rule",
+        "scripts/doctor.mjs",
         "scripts/generate.sh",
     ],
     "static-testing/requirements-analysis/references/SENIOR_REVIEW_CHECKLIST.md": [
@@ -468,6 +473,12 @@ REQUIRED = {
         "Security and privacy",
         "Concurrency and idempotency",
         "Testability and acceptance criteria",
+    ],
+    "static-testing/requirements-analysis/references/API_REQUIREMENTS.md": [
+        "coverage_status: not_covered",
+        "hybrid-api-contract",
+        "support-testcase-authoring",
+        "dynamic-web-automation",
     ],
     "static-testing/requirements-analysis/scripts/render-qa.py": [
         "REVIEW_AREAS",
@@ -486,12 +497,20 @@ REQUIRED = {
         "Unified XMind relationship mismatch",
         "XMIND PASS",
     ],
+    "static-testing/requirements-analysis/scripts/doctor.mjs": [
+        "runtime_missing",
+        "python_openpyxl",
+        "xmindmark",
+    ],
     "static-testing/requirements-analysis/examples/sample-analysis.json": [
         "\"review_coverage\"",
         "\"QA-001\"",
         "\"questions\"",
         "\"flow_links\"",
         "\"sanity_journeys\"",
+        "\"business_goals\"",
+        "\"validation_rules\"",
+        "\"api_operations\"",
     ],
     "dynamic-testing/security-pentest/SKILL.md": [
         "references/ENGAGEMENT_CONTRACT.md",

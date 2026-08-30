@@ -1,13 +1,16 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "3.0",
   "project": "Cổng tài khoản",
   "scope": "Đăng nhập và vô hiệu tài khoản",
-  "analysis_date": "2026-08-29",
+  "analysis_date": "2026-08-30",
   "source_markdown": ["account-portal.md"],
-  "executive_summary": "Tài liệu xác định đăng nhập cho tài khoản hoạt động và vô hiệu tài khoản bởi quản trị viên; chính sách với phiên đang hoạt động là quyết định material duy nhất còn mở",
+  "executive_summary": "Tài liệu xác định mục tiêu truy cập, hai luồng tài khoản và contract API đăng nhập; chính sách phiên đang hoạt động là quyết định material duy nhất còn mở",
   "actors": [
-    {"name": "Người dùng đã đăng ký", "responsibilities": ["Đăng nhập vào cổng tài khoản"], "permissions": ["Sử dụng email và mật khẩu để đăng nhập"], "status": "verified", "source_ref": "account-portal.md#vai-trò"},
-    {"name": "Quản trị viên", "responsibilities": ["Quản lý trạng thái tài khoản"], "permissions": ["Vô hiệu tài khoản người dùng"], "status": "verified", "source_ref": "account-portal.md#vai-trò"}
+    {"name": "Người dùng đã đăng ký", "responsibilities": ["Đăng nhập"], "permissions": ["Sử dụng email và mật khẩu"], "status": "verified", "source_ref": "account-portal.md#vai-trò"},
+    {"name": "Quản trị viên", "responsibilities": ["Quản lý trạng thái tài khoản"], "permissions": ["Vô hiệu tài khoản"], "status": "verified", "source_ref": "account-portal.md#vai-trò"}
+  ],
+  "business_goals": [
+    {"id": "BG-001", "semantic_key": "account.secure-access", "statement": "Cho phép người dùng hợp lệ đăng nhập và chặn tài khoản đã vô hiệu tạo phiên mới", "success_metrics": ["Tài khoản hợp lệ đăng nhập được", "Tài khoản đã vô hiệu không tạo phiên mới"], "fact_status": "verified", "source_ref": "account-portal.md#mục-tiêu", "source_excerpt": "Cổng tài khoản cho phép người dùng hợp lệ đăng nhập và ngăn tài khoản đã vô hiệu tạo phiên mới"}
   ],
   "modules": [
     {
@@ -28,13 +31,18 @@
           "exit_state": "Đã xác thực",
           "preconditions": ["Tài khoản ở trạng thái Hoạt động"],
           "trigger": "Người dùng gửi email và mật khẩu",
-          "steps": [{"id": "S1", "action": "Gửi email và mật khẩu", "system_response": "Kiểm tra thông tin đăng nhập và trạng thái tài khoản", "state_change": "Tạo phiên xác thực khi dữ liệu hợp lệ", "api_data": "", "source_ref": "account-portal.md#đăng-nhập"}],
-          "outcomes": ["Phiên xác thực được tạo cho tài khoản hoạt động có thông tin hợp lệ"],
-          "alternate_flows": ["Thông tin không hợp lệ trả lỗi xác thực và không tạo phiên"],
+          "steps": [
+            {"id": "S1", "action": "Gửi email và mật khẩu", "system_response": "Kiểm tra thông tin và trạng thái", "state_change": "Tạo phiên khi hợp lệ", "api_data": "POST /login", "fact_status": "verified", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Hệ thống kiểm tra thông tin đăng nhập và trạng thái tài khoản trước khi tạo phiên xác thực"}
+          ],
+          "outcomes": ["Phiên xác thực được tạo cho tài khoản hợp lệ"],
+          "alternate_flows": ["Thông tin không hợp lệ trả lỗi và không tạo phiên"],
           "exceptions": [],
-          "business_rules": ["Chỉ tài khoản ở trạng thái Hoạt động được phép đăng nhập"],
-          "dependencies": [],
-          "sanity_checks": ["Tài khoản hoạt động với thông tin hợp lệ tạo được phiên", "Thông tin không hợp lệ không tạo phiên"],
+          "requirement_ids": ["REQ-AUTH-001"],
+          "business_rule_ids": ["BR-AUTH-001"],
+          "validation_rule_ids": ["VR-AUTH-001"],
+          "dependency_ids": ["DEP-AUTH-001"],
+          "api_operation_ids": ["API-AUTH-001"],
+          "sanity_checks": ["Tài khoản hợp lệ tạo được phiên", "Thông tin không hợp lệ không tạo phiên"],
           "unresolved": []
         },
         {
@@ -47,80 +55,75 @@
           "source_excerpt": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động",
           "entry_state": "Tài khoản Hoạt động",
           "exit_state": "Tài khoản Đã vô hiệu",
-          "preconditions": ["Người thao tác là quản trị viên", "Tài khoản đang ở trạng thái Hoạt động"],
+          "preconditions": ["Người thao tác là quản trị viên"],
           "trigger": "Quản trị viên yêu cầu vô hiệu tài khoản",
-          "steps": [{"id": "S1", "action": "Yêu cầu vô hiệu tài khoản", "system_response": "Kiểm tra quyền, chuyển trạng thái và lưu thay đổi", "state_change": "Hoạt động sang Đã vô hiệu", "api_data": "", "source_ref": "account-portal.md#vô-hiệu-tài-khoản"}],
-          "outcomes": ["Tài khoản Đã vô hiệu không tạo phiên đăng nhập mới"],
+          "steps": [
+            {"id": "S1", "action": "Yêu cầu vô hiệu", "system_response": "Kiểm tra quyền, chuyển trạng thái và lưu", "state_change": "Hoạt động sang Đã vô hiệu", "api_data": "", "fact_status": "verified", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Hệ thống kiểm tra quyền quản trị viên, chuyển trạng thái tài khoản sang Đã vô hiệu và lưu thay đổi"}
+          ],
+          "outcomes": ["Tài khoản đã vô hiệu không tạo phiên mới"],
           "alternate_flows": [],
           "exceptions": [],
-          "business_rules": ["Chỉ quản trị viên có quyền vô hiệu tài khoản"],
-          "dependencies": [],
-          "sanity_checks": ["Tài khoản chuyển sang Đã vô hiệu", "Tài khoản Đã vô hiệu không tạo phiên đăng nhập mới"],
+          "requirement_ids": ["REQ-ACCOUNT-001"],
+          "business_rule_ids": ["BR-ACCOUNT-001"],
+          "validation_rule_ids": [],
+          "dependency_ids": [],
+          "api_operation_ids": [],
+          "sanity_checks": ["Tài khoản chuyển sang Đã vô hiệu", "Không tạo phiên đăng nhập mới"],
           "unresolved": ["Hành vi của phiên đã tạo trước thời điểm vô hiệu"]
         }
       ]
     }
   ],
   "flow_links": [
-    {"from_flow": "FLOW-002", "to_flow": "FLOW-001", "label": "Chặn phiên đăng nhập mới", "condition": "Tài khoản đã chuyển sang Đã vô hiệu", "data_handoff": "Trạng thái tài khoản", "sanity_impact": "Luồng đăng nhập không tạo phiên mới", "status": "verified", "source_ref": "account-portal.md#vô-hiệu-tài-khoản"}
+    {"from_flow": "FLOW-002", "to_flow": "FLOW-001", "label": "Chặn phiên đăng nhập mới", "condition": "Tài khoản đã chuyển sang Đã vô hiệu", "data_handoff": "Trạng thái tài khoản", "sanity_impact": "Luồng đăng nhập không tạo phiên mới", "status": "verified", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Tài khoản đã vô hiệu không được tạo phiên đăng nhập mới"}
   ],
   "sanity_journeys": [
-    {
-      "id": "SANITY-001",
-      "name": "Đăng nhập rồi vô hiệu tài khoản",
-      "preconditions": ["Có tài khoản Hoạt động", "Có quản trị viên"],
-      "flow_sequence": [
-        {"flow_id": "FLOW-001", "transition_condition": "Người dùng gửi thông tin hợp lệ", "checkpoint": "Phiên xác thực được tạo"},
-        {"flow_id": "FLOW-002", "transition_condition": "Quản trị viên yêu cầu vô hiệu tài khoản", "checkpoint": "Tài khoản chuyển sang Đã vô hiệu"}
-      ],
-      "expected_results": ["Tài khoản Đã vô hiệu không tạo phiên đăng nhập mới"]
-    }
-  ],
-  "cross_cutting": [
-    {"name": "Nhật ký thay đổi trạng thái", "details": ["Lưu ID người thao tác, trạng thái cũ, trạng thái mới và thời gian thay đổi"], "status": "verified", "source_ref": "account-portal.md#nhật-ký"}
-  ],
-  "review_coverage": [
-    {"area": "Scope and actors", "status": "checked", "notes": "Phạm vi và hai vai trò được nêu rõ", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "Entry and preconditions", "status": "checked", "notes": "Trạng thái tài khoản và quyền quản trị viên là điều kiện vào", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
-    {"area": "Happy flow", "status": "checked", "notes": "Đăng nhập và vô hiệu tài khoản có kết quả xác định", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
-    {"area": "Alternate and exception flow", "status": "checked", "notes": "Tài liệu nêu nhánh thông tin đăng nhập không hợp lệ", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
-    {"area": "Business rules", "status": "checked", "notes": "Quy tắc trạng thái đăng nhập và quyền vô hiệu đã rõ", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": []},
-    {"area": "States and transitions", "status": "blocked", "notes": "Chính sách với phiên đang hoạt động chưa được quyết định", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": ["QA-001"]},
-    {"area": "Roles and permissions", "status": "checked", "notes": "Người dùng và quản trị viên có trách nhiệm riêng", "source_ref": "account-portal.md#vai-trò", "question_ids": []},
-    {"area": "Input and validation", "status": "checked", "notes": "Email, mật khẩu và trạng thái tài khoản được kiểm tra", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
-    {"area": "Data lifecycle and persistence", "status": "checked", "notes": "Thay đổi trạng thái tài khoản được lưu", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": []},
-    {"area": "API and integration", "status": "not_applicable", "notes": "Tài liệu và phạm vi không mô tả API hoặc tích hợp", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "Error handling and recovery", "status": "checked", "notes": "Thông tin đăng nhập không hợp lệ trả lỗi và không tạo phiên", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
-    {"area": "Concurrency and idempotency", "status": "not_applicable", "notes": "Tài liệu và phạm vi không nêu xử lý lặp hoặc cập nhật đồng thời", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "Security and privacy", "status": "blocked", "notes": "Quyền tạo phiên mới đã rõ nhưng phiên đang hoạt động chưa được quyết định", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": ["QA-001"]},
-    {"area": "Performance and capacity", "status": "not_applicable", "notes": "Tài liệu và phạm vi không đặt yêu cầu hiệu năng hoặc tải", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "UI UX and accessibility", "status": "not_applicable", "notes": "Tài liệu và phạm vi không mô tả giao diện", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "Audit logging and observability", "status": "checked", "notes": "Các trường nhật ký thay đổi trạng thái được nêu rõ", "source_ref": "account-portal.md#nhật-ký", "question_ids": []},
-    {"area": "Compatibility and migration", "status": "not_applicable", "notes": "Tài liệu và phạm vi không có migration hoặc nền tảng hỗ trợ", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
-    {"area": "Testability and acceptance criteria", "status": "checked", "notes": "Kết quả tạo phiên mới và chuyển trạng thái có thể quan sát", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []}
+    {"id": "SANITY-001", "name": "Đăng nhập rồi vô hiệu tài khoản", "preconditions": ["Có tài khoản Hoạt động", "Có quản trị viên"], "flow_sequence": [{"flow_id": "FLOW-001", "transition_condition": "Thông tin hợp lệ", "checkpoint": "Phiên được tạo"}, {"flow_id": "FLOW-002", "transition_condition": "Quản trị viên yêu cầu vô hiệu", "checkpoint": "Tài khoản chuyển trạng thái"}], "expected_results": ["Tài khoản đã vô hiệu không tạo phiên mới"]}
   ],
   "requirements": [
-    {"id": "REQ-AUTH-001", "text": "Chỉ tài khoản Hoạt động được đăng nhập", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Chỉ tài khoản ở trạng thái Hoạt động được phép đăng nhập", "page": "login", "actor": "Người dùng đã đăng ký", "expected_behavior": "Tài khoản Đã vô hiệu không tạo phiên mới", "fact_status": "verified", "human_confirmed": false, "ui": {"labels": ["Đăng nhập"], "intents": ["SUBMIT"]}, "expected": {"enabled": true}, "source_refs": [], "testcase_ids": []},
-    {"id": "REQ-ACCOUNT-001", "text": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động", "page": "account-detail", "actor": "Quản trị viên", "expected_behavior": "Tài khoản chuyển sang Đã vô hiệu", "fact_status": "verified", "human_confirmed": false, "ui": {"labels": ["Vô hiệu tài khoản"], "intents": ["UPDATE"]}, "expected": {"visible_roles": ["Quản trị viên"]}, "source_refs": [], "testcase_ids": []}
+    {"id": "REQ-AUTH-001", "semantic_key": "requirement.auth.active-account-login", "goal_ids": ["BG-001"], "flow_ids": ["FLOW-001"], "api_operation_ids": ["API-AUTH-001"], "text": "Chỉ tài khoản Hoạt động được đăng nhập", "requirement_type": "functional", "expected_behavior": "Tài khoản Đã vô hiệu không tạo phiên mới", "acceptance_criteria": ["Tài khoản hoạt động với thông tin hợp lệ tạo phiên"], "page": "login", "actor": "Người dùng đã đăng ký", "human_confirmed": false, "ui": {"labels": ["Đăng nhập"], "intents": ["SUBMIT"]}, "expected": {"enabled": true, "api": "POST /login"}, "source_refs": [], "testcase_ids": [], "fact_status": "verified", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Chỉ tài khoản ở trạng thái Hoạt động được phép đăng nhập"},
+    {"id": "REQ-ACCOUNT-001", "semantic_key": "requirement.account.disable", "goal_ids": ["BG-001"], "flow_ids": ["FLOW-002"], "api_operation_ids": [], "text": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động", "requirement_type": "functional", "expected_behavior": "Tài khoản chuyển sang Đã vô hiệu và không tạo phiên mới", "acceptance_criteria": ["Trạng thái được lưu là Đã vô hiệu"], "page": "account-detail", "actor": "Quản trị viên", "human_confirmed": false, "ui": {"labels": ["Vô hiệu tài khoản"], "intents": ["UPDATE"]}, "expected": {"visible_roles": ["Quản trị viên"]}, "source_refs": [], "testcase_ids": [], "fact_status": "verified", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động"}
+  ],
+  "business_rules": [
+    {"id": "BR-AUTH-001", "semantic_key": "rule.auth.active-account-only", "requirement_ids": ["REQ-AUTH-001"], "statement": "Chỉ tài khoản Hoạt động được phép đăng nhập", "condition": "Trạng thái là Hoạt động", "precedence": "Kiểm tra trước khi tạo phiên", "fact_status": "verified", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Chỉ tài khoản ở trạng thái Hoạt động được phép đăng nhập"},
+    {"id": "BR-ACCOUNT-001", "semantic_key": "rule.account.admin-disable", "requirement_ids": ["REQ-ACCOUNT-001"], "statement": "Chỉ quản trị viên có quyền vô hiệu tài khoản", "condition": "Người thao tác là quản trị viên", "precedence": "Kiểm tra trước khi đổi trạng thái", "fact_status": "verified", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Hệ thống kiểm tra quyền quản trị viên, chuyển trạng thái tài khoản sang Đã vô hiệu và lưu thay đổi"}
+  ],
+  "validation_rules": [
+    {"id": "VR-AUTH-001", "semantic_key": "validation.auth.invalid-credentials", "requirement_ids": ["REQ-AUTH-001"], "field": "email, password", "condition": "Thông tin phải hợp lệ", "boundary": "Không được để trống", "expected_error": "Trả lỗi xác thực và không tạo phiên", "fact_status": "verified", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Thông tin đăng nhập không hợp lệ không tạo phiên và trả về lỗi xác thực"}
+  ],
+  "dependencies": [
+    {"id": "DEP-AUTH-001", "semantic_key": "dependency.auth.account-status", "impacted_ids": ["REQ-AUTH-001", "FLOW-001"], "dependency_type": "data", "target": "Trạng thái tài khoản", "condition": "Trạng thái được kiểm tra trước khi tạo phiên", "fallback": "Tài liệu không mô tả", "fact_status": "verified", "source_ref": "account-portal.md#đăng-nhập", "source_excerpt": "Hệ thống kiểm tra thông tin đăng nhập và trạng thái tài khoản trước khi tạo phiên xác thực"}
+  ],
+  "risks": [
+    {"id": "RISK-AUTH-001", "semantic_key": "risk.account.active-session-undecided", "impacted_ids": ["FLOW-002", "REQ-ACCOUNT-001"], "risk_type": "analysis_gap", "statement": "Không có expected result xác định cho phiên đang hoạt động sau khi vô hiệu", "likelihood": "unknown", "impact": "high", "fact_status": "unresolved", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Tài liệu không quyết định hành vi của các phiên đã được tạo trước thời điểm vô hiệu"}
+  ],
+  "api_operations": [
+    {"id": "API-AUTH-001", "semantic_key": "api.auth.login", "operation_id": "login", "protocol": "REST", "method": "POST", "path": "/login", "roles": ["Người dùng đã đăng ký"], "request_contract": ["email và password bắt buộc"], "response_contract": ["200 tạo phiên khi hợp lệ", "401 không tạo phiên khi không hợp lệ"], "business_side_effects": ["Tạo phiên xác thực"], "cleanup": "Không áp dụng", "requirement_ids": ["REQ-AUTH-001"], "business_rule_ids": ["BR-AUTH-001"], "validation_rule_ids": ["VR-AUTH-001"], "dependency_ids": ["DEP-AUTH-001"], "fact_status": "verified", "coverage_status": "not_covered", "source_ref": "account-portal.md#api-đăng-nhập", "source_excerpt": "POST /login nhận email và password bắt buộc"}
+  ],
+  "cross_cutting": [
+    {"name": "Nhật ký thay đổi trạng thái", "details": ["Lưu ID người thao tác, trạng thái cũ, trạng thái mới và thời gian"], "status": "verified", "source_ref": "account-portal.md#nhật-ký"}
+  ],
+  "review_coverage": [
+    {"area": "Scope and actors", "status": "checked", "notes": "Phạm vi và vai trò được nêu rõ", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
+    {"area": "Entry and preconditions", "status": "checked", "notes": "Trạng thái và quyền là điều kiện vào", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "Happy flow", "status": "checked", "notes": "Hai luồng có kết quả xác định", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "Alternate and exception flow", "status": "checked", "notes": "Có nhánh thông tin không hợp lệ", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "Business rules", "status": "checked", "notes": "Quy tắc trạng thái và quyền đã rõ", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "States and transitions", "status": "blocked", "notes": "Phiên đang hoạt động chưa được quyết định", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": ["QA-001"]},
+    {"area": "Roles and permissions", "status": "checked", "notes": "Hai vai trò có trách nhiệm riêng", "source_ref": "account-portal.md#vai-trò", "question_ids": []},
+    {"area": "Input and validation", "status": "checked", "notes": "Thông tin đăng nhập và lỗi đã được mô tả", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "Data lifecycle and persistence", "status": "checked", "notes": "Thay đổi trạng thái được lưu", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": []},
+    {"area": "API and integration", "status": "checked", "notes": "API đăng nhập có request và response chính", "source_ref": "account-portal.md#api-đăng-nhập", "question_ids": []},
+    {"area": "Error handling and recovery", "status": "checked", "notes": "Thông tin không hợp lệ trả lỗi và không tạo phiên", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []},
+    {"area": "Concurrency and idempotency", "status": "not_applicable", "notes": "Phạm vi không nêu xử lý lặp hoặc cập nhật đồng thời", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
+    {"area": "Security and privacy", "status": "blocked", "notes": "Phiên đang hoạt động chưa được quyết định", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "question_ids": ["QA-001"]},
+    {"area": "Performance and capacity", "status": "not_applicable", "notes": "Phạm vi không đặt yêu cầu hiệu năng", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
+    {"area": "UI UX and accessibility", "status": "not_applicable", "notes": "Phạm vi không mô tả giao diện", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
+    {"area": "Audit logging and observability", "status": "checked", "notes": "Các trường nhật ký được nêu rõ", "source_ref": "account-portal.md#nhật-ký", "question_ids": []},
+    {"area": "Compatibility and migration", "status": "not_applicable", "notes": "Phạm vi không có migration hoặc versioning", "source_ref": "account-portal.md#phạm-vi", "question_ids": []},
+    {"area": "Testability and acceptance criteria", "status": "checked", "notes": "Kết quả tạo phiên và chuyển trạng thái có thể quan sát", "source_ref": "account-portal.md#đăng-nhập", "question_ids": []}
   ],
   "questions": [
-    {
-      "id": "QA-001",
-      "decision_key": "account.disable.active-session-policy",
-      "basis": "missing_required_rule",
-      "impact_ids": ["FLOW-002", "REQ-AUTH-001"],
-      "category": "Trạng thái và bảo mật",
-      "module_flow": "Tài khoản / Vô hiệu tài khoản",
-      "source_ref": "account-portal.md#vô-hiệu-tài-khoản",
-      "source_excerpt": "Quản trị viên có thể vô hiệu tài khoản đang hoạt động",
-      "ambiguity_gap": "Tài liệu không quyết định hành vi của phiên đã tạo trước thời điểm vô hiệu",
-      "risk": "Trạng thái truy cập sau khi vô hiệu không có kết quả kiểm thử xác định",
-      "question": "Các phiên đang hoạt động có bị thu hồi ngay khi tài khoản bị vô hiệu không",
-      "proposed_assumption": "Thu hồi ngay toàn bộ phiên đang hoạt động",
-      "owner": "PO",
-      "priority": "P0",
-      "status": "Open",
-      "answer": ""
-    }
+    {"id": "QA-001", "decision_key": "account.disable.active-session-policy", "basis": "missing_required_rule", "impact_ids": ["FLOW-002", "REQ-ACCOUNT-001", "RISK-AUTH-001"], "category": "Trạng thái và bảo mật", "module_flow": "Tài khoản / Vô hiệu tài khoản", "source_ref": "account-portal.md#vô-hiệu-tài-khoản", "source_excerpt": "Tài liệu không quyết định hành vi của các phiên đã được tạo trước thời điểm vô hiệu", "ambiguity_gap": "Tài liệu không quyết định hành vi của phiên đã tạo trước thời điểm vô hiệu", "risk": "Không có expected result xác định cho trạng thái truy cập", "question": "Các phiên đang hoạt động có bị thu hồi ngay khi tài khoản bị vô hiệu không", "proposed_assumption": "Thu hồi ngay toàn bộ phiên đang hoạt động", "owner": "PO", "priority": "P0", "status": "Open", "answer": "", "answer_source_ref": "", "answer_source_excerpt": ""}
   ]
 }

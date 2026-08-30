@@ -107,10 +107,21 @@
       "first_action": "Inspect the exact GitHub resource read-only"
     },
     {
+      "id": "requirements-skill-hardening",
+      "priority": 57,
+      "match": {
+        "all": ["tăng|nâng|cải thiện|đánh giá|review|rà soát|cover|bao phủ|sửa|fix|update|improve|harden|enhance", "skill", "static test(?:ing)?|static requirements?|requirements? analysis|business analysis|business goal|missing requirement"]
+      },
+      "route": ["static-requirements-analysis"],
+      "mode": "DESIGN_HARDENING",
+      "requires_brief": false,
+      "first_action": "Audit and harden the requirement model, validators, outputs and routing without inventing business behavior"
+    },
+    {
       "id": "testcase-testscript-skill-hardening",
       "priority": 58,
       "match": {
-        "all": ["tăng|nâng|cải thiện|thông minh|đúng yêu cầu|improve|harden|enhance", "skill", "testcase|test case", "testscript|test script|automation script"]
+        "all": ["tăng|nâng|cải thiện|thông minh|đúng yêu cầu|đánh giá|review|rà soát|cover|bao phủ|sửa|fix|update|improve|harden|enhance", "skill", "testcase|test case", "testscript|test script|automation script"]
       },
       "route": ["support-testcase-authoring", "dynamic-web-automation"],
       "mode": "DESIGN_HARDENING",
@@ -179,6 +190,17 @@
       "mode": "ANALYZE",
       "requires_brief": false,
       "first_action": "Convert non-Markdown input, then analyze requirements"
+    },
+    {
+      "id": "requirements-natural-analysis",
+      "priority": 81,
+      "match": {
+        "all": ["brd|srs|frs|requirements?|yêu cầu(?: nghiệp vụ)?|business goal|functional requirement|business rule|validation rule|missing requirement|questions? for ba|câu hỏi (?:cho )?(?:ba|dev)", "phân tích|đánh giá|kiểm tra|check|review|rà soát|cover|bao phủ|business flow|mơ hồ|ambiguity|contradiction|prerequisite|clarification|xmind|q&a"]
+      },
+      "route": ["static-requirements-analysis"],
+      "mode": "ANALYZE",
+      "requires_brief": false,
+      "first_action": "Resolve the exact requirement source, then analyze it without assuming a file format"
     },
     {
       "id": "requirements-markdown-analysis",
@@ -451,7 +473,13 @@
     {"id": "ROUTE-027", "input": "Phân tích white-box function processPayment và branch coverage", "expected_route": ["hybrid-source-coverage"], "expected_mode": "SOURCE_ANALYSIS", "requires_brief": false},
     {"id": "ROUTE-028", "input": "Tạo API automation cho POST /orders, chạy test và trả verdict", "expected_route": ["dynamic-web-automation"], "expected_mode": "BUILD_AND_RUN", "requires_brief": true},
     {"id": "ROUTE-029", "input": "tôi thấy skill gen testcase nó chưa cover đúng theo tài liệu và chưa cover đầy đủ các case", "expected_route": ["support-testcase-authoring"], "expected_mode": "AUTHOR", "requires_brief": false},
-    {"id": "ROUTE-030", "input": "giúp tôi tăng độ thông minh skill testcase và testscript đi để khi tôi dùng skill nó làm đúng yêu cầu hơn", "expected_route": ["support-testcase-authoring", "dynamic-web-automation"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false}
+    {"id": "ROUTE-030", "input": "giúp tôi tăng độ thông minh skill testcase và testscript đi để khi tôi dùng skill nó làm đúng yêu cầu hơn", "expected_route": ["support-testcase-authoring", "dynamic-web-automation"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
+    {"id": "ROUTE-031", "input": "Phân tích BRD và tìm điểm mơ hồ trong yêu cầu", "expected_route": ["static-requirements-analysis"], "expected_mode": "ANALYZE", "requires_brief": false},
+    {"id": "ROUTE-032", "input": "đánh giá skill testcase và testscript API cover đúng chưa", "expected_route": ["support-testcase-authoring", "dynamic-web-automation"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
+    {"id": "ROUTE-033", "input": "update fix skill testcase và testscript API", "expected_route": ["support-testcase-authoring", "dynamic-web-automation"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
+    {"id": "ROUTE-034", "input": "check skill static testing requirements có cover Business Goal, Validation Rule và Missing Requirement không", "expected_route": ["static-requirements-analysis"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
+    {"id": "ROUTE-035", "input": "Review API requirements cho POST /orders gồm business rule, validation rule và câu hỏi cho BA/Dev", "expected_route": ["static-requirements-analysis"], "expected_mode": "ANALYZE", "requires_brief": false},
+    {"id": "ROUTE-036", "input": "Validate OpenAPI contract với implementation", "expected_route": ["hybrid-api-contract"], "expected_mode": "CONTRACT_VALIDATION", "requires_brief": false}
   ],
   "document_contracts": {
     "AGENTS.md": {

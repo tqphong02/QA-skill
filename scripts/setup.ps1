@@ -14,20 +14,20 @@ param(
 $ErrorActionPreference = "Stop"
 
 if (-not $Agent) {
-    throw "Phải chọn -Agent codex, antigravity hoặc claude"
+    throw "Select -Agent codex, antigravity, or claude"
 }
 
 $repoDir = Split-Path -Parent $PSScriptRoot
 $bashCandidates = @(
     @(
-        (Get-Command bash -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
         "$env:ProgramFiles\Git\bin\bash.exe",
-        "$env:ProgramFiles\Git\usr\bin\bash.exe"
+        "$env:ProgramFiles\Git\usr\bin\bash.exe",
+        (Get-Command bash -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
     ) | Where-Object { $_ -and (Test-Path $_) }
 )
 
 if (-not $bashCandidates) {
-    throw "Không tìm thấy Bash. Cài Git for Windows hoặc WSL rồi chạy lại"
+    throw "Bash was not found. Install Git for Windows or WSL and retry"
 }
 
 $bash = $bashCandidates[0]
@@ -39,7 +39,7 @@ if ($SkipMcpSetup) { $arguments += "--skip-mcp-setup" }
 if ($DryRun) { $arguments += "--dry-run" }
 if ($Yes) { $arguments += "--yes" }
 
-$escapedArgs = ($arguments | ForEach-Object { "'" + $_.Replace("'", "'\"'\"'") + "'" }) -join " "
+$escapedArgs = ($arguments | ForEach-Object { "'$_'" }) -join " "
 $command = "cd '$repoPosix' && ./scripts/setup.sh $escapedArgs"
 
 Write-Host "Running QA-skill setup for $Agent via $bash"

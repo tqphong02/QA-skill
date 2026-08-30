@@ -36,7 +36,7 @@ Turn a bounded `.automation.json` manifest into maintainable Playwright code, ex
 ## Canonical workflow
 
 1. Run `npm run testcase-workflow -- --phase plan ...` through `scripts/run-testcase-pom.mjs`; the workflow invokes the `pom-plan` and `advanced-contracts` gates. UI coverage is mandatory by default
-2. For UI/functional, create a current-build Browser MCP `UI_FUNCTION_INVENTORY` covering every allowed route, role, and state. For API/functional, require method, path, auth, expected status, schemas, mutation ownership, and cleanup in the manifest
+2. For UI/functional, create a current-build Browser MCP `UI_FUNCTION_INVENTORY` covering every allowed route, role, and state. For API/functional, require method, path, auth, expected status, schemas, mutation ownership, cleanup, approved `manual_verification`, complete `risk_profile`, and a bounded `stability_gate` in the manifest
 3. Run `--phase build` or the default `--phase build-and-run`. The deterministic generator emits only the artifacts required by the selected surface
 4. Bootstrap the pinned local toolchain and pass advanced testcase contracts, runtime scaffold, module layout, placeholder, TypeScript/ESLint, traceability, UI coverage, and API operation coverage gates as applicable
 5. `RUN` requires the immutable BUILD `--plan-input`; reject a manifest hash mismatch
@@ -116,6 +116,7 @@ Handoff authoring-only work to `support-testcase-authoring`, contract-only valid
 
 - UI full runs require 100% UI-function inventory coverage and fresh same-session selector evidence
 - Each selected API testcase maps exactly once to method, path, canonical fixture, auth/role, expected status, schemas, and required cleanup
+- API BUILD is blocked when manual verification is not `PASS`/explicitly `WAIVED`, risk/stability metadata is incomplete, or a claimed side effect exists only as prose instead of machine-executable `api.expected_side_effects[]`
 - Runtime scaffold, module layout, complexity, traceability, applicable coverage, and `reports/allure-contract.json` must pass
 - `AUTOMATE`/`ACTIVE` selection is required when selection metadata exists; `DEFER`, `REJECT`, and `RETIRED` are excluded from the plan and never projected as runtime `N/A`
 - Mock/HAR, DB verification, custom tag, ROI/layer and lifecycle-hook contracts must pass `reports/advanced-test-contracts.json`, including compatible route actions, inspected HAR content and approved hosts, real-flow sibling coverage, bounded declared helper exports, `after_test` teardown in `finally`, one read-only parameterized SQL statement, declared drivers, RUN-time credential presence, and specialist-skill handoffs

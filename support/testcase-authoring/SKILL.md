@@ -45,6 +45,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 - Always create `<output>.md` before `<output>.xlsx`
 - Validate the `RBAC Matrix` with `references/rbac-matrix.schema.json` and its `allow_case_ref` links
 - The generator fails closed for `review_required`, missing/uncovered source obligations, unknown requirements, mixed AC, invalid IDs/types/technique/contracts, invalid RBAC or secret placeholders
+- API automation handoff preserves `manual_verification`, `risk_profile`, `stability_gate`, and typed `api.expected_side_effects[]`; prose-only `api.side_effect` is authoring context, not executable proof
 
 ## Structure and fields
 

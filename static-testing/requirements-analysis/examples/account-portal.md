@@ -1,5 +1,9 @@
 # Cổng tài khoản
 
+## Mục tiêu
+
+Cổng tài khoản cho phép người dùng hợp lệ đăng nhập và ngăn tài khoản đã vô hiệu tạo phiên mới
+
 ## Phạm vi
 
 Tài liệu mô tả đăng nhập và vô hiệu tài khoản
@@ -19,6 +23,12 @@ Hệ thống kiểm tra thông tin đăng nhập và trạng thái tài khoản 
 Thông tin đăng nhập không hợp lệ không tạo phiên và trả về lỗi xác thực
 
 Chỉ tài khoản ở trạng thái Hoạt động được phép đăng nhập
+
+## API đăng nhập
+
+POST /login nhận email và password bắt buộc
+
+API trả 200 và tạo phiên khi thông tin hợp lệ; API trả 401 và không tạo phiên khi thông tin không hợp lệ
 
 ## Vô hiệu tài khoản
 

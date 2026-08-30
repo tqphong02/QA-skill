@@ -219,6 +219,9 @@ test('quick-start and quick-finish execute a complete bounded FAST browser task 
     });
     const result = JSON.parse(finished.stdout);
     assert.equal(result.verdict, 'PASS');
+    assert.equal(result.closed.closed, true);
+    assert.equal(result.closed.ready_for_cleanup, true);
+    assert.equal(result.closed.status, 'CLOSED');
     const task = JSON.parse(fs.readFileSync(packet.task_file, 'utf8'));
     assert.equal(task.status, 'PASS');
   } finally {

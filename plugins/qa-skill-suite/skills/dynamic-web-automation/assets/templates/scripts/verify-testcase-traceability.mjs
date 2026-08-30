@@ -343,6 +343,15 @@ function parseAutomationManifest(manifestPath) {
       api: item.api && typeof item.api === 'object' && !Array.isArray(item.api)
         ? item.api
         : null,
+      manual_verification: item.manual_verification && typeof item.manual_verification === 'object' && !Array.isArray(item.manual_verification)
+        ? item.manual_verification
+        : item.manual_verification ?? null,
+      risk_profile: item.risk_profile && typeof item.risk_profile === 'object' && !Array.isArray(item.risk_profile)
+        ? item.risk_profile
+        : item.risk_profile ?? null,
+      stability_gate: item.stability_gate && typeof item.stability_gate === 'object' && !Array.isArray(item.stability_gate)
+        ? item.stability_gate
+        : item.stability_gate ?? null,
       automation_selection: item.automation_selection && typeof item.automation_selection === 'object' && !Array.isArray(item.automation_selection)
         ? item.automation_selection
         : item.automation_selection ?? null,
@@ -374,6 +383,11 @@ function parseAutomationManifest(manifestPath) {
         cleanup: execution?.cleanup != null || execution?.mutates === true ? `[${id}:CLEANUP]` : null,
         network_interception: item.network_interception ? `[${id}:NETWORK_INTERCEPTION] ${String(item.network_interception.mode || '').toUpperCase()}` : null,
         db_verification: item.db_verification ? `[${id}:DB_VERIFICATION] ${String(item.db_verification.mode || '').toUpperCase()}` : null,
+        side_effects: Array.isArray(item.api?.expected_side_effects)
+          ? item.api.expected_side_effects.map(effect => (
+            `[${id}:SIDE_EFFECT:${String(effect.id || '').trim()}] ${String(effect.type || '').trim().toUpperCase()}`
+          ))
+          : [],
         lifecycle_before: item.lifecycle_hooks?.before_test ? `[${id}:LIFECYCLE] BEFORE_TEST` : null,
         lifecycle_after: item.lifecycle_hooks?.after_test ? `[${id}:LIFECYCLE] AFTER_TEST` : null,
       },
@@ -974,6 +988,7 @@ function buildTraceability({
         ...(testcase.required_markers?.cleanup ? [testcase.required_markers.cleanup] : []),
         ...(testcase.required_markers?.network_interception ? [testcase.required_markers.network_interception] : []),
         ...(testcase.required_markers?.db_verification ? [testcase.required_markers.db_verification] : []),
+        ...(testcase.required_markers?.side_effects || []),
         ...(testcase.required_markers?.lifecycle_before ? [testcase.required_markers.lifecycle_before] : []),
         ...(testcase.required_markers?.lifecycle_after ? [testcase.required_markers.lifecycle_after] : []),
       ];
@@ -1015,6 +1030,7 @@ function buildTraceability({
         ...(testcase.required_markers?.db_verification
           ? [{ marker: testcase.required_markers.db_verification, kind: 'advanced' }]
           : []),
+        ...(testcase.required_markers?.side_effects || []).map(marker => ({ marker, kind: 'advanced' })),
         ...(testcase.required_markers?.lifecycle_before
           ? [{ marker: testcase.required_markers.lifecycle_before, kind: 'advanced' }]
           : []),

@@ -14,6 +14,8 @@ Automation Value =
 
 The score supports the decision; it does not replace engineering judgement. Record the decision and rationale in the source automation manifest so BUILD can reproduce it
 
+For API/functional candidates, complete `risk_profile` before scoring. Record `criticality`, `money_or_data_impact`, `third_party_dependency`, `async_behavior`, `recovery_sensitivity`, `dependency_refs`, and `rationale`; do not compress third-party or asynchronous risk into a single undocumented score
+
 ```json
 {
   "testcase_id": "TC_UPLOAD_001",

@@ -94,6 +94,58 @@ Mỗi API case thêm object `api` như sau
 
 Generator tự chuyển object này vào F/G/H và giữ I-M trống
 
+## Automation handoff gate
+
+Testcase API có thể được author trước khi chạy manual, nhưng trước khi chuyển sang `dynamic-web-automation`, mỗi case phải có ba contract sau
+
+```json
+{
+  "manual_verification": {
+    "status": "PASS",
+    "environment": "staging",
+    "evidence": ["reports/manual-api/API-AUTH-001.json"],
+    "verified_at": "2026-08-30T07:00:00Z"
+  },
+  "risk_profile": {
+    "criticality": 5,
+    "money_or_data_impact": 4,
+    "third_party_dependency": false,
+    "async_behavior": false,
+    "recovery_sensitivity": 4,
+    "dependency_refs": [],
+    "rationale": "Authentication protects user data"
+  },
+  "stability_gate": {
+    "repeat_count": 3,
+    "required_consecutive_passes": 3,
+    "max_flaky_rate": 0
+  }
+}
+```
+
+- `manual_verification.status` dùng `PASS`, `FAILED`, `BLOCKED` hoặc `WAIVED`
+- `PASS` và `FAILED` cần evidence cùng timestamp UTC; `WAIVED` cần `waiver_reason`
+- Chỉ `PASS` hoặc waiver tường minh mới được BUILD
+- `risk_profile` dùng cùng thang 1-5 để giữ scope/risk rõ trước automation
+- `stability_gate` phải yêu cầu ít nhất hai lần chạy và không được yêu cầu số pass liên tiếp lớn hơn `repeat_count`
+
+## Typed side-effect oracle
+
+Không dùng prose `side_effect` làm bằng chứng automation. Với persistence, event, webhook hoặc transaction, khai báo `api.expected_side_effects[]`
+
+```json
+{
+  "id": "SE-USER-PERSISTED",
+  "type": "READ_AFTER_WRITE",
+  "description": "User vừa tạo có thể được đọc lại",
+  "expected": { "email": "qa+api@example.com", "role": "viewer" },
+  "implementation_file": "src/shared/helpers/user-side-effect.ts",
+  "implementation_export": "readCreatedUser"
+}
+```
+
+Type hợp lệ: `READ_AFTER_WRITE`, `DATABASE_STATE`, `EVENT_PUBLISHED`, `WEBHOOK_SENT`, `TRANSACTION_ROLLBACK`, `NO_UNEXPECTED_MUTATION`. Helper phải trả về oracle quan sát được; codegen sẽ assert kết quả với `expected`
+
 ## Coverage cần cân nhắc
 
 - Happy path

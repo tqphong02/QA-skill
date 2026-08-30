@@ -18,6 +18,11 @@ const SENSITIVE_NAMES = new Set([
   'proxy-authorization', 'refresh_token', 'secret', 'session', 'set-cookie', 'token', 'x-api-key',
 ]);
 const AUTOMATION_TAG_RE = /^@[a-z][a-z0-9-]*$/;
+const MANUAL_VERIFICATION_STATUSES = new Set(['PASS', 'FAILED', 'BLOCKED', 'WAIVED']);
+const API_SIDE_EFFECT_TYPES = new Set([
+  'READ_AFTER_WRITE', 'DATABASE_STATE', 'EVENT_PUBLISHED', 'WEBHOOK_SENT',
+  'TRANSACTION_ROLLBACK', 'NO_UNEXPECTED_MUTATION',
+]);
 
 function text(value) {
   return String(value ?? '').trim();
@@ -125,6 +130,157 @@ function selectionEvaluation(testcase) {
 
 function violation(violations, testcaseId, code, message) {
   violations.push({ testcase_id: testcaseId, code, message });
+}
+
+function isApiTestcase(testcase) {
+  return Array.isArray(testcase?.capabilities)
+    ? testcase.capabilities.includes('api')
+    : Boolean(testcase?.api);
+}
+
+function validateManualVerification(testcase, violations) {
+  if (!isApiTestcase(testcase)) return;
+  const id = testcase.testcase_id || testcase.id;
+  const contract = testcase.manual_verification;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    violation(violations, id, 'MANUAL_VERIFICATION_REQUIRED', 'API automation requires manual_verification before BUILD');
+    return;
+  }
+  const status = text(contract.status).toUpperCase();
+  if (!MANUAL_VERIFICATION_STATUSES.has(status)) {
+    violation(violations, id, 'MANUAL_VERIFICATION_STATUS_INVALID', 'status must be PASS, FAILED, BLOCKED or WAIVED');
+  }
+  if (!text(contract.environment)) {
+    violation(violations, id, 'MANUAL_VERIFICATION_ENVIRONMENT_MISSING', 'manual_verification.environment is required');
+  }
+  const evidence = Array.isArray(contract.evidence) ? contract.evidence.map(text).filter(Boolean) : [];
+  if (!Array.isArray(contract.evidence) || evidence.length !== contract.evidence.length) {
+    violation(violations, id, 'MANUAL_VERIFICATION_EVIDENCE_INVALID', 'manual_verification.evidence must be an array of non-empty refs');
+  }
+  if (['PASS', 'FAILED'].includes(status)) {
+    if (evidence.length === 0) {
+      violation(violations, id, 'MANUAL_VERIFICATION_EVIDENCE_MISSING', `${status} manual verification requires evidence`);
+    }
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/.test(text(contract.verified_at))) {
+      violation(violations, id, 'MANUAL_VERIFICATION_TIMESTAMP_INVALID', 'verified_at must be an ISO-8601 UTC timestamp');
+    }
+  }
+  if (status === 'WAIVED' && !text(contract.waiver_reason)) {
+    violation(violations, id, 'MANUAL_VERIFICATION_WAIVER_REASON_MISSING', 'WAIVED requires waiver_reason');
+  }
+  if (!['PASS', 'WAIVED'].includes(status)) {
+    violation(violations, id, 'MANUAL_VERIFICATION_NOT_APPROVED', 'API automation requires PASS or an explicit WAIVED decision');
+  }
+}
+
+function validateRiskProfile(testcase, violations) {
+  if (!isApiTestcase(testcase)) return;
+  const id = testcase.testcase_id || testcase.id;
+  const contract = testcase.risk_profile;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    violation(violations, id, 'RISK_PROFILE_REQUIRED', 'API automation requires risk_profile');
+    return;
+  }
+  for (const field of ['criticality', 'money_or_data_impact', 'recovery_sensitivity']) {
+    const value = Number(contract[field]);
+    if (!Number.isInteger(value) || value < 1 || value > 5) {
+      violation(violations, id, 'RISK_PROFILE_SCORE_INVALID', `risk_profile.${field} must be an integer from 1 to 5`);
+    }
+  }
+  for (const field of ['third_party_dependency', 'async_behavior']) {
+    if (typeof contract[field] !== 'boolean') {
+      violation(violations, id, 'RISK_PROFILE_FLAG_INVALID', `risk_profile.${field} must be a boolean`);
+    }
+  }
+  const dependencies = Array.isArray(contract.dependency_refs)
+    ? contract.dependency_refs.map(text).filter(Boolean)
+    : [];
+  if (!Array.isArray(contract.dependency_refs) || dependencies.length !== contract.dependency_refs.length) {
+    violation(violations, id, 'RISK_PROFILE_DEPENDENCIES_INVALID', 'risk_profile.dependency_refs must be an array of non-empty refs');
+  } else if (new Set(dependencies).size !== dependencies.length) {
+    violation(violations, id, 'RISK_PROFILE_DEPENDENCIES_DUPLICATE', 'risk_profile.dependency_refs must be unique');
+  }
+  if (contract.third_party_dependency === true && dependencies.length === 0) {
+    violation(violations, id, 'RISK_PROFILE_DEPENDENCY_REQUIRED', 'third_party_dependency=true requires dependency_refs');
+  }
+  if (!text(contract.rationale)) violation(violations, id, 'RISK_PROFILE_RATIONALE_MISSING', 'risk_profile.rationale is required');
+}
+
+function validateStabilityGate(testcase, violations) {
+  if (!isApiTestcase(testcase)) return;
+  const id = testcase.testcase_id || testcase.id;
+  const contract = testcase.stability_gate;
+  if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+    violation(violations, id, 'STABILITY_GATE_REQUIRED', 'API automation requires stability_gate');
+    return;
+  }
+  const repeatCount = Number(contract.repeat_count);
+  const requiredPasses = Number(contract.required_consecutive_passes);
+  const maxFlakyRate = Number(contract.max_flaky_rate);
+  if (!Number.isInteger(repeatCount) || repeatCount < 2 || repeatCount > 20) {
+    violation(violations, id, 'STABILITY_REPEAT_COUNT_INVALID', 'repeat_count must be an integer from 2 to 20');
+  }
+  if (!Number.isInteger(requiredPasses) || requiredPasses < 2 || requiredPasses > repeatCount) {
+    violation(violations, id, 'STABILITY_CONSECUTIVE_PASS_INVALID', 'required_consecutive_passes must be from 2 to repeat_count');
+  }
+  if (!Number.isFinite(maxFlakyRate) || maxFlakyRate < 0 || maxFlakyRate > 1) {
+    violation(violations, id, 'STABILITY_FLAKY_RATE_INVALID', 'max_flaky_rate must be a number from 0 to 1');
+  }
+}
+
+function validateApiSideEffects(testcase, context, violations) {
+  if (!isApiTestcase(testcase)) return;
+  const id = testcase.testcase_id || testcase.id;
+  const api = testcase.api || {};
+  const effects = api.expected_side_effects;
+  if (text(api.side_effect) && (!Array.isArray(effects) || effects.length === 0)) {
+    violation(violations, id, 'API_SIDE_EFFECT_PROSE_UNENFORCED', 'api.side_effect prose cannot replace expected_side_effects[]');
+  }
+  if (effects === undefined || effects === null) return;
+  if (!Array.isArray(effects)) {
+    violation(violations, id, 'API_SIDE_EFFECTS_INVALID', 'api.expected_side_effects must be an array');
+    return;
+  }
+  const seen = new Set();
+  for (const [index, effect] of effects.entries()) {
+    if (!effect || typeof effect !== 'object' || Array.isArray(effect)) {
+      violation(violations, id, 'API_SIDE_EFFECT_INVALID', `expected_side_effects[${index}] must be an object`);
+      continue;
+    }
+    const effectId = text(effect.id);
+    const effectType = text(effect.type).toUpperCase();
+    if (!/^SE[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$/.test(effectId)) {
+      violation(violations, id, 'API_SIDE_EFFECT_ID_INVALID', `expected_side_effects[${index}].id must use SE-<ID>`);
+    } else if (seen.has(effectId)) {
+      violation(violations, id, 'API_SIDE_EFFECT_ID_DUPLICATE', `duplicate side-effect ID ${effectId}`);
+    }
+    seen.add(effectId);
+    if (!API_SIDE_EFFECT_TYPES.has(effectType)) {
+      violation(violations, id, 'API_SIDE_EFFECT_TYPE_INVALID', `${effectId || index} has an unsupported type`);
+    }
+    if (!text(effect.description)) violation(violations, id, 'API_SIDE_EFFECT_DESCRIPTION_MISSING', `${effectId || index} requires description`);
+    if (!Object.hasOwn(effect, 'expected')) violation(violations, id, 'API_SIDE_EFFECT_EXPECTED_MISSING', `${effectId || index} requires expected`);
+    const implementationPathValid = safeRelativePath(
+      effect.implementation_file,
+      ['src/shared/helpers/'],
+      ['.ts', '.js', '.mjs'],
+    );
+    if (!implementationPathValid) {
+      violation(violations, id, 'API_SIDE_EFFECT_IMPLEMENTATION_PATH_INVALID', `${effectId || index} implementation_file must stay below src/shared/helpers/`);
+    }
+    const exportName = text(effect.implementation_export);
+    if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(exportName)) {
+      violation(violations, id, 'API_SIDE_EFFECT_IMPLEMENTATION_EXPORT_INVALID', `${effectId || index} implementation_export is invalid`);
+    }
+    if (implementationPathValid && context.checkRuntimeAssets) {
+      const implementationPath = path.resolve(context.projectRoot, effect.implementation_file);
+      if (!fs.existsSync(implementationPath)) {
+        violation(violations, id, 'API_SIDE_EFFECT_IMPLEMENTATION_MISSING', `${effect.implementation_file} does not exist`);
+      } else if (exportName && !implementationExports(implementationPath, exportName)) {
+        violation(violations, id, 'API_SIDE_EFFECT_IMPLEMENTATION_EXPORT_MISSING', `${exportName} is not exported by ${effect.implementation_file}`);
+      }
+    }
+  }
 }
 
 function validateAutomationTags(testcase, violations) {
@@ -586,6 +742,10 @@ function verifyAdvancedTestContracts({
     validateDb(testcase, context, violations);
     validateAutomationTags(testcase, violations);
     validateLifecycleHooks(testcase, context, violations);
+    validateManualVerification(testcase, violations);
+    validateRiskProfile(testcase, violations);
+    validateStabilityGate(testcase, violations);
+    validateApiSideEffects(testcase, context, violations);
   }
   return {
     schema_version: 1,
@@ -599,6 +759,12 @@ function verifyAdvancedTestContracts({
       db_verification: testcases.filter(item => item.db_verification).length,
       automation_tags: testcases.filter(item => Array.isArray(item.automation_tags) && item.automation_tags.length > 0).length,
       lifecycle_hooks: testcases.filter(item => item.lifecycle_hooks).length,
+      manual_verification: testcases.filter(item => item.manual_verification).length,
+      risk_profile: testcases.filter(item => item.risk_profile).length,
+      stability_gate: testcases.filter(item => item.stability_gate).length,
+      api_side_effects: testcases.reduce((total, item) => (
+        total + (Array.isArray(item.api?.expected_side_effects) ? item.api.expected_side_effects.length : 0)
+      ), 0),
     },
     violations,
   };

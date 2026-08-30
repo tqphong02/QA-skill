@@ -8,22 +8,22 @@
       "id": "dynamic-web-exploratory",
       "source_path": "dynamic-testing/web-exploratory",
       "file_count": 131,
-      "source_sha256": "d64162c6c573f7b806dece533ae4d5a7837918df49864976fb9b186ddfe668ee",
-      "bundled_sha256": "805c24c76ab5d41d14e3b10ecd148e418f4efd9e6c9bf0e30a6b5cac7b443da7"
+      "source_sha256": "391fd44279afae5aa87e002d34eacc012e70e2f833edada00fc4cc60f4c36f40",
+      "bundled_sha256": "64ef3c691bfa942b602cf4479acca0a8c016bd4455ab71f26ea31db1d7ee338d"
     },
     {
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
       "file_count": 22,
-      "source_sha256": "425c8f7638735a520036b15d352e4162823333a2392157845df1cac86e410f1a",
-      "bundled_sha256": "370b080c2357598d19fdb2fd863405626bb07ca22ba10daa6750f31380b9136b"
+      "source_sha256": "babd03af1e4145d832cda707c551f324450f58e6e2edf8954b6efcbda2c0b8ab",
+      "bundled_sha256": "3b4bd691d631b8101e1f5f2931d5f3ef0fb4598fa5b14f3042433f5fd2140153"
     },
     {
       "id": "dynamic-web-automation",
       "source_path": "dynamic-testing/web-automation",
       "file_count": 74,
-      "source_sha256": "89dcf287e92421700b7556c710fe4c2af18f8de9a5b273d8744603c3894cb8a2",
-      "bundled_sha256": "c08af1d23d9bcef13910173846cbb4ce54209b708db1ff6ec9c7158b48aeb496"
+      "source_sha256": "a14d6c7f6cdb7de47c4afc8ee099ae747df15973578809f1cb111d0e8fe09a32",
+      "bundled_sha256": "c37175e99e1a5e4f1626fb97faa18fa5218261f8a5778bd53340ef59e848c19e"
     },
     {
       "id": "support-document-conversion",
@@ -35,9 +35,9 @@
     {
       "id": "static-requirements-analysis",
       "source_path": "static-testing/requirements-analysis",
-      "file_count": 14,
-      "source_sha256": "6ae1ea7c1d9813d775bc8155d829d438a26564760bb2f96201c4c5860f8cbd31",
-      "bundled_sha256": "2d4cceffa962452900e834a0e2bf746fa3acb514c81a4242926af21dc0ca47bd"
+      "file_count": 16,
+      "source_sha256": "829b127ba662a97692c2307bfd81b58b957b73d9ba8b2a8d2202430429b847f7",
+      "bundled_sha256": "a6f93a7a11f04bdce74d67fe281ac43012f6496e4c24d6bcc90dbf6a3e8def2c"
     },
     {
       "id": "dynamic-security-pentest",
@@ -64,8 +64,8 @@
       "id": "dynamic-data-quality",
       "source_path": "dynamic-testing/data-quality",
       "file_count": 8,
-      "source_sha256": "c25167d2874bedf6e3d6f46459079f873a44bcf0f07a78244a8f726bbbe879fb",
-      "bundled_sha256": "524efb2991b5238cfa2316b0b40f172276bfe99243b67eaba7bad157776ed868"
+      "source_sha256": "1b52299f561f1a1587a9c6d4ca35f72deaac92d5bd4fa7b1c307f41ba3b58f80",
+      "bundled_sha256": "862609777bd0b6ff219f937a71a59aa048e40c46d5639caba04926726fbd8572"
     },
     {
       "id": "dynamic-ai-evaluation",

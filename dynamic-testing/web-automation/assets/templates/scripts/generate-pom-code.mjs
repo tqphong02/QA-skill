@@ -1238,6 +1238,18 @@ function renderApiTestBody(testcase, context) {
       );
     }
   }
+  for (const [index, hook] of (context.sideEffects || []).entries()) {
+    const marker = testcase.required_markers?.side_effects?.[index];
+    if (!marker) blocked('API_SIDE_EFFECT_MARKER_MISSING', `${testcase.testcase_id}:${hook.contract.id || index}`);
+    const resultName = `sideEffectResult${index + 1}`;
+    const responseBody = api.expected_status === 204 || api.method === 'HEAD' ? 'undefined' : 'parsedBody';
+    lines.push(
+      `    await test.step(${JSON.stringify(marker)}, async () => {`,
+      `      const ${resultName} = await ${hook.alias}.${hook.exportName}({ testcaseId: ${JSON.stringify(testcase.testcase_id)}, response, responseBody: ${responseBody}, client: ${context.clientInstance} });`,
+      `      expect(${resultName}).toEqual(${runtimeValueExpression(hook.contract.expected, `${testcase.testcase_id}_side_effect_${hook.contract.id}`, context.usage)});`,
+      '    });',
+    );
+  }
   return lines;
 }
 
@@ -1313,6 +1325,35 @@ function advancedExtensionHooks(model, paths, projectRoot) {
       }
       hooks[kind] = { ...record, contract };
     }
+    const sideEffectHooks = [];
+    for (const contract of testcase.api?.expected_side_effects || []) {
+      const relativeFile = String(contract.implementation_file || '').trim().replaceAll('\\', '/');
+      const exportName = String(contract.implementation_export || '').trim();
+      if (!relativeFile.startsWith('src/shared/helpers/') || relativeFile.includes('/../')) {
+        blocked('API_SIDE_EFFECT_IMPLEMENTATION_PATH_INVALID', `${testcase.testcase_id}:${relativeFile || 'missing'}`);
+      }
+      if (!/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(exportName)) {
+        blocked('API_SIDE_EFFECT_IMPLEMENTATION_EXPORT_INVALID', `${testcase.testcase_id}:${exportName || 'missing'}`);
+      }
+      const filePath = path.resolve(projectRoot, relativeFile);
+      assertPathInsideProject(projectRoot, filePath);
+      if (!fs.existsSync(filePath)) blocked('API_SIDE_EFFECT_IMPLEMENTATION_MISSING', filePath);
+      const source = fs.readFileSync(filePath, 'utf8');
+      const exportPattern = new RegExp(`\\bexport\\s+(?:async\\s+)?(?:function|const|let|var|class)\\s+${exportName}\\b|\\bexport\\s*\\{[^}]*\\b${exportName}\\b`, 'm');
+      if (!exportPattern.test(source)) {
+        blocked('API_SIDE_EFFECT_IMPLEMENTATION_EXPORT_MISSING', `${relativeFile}:${exportName}`);
+      }
+      const key = `${filePath}:${exportName}`;
+      let record = importByKey.get(key);
+      if (!record) {
+        importIndex += 1;
+        record = { alias: `advancedExtension${importIndex}`, filePath, exportName };
+        importByKey.set(key, record);
+        imports.push(`import * as ${record.alias} from '${relativeImport(paths.spec, filePath)}';`);
+      }
+      sideEffectHooks.push({ ...record, contract });
+    }
+    if (sideEffectHooks.length > 0) hooks.sideEffects = sideEffectHooks;
     if (Object.keys(hooks).length > 0) byTestcase.set(testcase.testcase_id, hooks);
   }
   return { imports, byTestcase };
@@ -1412,7 +1453,7 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
 
     if (isFunctionalFlow) {
       const api = normalizeApiContract(testcase);
-      const apiContext = { operations, schemas, clientInstance, usage };
+      const apiContext = { operations, schemas, clientInstance, usage, sideEffects: advancedHooks.sideEffects || [] };
       const apiLines = renderApiTestBody(testcase, apiContext).map(line => line.trimStart());
       const uiCleanupMarker = testcase.required_markers?.cleanup;
       const needsFinally = Boolean(api.cleanup || uiCleanupMarker || advancedHooks.lifecycleAfter);
@@ -1489,7 +1530,7 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
       }
     } else if (capability === 'api') {
       const api = normalizeApiContract(testcase);
-      const apiContext = { operations, schemas, clientInstance, usage };
+      const apiContext = { operations, schemas, clientInstance, usage, sideEffects: advancedHooks.sideEffects || [] };
       const mainLines = renderApiTestBody(testcase, apiContext);
       const needsFinally = Boolean(api.cleanup || advancedHooks.lifecycleAfter);
       if (needsFinally) {
@@ -1682,6 +1723,12 @@ function renderApiOperationInventory(model, surface, apiClient, operations, sche
           response: api.expected_status >= 400 ? null : responseSchema,
           error: api.expected_status >= 400 ? responseSchema : null,
         },
+        side_effects: (api.expected_side_effects || []).map(effect => ({
+          id: effect.id,
+          type: effect.type,
+          marker: `[${testcase.testcase_id}:SIDE_EFFECT:${effect.id}] ${String(effect.type || '').toUpperCase()}`,
+          implementation_export: effect.implementation_export,
+        })),
         cleanup,
       };
     });

@@ -64,6 +64,7 @@ Every job writes to the same paths:
 | `reports/module-artifact-layout.json` | Surface-aware generated module layout gate |
 | `reports/automation-complexity.json` | Route, selector, action, API operation, schema variant and generated file-length gate |
 | `reports/api-operation-coverage.json` | Exact selected API operation coverage when applicable |
+| `reports/stability-gate.json` | Per-test repeat attempts, consecutive clean passes and flaky-rate promotion gate |
 | `evidence/` | HTML, trace and unified screenshot/video evidence |
 
 The runner clears stale raw results before a deterministic run. UI and

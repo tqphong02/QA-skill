@@ -377,6 +377,7 @@ function businessChecks(skill) {
     'readiness_Q&A.md',
     'readiness_Q&A.xlsx',
     path.join('.static-testing', 'requirements-analysis', 'readiness_Requirements.json'),
+    path.join('.static-testing', 'requirements-analysis', 'readiness_API_Contract_Handoff.json'),
     path.join('.static-testing', 'requirements-analysis', 'readiness_Analysis_State.json'),
   ]
   const missing = expected.filter(file => !fs.existsSync(path.join(outputDir, file)))
@@ -389,6 +390,11 @@ function businessChecks(skill) {
     const actualIds = registry.requirements.map(item => item.id)
     const idsOk = JSON.stringify(expectedIds) === JSON.stringify(actualIds)
     addCheck(skill, 'requirement registry ID read-back', idsOk ? 'PASS' : 'FAIL', idsOk ? `${actualIds.length} stable requirement IDs preserved` : `source IDs and exported IDs differ: ${expectedIds.join(',')} != ${actualIds.join(',')}`)
+    const apiHandoff = JSON.parse(fs.readFileSync(path.join(outputDir, '.static-testing', 'requirements-analysis', 'readiness_API_Contract_Handoff.json'), 'utf8'))
+    const apiSafe = apiHandoff.runtime_verified === false
+      && apiHandoff.evidence_kind === 'documented_expectation'
+      && apiHandoff.operations.every(item => item.coverage_status === 'not_covered')
+    addCheck(skill, 'API requirement handoff boundary', apiSafe ? 'PASS' : 'FAIL', apiSafe ? `${apiHandoff.operations.length} documented API operations exported without runtime claims` : 'API handoff incorrectly claims runtime coverage')
   }
   addIntegration(skill, 'N/A', 'business analysis has a deterministic local artifact contract; remote Drive/source-document access is exercised by integration-google-drive when a real source is supplied')
 }
@@ -455,6 +461,7 @@ function driveChecks(skill) {
 }
 
 function mobileChecks(skill) {
+  runNodeTestFiles(skill, [skillPath('dynamic-mobile', 'tests')], TMP_ROOT, 120000)
   const gate = runCommand('bash', [skillPath('dynamic-mobile', 'scripts', 'check-device-target.sh')], {
     env: safeEnv({ EXECUTION_TARGET: undefined, ANDROID_UDID: undefined, IOS_SIMULATOR_UDID: undefined }),
     timeout: 30000,

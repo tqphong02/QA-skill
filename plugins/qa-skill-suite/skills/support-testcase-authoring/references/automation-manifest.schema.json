@@ -96,7 +96,20 @@
             "items": { "type": "string", "pattern": "^COV[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$" }
           },
           "execution": { "type": ["object", "null"] },
-          "api": { "type": ["object", "null"] },
+          "api": {
+            "type": ["object", "null"],
+            "properties": {
+              "expected_side_effects": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "$ref": "#/$defs/apiSideEffect" }
+              }
+            },
+            "additionalProperties": true
+          },
+          "manual_verification": { "$ref": "#/$defs/manualVerification" },
+          "risk_profile": { "$ref": "#/$defs/riskProfile" },
+          "stability_gate": { "$ref": "#/$defs/stabilityGate" },
           "automation_selection": {
             "type": ["object", "null"],
             "required": [
@@ -238,6 +251,94 @@
   },
   "additionalProperties": true,
   "$defs": {
+    "manualVerification": {
+      "type": ["object", "null"],
+      "required": ["status", "environment", "evidence"],
+      "properties": {
+        "status": { "enum": ["PASS", "FAILED", "BLOCKED", "WAIVED"] },
+        "environment": { "type": "string", "minLength": 1 },
+        "evidence": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "verified_at": { "type": "string", "format": "date-time" },
+        "waiver_reason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "enum": ["PASS", "FAILED"] } }, "required": ["status"] },
+          "then": { "required": ["verified_at"], "properties": { "evidence": { "minItems": 1 } } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "WAIVED" } }, "required": ["status"] },
+          "then": { "required": ["waiver_reason"] }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "riskProfile": {
+      "type": ["object", "null"],
+      "required": [
+        "criticality", "money_or_data_impact", "third_party_dependency",
+        "async_behavior", "recovery_sensitivity", "dependency_refs", "rationale"
+      ],
+      "properties": {
+        "criticality": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "money_or_data_impact": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "third_party_dependency": { "type": "boolean" },
+        "async_behavior": { "type": "boolean" },
+        "recovery_sensitivity": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "dependency_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "rationale": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "third_party_dependency": { "const": true } }, "required": ["third_party_dependency"] },
+          "then": { "properties": { "dependency_refs": { "minItems": 1 } } }
+        }
+      ],
+      "additionalProperties": false
+    },
+    "stabilityGate": {
+      "type": ["object", "null"],
+      "required": ["repeat_count", "required_consecutive_passes", "max_flaky_rate"],
+      "properties": {
+        "repeat_count": { "type": "integer", "minimum": 2, "maximum": 20 },
+        "required_consecutive_passes": { "type": "integer", "minimum": 2, "maximum": 20 },
+        "max_flaky_rate": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "apiSideEffect": {
+      "type": "object",
+      "required": [
+        "id", "type", "description", "expected",
+        "implementation_file", "implementation_export"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^SE[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$" },
+        "type": {
+          "enum": [
+            "READ_AFTER_WRITE", "DATABASE_STATE", "EVENT_PUBLISHED",
+            "WEBHOOK_SENT", "TRANSACTION_ROLLBACK", "NO_UNEXPECTED_MUTATION"
+          ]
+        },
+        "description": { "type": "string", "minLength": 1 },
+        "expected": {},
+        "implementation_file": {
+          "type": "string",
+          "pattern": "^src/shared/helpers/.+\\.(?:ts|js|mjs)$"
+        },
+        "implementation_export": {
+          "type": "string",
+          "pattern": "^[A-Za-z_$][A-Za-z0-9_$]*$"
+        }
+      },
+      "additionalProperties": false
+    },
     "implementationHook": {
       "type": "object",
       "required": ["implementation_file", "implementation_export"],

@@ -14,8 +14,10 @@ import {
   buildSheetResults,
   loadImmutablePlan,
   normalizePlaywrightReport,
+  stabilityRepeatCount,
   surfaceTestPath,
   testcaseGrep,
+  verifyStabilityGate,
 } from '../assets/templates/scripts/run-testcase-pom.mjs';
 
 function planFor(ids) {
@@ -133,6 +135,36 @@ test('unified API workflow can PASS without browser-only visual evidence', () =>
   }, planFor(['TC-API-01']), { mode: 'api' });
 
   assert.equal(normalized.verdict, 'PASS');
+});
+
+test('pre-CI stability gate requires repeated clean passes and preserves attempt evidence', () => {
+  const plan = planFor(['TC-STABLE-01']);
+  plan.testcases[0].stability_gate = {
+    repeat_count: 3,
+    required_consecutive_passes: 3,
+    max_flaky_rate: 0,
+  };
+  assert.equal(stabilityRepeatCount(plan), 3);
+
+  const passed = verifyStabilityGate({
+    suites: [{ tests: [0, 1, 2].map(repeatEachIndex => ({
+      title: 'TC-STABLE-01 @api', repeatEachIndex, results: [result('passed')],
+    })) }],
+  }, plan);
+  assert.equal(passed.status, 'PASS', JSON.stringify(passed, null, 2));
+  assert.equal(passed.cases[0].actual_execution_count, 3);
+  assert.equal(passed.cases[0].consecutive_clean_passes, 3);
+
+  const flaky = verifyStabilityGate({
+    suites: [{ tests: [
+      { title: 'TC-STABLE-01 @api', repeatEachIndex: 0, results: [result('passed')] },
+      { title: 'TC-STABLE-01 @api', repeatEachIndex: 1, results: [result('failed'), result('passed')] },
+      { title: 'TC-STABLE-01 @api', repeatEachIndex: 2, results: [result('passed')] },
+    ] }],
+  }, plan);
+  assert.equal(flaky.status, 'BLOCKED');
+  assert.ok(flaky.cases[0].violations.includes('STABILITY_CONSECUTIVE_PASS_NOT_MET'));
+  assert.ok(flaky.cases[0].violations.includes('STABILITY_FLAKY_RATE_EXCEEDED'));
 });
 
 test('unmarked Playwright skips remain UNTEST instead of becoming N/A', () => {

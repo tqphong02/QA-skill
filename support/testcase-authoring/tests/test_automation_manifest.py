@@ -10,6 +10,7 @@ import unittest
 SKILL_ROOT = pathlib.Path(__file__).resolve().parents[1]
 GENERATOR_PATH = SKILL_ROOT / 'scripts' / 'gen-testcases.py'
 STRUCTURED_INPUT = SKILL_ROOT / 'examples' / 'structured-input.json'
+API_INPUT = SKILL_ROOT / 'examples' / 'sample-api-input.json'
 
 
 def load_generator():
@@ -116,6 +117,69 @@ class AutomationManifestTests(unittest.TestCase):
         self.assertEqual(case['lifecycle_hooks'], emitted['lifecycle_hooks'])
         self.assertEqual(case['network_interception'], emitted['network_interception'])
         self.assertEqual(case['db_verification'], emitted['db_verification'])
+
+    def test_api_manifest_preserves_governance_and_typed_side_effect_contracts(self):
+        data = json.loads(API_INPUT.read_text(encoding='utf-8'))
+        case = data['sections'][1]['groups'][0]['scenarios'][0]['cases'][0]
+        case['manual_verification'] = {
+            'status': 'PASS',
+            'environment': 'staging',
+            'evidence': ['reports/manual-api/login.json'],
+            'verified_at': '2026-08-30T07:00:00Z',
+        }
+        case['risk_profile'] = {
+            'criticality': 5,
+            'money_or_data_impact': 4,
+            'third_party_dependency': False,
+            'async_behavior': False,
+            'recovery_sensitivity': 4,
+            'dependency_refs': [],
+            'rationale': 'Authentication protects user data',
+        }
+        case['stability_gate'] = {
+            'repeat_count': 3,
+            'required_consecutive_passes': 3,
+            'max_flaky_rate': 0,
+        }
+        case['api']['expected_side_effects'] = [{
+            'id': 'SE-LOGIN-AUDIT',
+            'type': 'EVENT_PUBLISHED',
+            'description': 'Successful login emits an audit event',
+            'expected': {'event': 'LOGIN_SUCCEEDED'},
+            'implementation_file': 'src/shared/helpers/login-audit.ts',
+            'implementation_export': 'readLoginAudit',
+        }]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            markdown_path = pathlib.Path(temp_dir) / 'api.md'
+            markdown_path.write_text('# API\n', encoding='utf-8')
+            manifest = self.generator.build_automation_manifest(data, markdown_path)
+
+        emitted = manifest['testcases'][0]
+        self.assertEqual(case['manual_verification'], emitted['manual_verification'])
+        self.assertEqual(case['risk_profile'], emitted['risk_profile'])
+        self.assertEqual(case['stability_gate'], emitted['stability_gate'])
+        self.assertEqual(case['api']['expected_side_effects'], emitted['api']['expected_side_effects'])
+
+    def test_api_governance_rejects_invalid_manual_and_stability_metadata(self):
+        data = json.loads(API_INPUT.read_text(encoding='utf-8'))
+        case = data['sections'][1]['groups'][0]['scenarios'][0]['cases'][0]
+        case['manual_verification'] = {
+            'status': 'PASS', 'environment': 'staging', 'evidence': []
+        }
+        with self.assertRaisesRegex(ValueError, 'evidence is required'):
+            list(self.generator.iter_testcases(data))
+
+        case['manual_verification'] = {
+            'status': 'WAIVED', 'environment': 'staging', 'evidence': [],
+            'waiver_reason': 'Approved exception',
+        }
+        case['stability_gate'] = {
+            'repeat_count': 2,
+            'required_consecutive_passes': 3,
+            'max_flaky_rate': 0,
+        }
+        with self.assertRaisesRegex(ValueError, 'required_consecutive_passes'):
+            list(self.generator.iter_testcases(data))
 
     def test_manifest_rejects_invalid_or_reserved_automation_tags(self):
         for tags in (['Smoke'], ['@ui'], ['@smoke', '@smoke']):

@@ -12,22 +12,26 @@ INPUT="$1"
 OUTPUT_DIR="$2"
 BASE_NAME="${3:-business}"
 
-PYTHON_BIN="${QA_SKILL_PYTHON:-}"
-if [[ -z "$PYTHON_BIN" ]]; then
-  if command -v python3 >/dev/null 2>&1; then
-    PYTHON_BIN="python3"
-  elif command -v python >/dev/null 2>&1; then
-    PYTHON_BIN="python"
-  else
-    echo "Missing Python runtime"
-    exit 1
-  fi
+PYTHON_CMD=()
+if [[ -n "${QA_SKILL_PYTHON:-}" ]]; then
+  PYTHON_CMD=("$QA_SKILL_PYTHON")
+elif command -v python3 >/dev/null 2>&1 && python3 -c 'import openpyxl' >/dev/null 2>&1; then
+  PYTHON_CMD=(python3)
+elif command -v python >/dev/null 2>&1 && python -c 'import openpyxl' >/dev/null 2>&1; then
+  PYTHON_CMD=(python)
+elif command -v py >/dev/null 2>&1 && py -3.12 -c 'import openpyxl' >/dev/null 2>&1; then
+  PYTHON_CMD=(py -3.12)
+else
+  echo "Missing runnable Python runtime with openpyxl"
+  exit 1
 fi
 
 if [[ ! -f "$INPUT" ]]; then
   echo "Analysis JSON not found: $INPUT"
   exit 1
 fi
+
+node "$SCRIPT_DIR/doctor.mjs"
 
 if ! (cd "$SKILL_DIR" && node -e "import('xmindmark')" --input-type=module) >/dev/null 2>&1; then
   echo "Missing xmindmark dependency"
@@ -37,17 +41,19 @@ fi
 
 mkdir -p "$OUTPUT_DIR"
 STATE_PATH="$OUTPUT_DIR/.static-testing/requirements-analysis/${BASE_NAME}_Analysis_State.json"
-"$PYTHON_BIN" "$SCRIPT_DIR/convergence.py" --check "$INPUT" "$STATE_PATH"
-"$PYTHON_BIN" "$SCRIPT_DIR/render-qa.py" "$INPUT" "$OUTPUT_DIR" "$BASE_NAME"
+"${PYTHON_CMD[@]}" "$SCRIPT_DIR/convergence.py" --check "$INPUT" "$STATE_PATH"
+"${PYTHON_CMD[@]}" "$SCRIPT_DIR/render-qa.py" "$INPUT" "$OUTPUT_DIR" "$BASE_NAME"
 node "$SCRIPT_DIR/render-xmind.mjs" "$INPUT" "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"
-"$PYTHON_BIN" "$SCRIPT_DIR/render-qa.py" --check \
+"${PYTHON_CMD[@]}" "$SCRIPT_DIR/render-qa.py" --check \
   "$OUTPUT_DIR/${BASE_NAME}_Q&A.md" \
-  "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx"
+  "$OUTPUT_DIR/${BASE_NAME}_Q&A.xlsx" \
+  "$INPUT"
 node "$SCRIPT_DIR/render-xmind.mjs" --check "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind" "$INPUT"
-"$PYTHON_BIN" "$SCRIPT_DIR/export-requirements.py" \
+"${PYTHON_CMD[@]}" "$SCRIPT_DIR/export-requirements.py" \
   "$INPUT" \
-  "$OUTPUT_DIR/.static-testing/requirements-analysis/${BASE_NAME}_Requirements.json"
-"$PYTHON_BIN" "$SCRIPT_DIR/convergence.py" --commit "$INPUT" "$STATE_PATH"
+  "$OUTPUT_DIR/.static-testing/requirements-analysis/${BASE_NAME}_Requirements.json" \
+  "$OUTPUT_DIR/.static-testing/requirements-analysis/${BASE_NAME}_API_Contract_Handoff.json"
+"${PYTHON_CMD[@]}" "$SCRIPT_DIR/convergence.py" --commit "$INPUT" "$STATE_PATH"
 
 echo "BUSINESS ANALYSIS PASS"
 echo "$OUTPUT_DIR/${BASE_NAME}_Business_Flow.xmind"

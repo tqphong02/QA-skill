@@ -31,6 +31,92 @@ function selection(decision, retirement = { status: 'ACTIVE' }) {
   };
 }
 
+function apiGovernance(overrides = {}) {
+  return {
+    capabilities: ['api'],
+    api: { method: 'POST', endpoint: '/orders', expected_status: 201 },
+    manual_verification: {
+      status: 'PASS',
+      environment: 'staging',
+      evidence: ['reports/manual-api/orders-create.json'],
+      verified_at: '2026-08-30T07:00:00Z',
+    },
+    risk_profile: {
+      criticality: 5,
+      money_or_data_impact: 5,
+      third_party_dependency: false,
+      async_behavior: false,
+      recovery_sensitivity: 4,
+      dependency_refs: [],
+      rationale: 'Order creation changes business data',
+    },
+    stability_gate: {
+      repeat_count: 3,
+      required_consecutive_passes: 3,
+      max_flaky_rate: 0,
+    },
+    ...overrides,
+  };
+}
+
+test('API automation governance fails closed until manual, risk and stability contracts are complete', () => {
+  const missing = verifyAdvancedTestContracts({
+    plan: { testcases: [{ testcase_id: 'TC_API_GOV_01', capabilities: ['api'], api: {} }] },
+  });
+  const missingCodes = new Set(missing.violations.map(item => item.code));
+  assert.ok(missingCodes.has('MANUAL_VERIFICATION_REQUIRED'));
+  assert.ok(missingCodes.has('RISK_PROFILE_REQUIRED'));
+  assert.ok(missingCodes.has('STABILITY_GATE_REQUIRED'));
+
+  const blockedManual = apiGovernance({
+    testcase_id: 'TC_API_GOV_02',
+    manual_verification: { status: 'BLOCKED', environment: 'staging', evidence: [] },
+  });
+  const blocked = verifyAdvancedTestContracts({ plan: { testcases: [blockedManual] } });
+  assert.ok(blocked.violations.some(item => item.code === 'MANUAL_VERIFICATION_NOT_APPROVED'));
+
+  const approved = verifyAdvancedTestContracts({
+    plan: { testcases: [{ testcase_id: 'TC_API_GOV_03', ...apiGovernance() }] },
+  });
+  assert.equal(approved.status, 'PASS', JSON.stringify(approved.violations, null, 2));
+});
+
+test('API side-effect prose is blocked and typed side-effect helpers are validated', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-side-effect-'));
+  try {
+    write(root, 'src/shared/helpers/order-side-effect.ts', 'export async function readOrder() { return { status: "CREATED" }; }\n');
+    const prose = {
+      testcase_id: 'TC_API_SIDE_01',
+      ...apiGovernance({ api: { method: 'POST', endpoint: '/orders', expected_status: 201, side_effect: 'Order is stored' } }),
+    };
+    const proseReport = verifyAdvancedTestContracts({ plan: { testcases: [prose] } });
+    assert.ok(proseReport.violations.some(item => item.code === 'API_SIDE_EFFECT_PROSE_UNENFORCED'));
+
+    const typed = {
+      testcase_id: 'TC_API_SIDE_02',
+      ...apiGovernance({
+        api: {
+          method: 'POST', endpoint: '/orders', expected_status: 201,
+          expected_side_effects: [{
+            id: 'SE-ORDER-PERSISTED',
+            type: 'READ_AFTER_WRITE',
+            description: 'Created order can be read back',
+            expected: { status: 'CREATED' },
+            implementation_file: 'src/shared/helpers/order-side-effect.ts',
+            implementation_export: 'readOrder',
+          }],
+        },
+      }),
+    };
+    const typedReport = verifyAdvancedTestContracts({
+      plan: { testcases: [typed] }, projectRoot: root, checkRuntimeAssets: true,
+    });
+    assert.equal(typedReport.status, 'PASS', JSON.stringify(typedReport.violations, null, 2));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('selection contract computes value and excludes DEFER/RETIRED without mapping them to N/A', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-selection-'));
   try {

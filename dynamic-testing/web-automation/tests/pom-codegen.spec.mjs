@@ -382,6 +382,43 @@ test('API codegen emits client/schema/spec without UI artifacts', () => {
   });
 });
 
+test('API codegen emits and verifies typed side-effect oracle assertions', () => {
+  withTempRoot('pom-codegen-api-side-effect-', root => {
+    const testcase = apiCase('LOGIN-API-SIDE-01');
+    testcase.api.expected_side_effects = [{
+      id: 'SE-AUDIT-WRITTEN',
+      type: 'READ_AFTER_WRITE',
+      description: 'Login audit entry can be read back',
+      expected: { event: 'LOGIN_SUCCEEDED' },
+      implementation_file: 'src/shared/helpers/login-side-effect.ts',
+      implementation_export: 'readLoginAudit',
+    }];
+    testcase.required_markers.side_effects = [
+      '[LOGIN-API-SIDE-01:SIDE_EFFECT:SE-AUDIT-WRITTEN] READ_AFTER_WRITE',
+    ];
+    const helperPath = path.join(root, 'src/shared/helpers/login-side-effect.ts');
+    fs.mkdirSync(path.dirname(helperPath), { recursive: true });
+    fs.writeFileSync(
+      helperPath,
+      'export async function readLoginAudit() { return { event: "LOGIN_SUCCEEDED" }; }\n',
+      'utf8',
+    );
+    const planPath = writeJson(root, 'plans/login-side-effect.pom-plan.json', plan([testcase]));
+    const generated = generatePomCode({ planPaths: [planPath], projectRoot: root, surface: 'api' });
+    const spec = fs.readFileSync(path.join(root, 'tests/api/app/login.api.spec.ts'), 'utf8');
+    assert.match(spec, /readLoginAudit/);
+    assert.match(spec, /SIDE_EFFECT:SE-AUDIT-WRITTEN/);
+    assert.match(spec, /expect\(sideEffectResult1\)\.toEqual/);
+    const coverage = verifyApiOperationCoverage({
+      projectRoot: root,
+      inventoryPath: generated.api_operation_inventory.path,
+      testcaseIds: ['LOGIN-API-SIDE-01'],
+    });
+    assert.equal(coverage.status, 'PASS', JSON.stringify(coverage.violations, null, 2));
+    assert.equal(coverage.operations[0].side_effects[0].id, 'SE-AUDIT-WRITTEN');
+  });
+});
+
 test('API lifecycle after hook still runs when owned cleanup throws', () => {
   withTempRoot('pom-codegen-api-lifecycle-', root => {
     const testcase = apiCase('LOGIN-API-LIFECYCLE-01');

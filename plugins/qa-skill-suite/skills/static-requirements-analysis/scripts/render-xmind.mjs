@@ -68,7 +68,19 @@ function relatedFunctionNames(flowId, flow, links, flowById) {
   return [...new Set([...(flow.dependencies || []), ...linkedNames])]
 }
 
-function addFlowDetails(lines, level, node, links, flowById) {
+function entityMap(items) {
+  return new Map((items || []).map(item => [item.id, item]))
+}
+
+function linkedValues(ids, registry, valueField) {
+  return (ids || []).map(id => {
+    const item = registry.get(id)
+    if (!item) fail(`Unknown linked entity: ${id}`)
+    return `${id}: ${item[valueField] || item.text || item.statement || item.condition || item.target || item.path}`
+  })
+}
+
+function addFlowDetails(lines, level, node, links, flowById, registries) {
   const { linked, transitionCondition, checkpoint } = node
   if (transitionCondition) add(lines, level, `Điều kiện chuyển bước: ${transitionCondition}`, 'journey.transition_condition')
   if (checkpoint) add(lines, level, `Điểm kiểm soát nghiệp vụ: ${checkpoint}`, 'journey.checkpoint')
@@ -76,11 +88,29 @@ function addFlowDetails(lines, level, node, links, flowById) {
   add(lines, level, `Trạng thái ra: ${linked.flow.exit_state || 'Tài liệu không mô tả'}`, 'flow.exit_state')
   listBranch(lines, level, 'Điều kiện tiên quyết', linked.flow.preconditions, 'flow.preconditions')
   listBranch(lines, level, 'Kết quả cần bảo đảm', linked.flow.sanity_checks, 'flow.sanity_checks')
+  if ((linked.flow.requirement_ids || []).length) {
+    listBranch(lines, level, 'Yêu cầu chức năng', linkedValues(linked.flow.requirement_ids, registries.requirements, 'text'), 'flow.requirement_ids')
+  }
+  if ((linked.flow.business_rule_ids || []).length) {
+    listBranch(lines, level, 'Quy tắc nghiệp vụ', linkedValues(linked.flow.business_rule_ids, registries.businessRules, 'statement'), 'flow.business_rule_ids')
+  }
+  if ((linked.flow.validation_rule_ids || []).length) {
+    listBranch(lines, level, 'Quy tắc kiểm tra', linkedValues(linked.flow.validation_rule_ids, registries.validationRules, 'condition'), 'flow.validation_rule_ids')
+  }
+  if ((linked.flow.api_operation_ids || []).length) {
+    listBranch(lines, level, 'API liên quan', linkedValues(linked.flow.api_operation_ids, registries.apiOperations, 'path'), 'flow.api_operation_ids')
+  }
   listBranch(lines, level, 'Chức năng liên quan', relatedFunctionNames(linked.id, linked.flow, links, flowById), 'flow.related')
 }
 
 function buildUnifiedMark(data, flows, links) {
   const flowById = new Map(flows.map(item => [item.id, item]))
+  const registries = {
+    requirements: entityMap(data.requirements),
+    businessRules: entityMap(data.business_rules),
+    validationRules: entityMap(data.validation_rules),
+    apiOperations: entityMap(data.api_operations),
+  }
   const markers = new Map()
   const flowOccurrences = new Map()
   const usedFlowIds = new Set()
@@ -155,7 +185,7 @@ function buildUnifiedMark(data, flows, links) {
     preconditions.forEach((item, index) => add(lines, 2, item, `journey.preconditions[${index}]`))
     steps.forEach(node => {
       addMarked(lines, 1, node.title, 'journey.sequence', markers.get(node.key) || [])
-      addFlowDetails(lines, 2, node, links, flowById)
+      addFlowDetails(lines, 2, node, links, flowById, registries)
     })
     addMarked(lines, 1, 'Kết quả cuối', 'journey.expected_results', markers.get(resultKey) || [])
     const results = Array.isArray(journey.expected_results) ? journey.expected_results : []
@@ -167,7 +197,7 @@ function buildUnifiedMark(data, flows, links) {
     add(lines, 0, 'Chức năng bổ sung chưa nằm trong luồng nghiệp vụ chính', 'extra_flows')
     extraFlows.forEach(node => {
       addMarked(lines, 1, node.title, 'extra_flow', markers.get(node.key) || [])
-      addFlowDetails(lines, 2, node, links, flowById)
+      addFlowDetails(lines, 2, node, links, flowById, registries)
     })
   }
 

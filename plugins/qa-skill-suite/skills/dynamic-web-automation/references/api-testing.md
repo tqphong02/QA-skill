@@ -129,6 +129,10 @@ node scripts/verify-api-operation-coverage.mjs \
 
 Coverage must be 100%. Missing inventory, an unmapped API test, raw `request`, unvalidated schema, status mismatch or cleanup outside `finally` is `BLOCKED` and produces `UNTEST`, never `PASS`
 
+The advanced gate also requires `manual_verification`, `risk_profile`, and `stability_gate` for every selected API/functional testcase. `manual_verification` must be `PASS` with redacted evidence or an explicit `WAIVED` decision with a reason
+
+When a testcase claims persistence, event, webhook, rollback, or absence of unexpected mutation, use typed `api.expected_side_effects[]`. Each entry names a helper below `src/shared/helpers/`, its exported oracle, and the exact expected value. Codegen calls the helper after response validation and emits `expect(sideEffectResult).toEqual(expected)`. Operation coverage verifies the canonical side-effect marker, helper call, and assertion. Prose-only `api.side_effect` is blocked
+
 ## 8. Common anti-patterns
 
 | Anti-pattern | Fix |

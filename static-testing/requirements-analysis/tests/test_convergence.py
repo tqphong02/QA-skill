@@ -20,6 +20,13 @@ class ConvergenceTests(unittest.TestCase):
         payload = {
             "source_markdown": ["requirements.md"],
             "modules": [{"flows": [{"id": "FLOW-001", "semantic_key": "auth.login"}]}],
+            "business_goals": [],
+            "requirements": [{"id": "REQ-001", "semantic_key": "requirement.auth.login"}],
+            "business_rules": [],
+            "validation_rules": [],
+            "dependencies": [],
+            "risks": [],
+            "api_operations": [],
             "questions": [{"id": "QA-001", "decision_key": "auth.login.error-policy", "status": "Open"}],
         }
         analysis.write_text(json.dumps(payload), encoding="utf-8")
@@ -57,6 +64,18 @@ class ConvergenceTests(unittest.TestCase):
             payload["modules"][0]["flows"].append({"id": "FLOW-002", "semantic_key": "auth.reset-password"})
             current = CONVERGENCE.build_state(payload, analysis)
             self.assertEqual(CONVERGENCE.check_previous(current, state_path), "SOURCE_CHANGED")
+
+    def test_unchanged_snapshot_rejects_new_requirement_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            analysis, payload = self.fixture(root)
+            previous = CONVERGENCE.build_state(payload, analysis)
+            state_path = root / "state.json"
+            state_path.write_text(json.dumps(previous), encoding="utf-8")
+            payload["requirements"].append({"id": "REQ-002", "semantic_key": "requirement.auth.reset"})
+            current = CONVERGENCE.build_state(payload, analysis)
+            with self.assertRaisesRegex(SystemExit, "UNCHANGED_SOURCE_GROWTH"):
+                CONVERGENCE.check_previous(current, state_path)
 
     def test_no_active_question_finishes_done(self):
         with tempfile.TemporaryDirectory() as directory:

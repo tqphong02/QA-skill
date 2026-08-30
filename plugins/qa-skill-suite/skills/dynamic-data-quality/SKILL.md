@@ -48,7 +48,7 @@ Run evidence-led data validation without modifying production data.
 - Use project-native Spark/Delta tools for OneBrain rather than introducing dbt only for QA
 - Use browser QA only to trigger or observe a pipeline; validate persisted data through the data layer
 
-Read [references/DATABASE_MCP.md](references/DATABASE_MCP.md) before configuring any database MCP. Never accept a normal application account as proof of read-only access. Run `../../integration-github/scripts/doctor-stack.sh database-readonly` after configuration.
+Read [references/DATABASE_MCP.md](references/DATABASE_MCP.md) before configuring any database MCP. Never accept a normal application account as proof of read-only access. From the repository root, run `bash ../integration-github/scripts/doctor-stack.sh database-readonly` after configuration.
 
 Read [references/CHECK_MATRIX.md](references/CHECK_MATRIX.md) when designing coverage or reconciling an ingestion flow.
 

@@ -24,6 +24,8 @@ Modes:
 
 Before planning, validate source coverage bidirectionally: every in-spec testcase references at least one `COV-*` item, every coverage-ledger item names its testcase IDs, and both sides agree. Preserve those refs in the immutable POM plan and generated spec annotations so an executable test cannot silently drift away from the documented obligation
 
+For API/functional execution, the runner reads each `stability_gate`, passes the largest bounded `repeat_count` to Playwright as `--repeat-each`, and writes `reports/stability-gate.json`. A testcase is promoted only when it has enough attempts, the required clean-pass suffix, and a flaky rate at or below its threshold. Missing attempts produce `UNTEST`; a failed or retry-pass attempt remains `FAILED`
+
 Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, installs all declared package dependencies when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. Generated targets also wire this bootstrap to direct typecheck, provisioning and test npm entrypoints so editor/test commands do not depend on a pre-existing global install. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
 
 ## Commands

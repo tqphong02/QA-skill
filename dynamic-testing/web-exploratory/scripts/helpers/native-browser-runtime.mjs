@@ -94,6 +94,42 @@ async function waitForReady(filePath, timeoutMs = 45000) {
   throw new Error(`timed out waiting for native browser daemon: ${filePath}`);
 }
 
+function processIsRunning(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === 'EPERM';
+  }
+}
+
+async function waitForStopped(filePath, pid, timeoutMs = 7000) {
+  const startedAt = Date.now();
+  let status = 'UNKNOWN';
+  while (Date.now() - startedAt <= timeoutMs) {
+    try {
+      status = readJson(filePath, 'native daemon state').status || 'UNKNOWN';
+    } catch {
+      status = 'UNAVAILABLE';
+    }
+    if (status === 'CLOSED') {
+      // On Windows the detached PID can remain observable briefly after the
+      // daemon has closed its Playwright pool and written CLOSED. Give file
+      // handles one bounded settle interval before callers clean the run dir.
+      await sleep(process.platform === 'win32' ? 150 : 25);
+      return {
+        ready_for_cleanup: true,
+        status,
+        pid,
+        pid_running: processIsRunning(pid),
+      };
+    }
+    await sleep(50);
+  }
+  return { ready_for_cleanup: false, status, pid, pid_running: processIsRunning(pid) };
+}
+
 async function request(state, pathname, payload, { method = 'POST', timeoutMs = 30000 } = {}) {
   if (!state?.port || !state?.token) throw new Error('native browser daemon state is not ready');
   const controller = new AbortController();
@@ -342,6 +378,7 @@ async function quickFinish(args) {
   try {
     const state = await ensureState(dataDir, runId);
     closed = await request(state, '/close', {}, { timeoutMs: 30000 });
+    closed = { ...closed, ...(await waitForStopped(stateFile(dataDir, runId), state.pid)) };
   } catch (error) {
     closed = { closed: false, reason: String(error?.message || error).slice(0, 500) };
   }

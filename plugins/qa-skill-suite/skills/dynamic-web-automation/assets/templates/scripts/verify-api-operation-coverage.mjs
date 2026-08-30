@@ -9,6 +9,10 @@ const AUTH_MODES = new Set(['none', 'bearer', 'cookie', 'api-key', 'basic', 'oau
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 const TESTCASE_ID = /^[A-Za-z0-9][A-Za-z0-9_.-]{1,127}$/;
 const OPERATION_ID = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/;
+const SIDE_EFFECT_TYPES = new Set([
+  'READ_AFTER_WRITE', 'DATABASE_STATE', 'EVENT_PUBLISHED', 'WEBHOOK_SENT',
+  'TRANSACTION_ROLLBACK', 'NO_UNEXPECTED_MUTATION',
+]);
 
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -231,6 +235,29 @@ function normalizeOperation(raw, index) {
     ));
   }
 
+  const sideEffects = [];
+  if (raw.side_effects !== undefined && !Array.isArray(raw.side_effects)) {
+    violations.push(violation('API_SIDE_EFFECT_MAPPING_INVALID', 'side_effects must be an array', prefix));
+  }
+  const seenSideEffects = new Set();
+  for (const [sideEffectIndex, item] of (Array.isArray(raw.side_effects) ? raw.side_effects : []).entries()) {
+    const effect = isObject(item) ? item : {};
+    const id = typeof effect.id === 'string' ? effect.id.trim() : '';
+    const type = typeof effect.type === 'string' ? effect.type.trim().toUpperCase() : '';
+    const marker = typeof effect.marker === 'string' ? effect.marker.trim() : '';
+    const implementationExport = typeof effect.implementation_export === 'string'
+      ? effect.implementation_export.trim()
+      : '';
+    if (!/^SE[-_][A-Za-z0-9]+(?:[-_][A-Za-z0-9]+)*$/.test(id) || seenSideEffects.has(id)) {
+      violations.push(violation('API_SIDE_EFFECT_MAPPING_INVALID', 'side-effect IDs must be valid and unique', { ...prefix, side_effect_index: sideEffectIndex }));
+    }
+    seenSideEffects.add(id);
+    if (!SIDE_EFFECT_TYPES.has(type) || !marker || !IDENTIFIER.test(implementationExport)) {
+      violations.push(violation('API_SIDE_EFFECT_MAPPING_INVALID', 'side-effects require type, marker and implementation_export', { ...prefix, side_effect_id: id }));
+    }
+    sideEffects.push({ id, type, marker, implementation_export: implementationExport });
+  }
+
   const cleanup = isObject(raw.cleanup) ? raw.cleanup : {};
   if (typeof cleanup.required !== 'boolean') {
     violations.push(violation(
@@ -295,6 +322,7 @@ function normalizeOperation(raw, index) {
       response: schemas.response ?? null,
       error: schemas.error ?? null,
     },
+    side_effects: sideEffects,
     cleanup: cleanup.required === true
       ? {
           required: true,
@@ -609,6 +637,25 @@ function inspectImplementation(projectRoot, operation) {
     }
   }
 
+  const sideEffectChecks = [];
+  for (const effect of operation.side_effects) {
+    const markerPresent = block.includes(effect.marker);
+    const implementationCalled = new RegExp(`\\.${escapeRegex(effect.implementation_export)}\\s*\\(`).test(block);
+    const assertionPresent = new RegExp(
+      `sideEffectResult\\d+\\)\\.toEqual\\s*\\(`,
+    ).test(block);
+    if (!markerPresent) {
+      violations.push(violation('API_SIDE_EFFECT_MARKER_MISSING', 'Canonical side-effect marker is missing', { ...details, side_effect_id: effect.id }));
+    }
+    if (!implementationCalled) {
+      violations.push(violation('API_SIDE_EFFECT_IMPLEMENTATION_MISSING', 'Side-effect oracle helper is not called', { ...details, side_effect_id: effect.id }));
+    }
+    if (!assertionPresent) {
+      violations.push(violation('API_SIDE_EFFECT_ASSERTION_MISSING', 'Side-effect oracle result is not asserted', { ...details, side_effect_id: effect.id }));
+    }
+    sideEffectChecks.push({ id: effect.id, marker_present: markerPresent, implementation_called: implementationCalled, assertion_present: assertionPresent });
+  }
+
   let cleanupCallPresent = true;
   let cleanupMarkerPresent = true;
   if (operation.cleanup.required) {
@@ -664,6 +711,7 @@ function inspectImplementation(projectRoot, operation) {
       client_call_count: matchingCalls.length,
       asserted_statuses: actualStatuses,
       validated_schemas: schemas,
+      side_effects: sideEffectChecks,
       cleanup_marker_present: cleanupMarkerPresent,
       cleanup_call_present: cleanupCallPresent,
     },
@@ -852,6 +900,7 @@ export function verifyApiOperationCoverage({
       auth: operation.auth,
       expected_status: operation.expected_status,
       schemas: operation.schemas,
+      side_effects: operation.side_effects,
       cleanup: operation.cleanup,
       ...implementation,
     };

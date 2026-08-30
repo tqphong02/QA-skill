@@ -53,8 +53,30 @@ def source_snapshot(data: dict, analysis_path: Path) -> tuple[list[dict], str]:
     return sources, hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def semantic_map(data: dict) -> tuple[dict[str, str], dict[str, str]]:
-    flows = {}
+SEMANTIC_COLLECTIONS = {
+    "business_goal": "business_goals",
+    "requirement": "requirements",
+    "business_rule": "business_rules",
+    "validation_rule": "validation_rules",
+    "dependency": "dependencies",
+    "risk": "risks",
+    "api_operation": "api_operations",
+}
+
+
+def semantic_maps(data: dict) -> dict[str, dict[str, str]]:
+    maps: dict[str, dict[str, str]] = {label: {} for label in SEMANTIC_COLLECTIONS}
+    for label, field in SEMANTIC_COLLECTIONS.items():
+        for item in data.get(field) or []:
+            key = str(item.get("semantic_key") or "").strip()
+            item_id = str(item.get("id") or "").strip()
+            if not KEY_RE.fullmatch(key):
+                fail(f"invalid or missing {label} semantic_key: {key or '<empty>'}")
+            if key in maps[label]:
+                fail(f"duplicate {label} semantic_key: {key}")
+            maps[label][key] = item_id
+
+    flows: dict[str, str] = {}
     for module in data.get("modules") or []:
         for flow in module.get("flows") or []:
             key = str(flow.get("semantic_key") or "").strip()
@@ -65,7 +87,9 @@ def semantic_map(data: dict) -> tuple[dict[str, str], dict[str, str]]:
                 fail(f"duplicate flow semantic_key: {key}")
             flows[key] = flow_id
 
-    questions = {}
+    maps["flow"] = flows
+
+    questions: dict[str, str] = {}
     for question in data.get("questions") or []:
         key = str(question.get("decision_key") or "").strip()
         question_id = str(question.get("id") or "").strip()
@@ -74,7 +98,8 @@ def semantic_map(data: dict) -> tuple[dict[str, str], dict[str, str]]:
         if key in questions:
             fail(f"duplicate question decision_key: {key}")
         questions[key] = question_id
-    return flows, questions
+    maps["question"] = questions
+    return maps
 
 
 def completion_status(data: dict) -> str:
@@ -84,13 +109,12 @@ def completion_status(data: dict) -> str:
 
 def build_state(data: dict, analysis_path: Path) -> dict:
     sources, source_set_sha256 = source_snapshot(data, analysis_path)
-    flows, questions = semantic_map(data)
+    maps = semantic_maps(data)
     return {
-        "schema_version": "1.0",
+        "schema_version": "2.0",
         "source_set_sha256": source_set_sha256,
         "sources": sources,
-        "flow_keys": flows,
-        "question_keys": questions,
+        "semantic_maps": maps,
         "completion_status": completion_status(data),
     }
 
@@ -106,9 +130,16 @@ def check_previous(current: dict, state_path: Path) -> str:
     if previous.get("source_set_sha256") != current["source_set_sha256"]:
         return "SOURCE_CHANGED"
 
-    for field, label in (("flow_keys", "flow"), ("question_keys", "question")):
-        old = previous.get(field) or {}
-        new = current.get(field) or {}
+    old_maps = previous.get("semantic_maps")
+    if old_maps is None:
+        old_maps = {
+            "flow": previous.get("flow_keys") or {},
+            "question": previous.get("question_keys") or {},
+        }
+    new_maps = current.get("semantic_maps") or {}
+    for label in sorted(set(old_maps) | set(new_maps)):
+        old = old_maps.get(label) or {}
+        new = new_maps.get(label) or {}
         added = sorted(set(new) - set(old))
         if added:
             fail(f"UNCHANGED_SOURCE_GROWTH: new {label} semantic keys {added}")
@@ -139,7 +170,8 @@ def main() -> None:
             fail("convergence state read-back mismatch")
     print(f"CONVERGENCE PASS: {mode}")
     print(f"SOURCE SNAPSHOT: {current['source_set_sha256']}")
-    print(f"SEMANTIC COUNTS: flows={len(current['flow_keys'])}; questions={len(current['question_keys'])}")
+    counts = "; ".join(f"{label}={len(values)}" for label, values in current["semantic_maps"].items())
+    print(f"SEMANTIC COUNTS: {counts}")
     print(f"ANALYSIS COMPLETION: {current['completion_status']}")
 
 
