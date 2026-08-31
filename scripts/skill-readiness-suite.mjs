@@ -557,7 +557,9 @@ function pomChecks(skill) {
   const tags = specFiles.every(file => /@(ui|api|functional)/.test(fs.readFileSync(file, 'utf8')))
   const structureOk = missing.length === 0 && rawLocatorInSpecs.length === 0 && tags
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
-  const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: skillPath('dynamic-web-automation'), env: safeEnv({ npm_config_offline: 'true' }), timeout: 90000 })
+  // Install template dev dependencies (typescript) before typecheck; --no-install tsc requires a local binary
+  runCommand('npm', ['install', '--ignore-scripts', '--prefer-offline', '--no-audit', '--no-fund'], { cwd: templateRoot, env: safeEnv(), timeout: 60000 })
+  const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: templateRoot, env: safeEnv(), timeout: 90000 })
   commandPass(skill, 'POM template TypeScript compile', tsc, 'template-only compile')
   const qualityFixture = path.join(TMP_ROOT, 'playwright.quality-gate.json')
   const qualityTests = []

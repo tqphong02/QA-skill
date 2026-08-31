@@ -50,6 +50,17 @@ Use direct SQL only when the required persisted state is not available through a
 
 Declare the selected driver (`pg`, `mysql2`, or `knex`) in the generated project's `package.json`. The base template does not install a database driver because direct SQL is optional and environment-specific
 
+### Driver install reference
+
+| Driver | npm install | `credential_env` convention | Notes |
+|---|---|---|---|
+| PostgreSQL | `npm install --save-dev pg @types/pg` | `QA_DB_URL` (e.g. `postgresql://readonly:${pwd}@host:5432/db`) | Use a dedicated read-only role scoped to the test schema |
+| MySQL / MariaDB | `npm install --save-dev mysql2` | `QA_MYSQL_URL` (e.g. `mysql://readonly:${pwd}@host:3306/db`) | Pass `multipleStatements: false` to block write chaining |
+| SQLite (local) | `npm install --save-dev better-sqlite3 @types/better-sqlite3` | `QA_SQLITE_PATH` (absolute file path) | Suitable for local fixture runs; do not use for production-data verification |
+| Generic (multi-db) | `npm install --save-dev knex` | `QA_DB_URL` | Requires a knex client config; prefer the driver-specific packages above for clarity |
+
+Add the chosen package to `devDependencies` only; never add a database driver to `dependencies` (runtime bundle). Store only the environment variable **name** in the manifest — never the connection string or password. BUILD validates the name; RUN fails closed when the value is absent.
+
 BUILD imports the declared export and calls it after the testcase assertions but before generated cleanup with `{ page?, client?, testcaseId, contract }`. The helper must return `Promise<void>` and throw when persistence assertions fail
 
 The SQL file must stay below `test-data/sql/`, begin with `SELECT`, use a parameter placeholder, and contain no write/admin statement. Example for PostgreSQL

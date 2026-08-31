@@ -328,9 +328,16 @@ def _validate_atomic_instruction(step, index):
     action_text = instruction
     for value_token in _manual_strings(manual_value):
         action_text = action_text.replace(value_token, '')
+    # Strip target name so labels like "nút Xóa" or "cửa sổ mới" don't
+    # falsely match 'clear' or 'navigate' patterns.
+    _tgt = step.get('target')
+    if isinstance(_tgt, dict) and _tgt.get('name'):
+        action_text = action_text.replace(_tgt['name'], '')
     detected = _detected_manual_actions(action_text)
-    if action in {'download', 'dialog_accept', 'dialog_dismiss', 'popup'}:
+    if action in {'download', 'dialog_accept', 'dialog_dismiss'}:
         equivalent = {action, 'click', 'observe', 'assert'}
+    elif action == 'popup':
+        equivalent = {action, 'click', 'navigate', 'observe', 'assert'}
     else:
         equivalent = {'observe', 'assert'} if action in {'observe', 'assert'} else {action}
     if not detected.intersection(equivalent):

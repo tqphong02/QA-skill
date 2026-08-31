@@ -80,6 +80,52 @@ node scripts/verify-allure-contract.mjs \
 
 `PASS` means required parameters, URL shape, attachment names/types and secret checks passed. `BLOCKED` means the report cannot be used as evidence. The unified runner always clears stale raw results, writes this contract result, and applies the gate before projecting `PASS`, `FAILED`, `N/A` or `UNTEST`.
 
+### `allure-contract.json` examples
+
+**PASS** — all required parameters and evidence attachments are present:
+
+```json
+{
+  "status": "PASS",
+  "checked_at": "2026-08-31T05:00:00Z",
+  "results_dir": "reports/allure-results",
+  "mode": "mixed",
+  "summary": {
+    "total": 5,
+    "pass": 5,
+    "blocked": 0,
+    "violations": []
+  }
+}
+```
+
+**BLOCKED** — missing evidence attachment on a UI test result:
+
+```json
+{
+  "status": "BLOCKED",
+  "checked_at": "2026-08-31T05:00:00Z",
+  "results_dir": "reports/allure-results",
+  "mode": "mixed",
+  "summary": {
+    "total": 5,
+    "pass": 4,
+    "blocked": 1,
+    "violations": [
+      {
+        "result_file": "abc123-result.json",
+        "testcase_id": "ORDER-UI-001",
+        "violation": "missing_attachment",
+        "detail": "Required attachment 'evidence-video' not found; UI/functional result projected to UNTEST"
+      }
+    ]
+  }
+}
+```
+
+When `status` is `BLOCKED`, fix the underlying evidence problem before re-running — do not re-generate the HTML report and do not promote the run as `PASS`.
+
+
 ## Anti-patterns
 
 - `screenshot-on-failure`, `video`, `screen`, `url`, `link`, or `link_url` as alternate canonical names
