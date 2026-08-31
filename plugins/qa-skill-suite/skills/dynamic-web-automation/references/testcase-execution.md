@@ -26,6 +26,22 @@ Before planning, validate source coverage bidirectionally: every in-spec testcas
 
 For API/functional execution, the runner reads each `stability_gate`, passes the largest bounded `repeat_count` to Playwright as `--repeat-each`, and writes `reports/stability-gate.json`. A testcase is promoted only when it has enough attempts, the required clean-pass suffix, and a flaky rate at or below its threshold. Missing attempts produce `UNTEST`; a failed or retry-pass attempt remains `FAILED`
 
+## Manifest hash mismatch recovery
+
+When RUN rejects the `--plan-input` with a hash mismatch error, the manifest was modified after the immutable plan was created. Follow these steps in order:
+
+1. **Do not re-run RUN** — it will keep failing until the plan matches the manifest
+2. **Identify the change** — compare the current manifest with the committed version: `git diff testcases/<feature>.automation.json`
+3. **If the manifest change was intentional** — rebuild from scratch:
+   ```bash
+   npm run testcase-workflow -- --phase plan --manifest testcases/<feature>.automation.json --plan-output plans/<feature>.pom-plan.json
+   npm run testcase-workflow -- --phase build --manifest testcases/<feature>.automation.json --plan-input plans/<feature>.pom-plan.json
+   npm run testcase-workflow -- --phase execute --manifest testcases/<feature>.automation.json --plan-input plans/<feature>.pom-plan.json
+   ```
+4. **If the manifest change was accidental** — restore it: `git restore testcases/<feature>.automation.json`, then RUN with the original plan input
+
+Never patch the hash value manually. The hash is a cryptographic guard against manifest drift between BUILD and RUN; bypassing it invalidates the immutable plan contract.
+
 Before `execute`, the unified runner bootstraps the target project-local runtime through `scripts/bootstrap-playwright.mjs`. It adds missing Playwright/TypeScript development dependencies, installs all declared package dependencies when local modules are absent, invokes `npx --no-install playwright install chromium`, and runs `tsc --noEmit` when the project has a `tsconfig.json`. Generated targets also wire this bootstrap to direct typecheck, provisioning and test npm entrypoints so editor/test commands do not depend on a pre-existing global install. It then runs `scripts/verify-runtime-scaffold.mjs`; browser execution is blocked when generated specs bypass `fixtures/pom` or screenshot/video/trace output is not configured. Use `--skip-bootstrap` only after those checks have passed independently
 
 ## Commands

@@ -1,8 +1,63 @@
 # Network interception and HAR playback
 
-Read this reference when a UI testcase must observe a request, simulate a deterministic response, reproduce an error, or replay approved staging traffic
+Read this reference when a testcase needs to intercept, mock, stub or replay HTTP traffic inside a Playwright test.
 
 Mocking is not primary evidence for a critical business flow. Every `MOCK` or `HAR` testcase must name a different real-environment sibling testcase in `real_flow_testcase_id`
+
+## HAR recording workflow
+
+Record a HAR from the live application before creating a HAR playback testcase. Never commit a hand-written HAR or copy one from another environment.
+
+### Step 1 — Record
+
+```typescript
+// In a one-off helper script, not in the generated spec:
+import { chromium } from '@playwright/test';
+const browser = await chromium.launch();
+const context = await browser.newContext();
+await context.routeFromHAR('test-data/fixtures/upload.har', { update: true });
+const page = await context.newPage();
+await page.goto('https://your-staging-url/upload');
+// Perform the exact actions that the testcase will replay
+await browser.close();
+```
+
+Run with:
+
+```bash
+node scripts/record-har.mjs --url https://staging/upload --output test-data/fixtures/upload.har
+```
+
+### Step 2 — Commit
+
+- Place the recorded HAR under `test-data/fixtures/<feature>-<scenario>.har`
+- Commit alongside the manifest and spec; never store HAR in `reports/` or `evidence/`
+- Re-record when the API contract changes; a stale HAR is `UNTEST`
+- Redact credentials, tokens and PII before committing: replace real values with `<redacted>` in the HAR JSON
+
+### Step 3 — Playback in spec
+
+Declare in the manifest `network_interception` block, then BUILD injects the helper:
+
+```json
+{
+  "network_interception": {
+    "mode": "HAR",
+    "routes": [
+      {
+        "pattern": "**/api/upload",
+        "action": "HAR",
+        "har_file": "test-data/fixtures/upload.har"
+      }
+    ],
+    "real_flow_testcase_id": "TC_UPLOAD_REAL_001",
+    "implementation_file": "src/shared/helpers/upload-har.ts",
+    "implementation_export": "setupUploadHar"
+  }
+}
+```
+
+The implementation helper must call `page.routeFromHAR(harPath, { notFound: 'abort' })` and return `Promise<void>`.
 
 ## Manifest contract
 

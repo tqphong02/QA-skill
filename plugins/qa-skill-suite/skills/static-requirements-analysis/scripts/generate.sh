@@ -12,6 +12,11 @@ INPUT="$1"
 OUTPUT_DIR="$2"
 BASE_NAME="${3:-business}"
 
+if command -v cygpath >/dev/null 2>&1; then
+  [[ "$INPUT" =~ ^[A-Za-z]:[\\/] ]] && INPUT="$(cygpath -u "$INPUT")"
+  [[ "$OUTPUT_DIR" =~ ^[A-Za-z]:[\\/] ]] && OUTPUT_DIR="$(cygpath -u "$OUTPUT_DIR")"
+fi
+
 PYTHON_CMD=()
 if [[ -n "${QA_SKILL_PYTHON:-}" ]]; then
   PYTHON_CMD=("$QA_SKILL_PYTHON")
@@ -19,11 +24,21 @@ elif command -v python3 >/dev/null 2>&1 && python3 -c 'import openpyxl' >/dev/nu
   PYTHON_CMD=(python3)
 elif command -v python >/dev/null 2>&1 && python -c 'import openpyxl' >/dev/null 2>&1; then
   PYTHON_CMD=(python)
-elif command -v py >/dev/null 2>&1 && py -3.12 -c 'import openpyxl' >/dev/null 2>&1; then
-  PYTHON_CMD=(py -3.12)
 else
-  echo "Missing runnable Python runtime with openpyxl"
-  exit 1
+  if [[ -n "${LOCALAPPDATA:-}" ]]; then
+    for candidate in "$LOCALAPPDATA"/Programs/Python/Python*/python.exe; do
+      if [[ -x "$candidate" ]] && "$candidate" -c 'import openpyxl' >/dev/null 2>&1; then
+        PYTHON_CMD=("$candidate")
+      fi
+    done
+  fi
+  if [[ ${#PYTHON_CMD[@]} -eq 0 ]] && command -v py >/dev/null 2>&1 && py -3.12 -c 'import openpyxl' >/dev/null 2>&1; then
+    PYTHON_CMD=(py -3.12)
+  fi
+  if [[ ${#PYTHON_CMD[@]} -eq 0 ]]; then
+    echo "Missing runnable Python runtime with openpyxl"
+    exit 1
+  fi
 fi
 
 if [[ ! -f "$INPUT" ]]; then

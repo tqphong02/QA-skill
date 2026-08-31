@@ -15,15 +15,15 @@
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
       "file_count": 22,
-      "source_sha256": "babd03af1e4145d832cda707c551f324450f58e6e2edf8954b6efcbda2c0b8ab",
-      "bundled_sha256": "3b4bd691d631b8101e1f5f2931d5f3ef0fb4598fa5b14f3042433f5fd2140153"
+      "source_sha256": "df6cc2805dd51702dda5504c0ccc116c1c402edfd84f90c249e603f86a653c4b",
+      "bundled_sha256": "3b7602dfbede1f2f86fa114af569b78b1d0645a05ba88d3f4008251cd3dad7ed"
     },
     {
       "id": "dynamic-web-automation",
       "source_path": "dynamic-testing/web-automation",
-      "file_count": 74,
-      "source_sha256": "a14d6c7f6cdb7de47c4afc8ee099ae747df15973578809f1cb111d0e8fe09a32",
-      "bundled_sha256": "c37175e99e1a5e4f1626fb97faa18fa5218261f8a5778bd53340ef59e848c19e"
+      "file_count": 76,
+      "source_sha256": "d1bca580904a73e2cf0f15f993a07f01165699150ea746ced8a18e53aa611239",
+      "bundled_sha256": "4f68b40845270373278efe2aa87cb90faa22bec86fe7c5838dae0a30570b5afc"
     },
     {
       "id": "support-document-conversion",
@@ -36,8 +36,8 @@
       "id": "static-requirements-analysis",
       "source_path": "static-testing/requirements-analysis",
       "file_count": 16,
-      "source_sha256": "829b127ba662a97692c2307bfd81b58b957b73d9ba8b2a8d2202430429b847f7",
-      "bundled_sha256": "a6f93a7a11f04bdce74d67fe281ac43012f6496e4c24d6bcc90dbf6a3e8def2c"
+      "source_sha256": "2a9e96ecebc0c49a13a34c28c6318cf84f7dc502cf1946e2019ed6dd6b86ed03",
+      "bundled_sha256": "7b90de519429c9bfde970d7b848873ff874e782c85b89cc9afeb86eced486cc3"
     },
     {
       "id": "dynamic-security-pentest",
@@ -91,9 +91,9 @@
     {
       "id": "hybrid-api-contract",
       "source_path": "hybrid-testing/api-contract",
-      "file_count": 7,
-      "source_sha256": "85fb37843238edda1f5ee3501d6e6f9ad91b1b99ca8fb4969e6266fcdb429f79",
-      "bundled_sha256": "4a4be103274c541dd0fe5a21ff9dc19cf81e9b81d2d802c5291f091ff30d928f"
+      "file_count": 10,
+      "source_sha256": "5e458b683418cfa51e275e99532c5ac8e2926da98e23f7c49a35f7998709cb00",
+      "bundled_sha256": "e991a6349bf650cb03b1fc280e637c2b1a588072138d5eb45916235141e237dd"
     },
     {
       "id": "integration-postman",

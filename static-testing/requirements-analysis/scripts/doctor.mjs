@@ -49,6 +49,15 @@ checks.push({ name: 'bash', ok: Boolean(bashRuntime), detail: bashRuntime || 'no
 
 const pythonCandidates = []
 if (process.env.QA_SKILL_PYTHON) pythonCandidates.push([process.env.QA_SKILL_PYTHON, []])
+if (process.platform === 'win32') {
+  const pythonRoot = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python')
+  if (fs.existsSync(pythonRoot)) {
+    for (const entry of fs.readdirSync(pythonRoot).sort().reverse()) {
+      const executable = path.join(pythonRoot, entry, 'python.exe')
+      if (fs.existsSync(executable)) pythonCandidates.push([executable, []])
+    }
+  }
+}
 pythonCandidates.push(['python3', []], ['python', []], ['py', ['-3']], ['py', ['-3.12']])
 let python = null
 for (const [command, prefix] of pythonCandidates) {

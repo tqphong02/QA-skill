@@ -65,6 +65,39 @@ class ConvergenceTests(unittest.TestCase):
             current = CONVERGENCE.build_state(payload, analysis)
             self.assertEqual(CONVERGENCE.check_previous(current, state_path), "SOURCE_CHANGED")
 
+    def test_changed_snapshot_rejects_stable_id_change(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            analysis, payload = self.fixture(root)
+            previous = CONVERGENCE.build_state(payload, analysis)
+            state_path = root / "state.json"
+            state_path.write_text(json.dumps(previous), encoding="utf-8")
+            (root / "requirements.md").write_text(
+                "# Login\n\nRegistered users can log in with an active account\n",
+                encoding="utf-8",
+            )
+            payload["requirements"][0]["id"] = "REQ-999"
+            current = CONVERGENCE.build_state(payload, analysis)
+            with self.assertRaisesRegex(SystemExit, "stable IDs changed"):
+                CONVERGENCE.check_previous(current, state_path)
+
+    def test_same_basename_sources_are_distinguished_by_logical_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            analysis, payload = self.fixture(root)
+            (root / "v1").mkdir()
+            (root / "v2").mkdir()
+            (root / "v1" / "requirements.md").write_text("# V1\n\nFirst version\n", encoding="utf-8")
+            (root / "v2" / "requirements.md").write_text("# V2\n\nSecond version\n", encoding="utf-8")
+            payload["source_markdown"] = ["v1/requirements.md", "v2/requirements.md"]
+
+            state = CONVERGENCE.build_state(payload, analysis)
+
+            self.assertEqual(
+                [item["name"] for item in state["sources"]],
+                ["v1/requirements.md", "v2/requirements.md"],
+            )
+
     def test_unchanged_snapshot_rejects_new_requirement_key(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -2,6 +2,7 @@
 /** Repository test entrypoint for the complete local senior-readiness suite. */
 
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveInvocationRoot } from './invocation-paths.mjs';
@@ -11,9 +12,20 @@ const INVOCATION_ROOT = resolveInvocationRoot();
 const RUN_ENV = { ...process.env, QA_SKILL_PROJECT_ROOT: INVOCATION_ROOT };
 
 function resolvePython() {
+  const windowsInstalls = process.platform === 'win32'
+    ? (() => {
+        const root = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python');
+        if (!fs.existsSync(root)) return [];
+        return fs.readdirSync(root).sort().reverse()
+          .map(entry => path.join(root, entry, 'python.exe'))
+          .filter(executable => fs.existsSync(executable))
+          .map(command => ({ command, prefix: [] }));
+      })()
+    : [];
   const candidates = process.platform === 'win32'
     ? [
         { command: process.env.QA_SKILL_PYTHON, prefix: [] },
+        ...windowsInstalls,
         { command: 'python', prefix: [] },
         { command: 'py', prefix: ['-3'] },
       ]

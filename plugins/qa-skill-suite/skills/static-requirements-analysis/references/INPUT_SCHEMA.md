@@ -22,7 +22,7 @@ Do not use `inferred` to add generic best practices or checklist-driven controls
 
 ```json
 {
-  "schema_version": "3.0",
+  "schema_version": "4.0",
   "project": "Project name",
   "scope": "Scope reviewed",
   "analysis_date": "2026-08-30",
@@ -214,6 +214,8 @@ Flow list fields `requirement_ids`, `business_rule_ids`, `validation_rule_ids`, 
 ```
 
 Every step must contain `fact_status`, `source_ref` and `source_excerpt`
+
+Schema `4.0` also closes nested prose against the frozen source set. Every string in actor `responsibilities`/`permissions`, goal `success_metrics`, requirement `acceptance_criteria`, flow `preconditions`/`outcomes`/`alternate_flows`/`exceptions`/`sanity_checks`, sanity-journey conditions/checkpoints/results, API `roles`/`request_contract`/`response_contract`/`business_side_effects`, and cross-cutting `details` must be an exact normalized excerpt from one `source_markdown` document. Paraphrased or generic checklist-derived behavior is rejected; keep human-friendly summaries in the parent sourced entity instead
 
 ## Flow link and sanity journey
 

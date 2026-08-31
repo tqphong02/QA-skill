@@ -1,6 +1,7 @@
 import copy
 import importlib.util
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -18,7 +19,7 @@ class RenderContractTests(unittest.TestCase):
         path = ROOT / "examples" / "sample-analysis.json"
         return path, json.loads(path.read_text(encoding="utf-8"))
 
-    def test_sample_v3_contract_is_valid(self):
+    def test_sample_v4_contract_is_valid(self):
         path, data = self.fixture()
         questions, completion = RENDER.validate(data, path)
         self.assertEqual(completion, "DONE_WITH_OPEN_QA")
@@ -44,6 +45,12 @@ class RenderContractTests(unittest.TestCase):
         with self.assertRaisesRegex(SystemExit, "must be not_covered"):
             RENDER.validate(data, path)
 
+    def test_nested_acceptance_criterion_must_be_source_grounded(self):
+        path, data = self.fixture()
+        data["requirements"][0]["acceptance_criteria"] = ["Invented retry policy"]
+        with self.assertRaisesRegex(SystemExit, "is not grounded in source_markdown"):
+            RENDER.validate(data, path)
+
     def test_requirement_matrix_covers_requested_dimensions(self):
         path, data = self.fixture()
         questions, _ = RENDER.validate(copy.deepcopy(data), path)
@@ -54,6 +61,40 @@ class RenderContractTests(unittest.TestCase):
         self.assertIn("BR-AUTH-001", first[3])
         self.assertIn("VR-AUTH-001", first[4])
         self.assertIn("DEP-AUTH-001", first[5])
+
+    def test_same_basename_sources_require_an_exact_logical_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for version, statement in (("v1", "First rule"), ("v2", "Second rule")):
+                folder = root / version
+                folder.mkdir()
+                (folder / "requirements.md").write_text(
+                    f"# Rules\n\n{statement}\n",
+                    encoding="utf-8",
+                )
+            input_path = root / "analysis.json"
+            documents = RENDER.load_source_documents(
+                {"source_markdown": ["v1/requirements.md", "v2/requirements.md"]},
+                input_path,
+            )
+
+            RENDER.validate_evidence(
+                {
+                    "source_ref": "v2/requirements.md#rules",
+                    "source_excerpt": "Second rule",
+                },
+                "requirement",
+                documents,
+            )
+            with self.assertRaisesRegex(SystemExit, "ambiguous"):
+                RENDER.validate_evidence(
+                    {
+                        "source_ref": "requirements.md#rules",
+                        "source_excerpt": "Second rule",
+                    },
+                    "requirement",
+                    documents,
+                )
 
 
 if __name__ == "__main__":

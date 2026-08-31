@@ -6,13 +6,18 @@ import { fileURLToPath } from 'node:url';
 export const CI_SURFACES = Object.freeze(['ui', 'api', 'functional']);
 
 const SPEC_PATTERN = /\.spec\.(?:[cm]?[jt]sx?)$/i;
+const EXAMPLE_SPEC_PATTERN = /^example(?:[.-].*)?\.spec\.(?:[cm]?[jt]sx?)$/i;
+
+export function isExecutableSpec(fileName) {
+  return SPEC_PATTERN.test(fileName) && !EXAMPLE_SPEC_PATTERN.test(path.basename(fileName));
+}
 
 function walkSpecs(directory, output = []) {
   if (!fs.existsSync(directory)) return output;
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const target = path.join(directory, entry.name);
     if (entry.isDirectory()) walkSpecs(target, output);
-    else if (entry.isFile() && SPEC_PATTERN.test(entry.name)) output.push(target);
+    else if (entry.isFile() && isExecutableSpec(entry.name)) output.push(target);
   }
   return output;
 }

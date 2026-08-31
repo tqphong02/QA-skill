@@ -107,6 +107,17 @@
       "first_action": "Inspect the exact GitHub resource read-only"
     },
     {
+      "id": "automation-requirements-skill-hardening",
+      "priority": 56,
+      "match": {
+        "all": ["verify|check|review|audit|fix|update|improve|harden|enhance", "skill", "automation|playwright|page object model|\\bpom\\b", "static test(?:ing)?|static requirements?|requirements? analysis|business analysis"]
+      },
+      "route": ["dynamic-web-automation", "static-requirements-analysis"],
+      "mode": "DESIGN_HARDENING",
+      "requires_brief": false,
+      "first_action": "Audit executable automation contracts and source-grounded requirements contracts independently, then verify their routing and handoff boundary"
+    },
+    {
       "id": "requirements-skill-hardening",
       "priority": 57,
       "match": {
@@ -444,6 +455,7 @@
     }
   ],
   "golden_cases": [
+    {"id": "ROUTE-037", "input": "verify skill automation POM and static testing requirements for improvements", "expected_route": ["dynamic-web-automation", "static-requirements-analysis"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
     {"id": "ROUTE-001", "input": "https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane"], "expected_mode": "READ_ONLY", "requires_brief": false},
     {"id": "ROUTE-002", "input": "Retest https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"], "expected_mode": "RETEST_PLUS", "requires_brief": true},
     {"id": "ROUTE-003", "input": "Mở https://example.com và đọc tiêu đề", "expected_route": ["dynamic-web-exploratory"], "expected_mode": "FAST", "requires_brief": false},

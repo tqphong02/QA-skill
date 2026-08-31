@@ -45,9 +45,20 @@ function executableWorks(command, args = ['--version']) {
 }
 
 function resolvePythonRuntime() {
+  const windowsInstalls = process.platform === 'win32'
+    ? (() => {
+        const root = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python')
+        if (!fs.existsSync(root)) return []
+        return fs.readdirSync(root).sort().reverse()
+          .map(entry => path.join(root, entry, 'python.exe'))
+          .filter(executable => fs.existsSync(executable))
+          .map(command => ({ command, prefix: [] }))
+      })()
+    : []
   const candidates = process.platform === 'win32'
     ? [
         { command: process.env.QA_SKILL_PYTHON, prefix: [] },
+        ...windowsInstalls,
         { command: 'python', prefix: [] },
         { command: 'py', prefix: ['-3'] },
       ]
@@ -69,13 +80,15 @@ function resolveBashRuntime() {
 function resolveNodePackageRuntime(name) {
   if (process.platform !== 'win32') return { command: name, prefix: [] }
   const configured = process.env[`QA_SKILL_${name.toUpperCase()}_CLI`]
+  const systemNode = path.join('C:\\Program Files\\nodejs', 'node.exe')
+  const nodeExecutable = fs.existsSync(systemNode) ? systemNode : process.execPath
   const candidates = [
     configured,
     path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', `${name}-cli.js`),
     path.join('C:\\Program Files\\nodejs', 'node_modules', 'npm', 'bin', `${name}-cli.js`),
   ].filter(Boolean)
   const cli = candidates.find(candidate => fs.existsSync(candidate))
-  return cli ? { command: process.execPath, prefix: [cli] } : { command: name, prefix: [] }
+  return cli ? { command: nodeExecutable, prefix: [cli] } : { command: name, prefix: [] }
 }
 
 const PYTHON_RUNTIME = resolvePythonRuntime()
@@ -557,9 +570,12 @@ function pomChecks(skill) {
   const tags = specFiles.every(file => /@(ui|api|functional)/.test(fs.readFileSync(file, 'utf8')))
   const structureOk = missing.length === 0 && rawLocatorInSpecs.length === 0 && tags
   addCheck(skill, 'POM/selectors/tags template contract', structureOk ? 'PASS' : 'FAIL', structureOk ? 'selectors are outside specs, required Page Objects exist and specs carry execution tags' : `missing=${missing.join(',')}; raw locators in specs=${rawLocatorInSpecs.join(',')}; tags=${tags}`)
-  // Install template dev dependencies (typescript) before typecheck; --no-install tsc requires a local binary
-  runCommand('npm', ['install', '--ignore-scripts', '--prefer-offline', '--no-audit', '--no-fund'], { cwd: templateRoot, env: safeEnv(), timeout: 60000 })
-  const tsc = runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: templateRoot, env: safeEnv(), timeout: 90000 })
+  // CI uses the committed lockfile. Readiness must prove that exact install before typecheck.
+  const install = runCommand('npm', ['ci', '--ignore-scripts', '--prefer-offline', '--no-audit', '--no-fund'], { cwd: templateRoot, env: safeEnv(), timeout: 90000 })
+  commandPass(skill, 'POM template locked dependency install', install, 'npm ci from committed template lockfile')
+  const tsc = install.code === 0
+    ? runCommand('npx', ['--no-install', 'tsc', '--noEmit', '-p', path.join(templateRoot, 'tsconfig.json')], { cwd: templateRoot, env: safeEnv(), timeout: 90000 })
+    : { ...install, output: `dependency install failed before compile\n${install.output}` }
   commandPass(skill, 'POM template TypeScript compile', tsc, 'template-only compile')
   const qualityFixture = path.join(TMP_ROOT, 'playwright.quality-gate.json')
   const qualityTests = []

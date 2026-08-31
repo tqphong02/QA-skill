@@ -45,6 +45,9 @@ function resolveWorkers(): number {
  */
 export default defineConfig({
   testDir: './tests',
+  // Files prefixed with `example` document the template contract. They are not
+  // generated testcase implementations and must never execute in copied repos.
+  testIgnore: '**/example*.spec.{ts,tsx,js,jsx,mts,mjs,cts,cjs}',
   // Test files can run concurrently. Keep each generated business module in
   // declared order unless that module explicitly proves per-test isolation.
   fullyParallel: false,

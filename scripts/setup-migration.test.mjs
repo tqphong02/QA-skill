@@ -162,3 +162,33 @@ test('unchanged dependency manifests reuse node_modules across skill updates', (
     fs.rmSync(tempRoot, { recursive: true, force: true })
   }
 })
+
+test('fallback install preserves dotfiles and excludes nested template dependencies', () => {
+  const tempRoot = makeTempRoot('qa-skill-copy-contract-')
+  const skillsDir = path.join(tempRoot, 'skills')
+
+  try {
+    const result = spawnSync(BASH, [
+      toBashPath(SETUP),
+      '--agent=codex',
+      '--profile=full',
+      '--only=dynamic-web-automation',
+      `--skills-dir=${toBashPath(skillsDir)}`,
+      '--skip-deps',
+      '--skip-mcp-setup',
+      '--yes',
+    ], {
+      cwd: ROOT,
+      encoding: 'utf8',
+      env: { ...process.env, NO_COLOR: '1' },
+    })
+
+    const installed = path.join(skillsDir, 'dynamic-web-automation')
+    assert.equal(result.status, 0, result.stderr || result.stdout)
+    assert.equal(fs.existsSync(path.join(installed, 'assets', 'templates', '.gitlab-ci.yml')), true)
+    assert.equal(fs.existsSync(path.join(installed, 'assets', 'templates', 'package-lock.json')), true)
+    assert.equal(fs.existsSync(path.join(installed, 'assets', 'templates', 'node_modules')), false)
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true })
+  }
+})

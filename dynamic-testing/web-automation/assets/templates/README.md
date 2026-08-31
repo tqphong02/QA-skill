@@ -11,7 +11,7 @@ interface around the project-local Playwright, TypeScript, Allure and quality
 gate tools.
 
 ```bash
-npm install
+npm ci
 npm run qa:install:browsers -- --browser chromium
 npm run qa:lint
 npm run qa:test:ui
@@ -27,9 +27,10 @@ qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
 npm run qa:preflight -- --surface "$qa_surface" --require-auth
 ```
 
-Commit the generated `package-lock.json` after the first install. The GitHub,
-GitLab and Jenkins templates intentionally use `npm ci` for reproducible builds and
-fail early when the lockfile is missing or invalid. `qa:preflight` checks the
+The template ships its matching `package-lock.json`. Keep it committed and use
+`npm ci`; regenerate it only when `package.json` dependencies intentionally change.
+The GitHub, GitLab and Jenkins templates fail early when the lockfile is missing
+or invalid. `qa:preflight` checks the
 project layout, npm scripts, URLs and (when requested) CI authentication
 inputs without printing secret values.
 

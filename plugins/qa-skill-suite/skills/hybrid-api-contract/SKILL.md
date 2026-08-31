@@ -29,6 +29,8 @@ An exact user path, a source-code deliverable that belongs in the target reposit
 
 Verify both the specification and the observable implementation. A valid OpenAPI document does not prove the API follows it.
 
+When only a spec file is supplied (no live target URL), run **Static Analysis Mode** only: analyse gaps, produce Q&A, and stop at `DONE` or `DONE_WITH_OPEN_QA`. Live validation (Steps 3-6) runs only when a target base URL and credentials are confirmed.
+
 ## Hard gates
 
 1. Resolve specification version, target environment, base URL, authentication, roles, allowed mutations, rate limit, test data, and cleanup
@@ -40,12 +42,15 @@ Verify both the specification and the observable implementation. A valid OpenAPI
 7. Clean up every created resource and verify deletion or rollback
 
 Read [references/CONTRACT_MATRIX.md](references/CONTRACT_MATRIX.md) when designing endpoint coverage.
+Read [references/API_STATIC_ANALYSIS.md](references/API_STATIC_ANALYSIS.md) for gap categories, Q&A quality gate, and terminal result definitions.
 
 Route Postman MCP installation, authentication, diagnosis, and workspace operations to `integration-postman`. Read [references/POSTMAN_MCP.md](references/POSTMAN_MCP.md) when the Postman connection affects contract execution. Run `../integration-github/scripts/doctor-stack.sh postman` after configuration.
 
 ## Tool routing
 
 - Run `scripts/check_openapi.py` for a deterministic OpenAPI 3 structural preflight
+- Run `scripts/analyze_openapi.py` for static semantic gap analysis and Q&A generation
+- Run `scripts/render_api_qa.py` to produce `_API_Q&A.md` and `_API_Q&A.xlsx`
 - Use project-native Playwright API tests or start from [assets/api-contract.spec.ts](assets/api-contract.spec.ts) for stable regression
 - Use Postman MCP for workspace, collection, specification, mock, and monitor management; execute collections through `../integration-postman/scripts/runner.py`
 - Use Schemathesis or another schema-driven runner only when installed and approved by the project
@@ -62,6 +67,38 @@ Record the source file and checksum. Validate syntax, OpenAPI version, paths, me
 ```bash
 python3 scripts/check_openapi.py openapi.json --output evidence/openapi-preflight.json
 ```
+
+### 1.5. Static semantic analysis (always run)
+
+Run gap analysis over every operation. Inspect auth, request contract, response contract, lifecycle, collection, reliability, and observability gaps per [references/API_STATIC_ANALYSIS.md](references/API_STATIC_ANALYSIS.md).
+
+```bash
+python3 scripts/analyze_openapi.py openapi.json \
+  --project <ProjectName> \
+  --output <run-dir>/
+
+python3 scripts/render_api_qa.py \
+  <run-dir>/<ProjectName>_API_Analysis_Source.json \
+  <run-dir>/ <ProjectName>
+```
+
+Required outputs:
+
+```text
+<ProjectName>_API_Analysis_Source.json   ← canonical (internal)
+<ProjectName>_API_Q&A.md                 ← Q&A for BA/Dev
+<ProjectName>_API_Q&A.xlsx               ← 4-sheet workbook
+```
+
+Every static-only run ends with exactly one terminal result:
+
+- `DONE` — spec complete, no open Q&A
+- `DONE_WITH_OPEN_QA` — analysis complete, open Q&A items exist; stop and share with BA/Dev
+- `BLOCKED` — spec unreadable or preflight errors prevent analysis
+
+`DONE_WITH_OPEN_QA` is terminal for the current spec snapshot. Do not start another analysis pass unless the spec changes or authority answers are incorporated.
+
+If no live target URL is confirmed, stop here and deliver the Q&A outputs. Live validation (Steps 3-6 below) is optional and requires a target URL, credentials, and test data.
 
 ### 2. Build the operation ledger
 
@@ -83,6 +120,8 @@ Compare the candidate specification with the released baseline. Flag removed pat
 
 Each mismatch includes operation ID, method and path, role, request case, specification expectation, actual status or schema, business impact, redacted request and response evidence, cleanup status, and classification.
 
+For static-only runs the primary deliverable is `_API_Q&A.md` / `_API_Q&A.xlsx` and the terminal result. A mismatch report is produced only after live validation (Steps 3-5).
+
 ## Completion checks
 
 - Specification source and version are identified
@@ -93,3 +132,5 @@ Each mismatch includes operation ID, method and path, role, request case, specif
 - Pagination, idempotency, and lifecycle rules have verdicts when applicable
 - Backward-compatibility risks are separate from runtime defects
 - Mutated data is cleaned up
+- Static analysis: `_API_Analysis_Source.json`, `_API_Q&A.md`, `_API_Q&A.xlsx` are present and readable
+- Terminal result is explicitly stated (`DONE`, `DONE_WITH_OPEN_QA`, or `BLOCKED`)

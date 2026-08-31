@@ -10,6 +10,7 @@ const TEMPLATE_ROOT = path.resolve(HERE, '../assets/templates');
 test('GitHub Actions template covers UI, API and functional surfaces on maintained tooling', () => {
   const workflow = fs.readFileSync(path.join(TEMPLATE_ROOT, 'github-actions-ci.yml'), 'utf8');
   const packageJson = JSON.parse(fs.readFileSync(path.join(TEMPLATE_ROOT, 'package.json'), 'utf8'));
+  const packageLock = JSON.parse(fs.readFileSync(path.join(TEMPLATE_ROOT, 'package-lock.json'), 'utf8'));
 
   assert.match(workflow, /NODE_VERSION:\s*'24'/);
   assert.match(workflow, /PW_RETRIES:\s*'1'/);
@@ -54,12 +55,20 @@ test('GitHub Actions template covers UI, API and functional surfaces on maintain
   assert.match(packageJson.engines.node, /\^24\.0\.0/);
   assert.match(packageJson.devDependencies['@types/node'], /\^24\./);
   assert.equal(packageJson.devDependencies['@axe-core/playwright'], undefined);
+  assert.equal(packageLock.lockfileVersion, 3);
+  assert.deepEqual(packageLock.packages[''].dependencies, packageJson.dependencies);
+  assert.deepEqual(packageLock.packages[''].devDependencies, packageJson.devDependencies);
   assert.equal(packageJson.scripts['test:perf'], undefined);
   assert.equal(packageJson.scripts['pretest:perf'], undefined);
   assert.doesNotMatch(workflow, /\bk6\b|grafana\/k6-action/);
   const performanceDir = path.join(TEMPLATE_ROOT, 'tests', 'performance');
   assert.equal(fs.existsSync(performanceDir) ? fs.readdirSync(performanceDir).length : 0, 0);
   assert.equal(fs.existsSync(path.resolve(HERE, '../references/performance-testing.md')), false);
+});
+
+test('Playwright runtime ignores copyable example specs', () => {
+  const config = fs.readFileSync(path.join(TEMPLATE_ROOT, 'playwright.config.ts'), 'utf8');
+  assert.match(config, /testIgnore:\s*['"]\*\*\/example\*\.spec\.\{ts,tsx,js,jsx,mts,mjs,cts,cjs\}['"]/);
 });
 
 test('Jenkins template avoids concurrent reporters and runs only detected surfaces', () => {

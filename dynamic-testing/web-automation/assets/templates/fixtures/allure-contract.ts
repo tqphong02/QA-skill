@@ -145,9 +145,9 @@ export async function captureCanonicalUiEvidence({
     url,
     evidenceImage,
     evidenceVideo,
-    testcaseId: runtime.testcaseId,
+    ...(runtime.testcaseId ? { testcaseId: runtime.testcaseId } : {}),
     runId: process.env.QA_RUN_ID ?? process.env.RUN_ID ?? 'N/A',
-    role: runtime.role,
+    ...(runtime.role ? { role: runtime.role } : {}),
     browser: testInfo.project.name,
     appBuild: process.env.QA_APP_BUILD ?? process.env.APP_BUILD ?? 'N/A',
   });

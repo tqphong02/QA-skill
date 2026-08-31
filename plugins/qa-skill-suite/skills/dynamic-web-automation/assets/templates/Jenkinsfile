@@ -49,10 +49,12 @@ pipeline {
           test -f "$QA_PROJECT_DIR/.eslintrc.cjs" || { echo "ESLint config missing: $QA_PROJECT_DIR/.eslintrc.cjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/qa.mjs" || { echo "QA runner missing: $QA_PROJECT_DIR/scripts/qa.mjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/ci-preflight.mjs" || { echo "CI preflight missing: $QA_PROJECT_DIR/scripts/ci-preflight.mjs"; exit 1; }
+          test -f "$QA_PROJECT_DIR/scripts/ci-surfaces.mjs" || { echo "CI surface detector missing: $QA_PROJECT_DIR/scripts/ci-surfaces.mjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/scripts/execution-lock.mjs" || { echo "Execution lock missing: $QA_PROJECT_DIR/scripts/execution-lock.mjs"; exit 1; }
           test -f "$QA_PROJECT_DIR/fixtures/parallel-pool.js" || { echo "Parallel pool contract missing: $QA_PROJECT_DIR/fixtures/parallel-pool.js"; exit 1; }
           cd "$QA_PROJECT_DIR"
           node scripts/check-placeholders.mjs
+          node scripts/ci-surfaces.mjs --require
         '''
       }
     }
@@ -88,17 +90,25 @@ pipeline {
     stage('CI input preflight') {
       steps {
         dir("${env.QA_PROJECT_DIR}") {
-          sh 'npm run qa:preflight -- --surface all --require-auth'
+          sh '''
+            set -eu
+            qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+            npm run qa:preflight -- --surface "$qa_surface" --require-auth
+          '''
         }
       }
     }
 
     // Một Playwright invocation tránh UI/API ghi đè reports trong cùng workspace.
     // Playwright workers vẫn chạy file song song theo account/data capacity an toàn.
-    stage('Test (UI + API + functional)') {
+    stage('Test enabled surfaces') {
       steps {
         dir("${env.QA_PROJECT_DIR}") {
-          sh 'npm run qa:test -- --surface all --project=chromium'
+          sh '''
+            set -eu
+            qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+            npm run qa:test -- --surface "$qa_surface" --project=chromium
+          '''
         }
       }
     }
@@ -111,8 +121,25 @@ pipeline {
         def reportStatus
         def artifactStatus
         dir("${env.QA_PROJECT_DIR}") {
-          qualityStatus = sh(script: 'npm run qa:quality -- --surface all --project=chromium', returnStatus: true)
-          reportStatus = sh(script: 'npm run qa:report', returnStatus: true)
+          qualityStatus = sh(
+            script: '''
+              set -eu
+              qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+              qa_surfaces="$(node scripts/ci-surfaces.mjs --require --format csv)"
+              test -f reports/playwright.json
+              npm run qa:quality -- --surface "$qa_surface" --required-surfaces "$qa_surfaces" --project=chromium
+            ''',
+            returnStatus: true
+          )
+          reportStatus = sh(
+            script: '''
+              set -eu
+              allure_mode="$(node scripts/ci-surfaces.mjs --require --format allure-mode)"
+              find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .
+              npm run qa:report -- --mode "$allure_mode"
+            ''',
+            returnStatus: true
+          )
           artifactStatus = sh(
             script: '''
               set -eu

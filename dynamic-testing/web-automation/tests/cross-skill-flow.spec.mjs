@@ -93,10 +93,21 @@ function writeUiInventory(root) {
 
 function resolvePythonCommand() {
   const configured = process.env.PYTHON || process.env.PYTHON3;
+  const windowsInstalls = process.platform === 'win32'
+    ? (() => {
+      const pythonRoot = path.join(process.env.LOCALAPPDATA || '', 'Programs', 'Python');
+      if (!fs.existsSync(pythonRoot)) return [];
+      return fs.readdirSync(pythonRoot).sort().reverse()
+        .map(entry => path.join(pythonRoot, entry, 'python.exe'))
+        .filter(executable => fs.existsSync(executable))
+        .map(command => ({ command, prefix: [] }));
+    })()
+    : [];
   const candidates = configured
     ? [{ command: configured, prefix: [] }]
     : process.platform === 'win32'
       ? [
+        ...windowsInstalls,
         { command: 'py', prefix: ['-3'] },
         { command: 'python', prefix: [] },
         { command: 'python3', prefix: [] },

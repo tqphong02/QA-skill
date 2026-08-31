@@ -37,6 +37,13 @@ test('negated secondary intents do not override the requested route', () => {
   assert.equal(result.mode, 'FAST')
 })
 
+test('combined automation and static-requirements skill review keeps both owners', () => {
+  const result = routeRequest('verify skill automation POM and static testing requirements for improvements')
+  assert.deepEqual(result.route, ['dynamic-web-automation', 'static-requirements-analysis'])
+  assert.equal(result.mode, 'DESIGN_HARDENING')
+  assert.equal(result.requires_brief, false)
+})
+
 test('English and Vietnamese negation clauses are removed before matching', () => {
   const normalized = normalizeRoutingIntent('Review Figma spacing; exclude WCAG testing. Chỉ convert file.pptx, chưa phân tích requirement')
   assert.equal(normalized, 'Review Figma spacing; . Chỉ convert file.pptx,')

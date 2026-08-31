@@ -140,16 +140,37 @@ detect_os() {
 
 # ==== Python check (no abort — print version + warn) ====
 # Returns: python_version string ("3.11.9" / "9.9" / "")
-check_python() {
-  local candidates=("python3.12" "python3.11" "python3.10" "python3" "python" "/usr/bin/python3" "/usr/local/bin/python3")
-  for py in "${candidates[@]}"; do
-    if command -v "$py" >/dev/null 2>&1; then
-      local v
-      v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")' 2>/dev/null || echo "")
-      if [[ -n "$v" ]]; then echo "$v"; return 0; fi
+python_candidates() {
+  printf '%s\n' python3.12 python3.11 python3.10 python3 python /usr/bin/python3 /usr/local/bin/python3
+  if [[ "$(detect_os)" == "windows-gitbash" ]] && [[ -n "${LOCALAPPDATA:-}" ]]; then
+    local candidate
+    for candidate in "$LOCALAPPDATA"/Programs/Python/Python*/python.exe; do
+      [[ -f "$candidate" ]] && printf '%s\n' "$candidate"
+    done
+  fi
+}
+
+find_python_bin() {
+  local py v maj min
+  while IFS= read -r py; do
+    if [[ -x "$py" ]] || command -v "$py" >/dev/null 2>&1; then
+      v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "")
+      [[ -n "$v" ]] || continue
+      maj=$(echo "$v" | cut -d. -f1)
+      min=$(echo "$v" | cut -d. -f2)
+      if [[ "$maj" -ge 3 ]] && [[ "$min" -ge 10 ]]; then
+        echo "$py"
+        return 0
+      fi
     fi
-  done
-  echo ""
+  done < <(python_candidates)
+  return 1
+}
+
+check_python() {
+  local py
+  py=$(find_python_bin || true)
+  [[ -n "$py" ]] && "$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")' 2>/dev/null || echo ""
 }
 
 warn_if_python_too_old() {
@@ -516,13 +537,25 @@ copy_skill() {
       --exclude='*.bak' --exclude='*.tmp' \
       "$src/" "$dst/"
   else
-    # Fallback: copy then cleanup (works on Git Bash MINGW/MSYS too,
-    # since 'cp -R src/.' is non-POSIX; we use 'cp -R src dst').
-    cp -R "$src"/* "$dst"/ 2>/dev/null || cp -R "$src" "$dst"
-    # Cleanup excludes (best-effort)
-    for exclude in node_modules evidence qa-knowledge vendor tests '.env' auth.json '.DS_Store' __pycache__; do
-      rm -rf "$dst/$exclude" 2>/dev/null || true
-    done
+    # Preserve dotfiles and skip excluded directories at every depth. Git Bash
+    # ships tar even when rsync is unavailable, avoiding a costly copy/delete of
+    # template-local node_modules.
+    if command -v tar >/dev/null 2>&1; then
+      tar -C "$src" --exclude='node_modules' --exclude='*/node_modules' \
+        --exclude='evidence' --exclude='*/evidence' \
+        --exclude='qa-knowledge' --exclude='*/qa-knowledge' \
+        --exclude='vendor' --exclude='*/vendor' \
+        --exclude='tests' --exclude='*/tests' \
+        --exclude='.env' --exclude='auth.json' --exclude='.DS_Store' \
+        --exclude='__pycache__' --exclude='*/__pycache__' \
+        --exclude='*.pyc' --exclude='dist' --exclude='*/dist' \
+        --exclude='build' --exclude='*/build' \
+        --exclude='*.bak' --exclude='*.tmp' -cf - . | tar -C "$dst" -xf -
+    else
+      cp -R "$src"/. "$dst"/
+    fi
+    find "$dst" -type d \( -name node_modules -o -name evidence -o -name qa-knowledge -o -name vendor -o -name tests -o -name __pycache__ \) -prune -exec rm -rf {} + 2>/dev/null || true
+    find "$dst" -type f \( -name .env -o -name auth.json -o -name .DS_Store \) -delete 2>/dev/null || true
     find "$dst" -name '*.pyc' -delete 2>/dev/null || true
   fi
 
@@ -658,15 +691,7 @@ requires_python_packages() {
 
 install_python_deps() {
   local py_bin=""
-  for py in python3.11 python3.12 python3.10 python3 python "/usr/bin/python3"; do
-    if command -v "$py" >/dev/null 2>&1; then
-      local v
-      v=$("$py" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "0.0")
-      local maj min
-      maj=$(echo "$v" | cut -d. -f1); min=$(echo "$v" | cut -d. -f2)
-      if [[ "$maj" -ge 3 ]] && [[ "$min" -ge 10 ]]; then py_bin="$py"; break; fi
-    fi
-  done
+  py_bin=$(find_python_bin || true)
 
   if [[ -z "$py_bin" ]]; then
     log_warn "Skipping Python deps (không có Python 3.10+)"
@@ -915,9 +940,7 @@ verify_installation() {
 
   # 1. AI provider status (works as long as python3 anywhere)
   local py_bin=""
-  for py in python3.11 python3.12 python3.10 python3 python; do
-    command -v "$py" >/dev/null 2>&1 && { py_bin="$py"; break; }
-  done
+  py_bin=$(find_python_bin || true)
   if [[ -n "$py_bin" ]] && [[ -f "$REPO_DIR/scripts/ai_provider.py" ]] && [[ -z "${TARGET_AGENT:-}" || "$TARGET_AGENT" == "auto" ]]; then
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
       log_dry "$py_bin $REPO_DIR/scripts/ai_provider.py"

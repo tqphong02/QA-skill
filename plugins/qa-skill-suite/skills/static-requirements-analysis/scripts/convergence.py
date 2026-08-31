@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import posixpath
 import re
 import sys
 from pathlib import Path
@@ -42,12 +43,14 @@ def source_snapshot(data: dict, analysis_path: Path) -> tuple[list[dict], str]:
     seen_names = set()
     for raw in raw_sources:
         source = resolve_source(raw, analysis_path)
-        logical_name = source.name.casefold()
-        if logical_name in seen_names:
-            fail(f"duplicate source Markdown basename: {source.name}")
-        seen_names.add(logical_name)
+        raw_value = str(raw).strip().replace("\\", "/")
+        logical_name = source.name if Path(raw_value).is_absolute() else posixpath.normpath(raw_value)
+        logical_key = logical_name.casefold()
+        if logical_key in seen_names:
+            fail(f"duplicate logical source Markdown path: {logical_name}")
+        seen_names.add(logical_key)
         digest = hashlib.sha256(source.read_bytes()).hexdigest()
-        sources.append({"name": source.name, "sha256": digest})
+        sources.append({"name": logical_name, "sha256": digest})
     sources.sort(key=lambda item: item["name"].casefold())
     canonical = json.dumps(sources, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return sources, hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -111,7 +114,7 @@ def build_state(data: dict, analysis_path: Path) -> dict:
     sources, source_set_sha256 = source_snapshot(data, analysis_path)
     maps = semantic_maps(data)
     return {
-        "schema_version": "2.0",
+        "schema_version": "3.0",
         "source_set_sha256": source_set_sha256,
         "sources": sources,
         "semantic_maps": maps,
@@ -127,9 +130,6 @@ def check_previous(current: dict, state_path: Path) -> str:
     except (OSError, json.JSONDecodeError) as exc:
         fail(f"cannot read prior convergence state: {exc}")
 
-    if previous.get("source_set_sha256") != current["source_set_sha256"]:
-        return "SOURCE_CHANGED"
-
     old_maps = previous.get("semantic_maps")
     if old_maps is None:
         old_maps = {
@@ -137,16 +137,17 @@ def check_previous(current: dict, state_path: Path) -> str:
             "question": previous.get("question_keys") or {},
         }
     new_maps = current.get("semantic_maps") or {}
+    source_changed = previous.get("source_set_sha256") != current["source_set_sha256"]
     for label in sorted(set(old_maps) | set(new_maps)):
         old = old_maps.get(label) or {}
         new = new_maps.get(label) or {}
         added = sorted(set(new) - set(old))
-        if added:
+        if added and not source_changed:
             fail(f"UNCHANGED_SOURCE_GROWTH: new {label} semantic keys {added}")
         changed_ids = sorted(key for key in set(new) & set(old) if new[key] != old[key])
         if changed_ids:
             fail(f"stable IDs changed for {label} keys {changed_ids}")
-    return "UNCHANGED_RECONCILED"
+    return "SOURCE_CHANGED" if source_changed else "UNCHANGED_RECONCILED"
 
 
 def main() -> None:

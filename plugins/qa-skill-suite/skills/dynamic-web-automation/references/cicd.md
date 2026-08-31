@@ -13,11 +13,12 @@ duplicate Playwright arguments or depend on a globally installed CLI.
 | Command | Contract |
 |---|---|
 | `npm run qa:lint` | TypeScript `--noEmit` followed by ESLint |
-| `npm run qa:test:ui` | UI tests with the `@ui` tag |
-| `npm run qa:test:api` | API tests with the `@api` tag |
-| `npm run qa:test:functional` | Functional tests with the `@functional` tag |
+| `npm run qa:test:ui` | Tests under `tests/ui`; `@ui` remains required quality metadata |
+| `npm run qa:test:api` | Tests under `tests/api`; `@api` remains required quality metadata |
+| `npm run qa:test:functional` | Tests under `tests/functional`; `@functional` remains required quality metadata |
 | `npm run qa:test -- --surface all` | Full deterministic suite |
-| `npm run qa:quality -- --surface <surface> --project <browser>` | Enforce minimum executed tests, required surface tags and expected browser projects |
+| `npm run qa:ci-surfaces -- --format <json|csv|test-surface|allure-mode>` | Detect executable surfaces from canonical spec directories; fail when none exist |
+| `npm run qa:quality -- --surface <surface> --project <browser>` | Enforce minimum executed tests, required surface tags and expected browser projects; combined partial suites also pass `--required-surfaces <csv>` |
 | `npm run qa:contract -- --mode <mode>` | Validate the canonical Allure result shape |
 | `npm run qa:report -- --mode mixed --contract-output <file> --report-output <dir>` | Validate then generate the canonical Allure HTML report; ambiguous `--output`/`--no-media` are blocked |
 | `npm run qa:merge-allure -- --expect-artifact <name>` | Merge every expected downloaded job result without overwriting collisions; missing jobs/results are blocked |
@@ -30,6 +31,11 @@ Additional Playwright options are forwarded after `--`, for example:
 ```bash
 npm run qa:test:ui -- --project=firefox --grep @smoke
 ```
+
+Surface selection is path-based before the optional grep is applied. A custom
+grep can narrow the selected surface but cannot make a UI job execute an API or
+functional spec. Functional specs carry `@functional`, `@uses-ui` and
+`@uses-api`; capability tags never double as CI routing tags.
 
 Direct `npx playwright test` is reserved for local debugging. CI uses the
 stable `qa:*` commands; `qa:install:browsers` is the single browser-provisioning
@@ -79,8 +85,14 @@ functional results require `account`, `url`, `evidence_image`,
 ```text
 preflight ── lint ── test-ui [chromium/firefox, max 1]
                      ── test-functional [chromium/firefox, max 1]
-                     ── test-api ── report (always; consumes every artifact)
+                     ── test-api ── report (always; consumes enabled artifacts)
 ```
+
+Preflight runs `scripts/ci-surfaces.mjs` and publishes `ui`, `api` and
+`functional` outputs. A test job runs only when its canonical directory
+contains at least one executable `*.spec.*` file. Zero detected surfaces fails
+preflight. This makes UI-only, API-only, functional-only and mixed generated
+projects use the same workflow without producing `No tests found` jobs.
 
 The browser and surface jobs are deliberately sequential because they receive
 the same finite account/data secrets. This prevents five independent jobs from
@@ -106,19 +118,17 @@ Each test job:
 7. uploads `reports/` and `evidence/`, including failed-run diagnostics;
 8. fails explicitly after artifact upload when a test or gate failed.
 
-The final `report` job also runs with `if: always()`. It downloads all `qa-*`
-artifacts into `ci-artifacts/`, runs:
+The final `report` job also runs with `if: always()` when at least one detected
+surface job ran. It downloads all `qa-*` artifacts into `ci-artifacts/`, asks
+`ci-surfaces.mjs --format artifacts` for the exact expected artifact names, and
+runs the equivalent of:
 
 ```bash
 npm run qa:merge-allure -- \
   --input ci-artifacts \
   --output reports/allure-results \
   --summary reports/allure-merge.json \
-  --expect-artifact qa-ui-chromium-<run-id> \
-  --expect-artifact qa-ui-firefox-<run-id> \
-  --expect-artifact qa-functional-chromium-<run-id> \
-  --expect-artifact qa-functional-firefox-<run-id> \
-  --expect-artifact qa-api-<run-id>
+  "${detected_artifact_arguments[@]}"
 npm run qa:report -- --mode mixed
 ```
 
@@ -204,8 +214,8 @@ violated product expectation as `FAILED`, and a retry-pass as `FAILED` with
 ## Jenkins
 
 `assets/templates/Jenkinsfile` uses the same `qa:*` commands and output paths:
-layout/lockfile preflight, one tagged all-surface Playwright invocation,
-`qa:quality`, `qa:report`, JUnit publication and archived
+layout/lockfile preflight, one detected-surface Playwright invocation,
+surface-aware `qa:quality`, `qa:report`, JUnit publication and archived
 `reports/**, evidence/**` under `QA_PROJECT_DIR`. Playwright owns safe file-level
 parallelism inside that invocation. This avoids concurrent UI/API reporters
 overwriting the same workspace paths. `disableConcurrentBuilds()` prevents two
@@ -218,8 +228,9 @@ platform.
 
 `assets/templates/.gitlab-ci.yml` provides the same stable project interface for
 merge requests, pushes, schedules and manual pipelines. It uses a pinned
-Playwright image, `npm ci`, static preflight, lint, one all-surface Chromium run,
-the quality gate, the Allure contract/report and `artifacts: when: always`
+Playwright image, `npm ci`, static preflight, lint, one detected-surface Chromium
+run, the surface-aware quality gate, the Allure contract/report and
+`artifacts: when: always`
 
 `resource_group: qa-static-test-pool` serializes jobs that share the same finite
 account/data pool. Remove or partition that resource group only when each
@@ -242,7 +253,7 @@ YAML or Jenkinsfile logic.
 
 - Do not launch independent Playwright reporters concurrently in one workspace.
   The `qa:*` runner owns an execution lock for the fixed report paths. Use
-  isolated workspaces/artifacts, or one canonical tagged all-surface invocation.
+  isolated workspaces/artifacts, or one canonical detected-surface invocation.
 - Do not run matrix/surface jobs concurrently against the same finite account or
   dataset pool. Serialize them or lease dedicated pools per job.
 - Do not generate Allure only on success; upload evidence with `always()`.

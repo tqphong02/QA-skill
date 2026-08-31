@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import json
+import posixpath
 import re
 import sys
 from collections import Counter
@@ -161,11 +162,14 @@ def load_source_documents(data, input_path):
             fail(f"Source Markdown not found: {value}")
         if source_path.suffix.lower() not in {".md", ".markdown"}:
             fail(f"Source must be Markdown after conversion: {value}")
-        key = source_path.name.casefold()
+        raw_value = value.replace("\\", "/")
+        logical_name = source_path.name if Path(raw_value).is_absolute() else posixpath.normpath(raw_value)
+        key = logical_name.casefold()
         if key in documents:
-            fail(f"Duplicate source Markdown basename: {source_path.name}")
+            fail(f"Duplicate logical source Markdown path: {logical_name}")
         raw_content = source_path.read_text(encoding="utf-8")
         documents[key] = {
+            "logical_name": logical_name,
             "path": source_path,
             "content": normalize_evidence_text(raw_content),
             "sections": markdown_sections(raw_content),
@@ -173,16 +177,26 @@ def load_source_documents(data, input_path):
     return documents
 
 
-def validate_evidence(item, label, documents):
-    source_ref = str(item.get("source_ref") or "").strip()
-    excerpt = str(item.get("source_excerpt") or "").strip()
+def resolve_source_section(source_ref, label, documents):
+    source_ref = str(source_ref or "").strip()
     if not source_ref:
         fail(f"{label}.source_ref is required")
     ref_parts = source_ref.split("#", 1)
     ref_file = ref_parts[0].replace("\\", "/")
     if Path(ref_file).is_absolute():
         fail(f"{label}.source_ref must be logical, not an absolute path")
-    source = documents.get(Path(ref_file).name.casefold())
+    logical_ref = posixpath.normpath(ref_file).casefold()
+    source = documents.get(logical_ref)
+    if source is None:
+        basename = posixpath.basename(logical_ref)
+        basename_matches = [
+            document for key, document in documents.items()
+            if posixpath.basename(key) == basename
+        ]
+        if len(basename_matches) == 1:
+            source = basename_matches[0]
+        elif len(basename_matches) > 1:
+            fail(f"{label}.source_ref is ambiguous; use the logical source path: {source_ref}")
     if source is None:
         fail(f"{label}.source_ref does not match source_markdown: {source_ref}")
     if len(ref_parts) != 2 or not ref_parts[1].strip():
@@ -190,11 +204,31 @@ def validate_evidence(item, label, documents):
     anchor = markdown_anchor(ref_parts[1])
     if anchor not in source["sections"]:
         fail(f"{label}.source_ref heading was not found: {source_ref}")
+    return source, anchor
+
+
+def validate_evidence(item, label, documents):
+    source_ref = str(item.get("source_ref") or "").strip()
+    excerpt = str(item.get("source_excerpt") or "").strip()
+    source, anchor = resolve_source_section(source_ref, label, documents)
     if not excerpt:
         fail(f"{label}.source_excerpt is required")
     normalized_excerpt = normalize_evidence_text(excerpt)
     if normalized_excerpt not in source["sections"][anchor]:
         fail(f"{label}.source_excerpt was not found under {source_ref}")
+
+
+def validate_grounded_strings(values, label, documents):
+    if not isinstance(values, list):
+        fail(f"{label} must be a list")
+    source_corpus = [document["content"] for document in documents.values()]
+    for index, value in enumerate(values):
+        if not isinstance(value, str) or not value.strip():
+            fail(f"{label}[{index}] must be a non-empty string")
+        normalized = normalize_evidence_text(value)
+        if not any(normalized in content for content in source_corpus):
+            fail(f"{label}[{index}] is not grounded in source_markdown")
+    return values
 
 
 def validate_key(value, label):
@@ -312,8 +346,8 @@ def validate(data, input_path):
     for field in required_top:
         if field not in data or data[field] in (None, ""):
             fail(f"Missing required field: {field}")
-    if str(data["schema_version"]) != "3.0":
-        fail("schema_version must be 3.0")
+    if str(data["schema_version"]) != "4.0":
+        fail("schema_version must be 4.0")
     if not isinstance(data["source_markdown"], list) or not data["source_markdown"]:
         fail("source_markdown must be a non-empty list")
     documents = load_source_documents(data, input_path)
@@ -322,6 +356,17 @@ def validate(data, input_path):
     for field in ("actors", "cross_cutting"):
         if not isinstance(data[field], list):
             fail(f"{field} must be a list")
+    for index, actor in enumerate(data["actors"]):
+        if not isinstance(actor, dict):
+            fail(f"actors[{index}] must be an object")
+        resolve_source_section(actor.get("source_ref"), f"actors[{index}]", documents)
+        validate_grounded_strings(actor.get("responsibilities"), f"actors[{index}].responsibilities", documents)
+        validate_grounded_strings(actor.get("permissions"), f"actors[{index}].permissions", documents)
+    for index, item in enumerate(data["cross_cutting"]):
+        if not isinstance(item, dict):
+            fail(f"cross_cutting[{index}] must be an object")
+        resolve_source_section(item.get("source_ref"), f"cross_cutting[{index}]", documents)
+        validate_grounded_strings(item.get("details"), f"cross_cutting[{index}].details", documents)
 
     registries = {}
     registry_ids = {}
@@ -331,14 +376,12 @@ def validate(data, input_path):
         )
 
     for index, goal in enumerate(registries["business_goals"]):
-        if not isinstance(goal.get("success_metrics"), list):
-            fail(f"business_goals[{index}].success_metrics must be a list")
+        validate_grounded_strings(goal.get("success_metrics"), f"business_goals[{index}].success_metrics", documents)
     for index, requirement in enumerate(registries["requirements"]):
         label = f"requirements[{index}]"
         if requirement.get("requirement_type") not in {"functional", "non_functional"}:
             fail(f"{label}.requirement_type is invalid")
-        if not isinstance(requirement.get("acceptance_criteria"), list):
-            fail(f"{label}.acceptance_criteria must be a list")
+        validate_grounded_strings(requirement.get("acceptance_criteria"), f"{label}.acceptance_criteria", documents)
         if not isinstance(requirement.get("human_confirmed"), bool):
             fail(f"{label}.human_confirmed must be boolean")
         require_id_list(requirement, "goal_ids", label, registry_ids["business_goals"])
@@ -370,6 +413,8 @@ def validate(data, input_path):
         for field in ("roles", "request_contract", "response_contract", "business_side_effects", "requirement_ids", "business_rule_ids", "validation_rule_ids", "dependency_ids"):
             if not isinstance(item.get(field), list):
                 fail(f"{label}.{field} must be a list")
+        for field in ("roles", "request_contract", "response_contract", "business_side_effects"):
+            validate_grounded_strings(item.get(field), f"{label}.{field}", documents)
 
     coverage = data["review_coverage"]
     if not isinstance(coverage, list):
@@ -387,6 +432,7 @@ def validate(data, input_path):
             fail(f"{area}.status must be checked, blocked or not_applicable")
         if status in {"blocked", "not_applicable"} and not clean(item.get("notes"), f"{area}.notes"):
             fail(f"{area}.notes is required for {status}")
+        resolve_source_section(item.get("source_ref"), f"review_coverage[{area}]", documents)
     if not isinstance(data["modules"], list):
         fail("modules must be a list")
     flow_ids = set()
@@ -397,6 +443,7 @@ def validate(data, input_path):
         for required in ("name", "purpose", "status", "source_ref"):
             if not clean(module.get(required), f"modules[{module_index}].{required}"):
                 fail(f"modules[{module_index}].{required} is required")
+        resolve_source_section(module.get("source_ref"), f"modules[{module_index}]", documents)
         flows = module.get("flows")
         if not isinstance(flows, list):
             fail(f"modules[{module_index}].flows must be a list")
@@ -419,6 +466,8 @@ def validate(data, input_path):
             for field in ["preconditions", "steps", "outcomes", "alternate_flows", "exceptions", "requirement_ids", "business_rule_ids", "validation_rule_ids", "dependency_ids", "api_operation_ids", "sanity_checks", "unresolved"]:
                 if not isinstance(flow.get(field), list):
                     fail(f"{label}.{field} must be a list")
+            for field in ("preconditions", "outcomes", "alternate_flows", "exceptions", "sanity_checks"):
+                validate_grounded_strings(flow.get(field), f"{label}.{field}", documents)
             if not flow["steps"] or not flow["outcomes"] or not flow["sanity_checks"]:
                 fail(f"{label} must contain sourced steps, outcomes and sanity_checks")
             for step_index, step in enumerate(flow["steps"]):
@@ -469,6 +518,12 @@ def validate(data, input_path):
     if not flow_ids and data["sanity_journeys"]:
         fail("sanity_journeys must be empty when no flows exist")
     for journey_index, journey in enumerate(data["sanity_journeys"]):
+        for field in ("preconditions", "expected_results"):
+            validate_grounded_strings(
+                journey.get(field),
+                f"sanity_journeys[{journey_index}].{field}",
+                documents,
+            )
         sequence = journey.get("flow_sequence")
         if not isinstance(sequence, list) or not sequence:
             fail(f"sanity_journeys[{journey_index}].flow_sequence must be non-empty")
@@ -477,6 +532,11 @@ def validate(data, input_path):
                 fail(f"sanity_journeys[{journey_index}].flow_sequence[{step_index}] references an unknown flow")
             if not clean(step.get("transition_condition")) or not clean(step.get("checkpoint")):
                 fail(f"sanity_journeys[{journey_index}].flow_sequence[{step_index}] requires transition_condition and checkpoint")
+            validate_grounded_strings(
+                [step.get("transition_condition"), step.get("checkpoint")],
+                f"sanity_journeys[{journey_index}].flow_sequence[{step_index}]",
+                documents,
+            )
     questions = normalize_questions(data["questions"], documents, known_ids)
     question_ids = {item["id"] for item in questions}
     active_question_ids = {item["id"] for item in questions if item["status"] in {"Open", "Blocked"}}

@@ -76,10 +76,25 @@ function normalizedSurface(value) {
   return surface;
 }
 
-function tagsForSurface(config, surface) {
+function normalizedRequiredSurfaces(values = []) {
+  const surfaces = [...new Set(values.map(value => String(value).toLowerCase()).filter(Boolean))];
+  const invalid = surfaces.filter(surface => !['ui', 'api', 'functional'].includes(surface));
+  if (invalid.length > 0) {
+    throw new Error(`Unknown required surface(s): ${invalid.join(', ')}. Expected ui, api or functional`);
+  }
+  return surfaces;
+}
+
+function tagsForSurface(config, surface, requiredSurfaces = []) {
   const configured = Array.isArray(config.requiredTags)
     ? config.requiredTags.map(value => String(value))
     : [];
+  if (requiredSurfaces.length > 0) {
+    if (surface !== 'all' && (requiredSurfaces.length !== 1 || requiredSurfaces[0] !== surface)) {
+      throw new Error(`Required surfaces ${requiredSurfaces.join(', ')} conflict with selected surface ${surface}`);
+    }
+    return requiredSurfaces.map(requiredSurface => config.surfaceTags?.[requiredSurface] ?? `@${requiredSurface}`);
+  }
   if (surface === 'all') return configured;
   const mapped = config.surfaceTags?.[surface] ?? `@${surface}`;
   return configured.includes(mapped) || config.surfaceTags?.[surface] ? [mapped] : [];
@@ -115,9 +130,11 @@ function validateConfig(config) {
 export function evaluate(config, report, {
   surface = 'all',
   expectedProjects = [],
+  requiredSurfaces = [],
 } = {}) {
   validateConfig(config);
   const selectedSurface = normalizedSurface(surface);
+  const selectedRequiredSurfaces = normalizedRequiredSurfaces(requiredSurfaces);
   const tests = collectTests(report.suites);
   const rows = tests.map(test => {
     const results = test.results ?? [];
@@ -159,7 +176,7 @@ export function evaluate(config, report, {
   const branchCoverage = Number(report.branchCoverage ?? 0);
   const thresholds = config.thresholds ?? {};
   const minimumExecuted = Number(thresholds.minExecuted ?? 1);
-  const requiredTags = tagsForSurface(config, selectedSurface);
+  const requiredTags = tagsForSurface(config, selectedSurface, selectedRequiredSurfaces);
   const requiredTagCounts = Object.fromEntries(requiredTags.map(tag => [
     tag,
     executed.filter(row => testHasTag(row, tag)).length,
@@ -210,7 +227,11 @@ export function evaluate(config, report, {
   return {
     version: config.version,
     passed: Object.values(checks).every(check => check.pass),
-    scope: { surface: selectedSurface, expectedProjects: requiredProjects },
+    scope: {
+      surface: selectedSurface,
+      requiredSurfaces: selectedRequiredSurfaces,
+      expectedProjects: requiredProjects,
+    },
     summary: {
       total: rows.length,
       executed: executed.length,
@@ -242,6 +263,7 @@ if (!fs.existsSync(reportPath)) throw new Error(`Playwright JSON report not foun
 const result = evaluate(config, readJson(reportPath), {
   surface: arg('--surface', 'all'),
   expectedProjects: args('--project'),
+  requiredSurfaces: args('--required-surfaces'),
 });
 fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`);
