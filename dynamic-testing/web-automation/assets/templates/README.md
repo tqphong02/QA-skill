@@ -17,12 +17,14 @@ npm run qa:lint
 npm run qa:test:ui
 npm run qa:test:api
 npm run qa:test:functional
+npm run qa:ci-surfaces
 npm run qa:contract
 npm run qa:report
 npm run qa:clean
 
 # In CI (or a shell with the CI URLs/credentials exported):
-npm run qa:preflight -- --surface all --require-auth
+qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+npm run qa:preflight -- --surface "$qa_surface" --require-auth
 ```
 
 Commit the generated `package-lock.json` after the first install. The GitHub,
@@ -36,6 +38,10 @@ Additional Playwright flags are passed after `--`:
 ```bash
 npm run qa:test:ui -- --project=firefox --grep @smoke
 ```
+
+The selected surface is constrained by `tests/<surface>` before an optional
+grep is applied. `qa:ci-surfaces` detects which canonical spec directories are
+executable and fails closed when the project contains no specs.
 
 CI templates are available for GitHub Actions (`github-actions-ci.yml`), GitLab
 CI (`.gitlab-ci.yml`) and Jenkins (`Jenkinsfile`). Set `QA_PROJECT_DIR` to the
@@ -95,7 +101,9 @@ assumes the automation project is in `<repository>/qa`; change
 `QA_PROJECT_DIR` to `.` when `package.json` is at repository root. It validates
 the lockfile and placeholders before install, then separates lint, UI browser
 matrix, functional browser matrix, API and unified Allure report jobs on Node
-24 LTS. Browser/surface jobs consume shared secret pools sequentially; each
+ 24 LTS. Preflight detects the available spec surfaces, skips absent jobs and
+ expects report artifacts only from enabled jobs. Browser/surface jobs consume
+ shared secret pools sequentially; each
 Playwright invocation may still use multiple isolated workers. A repository-wide
 workflow concurrency group also prevents separate refs/reruns from sharing the
 static pool at the same time. Each live test
@@ -111,5 +119,5 @@ deploy the product under test. Configure `BASE_URL`, `UI_BASE_URL`,
 or environment secrets. Add `TEST_DATASETS_JSON` with an isolated dataset per
 account before enabling multiple workers. Jenkins disables concurrent builds
 that would lease the same static pools and uses the same `QA_PROJECT_DIR`
-convention, a single tagged all-surface Playwright invocation and the equivalent
+convention, a single detected-surface Playwright invocation and the equivalent
 credential IDs in `Jenkinsfile`.

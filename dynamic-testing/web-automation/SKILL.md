@@ -43,6 +43,11 @@ Turn a bounded `.automation.json` manifest into maintainable Playwright code, ex
 6. Read the generated codegen, coverage, layout, Allure, and execution reports. Return only `PASS`, `FAILED`, `N/A`, or `UNTEST`
 7. Sheet/Excel write-back uses the exact execution projection and requires write confirmation plus read-back validation
 
+For CI, route by canonical spec directory rather than title grep. Run
+`scripts/ci-surfaces.mjs --require` before live jobs, skip absent surfaces, and
+derive expected report artifacts from the same detector. Functional capability
+metadata is `@uses-ui`/`@uses-api`; only `@functional` is its routing/quality tag.
+
 ## Generated project contract
 
 One module is identified by `domain/feature`. Prefer explicit `domain` and `feature` manifest fields; legacy single-segment groups deterministically map to `app/<group>`, while `Domain / Feature` groups map to `<domain>/<feature>`:

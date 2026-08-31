@@ -26,8 +26,10 @@ preflight:
   script:
     - npm run toolchain:check
     - npm ci
+    - node scripts/ci-surfaces.mjs --require
     - npm run qa:lint
-    - npm run qa:preflight -- --surface all --require-auth
+    - qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+    - npm run qa:preflight -- --surface "$qa_surface" --require-auth
 
 test-all:
   stage: test
@@ -39,9 +41,20 @@ test-all:
       test_status=0
       quality_status=0
       report_status=0
-      npm run qa:test -- --surface all --project=chromium || test_status=$?
-      npm run qa:quality -- --surface all --project=chromium || quality_status=$?
-      npm run qa:report -- --mode mixed || report_status=$?
+      qa_surface="$(node scripts/ci-surfaces.mjs --require --format test-surface)"
+      qa_surfaces="$(node scripts/ci-surfaces.mjs --require --format csv)"
+      allure_mode="$(node scripts/ci-surfaces.mjs --require --format allure-mode)"
+      npm run qa:test -- --surface "$qa_surface" --project=chromium || test_status=$?
+      if [ -f reports/playwright.json ]; then
+        npm run qa:quality -- --surface "$qa_surface" --required-surfaces "$qa_surfaces" --project=chromium || quality_status=$?
+      else
+        quality_status=1
+      fi
+      if find reports/allure-results -maxdepth 1 -type f -name '*-result.json' -print -quit | grep -q .; then
+        npm run qa:report -- --mode "$allure_mode" || report_status=$?
+      else
+        report_status=1
+      fi
       if [ "$test_status" -ne 0 ] || [ "$quality_status" -ne 0 ] || [ "$report_status" -ne 0 ]; then
         exit 1
       fi

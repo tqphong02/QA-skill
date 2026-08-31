@@ -1407,7 +1407,7 @@ function renderSpec(model, surface, ui, apiClient, operations, schemas, paths, p
     const isFunctionalFlow = testcase.capabilities.length === 2;
     const capability = testcase.capabilities[0];
     const titleTag = [
-      ...(isFunctionalFlow ? ['@functional', '@ui', '@api'] : [`@${surface}`]),
+      ...(isFunctionalFlow ? ['@functional', '@uses-ui', '@uses-api'] : [`@${surface}`]),
       ...automationTitleTags(testcase),
     ].join(' ');
     const title = `${testcase.testcase_id} | ${testcase.scenario_id || testcase.case_ref || testcase.type || 'case'} ${titleTag}`;

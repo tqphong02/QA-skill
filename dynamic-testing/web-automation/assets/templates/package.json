@@ -16,6 +16,7 @@
     "qa:test:ui": "node scripts/qa.mjs test --surface ui",
     "qa:test:api": "node scripts/qa.mjs test --surface api",
     "qa:test:functional": "node scripts/qa.mjs test --surface functional",
+    "qa:ci-surfaces": "node scripts/ci-surfaces.mjs --require",
     "qa:contract": "node scripts/qa.mjs contract",
     "qa:report": "node scripts/qa.mjs report",
     "qa:quality": "node scripts/qa.mjs quality",

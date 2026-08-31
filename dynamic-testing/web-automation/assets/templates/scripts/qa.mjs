@@ -6,10 +6,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { acquireExecutionLock } from './execution-lock.mjs';
 
-const SURFACE_TAGS = Object.freeze({
-  ui: '@ui',
-  api: '@api',
-  functional: '@functional',
+const SURFACE_PATHS = Object.freeze({
+  ui: 'tests/ui',
+  api: 'tests/api',
+  functional: 'tests/functional',
   all: null,
 });
 
@@ -73,7 +73,7 @@ function hasOption(args, name) {
 
 function normalizedSurface(surface) {
   const value = String(surface || 'all').toLowerCase();
-  if (!Object.hasOwn(SURFACE_TAGS, value)) {
+  if (!Object.hasOwn(SURFACE_PATHS, value)) {
     throw new Error(`Unknown test surface: ${surface}. Expected ui, api, functional or all`);
   }
   return value;
@@ -89,12 +89,9 @@ function normalizedAllureMode(mode) {
 
 export function buildPlaywrightArgs(surface = 'all', extraArgs = []) {
   const selectedSurface = normalizedSurface(surface);
-  const args = ['--no-install', 'playwright', 'test'];
+  const testPath = SURFACE_PATHS[selectedSurface];
+  const args = ['--no-install', 'playwright', 'test', ...(testPath ? [testPath] : [])];
   const forwarded = [...extraArgs].filter(argument => argument !== '--');
-  const tag = SURFACE_TAGS[selectedSurface];
-  if (tag && !hasOption(forwarded, '--grep')) {
-    args.push('--grep', tag);
-  }
   return [...args, ...forwarded];
 }
 

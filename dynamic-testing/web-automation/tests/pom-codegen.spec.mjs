@@ -475,6 +475,9 @@ test('functional codegen requires a composed per-testcase UI+API flow and emits 
     ]);
     const spec = fs.readFileSync(path.join(root, 'tests/functional/app/login.functional.spec.ts'), 'utf8');
     assert.match(spec, /async \(\{ page, api \}\)/);
+    assert.match(spec, /@functional @uses-ui @uses-api/);
+    assert.doesNotMatch(spec, /\s@ui(?:\s|")/);
+    assert.doesNotMatch(spec, /\s@api(?:\s|")/);
     assert.doesNotMatch(spec, /\brequest\b/);
     assert.ok(spec.indexOf('FUNCTIONAL:API') < spec.indexOf('fillEmailInput'));
 

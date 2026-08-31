@@ -180,6 +180,7 @@ export function inspectCiPreflight(projectRoot, {
   requireFile(resolvedRoot, 'automation-complexity.json', violations);
   requireFile(resolvedRoot, 'scripts/qa.mjs', violations);
   requireFile(resolvedRoot, 'scripts/ci-preflight.mjs', violations);
+  requireFile(resolvedRoot, 'scripts/ci-surfaces.mjs', violations);
   requireFile(resolvedRoot, 'scripts/execution-lock.mjs', violations);
   requireFile(resolvedRoot, 'scripts/generate-pom-code.mjs', violations);
   requireFile(resolvedRoot, 'scripts/verify-module-artifact-layout.mjs', violations);
@@ -203,6 +204,7 @@ export function inspectCiPreflight(projectRoot, {
     for (const script of [
       'qa:lint',
       'qa:preflight',
+      'qa:ci-surfaces',
       'qa:quality',
       'qa:contract',
       'qa:report',

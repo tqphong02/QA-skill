@@ -18,6 +18,13 @@ test('GitHub Actions template covers UI, API and functional surfaces on maintain
   assert.match(workflow, /^  test-ui:/m);
   assert.match(workflow, /^  test-api:/m);
   assert.match(workflow, /^  test-functional:/m);
+  assert.match(workflow, /ui: \$\{\{ steps\.surfaces\.outputs\.ui \}\}/);
+  assert.match(workflow, /api: \$\{\{ steps\.surfaces\.outputs\.api \}\}/);
+  assert.match(workflow, /functional: \$\{\{ steps\.surfaces\.outputs\.functional \}\}/);
+  assert.match(workflow, /node scripts\/ci-surfaces\.mjs --require --github-output "\$GITHUB_OUTPUT"/);
+  assert.match(workflow, /needs\.preflight\.outputs\.ui == 'true'/);
+  assert.match(workflow, /needs\.preflight\.outputs\.api == 'true'/);
+  assert.match(workflow, /needs\.preflight\.outputs\.functional == 'true'/);
   assert.match(workflow, /qa:test:functional -- --project=\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /qa:test:api -- --project=chromium/);
   assert.match(workflow, /TEST_DATASETS_JSON: \$\{\{ secrets\.TEST_DATASETS_JSON \}\}/);
@@ -34,10 +41,14 @@ test('GitHub Actions template covers UI, API and functional surfaces on maintain
   assert.match(workflow, /qa:quality -- --surface ui --project=\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /qa:quality -- --surface functional --project=\$\{\{ matrix\.browser \}\}/);
   assert.match(workflow, /qa:quality -- --surface api --project=chromium/);
-  assert.equal((workflow.match(/--expect-artifact qa-/g) ?? []).length, 5);
+  assert.doesNotMatch(workflow, /--expect-artifact qa-/);
+  assert.match(workflow, /ci-surfaces\.mjs --require --format artifacts --run-id "\$GITHUB_RUN_ID"/);
+  assert.match(workflow, /merge_args\+=\(--expect-artifact "\$artifact"\)/);
+  assert.match(workflow, /hashFiles\(format\('\{0\}\/reports\/playwright\.json'/);
+  assert.match(workflow, /hashFiles\(format\('\{0\}\/reports\/allure-results\/\*-result\.json'/);
   assert.doesNotMatch(workflow, /if-no-files-found:\s*ignore/);
   assert.match(workflow, /if-no-files-found:\s*error/);
-  assert.match(workflow, /needs: \[test-ui, test-functional, test-api\]/);
+  assert.match(workflow, /needs: \[preflight, test-ui, test-functional, test-api\]/);
   assert.doesNotMatch(workflow, /actions\/(?:checkout|setup-node|upload-artifact|download-artifact)@v4/);
   assert.doesNotMatch(workflow, /actions\/cache@/);
   assert.match(packageJson.engines.node, /\^24\.0\.0/);
@@ -51,7 +62,7 @@ test('GitHub Actions template covers UI, API and functional surfaces on maintain
   assert.equal(fs.existsSync(path.resolve(HERE, '../references/performance-testing.md')), false);
 });
 
-test('Jenkins template avoids concurrent reporters in one workspace and runs every surface', () => {
+test('Jenkins template avoids concurrent reporters and runs only detected surfaces', () => {
   const pipeline = fs.readFileSync(path.join(TEMPLATE_ROOT, 'Jenkinsfile'), 'utf8');
 
   assert.match(pipeline, /nodejs 'Node-24'/);
@@ -63,8 +74,10 @@ test('Jenkins template avoids concurrent reporters in one workspace and runs eve
   assert.match(pipeline, /scripts\/execution-lock\.mjs/);
   assert.match(pipeline, /dependency-versions\.json/);
   assert.match(pipeline, /npm run toolchain:check/);
-  assert.match(pipeline, /npm run qa:test -- --surface all --project=chromium/);
-  assert.match(pipeline, /qa:quality -- --surface all --project=chromium/);
+  assert.match(pipeline, /ci-surfaces\.mjs --require --format test-surface/);
+  assert.match(pipeline, /ci-surfaces\.mjs --require --format csv/);
+  assert.match(pipeline, /npm run qa:test -- --surface "\$qa_surface" --project=chromium/);
+  assert.match(pipeline, /qa:quality -- --surface "\$qa_surface" --required-surfaces "\$qa_surfaces" --project=chromium/);
   assert.match(pipeline, /allowEmptyArchive:\s*false/);
   assert.match(pipeline, /allowEmptyResults:\s*false/);
   assert.doesNotMatch(pipeline, /\bk6\b/);
@@ -72,17 +85,19 @@ test('Jenkins template avoids concurrent reporters in one workspace and runs eve
   assert.match(pipeline, /archiveArtifacts artifacts: .*reports\/\*\*.*evidence\/\*\*/);
 });
 
-test('GitLab template runs the stable all-surface contract and always retains evidence', () => {
+test('GitLab template runs the detected-surface contract and always retains evidence', () => {
   const pipeline = fs.readFileSync(path.join(TEMPLATE_ROOT, '.gitlab-ci.yml'), 'utf8');
 
   assert.match(pipeline, /mcr\.microsoft\.com\/playwright:v1\.62\.0-noble/);
   assert.match(pipeline, /PW_RETRIES:\s*"1"/);
   assert.match(pipeline, /resource_group:\s*qa-static-test-pool/);
   assert.match(pipeline, /npm run toolchain:check/);
-  assert.match(pipeline, /npm run qa:preflight -- --surface all --require-auth/);
-  assert.match(pipeline, /npm run qa:test -- --surface all --project=chromium/);
-  assert.match(pipeline, /npm run qa:quality -- --surface all --project=chromium/);
-  assert.match(pipeline, /npm run qa:report -- --mode mixed/);
+  assert.match(pipeline, /ci-surfaces\.mjs --require --format test-surface/);
+  assert.match(pipeline, /ci-surfaces\.mjs --require --format csv/);
+  assert.match(pipeline, /npm run qa:preflight -- --surface "\$qa_surface" --require-auth/);
+  assert.match(pipeline, /npm run qa:test -- --surface "\$qa_surface" --project=chromium/);
+  assert.match(pipeline, /npm run qa:quality -- --surface "\$qa_surface" --required-surfaces "\$qa_surfaces" --project=chromium/);
+  assert.match(pipeline, /npm run qa:report -- --mode "\$allure_mode"/);
   assert.match(pipeline, /when:\s*always/);
   assert.match(pipeline, /reports\/junit\.xml/);
   assert.doesNotMatch(pipeline, /TEST_PASS:\s*[^$]/);

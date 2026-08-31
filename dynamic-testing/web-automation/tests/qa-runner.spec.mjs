@@ -14,15 +14,22 @@ import {
 test('qa runner builds one stable UI command and forwards project options', () => {
   assert.deepEqual(
     buildPlaywrightArgs('ui', ['--project=chromium']),
-    ['--no-install', 'playwright', 'test', '--grep', '@ui', '--project=chromium'],
+    ['--no-install', 'playwright', 'test', 'tests/ui', '--project=chromium'],
   );
 });
 
-test('qa runner does not overwrite an explicit grep filter', () => {
+test('qa runner keeps surface routing when an explicit grep filter is supplied', () => {
   assert.deepEqual(
     buildPlaywrightArgs('functional', ['--grep', '@smoke']),
-    ['--no-install', 'playwright', 'test', '--grep', '@smoke'],
+    ['--no-install', 'playwright', 'test', 'tests/functional', '--grep', '@smoke'],
   );
+});
+
+test('qa runner routes every selected surface to one exclusive test directory', () => {
+  assert.equal(buildPlaywrightArgs('ui')[3], 'tests/ui');
+  assert.equal(buildPlaywrightArgs('api')[3], 'tests/api');
+  assert.equal(buildPlaywrightArgs('functional')[3], 'tests/functional');
+  assert.deepEqual(buildPlaywrightArgs('all'), ['--no-install', 'playwright', 'test']);
 });
 
 test('qa runner parses surface without leaking its control flag to Playwright', () => {

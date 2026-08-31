@@ -18,6 +18,7 @@ function projectRoot({ lockfileVersion = 3 } = {}) {
     scripts: {
       'qa:lint': 'true',
       'qa:preflight': 'true',
+      'qa:ci-surfaces': 'true',
       'qa:test:ui': 'true',
       'qa:test:api': 'true',
       'qa:test:functional': 'true',
@@ -37,6 +38,7 @@ function projectRoot({ lockfileVersion = 3 } = {}) {
   write(root, 'automation-complexity.json', JSON.stringify({ schema_version: 1, limits: {} }));
   write(root, 'scripts/qa.mjs', 'export {};\n');
   write(root, 'scripts/ci-preflight.mjs', 'export {};\n');
+  write(root, 'scripts/ci-surfaces.mjs', 'export {};\n');
   write(root, 'scripts/execution-lock.mjs', 'export {};\n');
   write(root, 'scripts/generate-pom-code.mjs', 'export {};\n');
   write(root, 'scripts/verify-module-artifact-layout.mjs', 'export {};\n');

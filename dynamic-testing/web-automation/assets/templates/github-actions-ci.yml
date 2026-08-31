@@ -30,8 +30,17 @@ jobs:
     name: Validate QA project layout
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      ui: ${{ steps.surfaces.outputs.ui }}
+      api: ${{ steps.surfaces.outputs.api }}
+      functional: ${{ steps.surfaces.outputs.functional }}
+      surfaces: ${{ steps.surfaces.outputs.surfaces }}
     steps:
       - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Check package and lockfile
         shell: bash
@@ -45,6 +54,7 @@ jobs:
           test -f "$qa_dir/.eslintrc.cjs" || { echo "::error title=ESLint config missing::$qa_dir/.eslintrc.cjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/qa.mjs" || { echo "::error title=QA runner missing::$qa_dir/scripts/qa.mjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/ci-preflight.mjs" || { echo "::error title=CI preflight missing::$qa_dir/scripts/ci-preflight.mjs was not found"; exit 1; }
+          test -f "$qa_dir/scripts/ci-surfaces.mjs" || { echo "::error title=CI surface detector missing::$qa_dir/scripts/ci-surfaces.mjs was not found"; exit 1; }
           test -f "$qa_dir/scripts/execution-lock.mjs" || { echo "::error title=Execution lock missing::$qa_dir/scripts/execution-lock.mjs was not found"; exit 1; }
           test -f "$qa_dir/fixtures/parallel-pool.js" || { echo "::error title=Parallel pool contract missing::$qa_dir/fixtures/parallel-pool.js was not found"; exit 1; }
 
@@ -54,6 +64,14 @@ jobs:
           set -euo pipefail
           cd "$QA_PROJECT_DIR"
           node scripts/check-placeholders.mjs
+
+      - name: Detect executable test surfaces
+        id: surfaces
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$QA_PROJECT_DIR"
+          node scripts/ci-surfaces.mjs --require --github-output "$GITHUB_OUTPUT"
 
   lint:
     name: Lint and typecheck
@@ -87,7 +105,7 @@ jobs:
 
   test-ui:
     name: UI (${{ matrix.browser }})
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    if: ${{ needs.preflight.outputs.ui == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs: [preflight, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -149,7 +167,7 @@ jobs:
 
       - name: Evaluate quality gate
         id: quality
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/playwright.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -157,7 +175,7 @@ jobs:
 
       - name: Validate canonical Allure result
         id: contract
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/allure-results/*-result.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -196,7 +214,7 @@ jobs:
 
   test-functional:
     name: Functional (${{ matrix.browser }})
-    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && needs.preflight.outputs.functional == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs: [preflight, lint, test-ui]
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -256,7 +274,7 @@ jobs:
 
       - name: Evaluate quality gate
         id: quality
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/playwright.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -264,7 +282,7 @@ jobs:
 
       - name: Validate canonical Allure result
         id: contract
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/allure-results/*-result.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -303,7 +321,7 @@ jobs:
 
   test-api:
     name: API
-    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+    if: ${{ always() && needs.preflight.result == 'success' && needs.lint.result == 'success' && needs.preflight.outputs.api == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
     needs: [preflight, lint, test-functional]
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -349,7 +367,7 @@ jobs:
 
       - name: Evaluate quality gate
         id: quality
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/playwright.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -357,7 +375,7 @@ jobs:
 
       - name: Validate canonical Allure result
         id: contract
-        if: always()
+        if: ${{ always() && hashFiles(format('{0}/reports/allure-results/*-result.json', env.QA_PROJECT_DIR)) != '' }}
         continue-on-error: true
         run: |
           cd "$QA_PROJECT_DIR"
@@ -396,8 +414,8 @@ jobs:
 
   report:
     name: Merge and publish Allure
-    needs: [test-ui, test-functional, test-api]
-    if: ${{ always() && (needs.test-ui.result != 'skipped' || needs.test-functional.result != 'skipped' || needs.test-api.result != 'skipped') }}
+    needs: [preflight, test-ui, test-functional, test-api]
+    if: ${{ always() && needs.preflight.result == 'success' && (needs.test-ui.result != 'skipped' || needs.test-functional.result != 'skipped' || needs.test-api.result != 'skipped') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -422,17 +440,20 @@ jobs:
           merge-multiple: false
 
       - name: Merge Allure results
+        shell: bash
         run: |
+          set -euo pipefail
           cd "$QA_PROJECT_DIR"
+          mapfile -t expected_artifacts < <(node scripts/ci-surfaces.mjs --require --format artifacts --run-id "$GITHUB_RUN_ID")
+          merge_args=()
+          for artifact in "${expected_artifacts[@]}"; do
+            merge_args+=(--expect-artifact "$artifact")
+          done
           npm run qa:merge-allure -- \
             --input ci-artifacts \
             --output reports/allure-results \
             --summary reports/allure-merge.json \
-            --expect-artifact qa-ui-chromium-${{ github.run_id }} \
-            --expect-artifact qa-ui-firefox-${{ github.run_id }} \
-            --expect-artifact qa-functional-chromium-${{ github.run_id }} \
-            --expect-artifact qa-functional-firefox-${{ github.run_id }} \
-            --expect-artifact qa-api-${{ github.run_id }}
+            "${merge_args[@]}"
 
       - name: Generate unified Allure report
         run: |

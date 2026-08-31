@@ -201,6 +201,47 @@ test('quality gate blocks missing required surfaces and browser projects on a fu
   assert.deepEqual(output.checks.browserProjects.missing, ['firefox']);
 });
 
+test('quality gate enforces only the surfaces detected by a partial CI project', () => {
+  const report = {
+    suites: [{
+      title: 'partial suite',
+      specs: [{
+        title: 'TC-UI succeeds @ui',
+        tags: ['@ui'],
+        tests: [{
+          testId: 'ui-test',
+          projectName: 'chromium',
+          results: [{
+            status: 'passed',
+            duration: 1,
+            attachments: [{ name: 'evidence-image', path: 'evidence.png' }],
+          }],
+        }],
+      }, {
+        title: 'TC-API succeeds @api',
+        tags: ['@api'],
+        tests: [{
+          testId: 'api-test',
+          projectName: 'chromium',
+          results: [{ status: 'passed', duration: 1, attachments: [] }],
+        }],
+      }],
+    }],
+  };
+  const { execution, output } = runGate(report, {
+    args: [
+      '--surface', 'all',
+      '--required-surfaces', 'ui,api',
+      '--project', 'chromium',
+    ],
+  });
+
+  assert.equal(execution.status, 0, execution.stderr);
+  assert.deepEqual(output.scope.requiredSurfaces, ['ui', 'api']);
+  assert.deepEqual(output.checks.requiredSurfaces.actual, { '@ui': 1, '@api': 1 });
+  assert.deepEqual(output.checks.requiredSurfaces.missing, []);
+});
+
 test('quality gate does not count a skipped-only suite as executed', () => {
   const strictConfig = {
     ...config(),
