@@ -56,3 +56,52 @@ python3 scripts/runner.py run collection.json \
 ```
 
 Newman chỉ dùng cho collection JSON v2/v2.1. Collection v3 YAML phải chạy bằng Postman CLI
+
+Automatic API testing với exact target và preflight fail-closed:
+
+```bash
+python3 scripts/runner.py api-test collection.json \
+  --target https://api.example.test \
+  --environment environment.json \
+  --report-dir qa-runs/integration-postman/<run-id>/postman
+```
+
+Thêm `--dry-run` để chỉ kiểm tra collection, target, assertions và mutation safety. Collection có write method chỉ được chạy khi đã xác nhận authority với `--allow-mutations` và khai báo `--cleanup-item`
+
+### 6. Push collection lên Postman app để chạy thủ công
+
+Khi muốn mở collection trực tiếp trong Postman desktop hoặc web:
+
+**Lấy API key miễn phí**: https://web.postman.co/settings/me/api-keys → Generate API Key → copy chuỗi `PMAK-...`
+
+```bash
+# Xem danh sách workspace (smoke test read-only)
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py list-workspaces
+
+# Dry-run — kiểm tra không gọi network
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py push \
+  collection.json --workspace <workspace-id> --dry-run
+
+# Push — upload lên Postman, in ra URL mở ngay
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py push \
+  collection.json --workspace <workspace-id> --apply
+```
+
+Output khi thành công:
+```
+PASS collection_id=abc123 collection_name='Orders API' workspace=ws-xxx
+URL https://web.postman.co/workspace/ws-xxx/collection/abc123
+NEXT open Postman app or visit the URL above to run the collection
+```
+
+**Luồng đầy đủ: OpenAPI doc → Postman app**
+
+```
+openapi.json
+  → gen_postman_collection.py   # sinh collection v2.1
+  → push_to_workspace.py push   # upload lên workspace
+  → mở Postman app              # chạy thủ công với UI
+```
+
+Không paste `POSTMAN_API_KEY` vào prompt hoặc commit vào repo. Đặt trong environment local hoặc secret manager
+Luôn chọn chính xác `workspace-id`, xem dry-run trước, rồi mới dùng `--apply`. Nếu read-back sai ID/tên hoặc thất bại thì kết quả là `FAILED`, không phải `PASS`

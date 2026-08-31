@@ -34,7 +34,11 @@ const INVOCATION_ROOT = resolveInvocationRoot()
 const SKILL_REGISTRY = loadSkillRegistry(ROOT)
 const SKILL_ORDER = SKILL_REGISTRY.skills.map((entry) => entry.id)
 
-const TMP_ROOT = fs.mkdtempSync(path.join(os.tmpdir(), 'qa-skill-senior-'))
+const TMP_BASE = process.platform === 'win32'
+  ? path.join(INVOCATION_ROOT, 'qa-runs', '.readiness-tmp')
+  : os.tmpdir()
+fs.mkdirSync(TMP_BASE, { recursive: true })
+const TMP_ROOT = fs.mkdtempSync(path.join(TMP_BASE, 'qa-skill-senior-'))
 const RUN_ID = `${new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')}-${process.pid}`
 const DEFAULT_OUTPUT_DIR = resolveReadinessOutputDir()
 
@@ -345,6 +349,7 @@ function aiChecks(skill) {
 }
 
 function apiChecks(skill) {
+  runPythonUnitTests(skill, 'hybrid-api-contract')
   const fixtureDir = path.join(TMP_ROOT, 'api-contract')
   fs.mkdirSync(fixtureDir, { recursive: true })
   const valid = {
@@ -378,6 +383,52 @@ function apiChecks(skill) {
   const invalidReport = parseJsonOutput(invalidRun)
   const invalidOk = invalidRun.code === 1 && invalidReport?.passed === false && Array.isArray(invalidReport.errors) && invalidReport.errors.length > 0
   addCheck(skill, 'OpenAPI negative fixture', invalidOk ? 'PASS' : 'FAIL', invalidOk ? 'invalid contract is rejected with structured errors' : `unexpected result\n${invalidRun.output}`, invalidRun.command)
+  const analyzer = skillPath('hybrid-api-contract', 'scripts', 'analyze_openapi.py')
+  const renderer = skillPath('hybrid-api-contract', 'scripts', 'render_api_qa.py')
+  const analysisRun = runCommand('python3', [analyzer, validPath, '--project', 'readiness', '--output', fixtureDir])
+  const analysisPath = path.join(fixtureDir, 'readiness_API_Analysis_Source.json')
+  const renderRun = fs.existsSync(analysisPath)
+    ? runCommand('python3', [renderer, analysisPath, fixtureDir, 'readiness'])
+    : { code: 1, output: 'analysis source was not generated', command: 'render skipped' }
+  const expectedStaticOutputs = [
+    analysisPath,
+    path.join(fixtureDir, 'readiness_API_Q&A.md'),
+    path.join(fixtureDir, 'readiness_API_Q&A.xlsx'),
+  ]
+  const staticOutputsExist = expectedStaticOutputs.every(file => fs.existsSync(file))
+  const analysisPayload = fs.existsSync(analysisPath)
+    ? JSON.parse(fs.readFileSync(analysisPath, 'utf8'))
+    : null
+  const sourceRefsValid = analysisPayload
+    && analysisPayload.spec_source === 'valid.json'
+    && analysisPayload.questions.every(item => item.source_ref.startsWith('valid.json'))
+  const semanticOk = analysisRun.code === 0 && renderRun.code === 0 && staticOutputsExist && sourceRefsValid
+  addCheck(skill, 'OpenAPI semantic analysis and synchronized render', semanticOk ? 'PASS' : 'FAIL', semanticOk ? 'local refs, logical source identity, Markdown and four-sheet Excel output passed' : `analysis or render contract failed\n${analysisRun.output}\n${renderRun.output}`, analysisRun.command)
+  const generator = skillPath('hybrid-api-contract', 'scripts', 'gen_postman_collection.py')
+  const generatedOne = path.join(fixtureDir, 'readiness-one.postman_collection.json')
+  const generatedTwo = path.join(fixtureDir, 'readiness-two.postman_collection.json')
+  const generateOne = runCommand('python3', [generator, validPath, '--project', 'readiness', '--base-url', 'https://api.example.test', '--output', generatedOne])
+  const generateTwo = runCommand('python3', [generator, validPath, '--project', 'readiness', '--base-url', 'https://api.example.test', '--output', generatedTwo])
+  const generatedStable = generateOne.code === 0
+    && generateTwo.code === 0
+    && fs.existsSync(generatedOne)
+    && fs.existsSync(generatedTwo)
+    && fs.readFileSync(generatedOne, 'utf8') === fs.readFileSync(generatedTwo, 'utf8')
+  const runner = skillPath('integration-postman', 'scripts', 'runner.py')
+  const generatedReportDir = path.join(fixtureDir, 'generated-postman-preflight')
+  const generatedPreflight = generatedStable
+    ? runCommand('python3', [runner, 'api-test', generatedOne, '--target', 'https://api.example.test', '--report-dir', generatedReportDir, '--dry-run'], { timeout: 60000 })
+    : { code: 1, output: 'generation was not reproducible', command: 'runner skipped' }
+  const generatedPreflightPath = path.join(generatedReportDir, 'api-test-preflight.json')
+  const generatedPacket = fs.existsSync(generatedPreflightPath)
+    ? JSON.parse(fs.readFileSync(generatedPreflightPath, 'utf8'))
+    : null
+  const generatorOk = generatedStable
+    && generatedPreflight.code === 0
+    && generatedPacket?.status === 'PASS'
+    && generatedPacket?.request_count === 1
+    && generatedPacket?.has_tests === true
+  addCheck(skill, 'OpenAPI to Postman automatic API bridge', generatorOk ? 'PASS' : 'FAIL', generatorOk ? 'reproducible v2.1 collection and guarded Postman dry-run preflight passed' : `generator or Postman bridge failed\n${generateOne.output}\n${generateTwo.output}\n${generatedPreflight.output}`, generateOne.command)
   addIntegration(skill, 'BLOCKED', 'no live implementation, deployed OpenAPI target, GraphQL schema, proto or webhook endpoint was supplied; only structural contract preflight is authorized locally')
 }
 
@@ -602,7 +653,15 @@ function pomChecks(skill) {
 
 function integrationPostmanChecks(skill) {
   runPythonUnitTests(skill, 'integration-postman')
-  const doctor = runCommand('python3', [skillPath('integration-postman', 'scripts', 'runner.py'), 'doctor'], { timeout: 60000 })
+  const runner = skillPath('integration-postman', 'scripts', 'runner.py')
+  const fixture = skillPath('integration-postman', 'tests', 'fixtures', 'api-smoke.collection.json')
+  const reportDir = path.join(TMP_ROOT, 'postman-api-test')
+  const apiDryRun = runCommand('python3', [runner, 'api-test', fixture, '--target', 'https://api.example.test', '--report-dir', reportDir, '--dry-run'], { timeout: 60000 })
+  const preflightPath = path.join(reportDir, 'api-test-preflight.json')
+  const preflight = fs.existsSync(preflightPath) ? JSON.parse(fs.readFileSync(preflightPath, 'utf8')) : null
+  const apiDryRunOk = apiDryRun.code === 0 && preflight?.status === 'PASS' && preflight?.request_count === 1 && preflight?.has_tests === true
+  addCheck(skill, 'Postman automatic API preflight', apiDryRunOk ? 'PASS' : 'FAIL', apiDryRunOk ? 'exact target, assertions, mutation gate and report contract passed without a network request' : `automatic API preflight failed\n${apiDryRun.output}`, apiDryRun.command)
+  const doctor = runCommand('python3', [runner, 'doctor'], { timeout: 60000 })
   const doctorText = `${doctor.output}\n${doctor.rawOutput}`
   const typed = [0, 1].includes(doctor.code) && /(PASS|MISSING|BLOCKED|NOTICE)/i.test(doctorText)
   addCheck(skill, 'Postman runtime doctor', typed ? 'PASS' : 'FAIL', typed ? `official CLI/Newman availability is classified with exit=${doctor.code}` : `untyped doctor response\n${doctor.output}`, doctor.command)

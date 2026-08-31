@@ -5,11 +5,21 @@ from pathlib import Path
 import ast
 import json
 import re
+import shutil
 import subprocess
 import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def node_runtime() -> str:
+    """Resolve Node without depending on a user-profile shim on Windows."""
+    if sys.platform == "win32":
+        system_node = Path("C:/Program Files/nodejs/node.exe")
+        if system_node.is_file():
+            return str(system_node)
+    return shutil.which("node") or "node"
 
 SKILLS = (
     "hybrid-accessibility",
@@ -976,7 +986,7 @@ def main():
             )
 
     routing = subprocess.run(
-        ["node", str(ROOT / "scripts/core-skill-router.mjs"), "--self-test"],
+        [node_runtime(), str(ROOT / "scripts/core-skill-router.mjs"), "--self-test"],
         cwd=ROOT,
         capture_output=True,
         text=True,

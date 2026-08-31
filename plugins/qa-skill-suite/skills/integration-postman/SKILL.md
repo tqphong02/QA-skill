@@ -83,6 +83,27 @@ python3 scripts/runner.py run <collection-path-or-id> \
   --report-dir evidence/postman
 ```
 
+For automatic API testing against one exact live target, prefer the guarded
+`api-test` mode:
+
+```bash
+python3 scripts/runner.py api-test collection.json \
+  --target https://api.example.test \
+  --environment environment.json \
+  --report-dir <run-dir>/postman
+```
+
+`api-test` accepts only a local v2/v2.1 collection so it can inspect every
+request before network execution. It requires at least one request and an
+applicable Postman test script for every request. It rejects a different
+absolute origin and injects the exact target through `--target-variable`
+(default `baseUrl`). Use `--dry-run` to create only the preflight packet.
+
+Collections containing `POST`, `PUT`, `PATCH`, or `DELETE` are blocked unless
+`--allow-mutations` and at least one exact `--cleanup-item` are supplied after
+authority is confirmed. A clean engine exit without assertions, a missing
+structured v2 report, or an unexecuted cleanup item is `UNTEST`, never `PASS`.
+
 Engine selection is deterministic:
 
 1. Prefer Postman CLI for every supported collection
@@ -90,7 +111,7 @@ Engine selection is deterministic:
 3. Block Newman for Postman v3 YAML collections
 4. Preserve the selected engine's exit code for CI
 
-The runner creates `console.log` when `--report-dir` is supplied. For compatible v2 collections it also creates `report.json` and `junit.xml`. Authenticate the Postman CLI only when a cloud collection ID, cloud result upload, monitor, or another authenticated command requires it:
+The runner creates `console.log` when `--report-dir` is supplied. For compatible v2 collections it also creates `report.json`, `junit.xml`, and `execution-summary.json`. Reporter headers and bodies are omitted where supported; console and JSON evidence are redacted before storage. Authenticate the Postman CLI only when a cloud collection ID, cloud result upload, monitor, or another authenticated command requires it:
 
 ```bash
 python3 scripts/runner.py login
@@ -118,6 +139,44 @@ python3 scripts/bootstrap.py --agent=<agent> --mode=<minimal|code|full> --replac
 3. Record a mutation contract with target, operation, required inputs, write action, and verification
 4. Execute only the requested Postman operation
 5. Read the object back and verify its ID, parent workspace, name, and changed content
+
+Postman MCP does not execute a collection by itself in this contract. Resolve
+cloud resources through MCP, export or supply the exact collection/environment,
+then execute them through `scripts/runner.py`. Never treat a successful import
+or workspace write as an API test PASS.
+
+## Pushing a generated collection to the Postman app
+
+When the user wants to open a generated collection directly in the Postman desktop or web app:
+
+```bash
+# 1. Smoke test — list workspaces (read-only)
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py list-workspaces
+
+# 2. Dry-run — validate locally without network calls
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py push \
+  collection.json \
+  --workspace <workspace-id> \
+  --dry-run
+
+# 3. Push — uploads collection; prints URL to open in Postman
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py push \
+  collection.json \
+  --workspace <workspace-id> \
+  --apply
+
+# 4. Update an existing collection (overwrite by ID)
+POSTMAN_API_KEY=PMAK-... python3 scripts/push_to_workspace.py push \
+  collection.json \
+  --workspace <workspace-id> \
+  --collection-id <existing-postman-collection-id> \
+  --apply
+```
+
+On success the script prints `PASS collection_id=<id>` and a direct URL:
+`https://web.postman.co/workspace/<workspace-id>/collection/<id>`
+
+The `POSTMAN_API_KEY` must be set as an environment variable (never as a CLI argument). Generate a free key at `https://web.postman.co/settings/me/api-keys`. Pushing a collection requires an exact `--workspace`, a reviewed `--dry-run`, and explicit `--apply`. Treat a missing or mismatched read-back ID/name as `FAILED`; never report PASS from the write response alone.
 
 Route contract validation against a live implementation to `hybrid-api-contract`. Route explicit testcase document creation to `support-testcase-authoring`. Execute collections through `scripts/runner.py`
 

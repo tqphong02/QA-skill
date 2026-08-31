@@ -12,6 +12,11 @@ terminal result definitions.
 and reports spec-level gaps. Does **not** call a live endpoint and does **not**
 claim runtime conformance.
 
+The analyzer expands valid local `$ref` pointers before semantic checks and
+fails closed on an unresolved local reference. Recursive schemas are bounded at
+the cycle edge. External references must be bundled first; otherwise the static
+analysis returns `BLOCKED` instead of claiming semantic completeness.
+
 - Static analysis → `_API_Analysis_Source.json`, `_API_Q&A.md`, `_API_Q&A.xlsx`
 - Runtime validation → Workflow steps 3-6 in SKILL.md (live requests)
 
@@ -107,9 +112,8 @@ claim runtime conformance.
 | 1 | `deprecated` without migration guide | removed operation |
 | 2 | `deprecated` without `x-sunset` date | removed operation |
 | 3 | `x-internal` endpoint leaked in public spec | removed operation |
-| XO-1 | No versioning strategy (`/v1/` or version header) | narrowed type/auth change |
+| XO-1 | No versioning strategy in path, `servers[].url`, or version header | narrowed type/auth change |
 | XO-2 | Naming convention mixed (camelCase + snake_case) | removed operation |
-| XO-3 | Missing `info.license` | auth change |
 
 ### Observability (9 checks per operation + 3 cross-operation)
 | # | Check | CONTRACT_MATRIX item |
@@ -123,9 +127,7 @@ claim runtime conformance.
 | 7 | `writeOnly` missing on sensitive input fields | safe error |
 | 8 | oneOf/anyOf without `discriminator` | traceability |
 | 9 | `additionalProperties` not declared | traceability |
-| XO-1 | No `info.contact` | traceability |
-| XO-2 | Root `tags[]` not defined | traceability |
-| XO-3 | CORS/OPTIONS not documented | safe error |
+| XO-1 | CORS/OPTIONS missing when `x-cors-required` or `x-browser-consumers` is true | safe error |
 
 ### Schema Quality (3 checks, overlapping with Request)
 | # | Check |
@@ -134,7 +136,7 @@ claim runtime conformance.
 | 2 | Schema object without `additionalProperties` |
 | 3 | Sensitive input field without `writeOnly: true` |
 
-### Cross-operation (10 checks at document level)
+### Cross-operation (7 behavioral checks at document level)
 | # | Check |
 |---|---|
 | XO-1 | Missing `servers[]` (no base URL) |
@@ -142,11 +144,8 @@ claim runtime conformance.
 | XO-3 | Global error shape inconsistency (≥3 different shapes) |
 | XO-4 | No API versioning strategy |
 | XO-5 | Naming convention inconsistency (camelCase vs snake_case) |
-| XO-6 | Missing `info.contact` |
-| XO-7 | Missing `info.license` |
-| XO-8 | Root `tags[]` not defined |
-| XO-9 | CORS/OPTIONS not documented |
-| XO-10 | Duplicate `operationId` across spec |
+| XO-6 | CORS/OPTIONS missing when browser consumers are explicitly declared |
+| XO-7 | Duplicate `operationId` across spec |
 
 ---
 
@@ -154,9 +153,9 @@ claim runtime conformance.
 
 | Layer | Count |
 |---|---|
-| Per-operation checks (Q) | **76 checks** across 9 categories |
-| Cross-operation checks (XQ) | **10 checks** |
-| **Total possible** | **86 check points** |
+| Per-operation checks (Q) | Behavioral checks across 9 categories |
+| Cross-operation checks (XQ) | **7 conditional checks** |
+| Documentation-only lint | Excluded from blocking Q&A unless an explicit `x-require-*` scope enables it |
 
 ---
 
@@ -169,6 +168,11 @@ A gap item is created only when:
 3. Alternative answers change an observable contract (status code, schema, auth, idempotency)
 4. The question is answerable by Dev, BA, PO, or Architect
 5. A proposed assumption is clearly labeled as a proposal
+
+Missing `info.contact`, `info.license`, or root `tags[]` is documentation lint,
+not automatically a behavioral Q&A item. Enable those checks only with
+`x-require-contact`, `x-public-api`, or `x-require-root-tags`. CORS is checked
+only when `x-cors-required` or `x-browser-consumers` is true.
 
 Zero Q&A items is a valid result when the spec is complete.
 

@@ -91,16 +91,16 @@
     {
       "id": "hybrid-api-contract",
       "source_path": "hybrid-testing/api-contract",
-      "file_count": 10,
-      "source_sha256": "5e458b683418cfa51e275e99532c5ac8e2926da98e23f7c49a35f7998709cb00",
-      "bundled_sha256": "e991a6349bf650cb03b1fc280e637c2b1a588072138d5eb45916235141e237dd"
+      "file_count": 11,
+      "source_sha256": "2f7f70b87b7501ba6e997a80e055f9469be7b3db69d09038fe61acc25033ee66",
+      "bundled_sha256": "0297f232da5528a2bc40d1011788e5d702b96af475381360acf96a0eced7e7da"
     },
     {
       "id": "integration-postman",
       "source_path": "integration/postman",
-      "file_count": 8,
-      "source_sha256": "4425da5436dd1f82db37d3caf5494b53b6edc0d6f8bded1101ac8135cc2f270b",
-      "bundled_sha256": "1c958f1eb7aba1909b8fca5614c1507c8570c21c5ce72d59dba60cdcf441811c"
+      "file_count": 9,
+      "source_sha256": "6452f5be2aeb228449ff0d4e404c72cf4dd2171ff1d15db6fcbf6a9093ea4245",
+      "bundled_sha256": "627404896863294afa6084f9391aa1eb7256697222407c083768c53208ef17b1"
     },
     {
       "id": "dynamic-mobile",

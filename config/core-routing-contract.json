@@ -237,6 +237,17 @@
       "first_action": "Select the local converter for the artifact type"
     },
     {
+      "id": "postman-api-automation",
+      "priority": 94,
+      "match": {
+        "all": ["postman|postamn|newman", "\\bapi\\b", "automatic|automation|automated|tự động|chạy|run|test|kiểm thử"]
+      },
+      "route": ["integration-postman", "hybrid-api-contract"],
+      "mode": "API_AUTOMATION",
+      "requires_brief": true,
+      "first_action": "Run the Postman doctor, then require an exact collection, target, assertions, mutation authority, cleanup and stop condition"
+    },
+    {
       "id": "postman-contract-composite",
       "priority": 95,
       "match": {
@@ -455,6 +466,7 @@
     }
   ],
   "golden_cases": [
+    {"id": "ROUTE-038", "input": "update skill Postman để chạy test tự động API", "expected_route": ["integration-postman", "hybrid-api-contract"], "expected_mode": "API_AUTOMATION", "requires_brief": true},
     {"id": "ROUTE-037", "input": "verify skill automation POM and static testing requirements for improvements", "expected_route": ["dynamic-web-automation", "static-requirements-analysis"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
     {"id": "ROUTE-001", "input": "https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane"], "expected_mode": "READ_ONLY", "requires_brief": false},
     {"id": "ROUTE-002", "input": "Retest https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane", "dynamic-web-exploratory", "integration-plane"], "expected_mode": "RETEST_PLUS", "requires_brief": true},

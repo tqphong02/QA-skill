@@ -44,6 +44,13 @@ test('combined automation and static-requirements skill review keeps both owners
   assert.equal(result.requires_brief, false)
 })
 
+test('automatic Postman API testing keeps runtime and contract owners', () => {
+  const result = routeRequest('update skill Postman để chạy test tự động API')
+  assert.deepEqual(result.route, ['integration-postman', 'hybrid-api-contract'])
+  assert.equal(result.mode, 'API_AUTOMATION')
+  assert.equal(result.requires_brief, true)
+})
+
 test('English and Vietnamese negation clauses are removed before matching', () => {
   const normalized = normalizeRoutingIntent('Review Figma spacing; exclude WCAG testing. Chỉ convert file.pptx, chưa phân tích requirement')
   assert.equal(normalized, 'Review Figma spacing; . Chỉ convert file.pptx,')

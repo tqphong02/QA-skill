@@ -35,11 +35,12 @@ When only a spec file is supplied (no live target URL), run **Static Analysis Mo
 
 1. Resolve specification version, target environment, base URL, authentication, roles, allowed mutations, rate limit, test data, and cleanup
 2. Treat the supplied specification as proposed behavior when requirements are unconfirmed; do not invent missing expected status or schema
-3. Use least-privilege test credentials and never print tokens or secret headers
-4. Run static validation before live requests
-5. Separate documentation defects, implementation defects, environment blockers, and backward-compatibility risks
-6. Verify response semantics and business outcome, not only HTTP 2xx
-7. Clean up every created resource and verify deletion or rollback
+3. Bundle external references before semantic analysis. Expand local `$ref` values with bounded cycle handling and return `BLOCKED` for unresolved references
+4. Use least-privilege test credentials and never print tokens or secret headers
+5. Run static validation before live requests
+6. Separate documentation lint, contract questions, implementation defects, environment blockers, and backward-compatibility risks
+7. Verify response semantics and business outcome, not only HTTP 2xx
+8. Clean up every created resource and verify deletion or rollback
 
 Read [references/CONTRACT_MATRIX.md](references/CONTRACT_MATRIX.md) when designing endpoint coverage.
 Read [references/API_STATIC_ANALYSIS.md](references/API_STATIC_ANALYSIS.md) for gap categories, Q&A quality gate, and terminal result definitions.
@@ -51,8 +52,9 @@ Route Postman MCP installation, authentication, diagnosis, and workspace operati
 - Run `scripts/check_openapi.py` for a deterministic OpenAPI 3 structural preflight
 - Run `scripts/analyze_openapi.py` for static semantic gap analysis and Q&A generation
 - Run `scripts/render_api_qa.py` to produce `_API_Q&A.md` and `_API_Q&A.xlsx`
+- Run `scripts/gen_postman_collection.py` to generate a Postman v2.1 collection from the OpenAPI spec before running live validation with the Postman runner
 - Use project-native Playwright API tests or start from [assets/api-contract.spec.ts](assets/api-contract.spec.ts) for stable regression
-- Use Postman MCP for workspace, collection, specification, mock, and monitor management; execute collections through `../integration-postman/scripts/runner.py`
+- Use Postman MCP for workspace, collection, specification, mock, and monitor management; execute collections through `../integration-postman/scripts/runner.py api-test` when the user requests automatic Postman API testing
 - Use Schemathesis or another schema-driven runner only when installed and approved by the project
 - Use `support-testcase-authoring` when the user asks to produce testcase Markdown or Excel; keep execution in this skill
 - Route performance behavior, JMeter and k6 work to the single public `dynamic-performance`
@@ -104,6 +106,49 @@ If no live target URL is confirmed, stop here and deliver the Q&A outputs. Live 
 
 For every in-scope operation record method, path, auth role, parameters, request variants, success responses, error responses, side effects, cleanup, and coverage status.
 
+### 2.5. Optional automatic Postman execution
+
+When the user requests Postman automation, read `../integration-postman/SKILL.md` and run its doctor first. Resolve one exact local v2/v2.1 collection, target URL, optional environment, authorization boundary, mutation ownership, cleanup item, report directory, and stop condition.
+
+If no local collection is available, generate one from the OpenAPI spec first:
+
+```bash
+python3 scripts/gen_postman_collection.py openapi.json \
+  --project <ProjectName> \
+  --base-url https://api.example.test \
+  --output <run-dir>/<ProjectName>.postman_collection.json
+```
+
+The generator produces reproducible v2.1 IDs, resolves bundled local `$ref`
+values, blocks missing/external references, and honors an explicit
+`--auth-scheme`. Its generated assertions are a safe contract-smoke baseline;
+they do not replace operation-specific negative, schema, persistence, RBAC, or
+cleanup tests.
+
+Then run the guarded `api-test` mode:
+
+```bash
+python3 ../integration-postman/scripts/runner.py api-test collection.json \
+  --target https://api.example.test \
+  --environment environment.json \
+  --report-dir <run-dir>/postman
+```
+
+`api-test` accepts only a local v2/v2.1 collection so it can inspect every
+request before network execution. It requires at least one request and an
+applicable Postman test script for every request. It rejects a different
+absolute origin and injects the exact target through `--target-variable`
+(default `baseUrl`). Use `--dry-run` to create only the preflight packet.
+
+The runner blocks a collection without test
+scripts, a mismatched target, unsafe mutations, or missing cleanup. It emits
+`api-test-preflight.json`, redacted runtime evidence, and
+`execution-summary.json`. Static analysis alone never authorizes this live run.
+
+Use Postman MCP to resolve or update a cloud collection only after exact
+workspace/collection read-back and explicit write confirmation. MCP resource
+management and local CLI execution are separate gates.
+
 ### 3. Verify live behavior
 
 Cover valid, missing, null, malformed, boundary, unexpected, unauthorized, forbidden, not found, conflict, rate-limit, and unsupported media-type cases when specified or confirmed. Validate status, headers, content type, schema, field semantics, and persisted side effects.
@@ -133,4 +178,5 @@ For static-only runs the primary deliverable is `_API_Q&A.md` / `_API_Q&A.xlsx` 
 - Backward-compatibility risks are separate from runtime defects
 - Mutated data is cleaned up
 - Static analysis: `_API_Analysis_Source.json`, `_API_Q&A.md`, `_API_Q&A.xlsx` are present and readable
+- When Postman automation is selected: generated collection (if created by `gen_postman_collection.py`) is v2.1 JSON, `api-test-preflight.json` and `execution-summary.json` exist, the exact target matches, assertions executed, and required cleanup is verified
 - Terminal result is explicitly stated (`DONE`, `DONE_WITH_OPEN_QA`, or `BLOCKED`)

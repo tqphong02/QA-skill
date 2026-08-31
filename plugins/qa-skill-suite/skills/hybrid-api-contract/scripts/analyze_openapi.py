@@ -108,6 +108,52 @@ def load_document(path: Path) -> dict[str, Any]:
     return value
 
 
+def _lookup_local_ref(document: dict[str, Any], ref: str) -> Any:
+    """Resolve one RFC 6901 local reference or raise a typed value error."""
+    if not ref.startswith("#/"):
+        raise ValueError(f"External reference is not supported by static analysis: {ref}")
+    node: Any = document
+    for encoded_part in ref[2:].split("/"):
+        part = encoded_part.replace("~1", "/").replace("~0", "~")
+        if not isinstance(node, dict) or part not in node:
+            raise ValueError(f"Unresolved local reference: {ref}")
+        node = node[part]
+    return node
+
+
+def resolve_local_refs(document: dict[str, Any]) -> dict[str, Any]:
+    """Expand local refs into a detached document while bounding cycles."""
+
+    def walk(value: Any, stack: tuple[str, ...] = ()) -> Any:
+        if isinstance(value, list):
+            return [walk(item, stack) for item in value]
+        if not isinstance(value, dict):
+            return value
+
+        ref = value.get("$ref")
+        if isinstance(ref, str) and not ref.startswith("#/"):
+            raise ValueError(f"External reference requires a bundled specification: {ref}")
+        if isinstance(ref, str) and ref.startswith("#/"):
+            siblings = {
+                key: walk(child, stack)
+                for key, child in value.items()
+                if key != "$ref"
+            }
+            if ref in stack:
+                return {"$ref": ref, **siblings}
+            resolved = walk(_lookup_local_ref(document, ref), (*stack, ref))
+            if isinstance(resolved, dict):
+                return {**resolved, **siblings}
+            return siblings or resolved
+
+        return {key: walk(child, stack) for key, child in value.items()}
+
+    resolved = walk(document)
+    if not isinstance(resolved, dict):
+        raise ValueError("Resolved OpenAPI root must be an object")
+    return resolved
+
+
 # ---------------------------------------------------------------------------
 # Low-level helpers
 # ---------------------------------------------------------------------------
@@ -200,8 +246,9 @@ def _is_list_endpoint(path: str, op: dict) -> bool:
         return True
     return not path.rstrip("/").endswith("}")
 
-def _src_ref(path: str, method: str) -> str:
-    return f"openapi.yaml#/paths/{path.replace('~','~0').replace('/','~1')}/{method}"
+def _src_ref(source_name: str, path: str, method: str) -> str:
+    pointer = path.replace("~", "~0").replace("/", "~1")
+    return f"{source_name}#/paths/{pointer}/{method}"
 
 def _label(method: str, path: str) -> str:
     return f"{method.upper()} {path}"
@@ -288,12 +335,13 @@ def _analyse_op(
     components: dict,
     qa_counter: list[int],
     op_idx: int,
+    source_name: str,
 ) -> tuple[dict, list[dict]]:
 
     m       = method.lower()
     label   = _label(method, path)
     api_id  = f"API-{op_idx:03d}"
-    src     = _src_ref(path, method)
+    src     = _src_ref(source_name, path, method)
     params  = _merged_params(path_item, op)
     resps   = _responses(op)
     codes   = _codes(op)
@@ -1177,6 +1225,7 @@ def _cross_checks(
     qa_counter: list[int],
     paths: dict,
     doc: dict,
+    source_name: str,
 ) -> list[dict]:
     extra: list[dict] = []
 
@@ -1191,7 +1240,7 @@ def _cross_checks(
             "impact_ids": ["GLOBAL"],
             "category": cat,
             "module_flow": "Toàn bộ API",
-            "source_ref": "openapi.yaml",
+            "source_ref": source_name,
             "source_excerpt": "Document-level check",
             "ambiguity_gap": gap,
             "risk": risk,
@@ -1247,7 +1296,12 @@ def _cross_checks(
 
     # X4. No API versioning
     all_paths = list(paths.keys())
-    has_version_in_path = any(re.search(r"/v\d+/", p) for p in all_paths)
+    has_version_in_path = any(re.search(r"(?:^|/)v\d+(?:/|$)", p) for p in all_paths)
+    has_version_in_server = any(
+        re.search(r"(?:^|/)v(?:\d+|\{[^{}]+\})(?:/|$)", str(server.get("url", "")))
+        for server in (doc.get("servers") or [])
+        if isinstance(server, dict)
+    )
     accept_version_params = False
     for path_item in paths.values():
         if isinstance(path_item, dict):
@@ -1256,7 +1310,7 @@ def _cross_checks(
                     for p in _merged_params(path_item, op):
                         if str(p.get("name", "")).lower() in ("api-version", "x-api-version", "version"):
                             accept_version_params = True
-    if not has_version_in_path and not accept_version_params:
+    if not has_version_in_path and not has_version_in_server and not accept_version_params:
         XQ("missing_required_rule", "Compatibility",
            "API không có versioning strategy (không có /v1/ trong path hoặc version header)",
            "Khi API thay đổi breaking, tất cả client bị ảnh hưởng đồng thời",
@@ -1291,7 +1345,7 @@ def _cross_checks(
 
     # X6. Missing global contact info
     info = doc.get("info") or {}
-    if not info.get("contact") and not info.get("x-contact"):
+    if doc.get("x-require-contact") is True and not info.get("contact") and not info.get("x-contact"):
         XQ("ambiguous_text", "Observability",
            "Spec không có contact info (ai sở hữu API này?)",
            "Developer không biết liên hệ ai khi có vấn đề",
@@ -1300,7 +1354,7 @@ def _cross_checks(
            priority="P2")
 
     # X7. Missing license info
-    if not info.get("license"):
+    if doc.get("x-public-api") is True and not info.get("license"):
         XQ("ambiguous_text", "Compatibility",
            "Spec không khai báo license",
            "Consumer không biết có được dùng API này không",
@@ -1309,7 +1363,7 @@ def _cross_checks(
            priority="P2")
 
     # X8. Missing global tags definition
-    if not doc.get("tags"):
+    if doc.get("x-require-root-tags") is True and not doc.get("tags"):
         XQ("ambiguous_text", "Observability",
            "Spec không định nghĩa tags[] ở root level",
            "Tags trên operations không có description; docs không có grouping rõ ràng",
@@ -1319,7 +1373,8 @@ def _cross_checks(
 
     # X9. Missing CORS/OPTIONS documentation
     cors_documented = any("options" in (path_item or {}) for path_item in paths.values())
-    if not cors_documented:
+    cors_required = doc.get("x-cors-required") is True or doc.get("x-browser-consumers") is True
+    if cors_required and not cors_documented:
         XQ("ambiguous_text", "Auth",
            "Spec không document CORS policy (không có OPTIONS operation)",
            "Frontend devs không biết CORS được phép origin nào; sẽ fail browser requests",
@@ -1352,6 +1407,7 @@ def _cross_checks(
 # ---------------------------------------------------------------------------
 
 def analyse(document: dict, project: str, spec_path: str) -> dict:
+    source_name = Path(str(spec_path).replace("\\", "/")).name or "openapi"
     paths      = document.get("paths") or {}
     doc_sec    = document.get("security") or []
     components = document.get("components") or {}
@@ -1361,20 +1417,22 @@ def analyse(document: dict, project: str, spec_path: str) -> dict:
     all_qa:  list[dict] = []
     counter: list[int]  = []
 
-    for op_idx, (path, path_item) in enumerate(paths.items(), start=1):
+    op_idx = 0
+    for path, path_item in paths.items():
         if not isinstance(path_item, dict):
             continue
         for method, op in path_item.items():
             if method.lower() not in HTTP_METHODS or not isinstance(op, dict):
                 continue
+            op_idx += 1
             api_op, qa = _analyse_op(
                 path, method.lower(), op, path_item,
-                doc_sec, components, counter, op_idx,
+                doc_sec, components, counter, op_idx, source_name,
             )
             all_ops.append(api_op)
             all_qa.extend(qa)
 
-    all_qa.extend(_cross_checks(all_ops, counter, paths, document))
+    all_qa.extend(_cross_checks(all_ops, counter, paths, document, source_name))
 
     by_p: dict[str, int] = {}
     by_c: dict[str, int] = {}
@@ -1388,7 +1446,7 @@ def analyse(document: dict, project: str, spec_path: str) -> dict:
     return {
         "schema_version": "3.0",
         "project": project,
-        "spec_source": spec_path,
+        "spec_source": source_name,
         "openapi_version": document.get("openapi", "unknown"),
         "api_title": info.get("title", project),
         "api_version": info.get("version", "unknown"),
@@ -1431,7 +1489,12 @@ def main() -> int:
         return 2
 
     project = args.project or (document.get("info") or {}).get("title") or spec_path.stem
-    result  = analyse(document, project, str(spec_path))
+    try:
+        resolved_document = resolve_local_refs(document)
+    except ValueError as exc:
+        print(json.dumps({"error": str(exc), "terminal_result": "BLOCKED"}, ensure_ascii=False), file=sys.stderr)
+        return 2
+    result  = analyse(resolved_document, project, str(spec_path))
 
     out_dir  = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
