@@ -50,10 +50,39 @@ Chỉ thực hiện write sau khi đã xác nhận đúng account, repository, b
 
 File global nằm tại `%USERPROFILE%\.gemini\config\mcp_config.json`
 
-Mở file bằng PowerShell:
+Dùng Node.js để ghi entry (tránh BOM do PowerShell sinh ra):
 
 ```powershell
-notepad "$env:USERPROFILE\.gemini\config\mcp_config.json"
+node -e "
+const fs = require('fs'), os = require('os');
+const p = os.homedir() + '\\.gemini\\\\config\\\\mcp_config.json';
+let raw = fs.readFileSync(p, 'utf8');
+if (raw.charCodeAt(0) === 0xFEFF) raw = raw.slice(1);
+const obj = JSON.parse(raw);
+obj.mcpServers.github = { serverUrl: 'https://api.githubcopilot.com/mcp/', disabled: false };
+fs.writeFileSync(p, JSON.stringify(obj, null, 2), 'utf8');
+console.log('OK');
+"
 ```
 
 Sau khi lưu, restart Antigravity rồi chạy `/mcp`
+
+### Doctor trên Windows
+
+Script `doctor-antigravity.sh` dùng bash; trên Windows cần WSL có `/bin/bash`. Nếu WSL chưa cài, dùng Python để xác nhận cấu hình:
+
+```powershell
+python -c "
+import json, sys
+path = r'%USERPROFILE%\.gemini\config\mcp_config.json'
+import os; path = os.path.expandvars(path)
+with open(path, encoding='utf-8-sig') as f:
+    data = json.load(f)
+server = data.get('mcpServers', {}).get('github')
+if not isinstance(server, dict):
+    sys.exit('FAILED github entry missing')
+if server.get('disabled', False):
+    sys.exit('FAILED github MCP is disabled')
+print('PASS', server.get('serverUrl'))
+"
+```
