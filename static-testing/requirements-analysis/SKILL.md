@@ -30,7 +30,7 @@ Build a closed-world model from the supplied requirement sources, reconcile it w
 2. Resolve the exact source files and output folder. Route Drive URLs/IDs to `integration-google-drive`
 3. For PDF/DOCX/PPTX/XLSX/HTML/image input, run `support/document-conversion/scripts/convert.sh` first and analyze only the resulting Markdown
 4. Read existing canonical analysis/Q&A plus `qa-knowledge/merged/system-business-guide.md`, `system-qna.json` and reconciliation/runtime/Graphify artifacts when present; preserve conflicts and never promote runtime or Graphify evidence to a documented requirement
-5. Read [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), but treat its 18 areas as review lenses, never as a quota for flows or questions
+5. Read [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md) and [REFINEMENT_QUESTIONING_GUIDE.md](references/REFINEMENT_QUESTIONING_GUIDE.md); treat their 18 areas, 5 core refinement questions, and 5W1H probes as review lenses, never as a quota for flows or questions
 6. Build one `.static-testing/requirements-analysis/<project-name>_Analysis_Source.json` from [INPUT_SCHEMA.md](references/INPUT_SCHEMA.md). Every goal, atomic requirement, rule, dependency, risk, API operation and flow needs a stable semantic identity plus exact source evidence
 7. Use closed-world extraction: include only behavior stated by a source or the minimum connective inference needed to represent a stated end-to-end flow. Mark connective inference `inferred`; never invent generic UI, security, audit, retry, concurrency, performance, migration, API or exception logic because a checklist mentions it
 8. Create Q&A only for one material decision that changes an in-scope outcome, state, permission, calculation, data contract or acceptance criterion. Each question needs one stable `decision_key`, exact source evidence and existing impacted flow/requirement IDs. Zero questions is valid
@@ -121,7 +121,7 @@ Only when requested, read [GRAPHIFY-EFFECTIVE-HTML.md](../../dynamic-testing/web
 
 ## Resources
 
-[INPUT_SCHEMA.md](references/INPUT_SCHEMA.md), [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), [API_REQUIREMENTS.md](references/API_REQUIREMENTS.md), [scripts/doctor.mjs](scripts/doctor.mjs), [scripts/generate.sh](scripts/generate.sh), [scripts/convergence.py](scripts/convergence.py), [scripts/render-qa.py](scripts/render-qa.py), [scripts/render-xmind.mjs](scripts/render-xmind.mjs), [scripts/export-requirements.py](scripts/export-requirements.py), [examples/sample-analysis.json](examples/sample-analysis.json)
+[INPUT_SCHEMA.md](references/INPUT_SCHEMA.md), [SENIOR_REVIEW_CHECKLIST.md](references/SENIOR_REVIEW_CHECKLIST.md), [REFINEMENT_QUESTIONING_GUIDE.md](references/REFINEMENT_QUESTIONING_GUIDE.md), [API_REQUIREMENTS.md](references/API_REQUIREMENTS.md), [scripts/doctor.mjs](scripts/doctor.mjs), [scripts/generate.sh](scripts/generate.sh), [scripts/convergence.py](scripts/convergence.py), [scripts/render-qa.py](scripts/render-qa.py), [scripts/render-xmind.mjs](scripts/render-xmind.mjs), [scripts/export-requirements.py](scripts/export-requirements.py), [examples/sample-analysis.json](examples/sample-analysis.json)
 
 ## Known limitations
 
