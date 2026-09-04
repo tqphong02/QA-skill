@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install Python QA dependencies
+        run: python -m pip install openpyxl==3.1.5 PyYAML==6.0.3
+
       - name: Run deterministic web-automation contracts
         run: node --test dynamic-testing/web-automation/tests/*.spec.mjs
 

@@ -121,6 +121,8 @@ test('repository release workflow requires the web-automation contract suite', (
   );
   assert.match(workflow, /^  web-automation-contracts:/m);
   assert.match(workflow, /node --test dynamic-testing\/web-automation\/tests\/\*\.spec\.mjs/);
+  assert.match(workflow, /Install Python QA dependencies/);
+  assert.match(workflow, /openpyxl==3\.1\.5 PyYAML==6\.0\.3/);
   assert.match(workflow, /^  api-postman-contracts:/m);
   assert.match(workflow, /python -m unittest discover -s hybrid-testing\/api-contract\/tests/);
   assert.match(workflow, /python -m unittest discover -s integration\/postman\/tests/);

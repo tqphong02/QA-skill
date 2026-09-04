@@ -92,8 +92,8 @@
       "id": "hybrid-api-contract",
       "source_path": "hybrid-testing/api-contract",
       "file_count": 11,
-      "source_sha256": "2f7f70b87b7501ba6e997a80e055f9469be7b3db69d09038fe61acc25033ee66",
-      "bundled_sha256": "0297f232da5528a2bc40d1011788e5d702b96af475381360acf96a0eced7e7da"
+      "source_sha256": "46e73d27b01443a24d056fc7e305e7a1873c3f198d76fa5e2696f3840f6c9b24",
+      "bundled_sha256": "e7ff4eb844d03462cf170029016c9d0c5929899ef00d60585302dafe663661c4"
     },
     {
       "id": "integration-postman",

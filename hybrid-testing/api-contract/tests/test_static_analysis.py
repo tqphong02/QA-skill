@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 import sys
@@ -127,6 +128,10 @@ def referenced_document() -> dict:
 
 
 class StaticAnalysisTests(unittest.TestCase):
+    def test_analyzer_parses_with_python_311_grammar(self):
+        source = (SCRIPT_DIR / "analyze_openapi.py").read_text(encoding="utf-8")
+        ast.parse(source, filename="analyze_openapi.py", feature_version=(3, 11))
+
     def test_local_refs_source_identity_and_server_version_are_respected(self):
         resolved = analyzer.resolve_local_refs(referenced_document())
         result = analyzer.analyse(resolved, "Orders", r"C:\specs\orders.json")

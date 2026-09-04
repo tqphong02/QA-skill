@@ -1136,9 +1136,12 @@ def _analyse_op(
         for c in sorted(codes)
     ]
 
+    operation_key = str(op.get("operationId") or f"{m}_{path}")
+    semantic_key = re.sub(r"[^\w]", "_", operation_key.lower())
+
     return {
         "id": api_id,
-        "semantic_key": f"api.{re.sub(r'[^\\w]', '_', (op.get('operationId') or f'{m}_{path}').lower())}",
+        "semantic_key": f"api.{semantic_key}",
         "operation_id": op.get("operationId") or f"{method.upper()}_{path}",
         "protocol": "REST",
         "method": method.upper(),
