@@ -71,11 +71,22 @@ Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Erro
 
 Every UI/FUNCTION procedure states environment, route/screen, business role, state, permission and named data; uses one action per numbered line with exact input and observable intermediate/final results. Keep click/focus separate from fill/clear, keep machine keys/selectors/HTTP syntax out of Excel F/G/H, and never store real passwords, tokens, cookies or API keys
 
+## Gherkin/BDD mode
+
+Trigger when the user explicitly requests "Feature file", "Given/When/Then", "Gherkin", or "Cucumber":
+1. Generate `.feature` from the validated JSON source: `python scripts/gen-gherkin.py <input.json> <output.feature>`
+2. Techniques with multiple tabular variations (`BVA`, `Pairwise`, `Decision Table`) map to `Scenario Outline` with an `Examples:` table
+3. Single-flow techniques (`EP`, `State Transition`, `Use Case Testing`) map to discrete `Scenario:` blocks with `Given/When/Then`
+4. Preserve stable `SCN-*` scenario IDs and `testcase_id` in comments and examples for automated test binding
+5. Audit requirement coverage using `python scripts/coverage-report.py <input.json>`
+
 ## Conditional references
 
 | Need | Read |
 |---|---|
 | Source/document coverage and completeness | [coverage-contract.md](references/coverage-contract.md) |
+| Requirement coverage CLI report | Run `python scripts/coverage-report.py <input.json>` |
+| Gherkin/BDD feature generation | Run `python scripts/gen-gherkin.py <input.json> <output.feature>` |
 | UI/FUNCTION contract/templates | [execution-contract.md](references/execution-contract.md) |
 | Black-box techniques | [blackbox-techniques.md](references/blackbox-techniques.md) |
 | UI display-only cases | [ui-testcases.md](references/ui-testcases.md) |
