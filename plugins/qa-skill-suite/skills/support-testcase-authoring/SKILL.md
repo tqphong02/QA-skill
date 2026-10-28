@@ -1,6 +1,6 @@
 ---
 name: support-testcase-authoring
-description: Generate, edit, or review synchronized manual testcase Markdown, shared execution manifests, Excel, or CSV with stable Scenario/Testcase IDs, black-box metadata, detailed reproduce steps, and optional RBAC coverage. Trigger on testcase/scenario writing or review and explicit API testcase requests for endpoints, OpenAPI, Swagger, Postman, or curl; do not require the skill name. Not for exploratory notes, live execution, bug reports, or Playwright code.
+description: Generate, edit, or review synchronized manual testcase Markdown, shared execution manifests, Excel, or CSV with stable Scenario/Testcase IDs, black-box metadata, detailed reproduce steps, and optional RBAC coverage. Trigger on testcase/scenario writing or review, interactive black-box requirement analysis and testcase authoring, and explicit API testcase requests for endpoints, OpenAPI, Swagger, Postman, or curl; do not require the skill name. Not for exploratory notes, live execution, bug reports, or Playwright code.
 mode: support
 surface: test-design
 role: authoring
@@ -31,6 +31,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 
 ## Mandatory workflow
 
+0. Interactive intake & requirement clarification: When presented with feature context, BRD/SRS specs, or interactive testcase prompts, inspect context, extract explicit business rules, flag missing/conflicting items, and ask clarification questions (or list explicit assumptions) before generating test cases; read [blackbox-intake-protocol.md](references/blackbox-intake-protocol.md)
 1. Resolve `UI`, `FUNCTION` or explicit `API` mode. only use API mode when user explicitly requests writing API testcases
 2. Read the complete supplied source and build atomic `requirements[].coverage_items`; read [coverage-contract.md](references/coverage-contract.md). Unresolved expected results stop generation through `review_required`
 3. Reconcile the source inventory before cases: every explicit AC, rule, field constraint, role/state/transition, documented error and in-scope UI/API behavior needs a stable `COV-*` obligation with source ref, expected result, required design and minimum case count
@@ -42,6 +43,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 9. Run `python3 scripts/gen-testcases.py <input.json> <output.xlsx>`
 10. Read Markdown, validate the requirement coverage matrix and manifest, compare IDs/count/content/design with Excel; I-M remain blank
 11. Fix the JSON source and regenerate on mismatch
+12. Review each case against the 9 quality criteria in [testcase-quality-review.md](references/testcase-quality-review.md); unresolved items go to the clarification list, never guessed
 
 ## Cross-model hard gates
 
@@ -63,7 +65,7 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 
 Top level needs `execution_contract="required"`, project metadata, source document, atomic `requirements[].coverage_items` and `sections[]`. Scenarios need `SCN-*`, name and requirement. Cases need stable ID, type, matching req, `coverage_item_refs`, Vietnamese description, priority, `bb_technique` and `execution`
 
-Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Error Guessing` or `Pairwise`. `additional` uses `req=(out-of-spec)` and is not confirmed requirement coverage. Every non-empty FUNCTION group needs a `happy` case before validation/negative-only cases
+Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Error Guessing` or `Pairwise`. Extended techniques: `Domain Testing`, `CRUD Testing`, `Scenario-Based Testing`, `Metamorphic Testing`, `Session-Based Testing`, `Checklist-Based Testing`, `Crowd Testing`, `Random Testing`, `Combinatorial Testing` (alias of `Pairwise`). `additional` uses `req=(out-of-spec)` and is not confirmed requirement coverage. Every non-empty FUNCTION group needs a `happy` case before validation/negative-only cases
 
 ## Token-efficient source design
 
@@ -76,13 +78,26 @@ Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Erro
 
 Every UI/FUNCTION procedure states environment, route/screen, business role, state, permission and named data; uses one action per numbered line with exact input and observable intermediate/final results. Keep click/focus separate from fill/clear, keep machine keys/selectors/HTTP syntax out of Excel F/G/H, and never store real passwords, tokens, cookies or API keys
 
+## Gherkin/BDD mode
+
+Trigger when the user explicitly requests "Feature file", "Given/When/Then", "Gherkin", or "Cucumber":
+1. Generate `.feature` from the validated JSON source: `python scripts/gen-gherkin.py <input.json> <output.feature>`
+2. Techniques with multiple tabular variations (`BVA`, `Pairwise`, `Decision Table`) map to `Scenario Outline` with an `Examples:` table
+3. Single-flow techniques (`EP`, `State Transition`, `Use Case Testing`) map to discrete `Scenario:` blocks with `Given/When/Then`
+4. Preserve stable `SCN-*` scenario IDs and `testcase_id` in comments and examples for automated test binding
+5. Audit requirement coverage using `python scripts/coverage-report.py <input.json>`
+
 ## Conditional references
 
 | Need | Read |
 |---|---|
+| Black-box intake protocol, context analysis & Q&A prompt | [blackbox-intake-protocol.md](references/blackbox-intake-protocol.md) |
 | Source/document coverage and completeness | [coverage-contract.md](references/coverage-contract.md) |
+| Requirement coverage CLI report | Run `python scripts/coverage-report.py <input.json>` |
+| Gherkin/BDD feature generation | Run `python scripts/gen-gherkin.py <input.json> <output.feature>` |
 | UI/FUNCTION contract/templates | [execution-contract.md](references/execution-contract.md) |
 | Black-box techniques | [blackbox-techniques.md](references/blackbox-techniques.md) |
+| Testcase quality review (9 criteria: correctness, feasibility, necessity, precision, understandability, completeness, traceability, consistency, conciseness) | [testcase-quality-review.md](references/testcase-quality-review.md) |
 | UI display-only cases | [ui-testcases.md](references/ui-testcases.md) |
 | Explicit API testcase writing | [api-testcases.md](references/api-testcases.md) |
 | API source import | Run [scripts/import-api-spec.py](scripts/import-api-spec.py) first and stop while `review_required` is non-empty |

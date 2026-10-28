@@ -1,6 +1,6 @@
 # Black-Box Testing Techniques
 
-> **Khi nào đọc file này**: Khi thiết kế test case và cần chọn kỹ thuật black-box phù hợp cho từng loại case. AI phải xác định kỹ thuật trước khi viết case. Tham chiếu `@references/blackbox-techniques.md` trong SKILL.md.
+> **Khi nào đọc file này**: Khi thiết kế test case và cần chọn kỹ thuật black-box phù hợp cho từng loại case. AI phải xác định kỹ thuật trước khi viết case. Tham chiếu `@references/blackbox-techniques.md` trong SKILL.md. Để xem quy trình tiếp nhận context và bóc tách yêu cầu trước khi viết test case, xem [blackbox-intake-protocol.md](blackbox-intake-protocol.md).
 
 Black-box testing thiết kế test case **hoàn toàn từ behavior và AC**, không dựa vào source code nội bộ. Mỗi case phải observable và measurable từ góc nhìn người dùng cuối.
 
@@ -319,3 +319,283 @@ Full factorial: 3 × 4 × 2 = 24 case. Pairwise: ~10 case đại diện.
 Mọi case dưới `execution_contract="required"` phải có `bb_technique`. Có thể dùng một chuỗi hoặc mảng khi case kết hợp nhiều kỹ thuật. Generator xác thực giá trị, giữ metadata trong `.automation.json` và chặn case thiếu/sai kỹ thuật. `legacy_text_only` vẫn tương thích mà không bắt buộc field này.
 
 Giá trị hợp lệ: `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Error Guessing`, `Pairwise`
+
+
+---
+
+## Phân nhóm kỹ thuật theo ISTQB CTAL Test Analyst
+
+Bốn nhóm kỹ thuật dưới đây bao phủ toàn bộ spectrum kiểm thử black-box. Chọn nhóm phù hợp với đặc điểm chức năng trước, sau đó chọn kỹ thuật cụ thể trong nhóm.
+
+| Nhóm | Kỹ thuật | Áp dụng khi |
+|---|---|---|
+| **Data-Based Testing** | Domain Testing (EP + BVA) | Input có miền giá trị, ràng buộc hoặc giới hạn rõ ràng |
+| **Data-Based Testing** | Combinatorial / Pairwise | ≥3 input field độc lập, full factorial quá lớn |
+| **Data-Based Testing** | Random Testing | Không gian input quá lớn, cần phát hiện lỗi ngoài spec |
+| **Behavior-Based Testing** | CRUD Testing | Feature có tạo, đọc, sửa, xóa dữ liệu |
+| **Behavior-Based Testing** | State Transition Testing | Object có vòng đời nhiều trạng thái rõ ràng |
+| **Behavior-Based Testing** | Scenario-Based Testing | Luồng end-to-end đa actor hoặc đa bước |
+| **Rule-Based Testing** | Decision Table Testing | ≥2 điều kiện kết hợp tạo ra behavior khác nhau |
+| **Rule-Based Testing** | Metamorphic Testing | Không có oracle rõ ràng, kiểm tra tính nhất quán |
+| **Experience-Based Testing** | Session-Based Testing | Khám phá tự do có cấu trúc thời gian |
+| **Experience-Based Testing** | Checklist-Based Testing | Review nhanh theo danh sách tiêu chí đã biết |
+| **Experience-Based Testing** | Crowd Testing | Thu thập lỗi từ nhiều tester với môi trường khác nhau |
+
+---
+
+## 8. Domain Testing
+
+### Nguyên tắc
+Domain Testing là sự kết hợp của EP và BVA áp dụng lên **từng miền giá trị** của input. Xác định miền hợp lệ, miền không hợp lệ và các ranh giới giữa chúng.
+
+### Khi nào áp dụng
+- Input có kiểu dữ liệu rõ ràng (số nguyên, chuỗi, ngày tháng, enum)
+- Input có ràng buộc miền: range, length, format, allowed values
+- Cần phủ cả trong miền và ngoài miền một cách có cấu trúc
+
+### Ví dụ: Trường tuổi (18–65)
+
+| Miền | Giá trị | Type |
+|---|---|---|
+| Dưới min (invalid) | 17 | `edge` |
+| Min hợp lệ | 18 | `edge` |
+| Trong miền | 30 | `happy` |
+| Max hợp lệ | 65 | `edge` |
+| Trên max (invalid) | 66 | `edge` |
+| Ngoài kiểu dữ liệu | `"abc"` | `validation` |
+
+### JSON mẫu
+
+```json
+{
+  "type": "edge",
+  "bb_technique": "Domain Testing",
+  "req": "AC5",
+  "description": "Xác minh rằng hệ thống từ chối đăng ký khi tuổi nhập vào là 17 (dưới giới hạn tối thiểu 18)",
+  "pre_condition": "User ở trang /register",
+  "procedure": "1. Mở /register\n2. Tại ô \"Tuổi\", nhập: 17\n3. Điền đầy đủ các trường còn lại hợp lệ\n4. Nhấp nút \"Đăng ký\"",
+  "expected": "1. Hệ thống không tạo tài khoản\n2. Hiển thị thông báo lỗi: \"Tuổi phải từ 18 đến 65\"\n3. Trang vẫn ở màn hình đăng ký",
+  "priority": "High"
+}
+```
+
+---
+
+## 9. CRUD Testing
+
+### Nguyên tắc
+Kiểm tra toàn bộ vòng đời dữ liệu: **Create → Read → Update → Delete**. Mỗi thao tác là một nhóm test case độc lập. Kiểm tra cả trạng thái dữ liệu trước và sau mỗi thao tác.
+
+### Checklist CRUD tối thiểu
+
+| Thao tác | Positive | Negative |
+|---|---|---|
+| Create | Tạo thành công với dữ liệu hợp lệ | Thiếu field bắt buộc, dữ liệu trùng lặp |
+| Read | Đọc đúng bản ghi theo ID, lọc, phân trang | Đọc ID không tồn tại (→ 404), không có quyền (→ 403) |
+| Update | Cập nhật thành công, dữ liệu phản ánh ngay | Sửa bản ghi không thuộc quyền, field bất biến |
+| Delete | Xóa thành công, không truy cập được sau xóa | Xóa đã xóa (→ 404), không có quyền (→ 403) |
+
+### Quy tắc áp dụng
+- Mỗi thao tác CRUD là 1 nhóm scenario riêng
+- Sau Create: verify bằng Read — không tin chỉ vào status code
+- Sau Delete: verify bản ghi không còn tồn tại bằng Read → 404
+- Test data cleanup bắt buộc sau mỗi test mutation
+
+### JSON mẫu (Delete → verify Read 404)
+
+```json
+{
+  "type": "happy",
+  "bb_technique": "CRUD Testing",
+  "req": "AC12",
+  "description": "Xác minh rằng sau khi xóa đơn hàng, hệ thống trả về 404 khi truy cập lại đơn hàng đó",
+  "pre_condition": "Đã tạo đơn hàng TEST-ORD-001; user đăng nhập với quyền Admin",
+  "procedure": "1. Gọi DELETE /orders/TEST-ORD-001\n2. Xác nhận response status 200 hoặc 204\n3. Gọi GET /orders/TEST-ORD-001",
+  "expected": "1. DELETE trả về status 200 hoặc 204\n2. GET trả về status 404\n3. Response body chứa message: \"Order not found\"",
+  "priority": "High"
+}
+```
+
+---
+
+## 10. Scenario-Based Testing
+
+### Nguyên tắc
+Kiểm tra **luồng end-to-end** thực tế của người dùng, bao gồm nhiều bước, nhiều actor và nhiều màn hình. Khác với Use Case Testing (tập trung 1 AC), Scenario-Based Testing kiểm tra chuỗi hành động liên tiếp phản ánh nghiệp vụ thực.
+
+### Khi nào áp dụng
+- Luồng nghiệp vụ có nhiều bước phụ thuộc nhau theo thứ tự
+- Nhiều vai trò tương tác: User tạo → Manager duyệt → Admin xuất
+- Cần kiểm tra tính nhất quán dữ liệu xuyên suốt toàn bộ flow
+
+### Cách thiết kế
+1. Xác định actor, precondition và goal của scenario
+2. Liệt kê từng bước theo thứ tự thực hiện
+3. Ghi expected state sau mỗi bước quan trọng
+4. Thêm alternative path và exception path nếu có
+
+### JSON mẫu (end-to-end: tạo đơn → duyệt → xuất)
+
+```json
+{
+  "type": "happy",
+  "bb_technique": "Scenario-Based Testing",
+  "req": "AC20",
+  "description": "Xác minh rằng luồng tạo đơn hàng → duyệt bởi Manager → xuất PDF hoàn tất đúng trình tự",
+  "pre_condition": "User A có quyền tạo đơn; Manager B có quyền duyệt; Admin C có quyền xuất",
+  "procedure": "1. User A đăng nhập, tạo đơn hàng với dữ liệu hợp lệ\n2. Xác nhận đơn ở trạng thái Pending\n3. Manager B đăng nhập, mở danh sách đơn chờ duyệt\n4. Manager B duyệt đơn hàng vừa tạo\n5. Xác nhận đơn ở trạng thái Approved\n6. Admin C đăng nhập, mở đơn hàng và xuất PDF",
+  "expected": "1. Đơn hàng tạo thành công, trạng thái: Pending\n2. Manager thấy đơn trong danh sách Pending\n3. Sau duyệt, trạng thái chuyển sang Approved\n4. Admin xuất được file PDF chứa đúng thông tin đơn hàng",
+  "priority": "Critical"
+}
+```
+
+---
+
+## 11. Metamorphic Testing
+
+### Nguyên tắc
+Dùng khi **không có oracle rõ ràng** để so sánh kết quả đúng/sai. Thay vì kiểm tra output tuyệt đối, kiểm tra **mối quan hệ tương đối** giữa output của 2 lần chạy với input biến đổi có kiểm soát.
+
+### Khi nào áp dụng
+- Hệ thống AI/ML, thuật toán tìm kiếm, tính toán phức tạp
+- Không có expected result tường minh từ spec
+- Cần kiểm tra tính nhất quán và tính bất biến (invariant) của hệ thống
+
+### Metamorphic Relations phổ biến
+
+| Relation | Mô tả | Ví dụ |
+|---|---|---|
+| Permutation | Thứ tự input thay đổi → output không thay đổi | Sắp xếp danh sách theo cùng tiêu chí: thứ tự input khác nhau → kết quả như nhau |
+| Additive | Thêm phần tử không liên quan → kết quả không thay đổi | Tìm kiếm với extra keyword không liên quan |
+| Multiplicative | Nhân input → output tỷ lệ tương ứng | Tính tổng tiền nhân đôi số lượng → tổng nhân đôi |
+| Inverse | Áp dụng nghịch đảo → quay về state ban đầu | Encrypt rồi Decrypt → ra chuỗi gốc |
+| Equivalence | Đổi input tương đương → output tương đương | Tìm kiếm "QA" = "qa" nếu case-insensitive |
+
+### JSON mẫu (Inverse relation)
+
+```json
+{
+  "type": "negative",
+  "bb_technique": "Metamorphic Testing",
+  "req": "AC18",
+  "description": "Xác minh rằng encrypt rồi decrypt cùng chuỗi trả về chuỗi gốc (Inverse relation)",
+  "pre_condition": "API /encrypt và /decrypt hoạt động; key hợp lệ đã cấu hình",
+  "procedure": "1. Gọi POST /encrypt với body: {\"text\": \"hello-qa-2025\"}\n2. Lưu giá trị encrypted từ response\n3. Gọi POST /decrypt với body: {\"text\": <encrypted>}\n4. So sánh result với chuỗi gốc",
+  "expected": "1. /encrypt trả về chuỗi encrypted khác chuỗi gốc\n2. /decrypt trả về chuỗi: \"hello-qa-2025\"\n3. result === input gốc",
+  "priority": "High"
+}
+```
+
+---
+
+## 12. Session-Based Testing
+
+### Nguyên tắc
+Tester khám phá tự do trong **một session có giới hạn thời gian** (thường 60–90 phút) với charter (mục tiêu) xác định. Kết quả ghi lại dưới dạng session note, không phải test case cố định.
+
+### Cấu trúc session
+
+```
+Charter:   Khám phá module Thanh toán, tập trung vào điều kiện lỗi và edge case
+Start:     10:00
+Duration:  90 phút
+Tester:    QA Engineer A
+```
+
+| Phần | Nội dung |
+|---|---|
+| Charter | Mục tiêu session, scope và focus area |
+| Notes | Quan sát, hành vi bất thường, câu hỏi phát sinh |
+| Bugs | Defect phát hiện được với bước tái hiện |
+| Issues | Rủi ro, dependency, thiếu data |
+| Teardown | % thời gian dành cho testing / bug / setup |
+
+### Khi nào áp dụng
+- Chức năng mới, chưa có test case đầy đủ
+- Cần khám phá nhanh trước khi viết test case chính thức
+- Bổ sung sau khi regression test không phát hiện được lỗi mới
+
+### Quy tắc
+- Mỗi session phải có charter trước khi bắt đầu
+- Ghi note liên tục trong session — không ghi sau
+- Kết thúc session: tóm tắt bug, risk và đề xuất charter tiếp theo
+
+---
+
+## 13. Checklist-Based Testing
+
+### Nguyên tắc
+Sử dụng **danh sách kiểm tra (checklist)** các tiêu chí chất lượng đã được tổng hợp từ kinh nghiệm và standard. Mỗi mục trong checklist là 1 điều kiện cần verify — nhanh hơn viết test case chi tiết.
+
+### Khi nào áp dụng
+- Review UI consistency, security baseline hoặc performance check
+- Sanity / smoke testing trước khi regression
+- Audit framework hoặc code review trước release
+
+### Checklist mẫu — Web Application Security Baseline
+
+- [ ] Không expose stack trace hoặc internal path trong error response
+- [ ] HTTPS bắt buộc trên mọi endpoint
+- [ ] Token không xuất hiện trong URL params
+- [ ] Session cookie có Secure + HttpOnly flag
+- [ ] CSRF protection trên mọi form mutation
+- [ ] Rate limiting hoạt động trên endpoint login
+- [ ] SQL injection pattern không được chấp nhận trong input
+- [ ] Thông báo lỗi authentication không tiết lộ email tồn tại hay không
+
+### Quy tắc
+- Mỗi checklist có scope rõ ràng — không dùng checklist generic cho mọi feature
+- Tick + ghi evidence (URL, screenshot, response) cho từng mục
+- Mục fail → tạo bug ticket ngay
+
+---
+
+## 14. Crowd Testing
+
+### Nguyên tắc
+Thu thập kết quả kiểm thử từ **nhiều tester với môi trường, thiết bị, locale và kinh nghiệm khác nhau**. Phát hiện lỗi khó tái hiện, lỗi device-specific và lỗi UX mà team nội bộ bỏ qua.
+
+### Khi nào áp dụng
+- Compatibility testing trên nhiều OS, browser, thiết bị
+- Localization / i18n với ngôn ngữ và locale thực
+- Beta testing hoặc UAT với người dùng thực
+- Bổ sung sau automated regression để phát hiện lỗi UX
+
+### Quy trình tối giản
+
+1. Xác định scope, môi trường mục tiêu và loại bug cần tìm
+2. Viết charter và hướng dẫn ngắn gọn cho tester crowd
+3. Cung cấp bug report template chuẩn (OS, browser, steps, actual, expected, screenshot)
+4. Aggregate kết quả: phân loại theo severity, module, environment
+5. Deduplicate bug trước khi push lên tracker
+
+### Bug report template cho crowd tester
+
+```
+Environment:  [OS] [Browser/App version] [Screen resolution]
+Steps:        1. ... 2. ... 3. ...
+Actual:       [Mô tả behavior thực tế]
+Expected:     [Mô tả behavior mong đợi]
+Attachment:   [Screenshot / video]
+Severity:     Critical / High / Medium / Low
+```
+
+### Quy tắc
+- Crowd testing bổ sung, không thay thế structured test case
+- Chỉ mở crowd session khi scope, charter và template đã sẵn sàng
+- Kết quả crowd cần được QA lead triage trước khi đưa vào tracker
+
+---
+
+## Cập nhật: Giá trị hợp lệ cho `bb_technique`
+
+```text
+Cũ (vẫn hợp lệ):
+  EP | BVA | Decision Table | State Transition | Use Case Testing | Error Guessing | Pairwise
+
+Mới (bổ sung):
+  Domain Testing | CRUD Testing | Scenario-Based Testing | Metamorphic Testing
+  | Session-Based Testing | Checklist-Based Testing | Crowd Testing | Random Testing | Combinatorial Testing (alias của Pairwise)
+```
+
+Có thể dùng mảng khi case kết hợp nhiều kỹ thuật: `["EP", "BVA"]`, `["CRUD Testing", "State Transition"]`

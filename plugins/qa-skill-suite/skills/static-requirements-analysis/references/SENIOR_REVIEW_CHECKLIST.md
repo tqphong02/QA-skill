@@ -1,6 +1,6 @@
 # Senior fullstack QA/QC review checklist
 
-Review every area below before generating outputs. These areas are lenses for the stated scope, not a completeness template for inventing requirements
+Review every area below before generating outputs. These areas are lenses for the stated scope, not a completeness template for inventing requirements. Detailed questioning strategies, the 5 core refinement questions, and the QA 5W1H framework are documented in [REFINEMENT_QUESTIONING_GUIDE.md](REFINEMENT_QUESTIONING_GUIDE.md)
 
 - Mark `checked` only when the source sufficiently covers the area for an in-scope flow
 - Mark `blocked` only when one missing material decision prevents implementation or deterministic testing; reference the existing root Q&A item
@@ -12,6 +12,7 @@ Review every area below before generating outputs. These areas are lenses for th
 - In-scope and out-of-scope functions
 - Actor, role, tenant and ownership boundaries
 - Entry channels such as UI, API, batch, import or scheduled job
+- Forgotten users and edge conditions (assistive tech/accessibility, unstable/low network, legacy devices, malicious abuse cases)
 
 ## 2. Entry and preconditions
 
@@ -27,6 +28,7 @@ Review every area below before generating outputs. These areas are lenses for th
 
 ## 4. Alternate and exception flow
 
+- Primary defensive probe: *"What happens when this goes wrong?"* across network, timeout, empty data, conflicts, and dependency outages
 - Cancel, retry, back, refresh and resume
 - Empty result, partial success and dependency failure
 - Recovery and compensation behavior
@@ -102,6 +104,7 @@ Review every area below before generating outputs. These areas are lenses for th
 - Who changed what and when
 - Correlation ID, job status and operational visibility
 - Alert, metric and trace needed for failures
+- Silent failure detection, blast radius assessment, and MTTD (Mean Time To Detect) for unthrown/stealth business errors
 
 ## 17. Compatibility and migration
 
@@ -113,6 +116,8 @@ Review every area below before generating outputs. These areas are lenses for th
 
 - Expected results are observable and measurable
 - Test data and environment are available
+- User-perceived "Done" vs technical completion; illusion of done / fake sync (optimistic UI rollback, eventual consistency lag)
+- Application of QA 5W1H framework (Who, What, When, Where, Why, How)
 - Each acceptance criterion has an authority and source reference
 
 ## Question quality gate

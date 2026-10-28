@@ -22,6 +22,7 @@ After `integration/plane/SKILL.md`, read `integration/plane/QUICK_REF.md`. For i
 - Chỉ có Drive/Docs/Sheets/Slides URL hoặc ID → `integration-google-drive` resolve/read
 - Generic browser task → `dynamic-web-exploratory` FAST; không cần business brief
 - Deterministic Sheet/testcase và API automation chuyển sang `dynamic-web-automation`; literal: deterministic Sheet/testcase chuyển sang `dynamic-web-automation`
+- Selenium/Java/Cucumber/BDD framework/Selenium POM → `dynamic-selenium-automation`; selected mode
 - Retest/verify → Plane read → exploratory RETEST_PLUS → Plane read-back/comment/state
 
 A bare link authorizes only exact read-only inspection. A mutation requires an execution contract and target validation. link đứng một mình không cấp quyền write

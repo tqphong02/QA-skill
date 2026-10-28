@@ -163,6 +163,17 @@
       "first_action": "Analyze source-derived paths, then hand stable candidates to testcase authoring"
     },
     {
+      "id": "selenium-java-automation",
+      "priority": 65,
+      "match": {
+        "any": ["selenium|java.{0,20}automation|cucumber.{0,20}selenium|selenium.{0,20}framework|selenium.{0,20}pom|selenium webdriver|java.{0,20}test.{0,20}framework|framework.{0,20}selenium|bdd.{0,20}selenium|selenium.{0,20}cucumber|junit.{0,20}selenium|testng.{0,20}selenium|xây dựng.{0,20}selenium|tạo.{0,20}framework.{0,20}selenium"]
+      },
+      "route": ["dynamic-selenium-automation"],
+      "mode": "GENERATE",
+      "requires_brief": false,
+      "first_action": "Read existing project structure and requirements, then run the selected mode"
+    },
+    {
       "id": "deterministic-web-automation",
       "priority": 70,
       "match": {

@@ -1,0 +1,5 @@
+interface:
+  display_name: "Selenium Java POM & BDD Automation"
+  short_description: "Xây dựng, chạy và bảo trì framework Java Selenium POM + Cucumber BDD"
+  default_prompt: "Use $dynamic-selenium-automation to analyze, design, generate, execute, debug, review, or maintain a Java Selenium WebDriver + Cucumber BDD + Page Object Model framework with explicit waits, multi-environment config, Allure reporting, and PASS, FAILED, N/A, or UNTEST verdicts."
+

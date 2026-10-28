@@ -1,0 +1,14 @@
+# Generated output
+qa-runs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Node
+node_modules/

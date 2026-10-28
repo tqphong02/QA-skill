@@ -16,7 +16,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-OUTLINE_TECHNIQUES = {"BVA", "Pairwise", "Decision Table"}
+OUTLINE_TECHNIQUES = {"BVA", "Pairwise", "Decision Table", "Combinatorial Testing", "Domain Testing"}
 VALID_TECHNIQUES = {
     "EP", "BVA", "Decision Table", "State Transition",
     "Use Case Testing", "Error Guessing", "Pairwise",

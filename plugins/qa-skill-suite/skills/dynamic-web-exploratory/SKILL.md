@@ -47,6 +47,7 @@ EXPLORATORY_BROWSER_QA = FAST profile | full EXPLORATORY profile
 | Exploratory/ad-hoc, bug hunting, UI/UX or business discovery | `DISCOVERY_CORE`; always read [EXPLORATORY-AGENT-LOOP.md](references/EXPLORATORY-AGENT-LOOP.md) |
 | Plane ticket plus retest | `RETEST_PLUS`; read [RETEST-PLUS.md](references/RETEST-PLUS.md) and [PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) |
 | Sanity, smoke or impacted regression | `DISCOVERY_CORE` plus the applicable regression scope; read [TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) |
+| Button or flow works per handler but final state is wrong, silent no-op, undo by side effect | `DISCOVERY_CORE`; read [CLICK-PATH-AUDIT.md](references/CLICK-PATH-AUDIT.md) |
 | First app/feature exploration | `APP_BASELINE_DISCOVERY`; use [PROCESS-GUIDE.md](references/PROCESS-GUIDE.md) and [TEST-INTELLIGENCE.md](references/TEST-INTELLIGENCE.md) |
 | Repository business discovery | Run `scripts/orchestrators/repo-business-discovery.mjs --repo <path> --mode <full|incremental> --parallel auto --graphify auto`; read [PIPELINE.md](references/PIPELINE.md) |
 | UI ↔ source/docs/runtime reconciliation | Run `scripts/orchestrators/ui-business-reconciliation.mjs --url <url> --page <slug> --requirements <registry.json>`; read [PIPELINE.md](references/PIPELINE.md) |

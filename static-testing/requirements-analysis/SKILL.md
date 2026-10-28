@@ -37,6 +37,7 @@ Build a closed-world model from the supplied requirement sources, reconcile it w
 9. Reconcile by semantic identity, never append blindly. Reuse IDs, update matching records in place, close answered items, retire unsupported items, and merge multiple review observations that share one root decision
 10. When the source defines an API, read [API_REQUIREMENTS.md](references/API_REQUIREMENTS.md), capture only documented API behavior and export the contract handoff. Static analysis does not prove implementation behavior; route spec-versus-runtime validation to `hybrid-api-contract`
 11. Run `scripts/generate.sh`, read back Markdown/Excel/XMind and fail closed on source drift, unsupported evidence, unchanged-source growth, dependency, ID or output mismatch
+12. Only when the user explicitly asks to recover behavior from code because no usable BRD/SRS exists, read [SOURCE_SPEC_MINING.md](references/SOURCE_SPEC_MINING.md); mined statements stay `candidate` with `EXTRACTED`/`INFERRED`/`AMBIGUOUS` labels and become Q&A, never confirmed requirements
 
 ## Workflow
 

@@ -361,6 +361,60 @@
       "requires_brief": false,
       "critical": true,
       "tags": ["english", "release", "issue-collision", "missing-evidence", "negation", "blocked-safe"]
+    },
+    {
+      "id": "STABLE-041",
+      "input": "Tạo framework Selenium Java cho dự án quản lý đơn hàng sử dụng Cucumber BDD và JUnit 5",
+      "expected_route": ["dynamic-selenium-automation"],
+      "expected_mode": "GENERATE",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "selenium", "framework-generation", "cucumber", "junit5"]
+    },
+    {
+      "id": "STABLE-042",
+      "input": "Build Selenium POM automation with Cucumber BDD for login and registration modules",
+      "expected_route": ["dynamic-selenium-automation"],
+      "expected_mode": "GENERATE",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "selenium", "pom", "cucumber", "build"]
+    },
+    {
+      "id": "STABLE-043",
+      "input": "Review code Java test automation framework, kiểm tra SOLID và locator stability",
+      "expected_route": ["dynamic-selenium-automation"],
+      "expected_mode": "GENERATE",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["mixed-language", "selenium", "java-automation", "review"]
+    },
+    {
+      "id": "STABLE-044",
+      "input": "Xây dựng Selenium WebDriver framework cho phỏng vấn Automation Tester với TestNG",
+      "expected_route": ["dynamic-selenium-automation"],
+      "expected_mode": "GENERATE",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["vietnamese", "selenium", "webdriver", "testng", "interview"]
+    },
+    {
+      "id": "STABLE-045",
+      "input": "Debug flaky Selenium test LoginTest failing with StaleElementReferenceException on CI",
+      "expected_route": ["dynamic-selenium-automation"],
+      "expected_mode": "GENERATE",
+      "requires_brief": false,
+      "critical": false,
+      "tags": ["english", "selenium", "debug", "flaky", "ci"]
+    },
+    {
+      "id": "STABLE-046",
+      "input": "Build and run Playwright POM automation for checkout module from testcase Excel sheet",
+      "expected_route": ["dynamic-web-automation"],
+      "expected_mode": "BUILD_AND_RUN",
+      "requires_brief": true,
+      "critical": true,
+      "tags": ["english", "playwright", "non-selenium", "boundary-test"]
     }
   ]
 }

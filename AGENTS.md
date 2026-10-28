@@ -31,6 +31,7 @@ Then read the matched `SKILL.md` completely and only the references required by 
 | Release/go-no-go/sign-off | Plane if applicable → `governance-release-quality`; evaluate packet read-only |
 | Drive/Docs/Sheets/Slides URL or ID | `integration-google-drive`; resolve and read object |
 | Deterministic testcase/Excel/Sheet/Playwright/POM/API automation/BUILD/RUN | `dynamic-web-automation`; unified BUILD_AND_RUN |
+| Selenium/Java/Cucumber/BDD framework/Selenium POM | `dynamic-selenium-automation`; selected mode |
 | Generic browser task | `dynamic-web-exploratory` FAST; no business brief is required |
 | Exploratory, ad-hoc, sanity, UI/UX, baseline, browser errors | `dynamic-web-exploratory`; UI-first |
 | Source/business discovery or UI ↔ source reconciliation | `dynamic-web-exploratory`; run the matching orchestrator |

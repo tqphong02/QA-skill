@@ -1,0 +1,16 @@
+{
+  "name": "@qa-skill/hybrid-accessibility",
+  "version": "1.0.0",
+  "description": "Accessibility audit skill — axe-core automated WCAG scanning with Playwright",
+  "type": "module",
+  "scripts": {
+    "doctor": "node scripts/doctor.mjs",
+    "scan": "node scripts/run-axe.mjs",
+    "test": "node --test tests/axe-runner.spec.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.62.0",
+    "@types/node": "^26.1.1"
+  }
+}

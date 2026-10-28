@@ -20,6 +20,11 @@ When this workflow creates local reports, evidence, logs, converted intermediate
 
 An exact user path, a source-code deliverable that belongs in the target repository, or a safety-mandated location overrides this layout. Register or link the result without copying secrets or sensitive evidence into the index
 <!-- qa-runs-contract:end -->
+
+# Senior QA Automation Engineer Protocol
+
+Read [senior-qa-engineer-protocol.md](references/senior-qa-engineer-protocol.md) before any implementation work. It defines the role contract, automation principles, five-step workflow, failing-test protocol, new-scenario guidelines, and completion criteria that govern all activity in this skill.
+
 # Deterministic UI and API automation
 
 Turn a bounded `.automation.json` manifest into maintainable Playwright code, execute the selected cases, and return evidence-backed verdicts. Use the scripts as the source of truth; do not recreate their naming, planning, coverage, or report logic in prose.
@@ -103,6 +108,8 @@ All deterministic surfaces use the canonical `fixtures/allure-contract.ts` and o
 
 | Need | Reference |
 |---|---|
+| **Role contract, workflow, and principles** | [senior-qa-engineer-protocol.md](references/senior-qa-engineer-protocol.md) |
+| **AI Agentic API Testing — 10-step process, responsibility matrix, Black-box design** | [ai-agentic-api-testing.md](references/ai-agentic-api-testing.md) |
 | BUILD/RUN/Sheet integration | [testcase-execution.md](references/testcase-execution.md) |
 | UI/POM, browser events, iframe and waits | [ui-testing.md](references/ui-testing.md) |
 | Browser MCP selectors | [selector-discovery.md](references/selector-discovery.md) |
@@ -114,6 +121,7 @@ All deterministic surfaces use the canonical `fixtures/allure-contract.ts` and o
 | Deciding what to automate, automation value formula | [test-selection-strategy.md](references/test-selection-strategy.md) |
 | Network interception, mocking, HAR playback | [network-interception.md](references/network-interception.md) |
 | UI + API + DB cross-layer verification | [db-verification.md](references/db-verification.md) |
+| AI blind spots, silent-failure hunt, independent review of AI-written tests | [ai-blind-spots-review.md](references/ai-blind-spots-review.md) |
 
 Handoff authoring-only work to `support-testcase-authoring`, contract-only validation to `hybrid-api-contract`, exploratory browser QA to `dynamic-web-exploratory`, WCAG to `hybrid-accessibility`, visual design review to `hybrid-ui-ux-review`, and load/performance work to `dynamic-performance`.
 

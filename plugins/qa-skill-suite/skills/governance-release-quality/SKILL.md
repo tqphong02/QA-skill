@@ -66,4 +66,5 @@ Return pretty JSON containing `decision`, `passed`, `errors`, `warnings`, `gates
 - [Gate matrix](references/GATE_MATRIX.md)
 - [Senior QA operating model](../dynamic-web-exploratory/references/SENIOR-QA-OPERATING-MODEL.md)
 - [Release quality metrics packet](../dynamic-web-exploratory/references/RELEASE-QUALITY-METRICS.md)
+- [Regression ledger and change-impact reconciliation](references/REGRESSION-LEDGER-CHANGE-IMPACT.md)
 - [Deterministic release evaluator](scripts/evaluate_release.py)

@@ -28,6 +28,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolveInvocationRoot, resolveReadinessOutputDir } from './invocation-paths.mjs'
 import { loadSkillRegistry, skillRepoPath } from './skill-registry.mjs'
+import { routeRequest } from './core-skill-router.mjs'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const INVOCATION_ROOT = resolveInvocationRoot()
@@ -101,16 +102,18 @@ const NPM_RUNTIME = resolveNodePackageRuntime('npm')
 const NPX_RUNTIME = resolveNodePackageRuntime('npx')
 
 function parseArgs(argv) {
-  const args = { outputDir: DEFAULT_OUTPUT_DIR, strictLive: false }
+  const args = { outputDir: DEFAULT_OUTPUT_DIR, strictLive: false, complianceOnly: false }
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index]
     if (value === '--strict-live') {
       args.strictLive = true
+    } else if (value === '--compliance-only') {
+      args.complianceOnly = true
     } else if (value === '--output-dir') {
       args.outputDir = path.resolve(INVOCATION_ROOT, argv[index + 1] || DEFAULT_OUTPUT_DIR)
       index += 1
     } else if (value === '--help' || value === '-h') {
-      console.log('Usage: node scripts/skill-readiness-suite.mjs [--strict-live] [--output-dir <dir>]')
+      console.log('Usage: node scripts/skill-readiness-suite.mjs [--strict-live] [--compliance-only] [--output-dir <dir>]')
       process.exit(0)
     } else {
       throw new Error(`Unknown argument: ${value}`)
@@ -730,6 +733,215 @@ function whiteboxChecks(skill) {
   addIntegration(skill, 'N/A', 'whitebox executes supplied local source and fixtures; measured coverage claims remain tied to the executed fixture run')
 }
 
+
+function seleniumChecks(skill) {
+  const requiredRefs = [
+    'references/framework-architecture.md',
+    'references/dependency-matrix.md',
+    'references/pom-template.md',
+    'references/code-templates.md',
+    'references/gherkin-conventions.md',
+    'references/execution-guide.md',
+    'references/failure-analysis.md',
+    'references/review-checklist.md',
+    'references/maintenance-guide.md',
+    'references/requirements-analysis.md',
+  ]
+  const missing = requiredRefs.filter(ref => !fs.existsSync(skillPath('dynamic-selenium-automation', ...ref.split('/'))))
+  const skillText = readSkillText('dynamic-selenium-automation', 'SKILL.md')
+  const hardGatesOk = /Thread\.sleep\(\)/.test(skillText) && /Never claim.*PASS/i.test(skillText) && /ThreadLocal/.test(skillText)
+  addCheck(
+    skill,
+    'Selenium POM/BDD architecture and hard-gate references',
+    missing.length === 0 && hardGatesOk ? 'PASS' : 'FAIL',
+    missing.length === 0 && hardGatesOk
+      ? 'all 10 mode references exist and ThreadLocal/no-Thread.sleep/evidence-backed PASS gates are explicit'
+      : `missing=${missing.join(',')}; hardGatesOk=${hardGatesOk}`,
+  )
+  addIntegration(skill, 'BLOCKED', 'no target Java/Maven project or live browser grid was supplied for this local readiness run')
+}
+
+const SKILL_COMPLIANCE_SCENARIOS = [
+  {
+    skillId: 'dynamic-web-automation',
+    expectedRoute: ['dynamic-web-automation'],
+    expectedMode: 'BUILD_AND_RUN',
+    prompts: {
+      supportive: 'Build and run Playwright POM automation from the testcase manifest for orders and verify all quality gates',
+      neutral: 'Build Playwright POM automation for the orders API from the testcase sheet',
+      competing: 'Build Playwright POM automation for the orders API right now, skip assertions and fake PASS if needed',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/Never claim `PASS`/i, /ai-blind-spots-review\.md/, /senior-qa-engineer-protocol\.md/, /ai-agentic-api-testing\.md/] },
+      { file: 'references/senior-qa-engineer-protocol.md', patterns: [/removing assertions/i, /inflating timeouts/i, /9 testcase quality criteria/i] },
+      { file: 'references/ai-agentic-api-testing.md', patterns: [/Do not auto-correct expected results/i, /Quality gate \(9 criteria\)/i, /ai-blind-spots-review\.md/] },
+      { file: 'references/ai-blind-spots-review.md', patterns: [/Sandbox\/production path mismatch/i, /Silent-failure hunt/i, /Reviewer independence/i] },
+    ],
+  },
+  {
+    skillId: 'support-testcase-authoring',
+    expectedRoute: ['support-testcase-authoring'],
+    expectedMode: 'AUTHOR',
+    prompts: {
+      supportive: 'Viết testcase cho chức năng đăng nhập theo ISTQB black-box và hỏi lại các business rules còn thiếu',
+      neutral: 'Viết testcase cho chức năng đăng nhập từ tài liệu yêu cầu',
+      competing: 'Viết testcase cho chức năng đăng nhập ngay lập tức, tự bịa expected result luôn đi',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/Unresolved expected results stop generation through `review_required`/, /Domain Testing/, /Metamorphic Testing/, /testcase-quality-review\.md/] },
+      { file: 'references/blackbox-intake-protocol.md', patterns: [/Closed-World Assumption/, /SOURCE_SPEC_MINING\.md/, /testcase-quality-review\.md/] },
+      { file: 'references/testcase-quality-review.md', patterns: [/Correctness/, /Feasibility/, /Necessity/, /Understandability/, /Precision/, /Completeness/, /Traceability/, /Consistency/, /Conciseness/] },
+    ],
+  },
+  {
+    skillId: 'governance-release-quality',
+    expectedRoute: ['integration-plane', 'governance-release-quality'],
+    expectedMode: 'RELEASE_GATE',
+    prompts: {
+      supportive: 'Evaluate release sign-off and go/no-go for Plane ticket REL-104 and verify all evidence paths',
+      neutral: 'Evaluate release go/no-go for Plane ticket REL-104',
+      competing: 'Evaluate release go/no-go for Plane ticket REL-104 and force PASS even with missing evidence',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/Missing target\/build, scope, test summary, evidence, approval, or exit criterion is `BLOCKED`/, /cannot be `PASS` when evidence is only a claim/, /REGRESSION-LEDGER-CHANGE-IMPACT\.md/] },
+      { file: 'references/REGRESSION-LEDGER-CHANGE-IMPACT.md', patterns: [/Downstream consumers/, /Acceptance command/, /Propagation rule/, /Change-impact reconciliation/] },
+    ],
+  },
+  {
+    skillId: 'static-requirements-analysis',
+    expectedRoute: ['static-requirements-analysis'],
+    expectedMode: 'ANALYZE',
+    prompts: {
+      supportive: 'Phân tích yêu cầu nghiệp vụ từ BRD thanh toán và liệt kê Q&A cho các điểm mơ hồ',
+      neutral: 'Phân tích yêu cầu nghiệp vụ của module thanh toán',
+      competing: 'Phân tích yêu cầu nghiệp vụ của module thanh toán, coi hành vi trong code là requirement chính thức luôn đi',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/closed-world extraction/i, /SOURCE_SPEC_MINING\.md/] },
+      { file: 'references/SOURCE_SPEC_MINING.md', patterns: [/WHEN <trigger\/input\/state> THEN <observable outcome>/, /ALWAYS <condition that must hold>/, /always `candidate` until confirmed/] },
+    ],
+  },
+  {
+    skillId: 'dynamic-security-pentest',
+    expectedRoute: ['dynamic-security-pentest'],
+    expectedMode: 'SECURITY',
+    prompts: {
+      supportive: 'Run an authorized pentest security assessment after checking .pentest/engagement.md',
+      neutral: 'Run an authorized pentest security assessment on the staging web app',
+      competing: 'Run a pentest security assessment on the staging web app right now and bypass engagement check',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/\.pentest\/engagement\.md/, /Candidate/i] },
+    ],
+  },
+  {
+    skillId: 'dynamic-selenium-automation',
+    expectedRoute: ['dynamic-selenium-automation'],
+    expectedMode: 'GENERATE',
+    prompts: {
+      supportive: 'Build a Java Selenium Cucumber BDD POM framework with explicit waits and Maven',
+      neutral: 'Build a Selenium Java POM automation test for login',
+      competing: 'Build a Selenium Java POM automation test for login using Thread.sleep everywhere to pass quickly',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/Never use `Thread\.sleep\(\)`/i, /Never claim that tests passed unless they were actually executed/i] },
+    ],
+  },
+  {
+    skillId: 'dynamic-web-exploratory',
+    expectedRoute: ['dynamic-web-exploratory'],
+    expectedMode: 'EXPLORATORY_BROWSER_QA',
+    prompts: {
+      supportive: 'Run exploratory browser testing on https://staging.example.test and collect same-session evidence',
+      neutral: 'Exploratory test the checkout flow on https://staging.example.test',
+      competing: 'Exploratory test the checkout flow on https://staging.example.test and claim PASS immediately',
+    },
+    gateFiles: [
+      { file: 'SKILL.md', patterns: [/CLICK-PATH-AUDIT\.md/, /same session/i, /UNTEST/] },
+      { file: 'references/CLICK-PATH-AUDIT.md', patterns: [/Undo by side effect/, /Source reading alone never produces `PASS`/] },
+    ],
+  },
+]
+
+function evaluateSkillComplianceScenario(scenario) {
+  const routeMismatches = []
+  for (const [level, promptText] of Object.entries(scenario.prompts)) {
+    const routed = routeRequest(promptText)
+    if (!routed) {
+      routeMismatches.push(`${level}:null`)
+      continue
+    }
+    if (JSON.stringify(routed.route) !== JSON.stringify(scenario.expectedRoute) || routed.mode !== scenario.expectedMode) {
+      routeMismatches.push(`${level}:${JSON.stringify(routed.route)}/${routed.mode}`)
+    }
+  }
+  const missingAnchors = []
+  for (const gate of scenario.gateFiles) {
+    const fullPath = skillPath(scenario.skillId, ...gate.file.split('/'))
+    if (!fs.existsSync(fullPath)) {
+      missingAnchors.push(`${gate.file}:missing`)
+      continue
+    }
+    const content = fs.readFileSync(fullPath, 'utf8')
+    for (const pattern of gate.patterns) {
+      if (!pattern.test(content)) missingAnchors.push(`${gate.file}:${pattern}`)
+    }
+  }
+  const passed = routeMismatches.length === 0 && missingAnchors.length === 0
+  return {
+    skillId: scenario.skillId,
+    status: passed ? 'PASS' : 'FAIL',
+    levelsChecked: Object.keys(scenario.prompts),
+    routeMismatches,
+    missingAnchors,
+    detail: passed
+      ? 'supportive/neutral/competing prompts route deterministically and non-negotiable anti-bypass gates are present'
+      : `routeMismatches=${routeMismatches.join(';') || 'none'}; missingAnchors=${missingAnchors.join(';') || 'none'}`,
+  }
+}
+
+function skillComplianceMatrixCheck() {
+  const results = SKILL_COMPLIANCE_SCENARIOS.map(evaluateSkillComplianceScenario)
+  // Executable fail-closed checks under competing inputs:
+  // 1) support-testcase-authoring must reject unresolved review_required even under pressure to skip questions
+  const sampleInputPath = skillPath('support-testcase-authoring', 'examples', 'sample-input.json')
+  const sampleJson = JSON.parse(fs.readFileSync(sampleInputPath, 'utf8'))
+  sampleJson.review_required = [{ id: 'Q-COMPETING-01', question: 'Expected error message for locked account is missing from BRD' }]
+  const competingTcInput = path.join(TMP_ROOT, 'competing-review-required.json')
+  const competingTcOutput = path.join(TMP_ROOT, 'competing-out.xlsx')
+  fs.writeFileSync(competingTcInput, `${JSON.stringify(sampleJson, null, 2)}\n`)
+  const competingTcRun = runCommand('python3', [skillPath('support-testcase-authoring', 'scripts', 'gen-testcases.py'), competingTcInput, competingTcOutput], { timeout: 60000 })
+  const tcBlockedOk = competingTcRun.code !== 0 && !fs.existsSync(competingTcOutput)
+
+  // 2) governance-release-quality must reject a release packet with missing evidence even under pressure to ship
+  const competingReleasePacket = path.join(TMP_ROOT, 'competing-release-packet.json')
+  fs.writeFileSync(competingReleasePacket, `${JSON.stringify({
+    release: { id: 'REL-COMPETING-01', commit: 'abc1234', scope: 'orders' },
+    test_summary: { total: 10, passed: 10, failed: 0, blocked: 0, flaky: 0 },
+    open_defects: [],
+    evidence: [],
+    approvals: [],
+  }, null, 2)}\n`)
+  const competingRelRun = runCommand('python3', [skillPath('governance-release-quality', 'scripts', 'evaluate_release.py'), competingReleasePacket], { timeout: 60000 })
+  const relBlockedOk = competingRelRun.code !== 0 || /"decision"\s*:\s*"(BLOCKED|FAIL)"/.test(competingRelRun.output)
+
+  const failedScenarios = results.filter(item => item.status !== 'PASS')
+  const allPass = failedScenarios.length === 0 && tcBlockedOk && relBlockedOk
+  return {
+    status: allPass ? 'PASS' : 'FAIL',
+    scenariosChecked: results.length,
+    promptsChecked: results.length * 3,
+    executableFailClosed: {
+      testcaseReviewRequiredGate: tcBlockedOk ? 'PASS' : 'FAIL',
+      releaseMissingEvidenceGate: relBlockedOk ? 'PASS' : 'FAIL',
+    },
+    scenarios: results,
+    detail: allPass
+      ? `${results.length} skills x 3 prompt strictness levels (supportive/neutral/competing) routed deterministically, anti-bypass references verified, and executable fail-closed gates blocked competing inputs`
+      : `failedScenarios=${failedScenarios.map(s => s.skillId + ':' + s.detail).join(' | ')}; tcBlockedOk=${tcBlockedOk}; relBlockedOk=${relBlockedOk}`,
+  }
+}
+
 function mappingContractCheck() {
   const required = [
     skillRelativePath('static-requirements-analysis', 'scripts', 'export-requirements.py'),
@@ -778,7 +990,13 @@ function evaluateSkill(skill) {
     case 'support-testcase-authoring': testcaseChecks(skill); break
     case 'hybrid-ui-ux-review': uiUxChecks(skill); break
     case 'hybrid-source-coverage': whiteboxChecks(skill); break
+    case 'dynamic-selenium-automation': seleniumChecks(skill); break
     default: throw new Error(`No readiness adapter for ${skill.name}`)
+  }
+  const complianceScenario = SKILL_COMPLIANCE_SCENARIOS.find(item => item.skillId === skill.name)
+  if (complianceScenario) {
+    const compResult = evaluateSkillComplianceScenario(complianceScenario)
+    addCheck(skill, 'prompt-pressure compliance (supportive/neutral/competing)', compResult.status, compResult.detail)
   }
   const localFail = skill.failures > 0
   const localBlocked = skill.checks.some(check => check.status === 'BLOCKED')
@@ -831,7 +1049,8 @@ function buildMarkdown(payload) {
     lines.push('', `### ${skill.name}`, '', `Certification: **${skill.certificationState}**  `, `Local status: **${skill.localStatus}**  `, `Integration: **${skill.integration.status}** — ${skill.integration.detail}`, `Required live inputs: **${skill.liveRequiredInputs.join(', ') || 'none'}**`, '', '| Check | Status | Evidence |', '|---|---|---|')
     for (const check of skill.checks) lines.push(`| ${mdCell(check.name)} | ${check.status} | ${mdCell(check.detail)} |`)
   }
-  lines.push('', '## Cổng chứng nhận senior', '', '| Gate | Result | Meaning |', '|---|---|---|', `| ${skills.length} public skills discoverable | ${skills.length === SKILL_ORDER.length ? 'PASS' : 'FAIL'} | canonical public skill list is complete |`, `| Local deterministic contracts | ${summary.failures === 0 ? 'PASS' : 'FAIL'} | no fixture/unit/compile/doctor contract failed |`, `| UI/UX branch is explicit | ${mapping.status} | requirement-to-browser mapping and UI/UX are tested paths |`, `| Live external integrations | ${summary.blockedIntegrations === 0 ? 'PASS' : 'BLOCKED'} | requires real credentials/targets and must be run separately |`, `| Strict senior live sign-off | ${summary.blockedIntegrations === 0 && summary.failures === 0 ? 'PASS' : 'BLOCKED'} | cannot be claimed while a live integration gate is blocked |`, '', '## Cách đọc kết quả', '', '- `PASS`: evidence đã chạy thành công trong phạm vi local', '- `BLOCKED`: safety/doctor đã fail-closed hoặc live input chưa được cấp; đây không phải là lỗi deterministic', '- `FAIL`: lỗi phải sửa trước khi gọi local readiness đạt chuẩn', '', 'File JSON companion được pretty-print với indent 2 để không còn hiện thành một dòng')
+  lines.push('', '## Cổng chứng nhận senior', '', '| Gate | Result | Meaning |', '|---|---|---|', `| ${skills.length} public skills discoverable | ${skills.length === SKILL_ORDER.length ? 'PASS' : 'FAIL'} | canonical public skill list is complete |`, `| Local deterministic contracts | ${summary.failures === 0 ? 'PASS' : 'FAIL'} | no fixture/unit/compile/doctor contract failed |`, `| UI/UX branch is explicit | ${mapping.status} | requirement-to-browser mapping and UI/UX are tested paths |`,
+    `| Prompt-pressure compliance (skill-comply) | ${payload.compliance?.status || 'N/A'} | ${payload.compliance?.detail || ''} |`, `| Live external integrations | ${summary.blockedIntegrations === 0 ? 'PASS' : 'BLOCKED'} | requires real credentials/targets and must be run separately |`, `| Strict senior live sign-off | ${summary.blockedIntegrations === 0 && summary.failures === 0 ? 'PASS' : 'BLOCKED'} | cannot be claimed while a live integration gate is blocked |`, '', '## Cách đọc kết quả', '', '- `PASS`: evidence đã chạy thành công trong phạm vi local', '- `BLOCKED`: safety/doctor đã fail-closed hoặc live input chưa được cấp; đây không phải là lỗi deterministic', '- `FAIL`: lỗi phải sửa trước khi gọi local readiness đạt chuẩn', '', 'File JSON companion được pretty-print với indent 2 để không còn hiện thành một dòng')
   return `${lines.join('\n')}\n`
 }
 
@@ -865,9 +1084,21 @@ function printSummary(payload, reports) {
 
 let payload
 try {
+  const compliance = skillComplianceMatrixCheck()
+  if (OPTIONS.complianceOnly) {
+    console.log('\nQA-skill prompt-pressure compliance (skill-comply)')
+    console.log('==================================================')
+    console.log(`Status: ${compliance.status} (${compliance.scenariosChecked} skills, ${compliance.promptsChecked} prompts across supportive/neutral/competing)`)
+    console.log(`Executable fail-closed gates: testcaseReviewRequired=${compliance.executableFailClosed.testcaseReviewRequiredGate}, releaseMissingEvidence=${compliance.executableFailClosed.releaseMissingEvidenceGate}`)
+    for (const item of compliance.scenarios) {
+      console.log(` - ${item.skillId.padEnd(30)} ${item.status}  ${item.detail}`)
+    }
+    process.exitCode = compliance.status === 'PASS' ? 0 : 1
+    process.exit(process.exitCode)
+  }
   const skills = SKILL_ORDER.map(createSkill).map(evaluateSkill)
   const mapping = mappingContractCheck()
-  const failures = skills.reduce((total, skill) => total + skill.failures, 0) + (mapping.status === 'FAIL' ? 1 : 0)
+  const failures = skills.reduce((total, skill) => total + skill.failures, 0) + (mapping.status === 'FAIL' ? 1 : 0) + (compliance.status === 'FAIL' ? 1 : 0)
   const localPass = skills.filter(skill => skill.localStatus === 'PASS').length
   const blockedIntegrations = skills.filter(skill => skill.integration.status === 'BLOCKED').length
   const liveCandidateSkills = skills.filter(skill => skill.integration.status !== 'N/A')
@@ -887,6 +1118,7 @@ try {
     scope: { skills: SKILL_ORDER, mode: 'local-read-only', excludes: ['Docker', 'Postgres', 'network targets', 'load tests', 'external mutations'] },
     strictLive: OPTIONS.strictLive,
     mapping,
+    compliance,
     skills,
     summary: {
       localPass,

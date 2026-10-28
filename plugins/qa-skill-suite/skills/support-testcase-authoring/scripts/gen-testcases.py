@@ -57,7 +57,10 @@ def configure_cli_streams():
 TYPE_ORDER = ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional']
 BB_TECHNIQUES = {
     'EP', 'BVA', 'Decision Table', 'State Transition', 'Use Case Testing',
-    'Error Guessing', 'Pairwise'
+    'Error Guessing', 'Pairwise',
+    'Domain Testing', 'Combinatorial Testing', 'Random Testing',
+    'CRUD Testing', 'Scenario-Based Testing', 'Metamorphic Testing',
+    'Session-Based Testing', 'Checklist-Based Testing', 'Crowd Testing'
 }
 TYPE_LABEL = {
     'happy': 'Happy Path',

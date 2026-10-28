@@ -247,3 +247,15 @@ codex mcp get github
 ```
 
 URL phải là `/mcp/` hoặc một endpoint `/mcp/x/<toolset>` có chủ đích. Nếu khác, chạy script với `--replace`
+
+### OAuth bị GitHub từ chối — `dynamic client registration not supported`
+
+Codex npm global (`@openai/codex` ≤ 0.122.0 cài qua NVM/npm) không hoàn thành OAuth vì GitHub đã tắt dynamic client registration cho app chưa đăng ký. Dấu hiệu: lệnh `--login` không mở browser hoặc báo registration error
+
+Giải pháp:
+
+1. Dùng PAT thay OAuth — xem Mục 6
+2. Cập nhật Codex lên phiên bản mới nhất: `npm update -g @openai/codex`
+3. Dùng Codex native của VS Code extension (`openai.chatgpt`) nếu có — runtime này khác với bản npm global và có OAuth registration riêng
+
+GitHub CLI (`gh`) không bị ảnh hưởng bởi lỗi này; vẫn dùng được để theo dõi CI và đọc workflow run trong khi chờ PAT hoặc phiên bản Codex mới

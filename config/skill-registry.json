@@ -208,6 +208,15 @@
       "role": "validator",
       "profile": "specialized",
       "legacy_aliases": ["compatibility-localization-qa"]
+    },
+    {
+      "id": "dynamic-selenium-automation",
+      "path": "dynamic-testing/selenium-automation",
+      "mode": "dynamic",
+      "surface": "web",
+      "role": "executor",
+      "profile": "specialized",
+      "legacy_aliases": ["selenium-java-automation"]
     }
   ],
   "retired_aliases": {

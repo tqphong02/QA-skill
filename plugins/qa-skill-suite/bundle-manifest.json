@@ -2,28 +2,28 @@
   "schema_version": 1,
   "generated_by": "scripts/sync-skills.mjs",
   "registry_version": 1,
-  "skill_count": 23,
+  "skill_count": 24,
   "skills": [
     {
       "id": "dynamic-web-exploratory",
       "source_path": "dynamic-testing/web-exploratory",
-      "file_count": 131,
-      "source_sha256": "391fd44279afae5aa87e002d34eacc012e70e2f833edada00fc4cc60f4c36f40",
-      "bundled_sha256": "64ef3c691bfa942b602cf4479acca0a8c016bd4455ab71f26ea31db1d7ee338d"
+      "file_count": 132,
+      "source_sha256": "a354daf45d85bb55fafa695832f8561abb4474dadbf0c168521a258ae3c16789",
+      "bundled_sha256": "e1d2384032beff0707adcf36251b53309bb4a7e047e886e45e28f6ad404e75f3"
     },
     {
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
-      "file_count": 22,
-      "source_sha256": "df6cc2805dd51702dda5504c0ccc116c1c402edfd84f90c249e603f86a653c4b",
-      "bundled_sha256": "3b7602dfbede1f2f86fa114af569b78b1d0645a05ba88d3f4008251cd3dad7ed"
+      "file_count": 26,
+      "source_sha256": "5ccac3512499e18c62079e53d5458924c2a06e169542842f31e376886d1c25fa",
+      "bundled_sha256": "a037461243db2030ae3bcc00b3d39b732425da691ec2ca36c7c7ade583ad7539"
     },
     {
       "id": "dynamic-web-automation",
       "source_path": "dynamic-testing/web-automation",
-      "file_count": 76,
-      "source_sha256": "d1bca580904a73e2cf0f15f993a07f01165699150ea746ced8a18e53aa611239",
-      "bundled_sha256": "4f68b40845270373278efe2aa87cb90faa22bec86fe7c5838dae0a30570b5afc"
+      "file_count": 79,
+      "source_sha256": "854cd3ef0a7e09575b5359e6296a974c1f6368eaab844c2ce0a86b46ea1cba4f",
+      "bundled_sha256": "95dc4402e5a023edd673aa9053bdb1de161a5b5ec55de66c0a5134b46deeaeb7"
     },
     {
       "id": "support-document-conversion",
@@ -35,9 +35,9 @@
     {
       "id": "static-requirements-analysis",
       "source_path": "static-testing/requirements-analysis",
-      "file_count": 16,
-      "source_sha256": "2a9e96ecebc0c49a13a34c28c6318cf84f7dc502cf1946e2019ed6dd6b86ed03",
-      "bundled_sha256": "7b90de519429c9bfde970d7b848873ff874e782c85b89cc9afeb86eced486cc3"
+      "file_count": 18,
+      "source_sha256": "d55317b151bcfb1b4eac9cc4a72de24361a12ddc5def3ceee7fead7543867271",
+      "bundled_sha256": "87c87056ccd515d6c678b91f4c09fb245b01c7ba368a1228cc608e98d39f266f"
     },
     {
       "id": "dynamic-security-pentest",
@@ -77,9 +77,9 @@
     {
       "id": "hybrid-accessibility",
       "source_path": "hybrid-testing/accessibility",
-      "file_count": 5,
-      "source_sha256": "a3f66168244c1cc14719fd08133b62c3616b433a2fd201e6e1ecd914fe8e7fb8",
-      "bundled_sha256": "7f150a23fd7130a4477a621c423fe76cc85fab2344bcfa4a97ed6b47cad3e6ee"
+      "file_count": 8,
+      "source_sha256": "807073d600a421b81ef38fb2d5ea950aa1409c9ffa8e78dc0c2cce9a27a05f09",
+      "bundled_sha256": "a25b83b9d1bc278e4b3833332ccc8d558a787b6d994598ed6e591526a4d413ed"
     },
     {
       "id": "dynamic-performance",
@@ -120,8 +120,8 @@
       "id": "integration-github",
       "source_path": "integration/github",
       "file_count": 11,
-      "source_sha256": "0e424a362b094d01faac19b408e19a907504ba2e78826447e96e93f2d77d47af",
-      "bundled_sha256": "f8beffd5d8c1b79da63d94d773e945dc6511606a07362483f458cd398133a7e5"
+      "source_sha256": "f3395f34c2b2e7c9455c7ddbf2b05499735fa9487c845160b6948abe29854ca4",
+      "bundled_sha256": "6487d27cd3e1b8f77376af78cb76a106ae37b8a5fafe04ac3823eee83a618c21"
     },
     {
       "id": "adapter-browser-session",
@@ -140,9 +140,9 @@
     {
       "id": "governance-release-quality",
       "source_path": "governance/release-quality",
-      "file_count": 5,
-      "source_sha256": "691be6fcb0899db2f8370f9b17c854aafb13c2d849ffb2fb56806fa962f8772b",
-      "bundled_sha256": "08f7fd6b7d29c3f03164c06becda14df2cf3f582ea16c1b92cd5698a9ca07e5d"
+      "file_count": 6,
+      "source_sha256": "5f51bd7fbf61c345d70e9a6fcb9617d7a7fe5d4b733e5d4b39cd42af5b523645",
+      "bundled_sha256": "cd1431e66461cd7381839137664aebb0028625b32071f68e39ab5e501477b588"
     },
     {
       "id": "static-supply-chain-security",
@@ -164,6 +164,13 @@
       "file_count": 5,
       "source_sha256": "0e3f3ae67441c76f511b388fc09f933df5334258a57fe2bff287264dd40aaf98",
       "bundled_sha256": "6b8a67b1ffd742be9c7386d2083b82589e53fdccb2b32f0629bc7cebf25e5324"
+    },
+    {
+      "id": "dynamic-selenium-automation",
+      "source_path": "dynamic-testing/selenium-automation",
+      "file_count": 14,
+      "source_sha256": "826199f48d7f5d3cae2ae46c545dd2a5e0230a3eb345b68aa03abb064c30ac5a",
+      "bundled_sha256": "c04407bc296306f4cea41d620a8d498fa75bcc8ec96b6bc69d9c5f015ddcea35"
     }
   ]
 }
