@@ -3,6 +3,30 @@
   "description": "Deterministic routing contract for the highest-frequency QA-skill entrypoints",
   "routes": [
     {
+      "id": "observability-trace-to-code",
+      "priority": 24,
+      "match": {
+        "all": ["prometheus|grafana|kibana|elasticsearch|observability|log|trace|stack trace", "codebase|source|repository|repo|code|file|function|dòng|nằm ở đâu|đối chiếu|truy ra"],
+        "none": ["load test|stress test|spike test|soak test|jmeter|\\.jmx\\b|\\bk6\\b"]
+      },
+      "route": ["integration-observability", "hybrid-source-coverage"],
+      "mode": "TRACE_TO_CODE",
+      "requires_brief": false,
+      "first_action": "Resolve telemetry and deployed commit, then correlate the exact stack trace with source read-only"
+    },
+    {
+      "id": "observability-integration",
+      "priority": 25,
+      "match": {
+        "any": ["prometheus|grafana|kibana|elasticsearch|observability|promql|metrics?\\b|log analysis|error rate|latency dashboard"],
+        "none": ["load test|stress test|spike test|soak test|jmeter|\\.jmx\\b|\\bk6\\b"]
+      },
+      "route": ["integration-observability"],
+      "mode": "OBSERVABILITY",
+      "requires_brief": false,
+      "first_action": "Run the observability doctor and resolve the exact telemetry target read-only"
+    },
+    {
       "id": "plane-release-gate",
       "priority": 5,
       "match": {
@@ -477,6 +501,9 @@
     }
   ],
   "golden_cases": [
+    {"id": "ROUTE-039", "input": "Kiểm tra health và error rate bằng Prometheus Grafana", "expected_route": ["integration-observability"], "expected_mode": "OBSERVABILITY", "requires_brief": false},
+    {"id": "ROUTE-040", "input": "Phân tích log lỗi trong Elasticsearch Kibana", "expected_route": ["integration-observability"], "expected_mode": "OBSERVABILITY", "requires_brief": false},
+    {"id": "ROUTE-041", "input": "Truy log Kibana và chỉ ra lỗi nằm ở đâu trong codebase", "expected_route": ["integration-observability", "hybrid-source-coverage"], "expected_mode": "TRACE_TO_CODE", "requires_brief": false},
     {"id": "ROUTE-038", "input": "update skill Postman để chạy test tự động API", "expected_route": ["integration-postman", "hybrid-api-contract"], "expected_mode": "API_AUTOMATION", "requires_brief": true},
     {"id": "ROUTE-037", "input": "verify skill automation POM and static testing requirements for improvements", "expected_route": ["dynamic-web-automation", "static-requirements-analysis"], "expected_mode": "DESIGN_HARDENING", "requires_brief": false},
     {"id": "ROUTE-001", "input": "https://projects.metasolutions.ai/acme/issues/ABC-12", "expected_route": ["integration-plane"], "expected_mode": "READ_ONLY", "requires_brief": false},

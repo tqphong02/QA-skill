@@ -38,7 +38,7 @@ Review the design contract before judging implementation quality. This skill cov
 5. Validate `usability.json` with `check_usability_artifact.py`; keep `READY` plans separate from observed `PASS` results
 6. Verify keyboard/focus and contrast expectations through `hybrid-accessibility`; do not treat a screenshot-only review as an accessibility pass
 7. For a live app, use `dynamic-web-exploratory` and keep screenshot, console, page-error, and network evidence in the same browser session
-8. Classify each observation as `PASS`, `FAIL`, `BLOCKED`, or `CANDIDATE`; never infer a business rule from visual appearance alone
+8. Classify each observation as `PASS`, `FAILED`, `N/A`, or `UNTEST` at the user-facing layer; a heuristic-only observation with no representative task evidence stays `UNTEST`, never a soft fifth verdict. Never infer a business rule from visual appearance alone
 
 ## Usability testing
 

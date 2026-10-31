@@ -2,21 +2,21 @@
   "schema_version": 1,
   "generated_by": "scripts/sync-skills.mjs",
   "registry_version": 1,
-  "skill_count": 24,
+  "skill_count": 25,
   "skills": [
     {
       "id": "dynamic-web-exploratory",
       "source_path": "dynamic-testing/web-exploratory",
-      "file_count": 132,
-      "source_sha256": "a354daf45d85bb55fafa695832f8561abb4474dadbf0c168521a258ae3c16789",
-      "bundled_sha256": "e1d2384032beff0707adcf36251b53309bb4a7e047e886e45e28f6ad404e75f3"
+      "file_count": 136,
+      "source_sha256": "547276ecbb8c037cc443fb4ae82b5e00f26484759b44133451f33b62ea92a5c1",
+      "bundled_sha256": "7f068a8f97cb6b1a9cd1f3e0c0c282a7bc0ed94b20faaab03cf4c1dcbcd10802"
     },
     {
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
       "file_count": 26,
-      "source_sha256": "5ccac3512499e18c62079e53d5458924c2a06e169542842f31e376886d1c25fa",
-      "bundled_sha256": "a037461243db2030ae3bcc00b3d39b732425da691ec2ca36c7c7ade583ad7539"
+      "source_sha256": "4ac9347acdec15755f8e2e89e7ab29f810ac716c000f4f1b5c8c633cecdb516b",
+      "bundled_sha256": "becaa9381b793063b680757af25aa0ef39f2214db234cf7cd48013788ac647c4"
     },
     {
       "id": "dynamic-web-automation",
@@ -29,8 +29,8 @@
       "id": "support-document-conversion",
       "source_path": "support/document-conversion",
       "file_count": 4,
-      "source_sha256": "135a3ad496e8e2568a9fc81917a0adedfc50155483705fef5043550d4fdf07ff",
-      "bundled_sha256": "a6474ffbe0d8a6f6233bbcde687fa16077b0be621908d957167edbe46a211944"
+      "source_sha256": "b1a689f16b500f3b46231958c47ffab80cc9df9db8f859ae48bbfda2a9d208df",
+      "bundled_sha256": "e88d703166b04da32421703fb446767d640c46d32ffe2382808d1736d9c8d475"
     },
     {
       "id": "static-requirements-analysis",
@@ -103,6 +103,13 @@
       "bundled_sha256": "627404896863294afa6084f9391aa1eb7256697222407c083768c53208ef17b1"
     },
     {
+      "id": "integration-observability",
+      "source_path": "integration/observability",
+      "file_count": 7,
+      "source_sha256": "716ea736fc4fa02008b697b1fda4dcd892c824eef955330f9b896889bd4bb42e",
+      "bundled_sha256": "6e1e3ba4dc536199aa2b9f6c5a9a85281127ebdd0b9ea3b4d8718b24d5dfe3cf"
+    },
+    {
       "id": "dynamic-mobile",
       "source_path": "dynamic-testing/mobile",
       "file_count": 34,
@@ -119,23 +126,23 @@
     {
       "id": "integration-github",
       "source_path": "integration/github",
-      "file_count": 11,
-      "source_sha256": "f3395f34c2b2e7c9455c7ddbf2b05499735fa9487c845160b6948abe29854ca4",
-      "bundled_sha256": "6487d27cd3e1b8f77376af78cb76a106ae37b8a5fafe04ac3823eee83a618c21"
+      "file_count": 12,
+      "source_sha256": "d063855e8305ef87a48fdf90b741049e0624b21d0b7d47114f940c38ba208da8",
+      "bundled_sha256": "c26dc0c1618b9b176c603d497181f9fe52605ca1abe524e7eae3a98cbab32303"
     },
     {
       "id": "adapter-browser-session",
       "source_path": "adapter/browser-session",
       "file_count": 10,
-      "source_sha256": "b735b37270730ed3409a6bd17f5bc26c29e4600c88f7bf850636f58a98bd8b0e",
-      "bundled_sha256": "8fad93bcbc3ac6504c45640c7962bb8a6c3bc87899a8f9953229ee429f46220b"
+      "source_sha256": "e40dd78a1672777ea50646c7a427f8c4fdb802d354fa78b1a5f73c56d116703b",
+      "bundled_sha256": "da54af8ab8ecc9432aafd8b7aa43a803ad7dd0a803cb53300dc74d59c399263b"
     },
     {
       "id": "hybrid-ui-ux-review",
       "source_path": "hybrid-testing/ui-ux-review",
       "file_count": 7,
-      "source_sha256": "fcab3efba70ebbfb22a1a348e699d26fcc8ada8b339159b088ebbae91a3f46ab",
-      "bundled_sha256": "479908441e3a67012c314e0d5dfc92f8b4649590c6671cfd21b2588772c857b6"
+      "source_sha256": "73f331e7ff00de5d369abda45c692265a8d1623ef7602aea05c6bdaee727f9e6",
+      "bundled_sha256": "c2fbffd5d51c5ae7680e17c13f5606757011fa2e731ab6690d779327235a39c8"
     },
     {
       "id": "governance-release-quality",
@@ -148,8 +155,8 @@
       "id": "static-supply-chain-security",
       "source_path": "static-testing/supply-chain-security",
       "file_count": 5,
-      "source_sha256": "7a05985cb4e4bb69959ddc7d34b3aaf2ccb266a58d27cdadc887c4a05aa74d96",
-      "bundled_sha256": "382a2f6f0caa59cbf8b79103f81b443df2f475de81e77aa715ab12f9b0473f57"
+      "source_sha256": "707fff3f688726787294b9f3e21d929a2e71deeda8ab4ebb1c727c3323f165f5",
+      "bundled_sha256": "b2531db5d6442db86b6917d94ef43725575e0faf32331e8423330c455af3cc0f"
     },
     {
       "id": "dynamic-resilience",
@@ -168,9 +175,9 @@
     {
       "id": "dynamic-selenium-automation",
       "source_path": "dynamic-testing/selenium-automation",
-      "file_count": 14,
-      "source_sha256": "826199f48d7f5d3cae2ae46c545dd2a5e0230a3eb345b68aa03abb064c30ac5a",
-      "bundled_sha256": "c04407bc296306f4cea41d620a8d498fa75bcc8ec96b6bc69d9c5f015ddcea35"
+      "file_count": 16,
+      "source_sha256": "0fd3b1b2b8e69a66412507f1b94f41a2faf085ba00b79b21cb5dc27f0725cc56",
+      "bundled_sha256": "8cbd24aa99c2cd8549e99cf5d4be76822a999a4b8758cdb783a2f622373f937e"
     }
   ]
 }

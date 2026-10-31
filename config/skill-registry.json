@@ -129,6 +129,15 @@
       "legacy_aliases": ["postman"]
     },
     {
+      "id": "integration-observability",
+      "path": "integration/observability",
+      "mode": "integration",
+      "surface": "observability",
+      "role": "connector",
+      "profile": "specialized",
+      "legacy_aliases": []
+    },
+    {
       "id": "dynamic-mobile",
       "path": "dynamic-testing/mobile",
       "mode": "dynamic",

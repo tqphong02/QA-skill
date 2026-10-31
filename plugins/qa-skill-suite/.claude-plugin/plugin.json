@@ -1,0 +1,20 @@
+{
+  "name": "qa-skill-suite",
+  "version": "1.0.0",
+  "description": "Cross-platform QE, security, automation, analysis, and integration skill suite",
+  "author": {
+    "name": "tqphong02",
+    "url": "https://github.com/tqphong02"
+  },
+  "homepage": "https://github.com/tqphong02/QA-skill#readme",
+  "repository": "https://github.com/tqphong02/QA-skill",
+  "license": "ISC",
+  "keywords": [
+    "qa",
+    "testing",
+    "playwright",
+    "security",
+    "automation",
+    "mcp"
+  ]
+}

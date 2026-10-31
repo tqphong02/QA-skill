@@ -183,7 +183,55 @@ def materialize_execution_templates(data):
                     if not isinstance(overrides, dict):
                         raise ValueError('execution_overrides must be an object')
                     case['execution'] = _deep_merge(templates[execution_ref], overrides)
-    return normalized
+    return normalize_testcase_sequence(normalized)
+
+
+def normalize_testcase_sequence(data):
+    """Ensure scenario_id and testcase_id count continuously +1 in final rendered order across each section."""
+    contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()
+    if contract_mode != 'required':
+        return data
+    for section in data.get('sections') or []:
+        groups = section.get('groups') or []
+        ordered_sc_list = []
+        ordered_case_list = []
+        for group in groups:
+            if not isinstance(group.get('scenarios'), list):
+                continue
+            group['scenarios'] = ordered_scenarios(group)
+            for scenario in group['scenarios']:
+                ordered_sc_list.append(scenario)
+                if isinstance(scenario.get('cases'), list):
+                    scenario['cases'] = sorted(
+                        scenario['cases'],
+                        key=lambda item: type_rank(item.get('type')),
+                    )
+                    ordered_case_list.extend(scenario['cases'])
+
+        sc_matches = [
+            re.fullmatch(r'(SCN-[A-Z0-9_-]*-)(\d+)', str(sc.get('scenario_id') or '').strip())
+            for sc in ordered_sc_list
+        ]
+        if ordered_sc_list and all(sc_matches):
+            sc_nums = [int(m.group(2)) for m in sc_matches]
+            expected_sc = list(range(sc_nums[0], sc_nums[0] + len(sc_nums)))
+            if sc_nums != expected_sc:
+                width = max(3, max(len(m.group(2)) for m in sc_matches))
+                for idx, (sc, m) in enumerate(zip(ordered_sc_list, sc_matches), start=1):
+                    sc['scenario_id'] = f'{m.group(1)}{idx:0{width}d}'
+
+        tc_matches = [
+            re.fullmatch(r'([A-Z][A-Z0-9_-]*-)(\d+)', str(c.get('testcase_id') or '').strip())
+            for c in ordered_case_list
+        ]
+        if ordered_case_list and all(tc_matches):
+            tc_nums = [int(m.group(2)) for m in tc_matches]
+            expected_tc = list(range(tc_nums[0], tc_nums[0] + len(tc_nums)))
+            if tc_nums != expected_tc:
+                width = max(2, max(len(m.group(2)) for m in tc_matches))
+                for idx, (case, m) in enumerate(zip(ordered_case_list, tc_matches), start=1):
+                    case['testcase_id'] = f'{m.group(1)}{idx:0{width}d}'
+    return data
 MANUAL_ACTION_PATTERNS = {
     'navigate': re.compile(r'\b(mở|truy cập|đi đến|đi tới|navigate|open)\b', re.IGNORECASE),
     'fill': re.compile(r'\b(nhập|điền|type|fill)\b', re.IGNORECASE),
@@ -876,6 +924,7 @@ def _validate_source_inventory(data, coverage_item_count):
 
 def iter_testcases(data):
     """Yield cases in canonical order with stable explicit IDs for new contracts."""
+    normalize_testcase_sequence(data)
     counter = 0
     project_code = str((data.get('project') or {}).get('code') or '')
     contract_mode = str(data.get('execution_contract') or 'legacy_text_only').strip().lower()

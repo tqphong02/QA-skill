@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "qa-skill-suite-local",
+  "description": "Local marketplace for the QA-skill repository's own skill suite",
+  "owner": {
+    "name": "tqphong02",
+    "url": "https://github.com/tqphong02"
+  },
+  "plugins": [
+    {
+      "name": "qa-skill-suite",
+      "source": "./plugins/qa-skill-suite"
+    }
+  ]
+}

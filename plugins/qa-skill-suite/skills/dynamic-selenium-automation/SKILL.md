@@ -37,7 +37,7 @@ Build and maintain production-grade Java Selenium WebDriver automation framework
 | ANALYZE | Analyze requirement, codebase, existing framework | Read requirements and/or existing codebase, produce a structured analysis report |
 | DESIGN | Design framework, architecture, dependencies | Design framework skeleton, dependency matrix, architecture decisions |
 | GENERATE | Create, build, generate Feature/Step/Page/framework | Generate complete executable code: features, step definitions, page objects, configuration, pom.xml |
-| EXECUTE | Build, run, execute test, mvn test | Compile and run tests via Maven CLI, capture results |
+| EXECUTE | Build, run, execute test, mvn test | Compile and run tests via Maven CLI; verdict comes from `scripts/check_execution_result.py`, not console output |
 | DEBUG | Debug, fix, analyze failure, flaky, error, lỗi | Analyze compilation errors, test failures, flaky behavior; fix root causes |
 | REVIEW | Review code, architecture, quality, SOLID | Audit code against SOLID, POM conventions, locator stability, separation of concerns |
 | MAINTAIN | Maintain, update, refactor, UI changed | Update page objects, step definitions, feature files when UI or requirements change |
@@ -440,14 +440,31 @@ When in REVIEW mode, evaluate against:
 | REVIEW | [review-checklist.md](references/review-checklist.md) |
 | MAINTAIN | [maintenance-guide.md](references/maintenance-guide.md) |
 
+## Execution tooling
+
+Before EXECUTE mode runs `mvn clean test`, check the toolchain instead of assuming it:
+
+```bash
+bash ./scripts/doctor.sh /path/to/project
+```
+
+After `mvn clean test` produces `target/cucumber-reports/cucumber.json`, compute the verdict from that report instead of reading console scrollback:
+
+```bash
+python3 ./scripts/check_execution_result.py \
+  --cucumber-json /path/to/project/target/cucumber-reports/cucumber.json
+```
+
+The script returns `UNTEST` when the report is missing, empty, or unreadable, and `FAILED` when any scenario has a `failed`, `undefined`, or `pending` step — it is the only accepted source for a `PASS` claim; "the console looked green" is not evidence.
+
 ## Verdicts
 
 Use only: `PASS`, `FAILED`, `N/A`, `UNTEST`
 
-- `PASS` requires actual Maven execution output showing green tests
-- `FAILED` requires the specific failure evidence
+- `PASS` requires `check_execution_result.py` to report `verdict: PASS` from an actual Cucumber JSON report, not Maven console output read by eye
+- `FAILED` requires the specific failure evidence from the same report (`failures[]`)
 - `N/A` for scenarios not applicable to the current environment or configuration
-- `UNTEST` when execution was not possible (missing dependency, environment unavailable, blocked)
+- `UNTEST` when execution was not possible (missing dependency, environment unavailable, blocked) — `doctor.sh` exiting non-zero is one valid basis for this
 - Never claim `PASS` from generated code alone without execution evidence
 - A retry-pass is `FAILED` with `flaky=true`
 

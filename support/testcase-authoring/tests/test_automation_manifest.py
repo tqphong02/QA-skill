@@ -388,5 +388,31 @@ class AutomationManifestTests(unittest.TestCase):
         self.assertEqual('Đăng nhập dành cho kiểm thử', manifest['testcases'][0]['execution']['entry']['screen'])
 
 
+    def test_normalize_testcase_sequence_renumbers_continuously_across_groups(self):
+        data = self.data()
+        group1 = data['sections'][0]['groups'][0]
+        group1['scenarios'][0]['cases'][0]['testcase_id'] = 'CDG-RTG-19'
+        group1['scenarios'][1]['cases'][0]['testcase_id'] = 'CDG-RTG-05'
+        group2 = copy.deepcopy(group1)
+        group2['name'] = 'AGENT_VIEW'
+        group2['scenarios'][0]['scenario_id'] = 'SCN-AGV-001'
+        group2['scenarios'][0]['cases'][0]['testcase_id'] = 'CDG-AGV-01'
+        group2['scenarios'][0]['cases'][0]['case_ref'] = 'AGV_HAPPY_1'
+        group2['scenarios'][1]['scenario_id'] = 'SCN-AGV-002'
+        group2['scenarios'][1]['cases'][0]['testcase_id'] = 'CDG-AGV-08'
+        group2['scenarios'][1]['cases'][0]['case_ref'] = 'AGV_NEG_2'
+        data['sections'][0]['groups'].append(group2)
+
+        records = list(self.generator.iter_testcases(data))
+        self.assertEqual(
+            ['CDG-RTG-01', 'CDG-RTG-02', 'CDG-AGV-03', 'CDG-AGV-04'],
+            [r['testcase_id'] for r in records],
+        )
+        self.assertEqual(
+            ['SCN-LOG-001', 'SCN-LOG-002', 'SCN-AGV-003', 'SCN-AGV-004'],
+            [r['scenario']['scenario_id'] for r in records],
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

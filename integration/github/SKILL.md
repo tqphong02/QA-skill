@@ -49,6 +49,7 @@ Select the guide for the active host:
 
 - Codex: read [references/codex-github-mcp-vi.md](references/codex-github-mcp-vi.md)
 - Antigravity: read [references/antigravity-github-mcp-vi.md](references/antigravity-github-mcp-vi.md)
+- Claude Code: read [references/claude-code-github-mcp-vi.md](references/claude-code-github-mcp-vi.md)
 
 For macOS, Linux, or WSL, configure the server with:
 

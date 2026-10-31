@@ -34,7 +34,9 @@ Trước khi dùng, chạy detect để xác nhận trạng thái:
 node ./scripts/detect.mjs
 ```
 
-Để hiểu đầy đủ CLI và helpers, đọc upstream skill tại thời điểm cài đặt:
+[`references/CAPABILITIES.md`](references/CAPABILITIES.md) là tài liệu API self-contained trong repo này — đủ cho hầu hết tác vụ (navigate, click, fill, snapshot, screenshot, drainEvents). Dùng nó trước; không cần mạng hoặc cài upstream để bắt đầu.
+
+Chỉ khi cần một helper không có trong `CAPABILITIES.md` (API hiếm, hành vi version-specific), thử đọc upstream skill tại thời điểm cài đặt — nếu lệnh dưới đây thất bại (không mạng, chưa cài upstream), coi đó là `runtime_missing` cho riêng helper đó, không phải lý do dừng toàn bộ tác vụ:
 ```bash
 cat "$(npx --yes skills which citrolabs/ego-lite 2>/dev/null)/./SKILL.md" 2>/dev/null \
   || echo "upstream not installed — read https://github.com/citrolabs/ego-lite/tree/main/skills/ego-browser"

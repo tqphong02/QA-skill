@@ -36,6 +36,7 @@ Convert local artifacts with MarkItDown, preserve structure and read back the ge
 - Never scrape a web page, download remote content implicitly or manually re-key tables/headings
 - Preserve source structure, output path/date policy and read the Markdown before handing it to another skill
 - Classify missing converter/dependency as `runtime_missing`, not conversion success
+- Never report a conversion as successful without inspecting the output: an empty file, a file with only whitespace/page-break markers, or a word count far below what the source page/slide/row count implies signals a failed or scanned-image extraction, not success
 
 ## Process
 
@@ -50,7 +51,8 @@ bash <skill-root>/scripts/convert.sh /path/to/data.xlsx /tmp/data.md
 ```
 
 4. Read the `.md` output, not the binary, and preserve heading/requirement references
-5. New Markdown uses `_<DD-MM-YYYY>` in `Asia/Ho_Chi_Minh`; avoid duplicate suffixes, do not rename existing files, and set `QA_PRESERVE_EXACT_FILENAME=1` only for an explicit exact-name request
+5. Check the output before reporting success: if it is empty, near-empty, or mostly non-text artifacts (repeated `\f`, broken glyphs, or far fewer words than the source's page/slide/row count suggests), treat it as an OCR/extraction failure — report `needs_ocr` or `conversion_incomplete` and ask whether to retry with Tesseract OCR, split the file, or scope the conversion, instead of handing the partial Markdown to another skill as if it were complete
+6. New Markdown uses `_<DD-MM-YYYY>` in `Asia/Ho_Chi_Minh`; avoid duplicate suffixes, do not rename existing files, and set `QA_PRESERVE_EXACT_FILENAME=1` only for an explicit exact-name request
 
 ## Supported formats and dependencies
 
@@ -64,7 +66,7 @@ For build/dependency failures, report the exact missing layer; do not upload fil
 
 ## Output contract
 
-Report source path, output Markdown path, detected format, conversion status, dependency/runtime status and read-back result. Preserve IDs, URLs, filenames, formulas, code and machine-readable values. Keep credentials and personal sensitive data out of reports
+Report source path, output Markdown path, detected format, conversion status (`converted`, `needs_ocr`, `conversion_incomplete`, or `runtime_missing`), dependency/runtime status and read-back result including an approximate output word/line count versus the source's page/slide/row count. Preserve IDs, URLs, filenames, formulas, code and machine-readable values. Keep credentials and personal sensitive data out of reports
 
 ## References
 
