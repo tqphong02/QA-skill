@@ -74,7 +74,7 @@
             ]
           },
           "requirement": { "type": "string", "minLength": 1 },
-          "priority": { "type": "string", "minLength": 1 },
+          "priority": { "type": "string", "enum": ["Critical", "High", "Medium", "Low", "N/A"] },
           "automation_tags": {
             "type": "array",
             "uniqueItems": true,

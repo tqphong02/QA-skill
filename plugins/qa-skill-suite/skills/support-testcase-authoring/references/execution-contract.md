@@ -1,6 +1,6 @@
 # Shared Testcase Execution Contract
 
-Use one structured testcase source for manual Excel/Markdown and unified deterministic Playwright BUILD_AND_RUN. `.automation.json` is the only lossless machine handoff; Excel F/G/H is its Vietnamese manual projection and must not be parsed when the matching manifest is available.
+Use one structured testcase source for manual Excel/Markdown and unified deterministic Playwright BUILD_AND_RUN. `.automation.json` is the only lossless machine handoff; Excel F/H/I is its Vietnamese manual projection and must not be parsed when the matching manifest is available.
 
 For UI/POM inventory coverage, a case may declare `ui_function_keys` (or the legacy alias `coverage_refs`) so the generated `.automation.json` keeps an explicit link to the Browser MCP UI function inventory. This is separate from `coverage_item_refs`, which trace the case to source-document obligations
 

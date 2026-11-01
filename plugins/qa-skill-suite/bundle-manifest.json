@@ -7,16 +7,16 @@
     {
       "id": "dynamic-web-exploratory",
       "source_path": "dynamic-testing/web-exploratory",
-      "file_count": 136,
-      "source_sha256": "547276ecbb8c037cc443fb4ae82b5e00f26484759b44133451f33b62ea92a5c1",
-      "bundled_sha256": "7f068a8f97cb6b1a9cd1f3e0c0c282a7bc0ed94b20faaab03cf4c1dcbcd10802"
+      "file_count": 135,
+      "source_sha256": "08037834e2536749ed37d298a6b083aee63b5f5e59023f409e33a2ccdcf0193a",
+      "bundled_sha256": "da95d07834f06ce4fc9e512d9de9376d04fb692b5610b7995e26e4b5e66ca849"
     },
     {
       "id": "support-testcase-authoring",
       "source_path": "support/testcase-authoring",
       "file_count": 26,
-      "source_sha256": "4ac9347acdec15755f8e2e89e7ab29f810ac716c000f4f1b5c8c633cecdb516b",
-      "bundled_sha256": "becaa9381b793063b680757af25aa0ef39f2214db234cf7cd48013788ac647c4"
+      "source_sha256": "f66dc8358dd6dc8cf6529e7d806c4f26f0b222a040bd392b795ea565965dab6d",
+      "bundled_sha256": "87c5488f79998202e24ed05245a994eb8e781b38b13e741d9bd6d17f2c6e6fb3"
     },
     {
       "id": "dynamic-web-automation",

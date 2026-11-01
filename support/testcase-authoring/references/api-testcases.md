@@ -56,9 +56,10 @@ Một scenario chỉ đại diện cho một endpoint, một HTTP operation và 
 | D | Testcase ID ổn định `CODE-API-NNN` do importer tạo và generator giữ nguyên |
 | E | Description bắt đầu bằng `Xác minh rằng` |
 | F | Role, tenant, auth state, test data và dependency cần có |
-| G | Method + endpoint, headers, query, body và bước gửi request |
-| H | Expected status, headers, body/schema và side-effect |
-| I-M | Để trống cho execution |
+| G | Priority 2 (agent tự đánh giá theo rủi ro nghiệp vụ của API) |
+| H | Method + endpoint, headers, query, body và bước gửi request |
+| I | Expected status, headers, body/schema và side-effect |
+| J-N | Để trống cho execution |
 
 ## Structured object
 
@@ -92,7 +93,7 @@ Mỗi API case thêm object `api` như sau
 }
 ```
 
-Generator tự chuyển object này vào F/G/H và giữ I-M trống
+Generator tự chuyển object này vào F/H/I, tự tính Priority 2 (cột G) từ `case.priority` và giữ J-N trống
 
 ## Automation handoff gate
 

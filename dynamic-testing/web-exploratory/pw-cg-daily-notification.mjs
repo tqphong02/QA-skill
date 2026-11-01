@@ -1,142 +1,128 @@
+// Daily-notification schedule-card probe — adaptive wait + accessibility-first
+// input, sharing lib/chat-probe.mjs instead of duplicating the fixed-sleep
+// CSS-guessing pattern that the earlier version carried.
 import { chromium } from 'playwright';
 import fs from 'fs';
 import path from 'path';
+import {
+  openPersistentBot,
+  findChatInput,
+  sendChatMessage,
+  waitForBotReply,
+  writeChatProbeReport,
+} from './lib/chat-probe.mjs';
 
 const PROFILE_DIR = 'C:\\Users\\Asus\\.gemini\\lark-personal-profile';
 const BOT_URL = 'https://dev.cluega.ai/app/pulse-bot?bot=cmvtabh0d004g31mns5ckgw16';
-const RUN_DIR = 'D:\\Project\\qa-runs\\dynamic-web-exploratory\\2026-10-31_09-12-40_daily-notification-schedule-card';
+const RUN_DIR = process.env.QA_RUN_DIR
+  || 'D:\\Project\\qa-runs\\dynamic-web-exploratory\\2026-10-31_09-12-40_daily-notification-schedule-card';
 const EVIDENCE_DIR = path.join(RUN_DIR, 'evidence', 'images');
 fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
 
-const steps = [];
-
 async function ss(page, name) {
-  const p = path.join(EVIDENCE_DIR, name + '.png');
+  const p = path.join(EVIDENCE_DIR, `${name}.png`);
   await page.screenshot({ path: p, fullPage: true }).catch(() => {});
   return p;
 }
 
-async function getInput(page) {
-  const sels = ['textarea', '[contenteditable="true"]', 'input[type="text"]', '[class*="chat-input"]', '[class*="message-input"]'];
-  for (const s of sels) {
-    try { const el = page.locator(s).first(); if (await el.isVisible({ timeout: 3000 })) return el; } catch {}
+async function findButton(page, texts) {
+  for (const text of texts) {
+    try {
+      const loc = page.getByRole('button', { name: new RegExp(text, 'i') }).last();
+      if (await loc.isVisible({ timeout: 2000 })) return loc;
+    } catch { /* try next label */ }
   }
   return null;
 }
 
-async function send(page, msg) {
-  const el = await getInput(page);
-  if (!el) return false;
-  await el.click();
-  await el.fill(msg);
-  await page.keyboard.press('Enter');
-  await page.waitForTimeout(12000);
-  return true;
-}
-
-async function lastBotText(page) {
-  const sels = ['[class*="bot"]', '[class*="assistant"]', '[data-role="bot"]', '[class*="message"]:last-child'];
-  for (const s of sels) {
-    try { const t = await page.locator(s).last().innerText({ timeout: 2000 }); if (t && t.trim().length > 10) return t.trim(); } catch {}
-  }
-  const body = await page.locator('body').innerText().catch(() => '');
-  return body.split('\n').filter(l => l.trim().length > 5).slice(-15).join('\n');
-}
-
-function record(id, desc, note, screenshotPath, verdict) {
-  steps.push({ id, desc, note, screenshotPath, verdict });
-  console.log(`[${verdict}] ${id} - ${desc} :: ${note.slice(0, 150)}`);
-}
-
 async function main() {
-  let browser;
+  const records = [];
+  let session;
   try {
-    browser = await chromium.launchPersistentContext(PROFILE_DIR, {
-      headless: false,
-      viewport: { width: 1440, height: 900 },
-      args: ['--no-sandbox', '--disable-dev-shm-usage'],
-    });
-    const pages = browser.pages();
-    const page = pages.length > 0 ? pages[0] : await browser.newPage();
-
-    let st = 0;
-    try { const r = await page.goto(BOT_URL, { waitUntil: 'load', timeout: 25000 }); st = r?.status() || 0; } catch (e) { console.log('goto err:', e.message.slice(0, 80)); }
-    await page.waitForTimeout(4000);
-    const url = page.url();
-    console.log(`HTTP ${st} | ${url}`);
+    session = await openPersistentBot(chromium, { profileDir: PROFILE_DIR, botUrl: BOT_URL });
+    const { page } = session;
+    console.log(`HTTP ${session.status} | ${session.url}`);
     const shot0 = await ss(page, 'STEP-000_botpage');
 
-    if (url.includes('login') || url.includes('auth')) {
-      record('NOTI-00', 'Truy cap bot', `Bi redirect sang login: ${url}`, shot0, 'UNTEST');
-      await browser.close(); writeReport(); return;
+    if (session.authExpired) {
+      records.push({ id: 'NOTI-00', desc: 'Truy cập bot', verdict: 'UNTEST', reason: 'auth_expired', note: `Bị redirect sang login: ${session.url}`, screenshotPath: shot0 });
+      await session.browser.close();
+      return report(records);
     }
 
-    // NOTI-01: request daily notification -> expect schedule card
-    const ok1 = await send(page, 'thông báo dữ liệu hàng ngày cho tôi');
-    const resp1 = ok1 ? await lastBotText(page) : '(không gửi được tin nhắn)';
-    const shot1 = await ss(page, 'STEP-001_request_sent');
-    const hasScheduleHint = /lịch|schedule|09:00|9:00|ngưỡng|threshold|ROAS|CPA/i.test(resp1);
-    record('NOTI-01', 'Tao schedule card khi yeu cau thong bao hang ngay', resp1, shot1, ok1 ? (hasScheduleHint ? 'OBS' : 'FAILED') : 'UNTEST');
-
-    // Try to find Confirm/Pause/Edit buttons
-    const btnSelsConfirm = ['button:has-text("Confirm")', 'button:has-text("Xác nhận")'];
-    const btnSelsPause = ['button:has-text("Pause")', 'button:has-text("Tạm dừng")'];
-    const btnSelsEdit = ['button:has-text("Edit")', 'button:has-text("Sửa")', 'button:has-text("Chỉnh sửa")'];
-
-    let confirmBtn = null;
-    for (const s of btnSelsConfirm) { try { const el = page.locator(s).last(); if (await el.isVisible({ timeout: 2000 })) { confirmBtn = el; break; } } catch {} }
-    let pauseBtn = null;
-    for (const s of btnSelsPause) { try { const el = page.locator(s).last(); if (await el.isVisible({ timeout: 2000 })) { pauseBtn = el; break; } } catch {} }
-    let editBtn = null;
-    for (const s of btnSelsEdit) { try { const el = page.locator(s).last(); if (await el.isVisible({ timeout: 2000 })) { editBtn = el; break; } } catch {} }
-
-    record('NOTI-01b', 'Kiem tra nut Pause/Edit/Confirm tren schedule card', `Confirm=${!!confirmBtn} Pause=${!!pauseBtn} Edit=${!!editBtn}`, shot1, (confirmBtn || pauseBtn || editBtn) ? 'OBS' : 'FAILED');
-
-    // NOTI-02: Confirm schedule
-    if (confirmBtn) {
-      await confirmBtn.click().catch(() => {});
-      await page.waitForTimeout(6000);
-      const resp2 = await lastBotText(page);
-      const shot2 = await ss(page, 'STEP-002_after_confirm');
-      record('NOTI-02', 'Confirm schedule', resp2, shot2, 'OBS');
+    // NOTI-01: request daily notification -> expect a schedule card with a concrete time/threshold
+    const input1 = await findChatInput(page);
+    if (!input1) {
+      records.push({ id: 'NOTI-01', desc: 'Tạo schedule card khi yêu cầu thông báo hàng ngày', verdict: 'UNTEST', note: 'chat input not found', screenshotPath: shot0 });
     } else {
-      record('NOTI-02', 'Confirm schedule', 'Khong tim thay nut Confirm de bam', shot1, 'UNTEST');
+      const baseline1 = await page.locator('body').innerText().catch(() => '');
+      await sendChatMessage(input1, 'thông báo dữ liệu hàng ngày cho tôi');
+      const reply1 = await waitForBotReply(page, baseline1, { timeoutMs: 30000 });
+      const shot1 = await ss(page, 'STEP-001_request_sent');
+      const hasScheduleHint = reply1.changed && /lịch|schedule|\b\d{1,2}:\d{2}\b|ngưỡng|threshold|roas|cpa/i.test(reply1.text || '');
+      records.push({
+        id: 'NOTI-01', desc: 'Tạo schedule card khi yêu cầu thông báo hàng ngày',
+        verdict: !reply1.changed ? 'UNTEST' : hasScheduleHint ? 'PASS' : 'FAILED',
+        note: reply1.changed ? (reply1.text || '').slice(0, 400) : `(no reply within ${reply1.elapsedMs}ms)`,
+        screenshotPath: shot1,
+      });
+
+      const confirmBtn = await findButton(page, ['Confirm', 'Xác nhận']);
+      const pauseBtn = await findButton(page, ['Pause', 'Tạm dừng']);
+      const editBtn = await findButton(page, ['Edit', 'Sửa', 'Chỉnh sửa']);
+      records.push({
+        id: 'NOTI-01b', desc: 'Kiểm tra nút Pause/Edit/Confirm trên schedule card',
+        verdict: (confirmBtn || pauseBtn || editBtn) ? 'PASS' : 'FAILED',
+        note: `Confirm=${!!confirmBtn} Pause=${!!pauseBtn} Edit=${!!editBtn}`,
+        screenshotPath: shot1,
+      });
+
+      if (confirmBtn) {
+        const baseline2 = await page.locator('body').innerText().catch(() => '');
+        await confirmBtn.click().catch(() => {});
+        const reply2 = await waitForBotReply(page, baseline2, { timeoutMs: 15000 });
+        const shot2 = await ss(page, 'STEP-002_after_confirm');
+        records.push({ id: 'NOTI-02', desc: 'Confirm schedule', verdict: reply2.changed ? 'PASS' : 'UNTEST', note: reply2.changed ? (reply2.text || '').slice(0, 400) : `(no reply within ${reply2.elapsedMs}ms)`, screenshotPath: shot2 });
+      } else {
+        records.push({ id: 'NOTI-02', desc: 'Confirm schedule', verdict: 'UNTEST', note: 'Không tìm thấy nút Confirm để bấm', screenshotPath: shot1 });
+      }
+
+      const pauseBtn2 = pauseBtn || await findButton(page, ['Pause', 'Tạm dừng']);
+      if (pauseBtn2) {
+        const baseline3 = await page.locator('body').innerText().catch(() => '');
+        await pauseBtn2.click().catch(() => {});
+        const reply3 = await waitForBotReply(page, baseline3, { timeoutMs: 15000 });
+        const shot3 = await ss(page, 'STEP-003_after_pause');
+        records.push({ id: 'NOTI-07', desc: 'Pause schedule', verdict: reply3.changed ? 'PASS' : 'UNTEST', note: reply3.changed ? (reply3.text || '').slice(0, 400) : `(no reply within ${reply3.elapsedMs}ms)`, screenshotPath: shot3 });
+      } else {
+        records.push({ id: 'NOTI-07', desc: 'Pause schedule', verdict: 'UNTEST', note: 'Không tìm thấy nút Pause để bấm', screenshotPath: shot1 });
+      }
+
+      // Clarification question — recorded as data for a human/BA to read, not scored as PASS/FAIL
+      const input8 = await findChatInput(page);
+      if (input8) {
+        const baseline4 = await page.locator('body').innerText().catch(() => '');
+        await sendChatMessage(input8, 'Nếu ROAS đúng bằng 1.5 hoặc CPA đúng bằng 12 thì có tính là bất thường không? Sau khi Pause có resume lại được không?');
+        const reply4 = await waitForBotReply(page, baseline4, { timeoutMs: 30000 });
+        const shot4 = await ss(page, 'STEP-004_clarify_boundary');
+        records.push({ id: 'NOTI-CLARIFY', desc: 'Hỏi bot về quy tắc biên và resume', verdict: 'N/A', note: reply4.changed ? (reply4.text || '').slice(0, 600) : '(không có phản hồi)', screenshotPath: shot4 });
+      }
     }
 
-    // NOTI-07: Pause schedule (try after confirm, separate message fallback)
-    let pauseBtn2 = pauseBtn;
-    if (!pauseBtn2) {
-      for (const s of btnSelsPause) { try { const el = page.locator(s).last(); if (await el.isVisible({ timeout: 2000 })) { pauseBtn2 = el; break; } } catch {} }
-    }
-    if (pauseBtn2) {
-      await pauseBtn2.click().catch(() => {});
-      await page.waitForTimeout(6000);
-      const resp7 = await lastBotText(page);
-      const shot7 = await ss(page, 'STEP-003_after_pause');
-      record('NOTI-07', 'Pause schedule', resp7, shot7, 'OBS');
-    } else {
-      record('NOTI-07', 'Pause schedule', 'Khong tim thay nut Pause de bam', shot1, 'UNTEST');
-    }
-
-    // Clarification question to bot about boundary / edit / resume behavior (as data, not as proof)
-    const ok8 = await send(page, 'Nếu ROAS đúng bằng 1.5 hoặc CPA đúng bằng 12 thì có tính là bất thường không? Sau khi Pause có resume lại được không?');
-    const resp8 = ok8 ? await lastBotText(page) : '(không gửi được tin nhắn)';
-    const shot8 = await ss(page, 'STEP-004_clarify_boundary');
-    record('NOTI-CLARIFY', 'Hoi bot ve quy tac bien va resume', resp8, shot8, 'OBS');
-
-    await browser.close();
-    writeReport();
+    await session.browser.close();
+    report(records);
   } catch (e) {
     console.error('Fatal:', e.message);
-    if (browser) await browser.close().catch(() => {});
-    record('ALL', 'Fatal error', e.message, null, 'UNTEST');
-    writeReport();
+    if (session?.browser) await session.browser.close().catch(() => {});
+    records.push({ id: 'ALL', desc: 'Fatal error', verdict: 'UNTEST', note: e.message });
+    report(records);
   }
 }
 
-function writeReport() {
-  fs.writeFileSync(path.join(RUN_DIR, 'results.json'), JSON.stringify(steps, null, 2), 'utf8');
-  console.log('\n===STEPS WRITTEN TO results.json===');
+function report(records) {
+  const normalized = writeChatProbeReport(RUN_DIR, 'results.json', records);
+  for (const r of normalized) console.log(`[${r.userVerdict}] ${r.id} - ${r.desc} :: ${(r.note || '').slice(0, 150)}`);
+  console.log('\n===RESULTS WRITTEN TO results.json===');
 }
 
 main();

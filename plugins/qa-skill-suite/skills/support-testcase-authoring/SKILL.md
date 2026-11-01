@@ -35,13 +35,13 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 1. Resolve `UI`, `FUNCTION` or explicit `API` mode. only use API mode when user explicitly requests writing API testcases
 2. Read the complete supplied source and build atomic `requirements[].coverage_items`; read [coverage-contract.md](references/coverage-contract.md). Unresolved expected results stop generation through `review_required`
 3. Reconcile the source inventory before cases: every explicit AC, rule, field constraint, role/state/transition, documented error and in-scope UI/API behavior needs a stable `COV-*` obligation with source ref, expected result, required design and minimum case count
-4. Organize `section → group → scenario → cases`; every FUNCTION group starts with its main successful flow
+4. Organize `section → group → scenario → cases`; every FUNCTION group starts with its main successful flow. `group.name` is the Module shown in Excel and Report; name it after the real Feature/Function from the source (e.g. `Authentication`, `User Management`, `Dashboard`), never `Module 1`, `General`, `Other` or `Miscellaneous`; keep every testcase for one Feature in the same Module; read [template-schema.md](references/template-schema.md)
 5. Keep one scenario per field/behavior/AC; changing it changes Scenario ID and Name
-6. Give each case stable `testcase_id`, valid `type`, matching `req`, `coverage_item_refs`, `bb_technique` and execution data
+6. Give each case stable `testcase_id`, valid `type`, matching `req`, `coverage_item_refs`, `bb_technique`, risk-based `priority` (`Critical`/`High`/`Medium`/`Low`/`N/A`, never the same value for every case) and execution data. `testcase_id` numbers continuously across the whole section regardless of Module/group; never restart at 1 when a new Module begins — the generator renumbers to close any gap it finds
 7. New UI/FUNCTION cases use `execution_contract="required"`; read [execution-contract.md](references/execution-contract.md)
 8. Add RBAC only when applicable; unresolved permission expectations remain `UNRESOLVED`
 9. Run `python3 scripts/gen-testcases.py <input.json> <output.xlsx>`
-10. Read Markdown, validate the requirement coverage matrix and manifest, compare IDs/count/content/design with Excel; I-M remain blank
+10. Read Markdown, validate the requirement coverage matrix and manifest, compare IDs/count/content/design with Excel; J-N remain blank
 11. Fix the JSON source and regenerate on mismatch
 12. Review each case against the 9 quality criteria in [testcase-quality-review.md](references/testcase-quality-review.md); unresolved items go to the clarification list, never guessed
 
@@ -51,8 +51,10 @@ Use one validated JSON source to generate `<name>.md`, `<name>.automation.json`,
 - No emoji/icons
 - Always create `<output>.md` before `<output>.xlsx`
 - Validate the `RBAC Matrix` with `references/rbac-matrix.schema.json` and its `allow_case_ref` links
-- The generator fails closed for `review_required`, missing/uncovered source obligations, unknown requirements, mixed AC, invalid IDs/types/technique/contracts, invalid RBAC or secret placeholders
+- The generator fails closed for `review_required`, missing/uncovered source obligations, unknown requirements, mixed AC, invalid IDs/types/technique/contracts, invalid priority, invalid RBAC or secret placeholders
 - API automation handoff preserves `manual_verification`, `risk_profile`, `stability_gate`, and typed `api.expected_side_effects[]`; prose-only `api.side_effect` is authoring context, not executable proof
+- Testcase IDs stay sequential across the whole section; the generator closes any per-Module reset back to a continuous count, so never hand-assign IDs that restart at 1 per Module
+- Excel column G (`Priority 2`) is always generator-filled from `case.priority`; column K (`Priority 1`) and J (`Results`, defaulting `Untested`) stay the tester's manual fields; never move or duplicate these roles
 
 ## Structure and fields
 
@@ -76,7 +78,7 @@ Use `EP`, `BVA`, `Decision Table`, `State Transition`, `Use Case Testing`, `Erro
 
 ## Manual and automation contract
 
-Every UI/FUNCTION procedure states environment, route/screen, business role, state, permission and named data; uses one action per numbered line with exact input and observable intermediate/final results. Keep click/focus separate from fill/clear, keep machine keys/selectors/HTTP syntax out of Excel F/G/H, and never store real passwords, tokens, cookies or API keys
+Every UI/FUNCTION procedure states environment, route/screen, business role, state, permission and named data; uses one action per numbered line with exact input and observable intermediate/final results. Keep click/focus separate from fill/clear, keep machine keys/selectors/HTTP syntax out of Excel F/H/I, and never store real passwords, tokens, cookies or API keys
 
 ## Gherkin/BDD mode
 
@@ -108,4 +110,4 @@ Trigger when the user explicitly requests "Feature file", "Given/When/Then", "Gh
 
 ## Output invariants
 
-Markdown → automation manifest → Excel share basename/date policy (`Asia/Ho_Chi_Minh`, `_DD-MM-YYYY` unless exact filename is requested). The source-to-test coverage matrix has no uncovered item; IDs, requirements, descriptions, execution content and counts match; scenario/testcase IDs remain stable; columns I-M remain blank; RBAC sheet exists with `N/A` when out of scope; content is Vietnamese with no trailing prose period or emoji/icon. Read back every artifact before handoff
+Markdown → automation manifest → Excel share basename/date policy (`Asia/Ho_Chi_Minh`, `_DD-MM-YYYY` unless exact filename is requested). The source-to-test coverage matrix has no uncovered item; IDs, requirements, descriptions, execution content and counts match; scenario/testcase IDs remain stable; columns J-N remain blank; RBAC sheet exists with `N/A` when out of scope; content is Vietnamese with no trailing prose period or emoji/icon. Read back every artifact before handoff

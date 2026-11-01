@@ -64,11 +64,13 @@ Test case được trình bày theo bảng chuẩn 6 cột, đồng bộ trực 
 | Cột | Ý nghĩa | Quy tắc thể hiện | Ánh xạ Template Excel / JSON |
 |---|---|---|---|
 | **ID** | Mã định danh test case | Ổn định, có tiền tố hệ thống (vd: `AUTH-01`, `PROJ-01`, `PROJ-UI-01`, `PROJ-API-01`) | Cột D (`Test case ID`) |
+| **Module** | Tên phân hệ nghiệp vụ chứa nhóm scenario liên quan | Đặt theo Feature/Function thực tế trong tài liệu, ngắn gọn, có nghĩa; KHÔNG dùng `Module 1`, `General`, `Other`, `Miscellaneous` | `group.name` (group header, cột C) — xem [template-schema.md](template-schema.md) |
 | **Function** | Tên chức năng / Nhóm chức năng | Tên phân hệ hoặc nhóm kịch bản (vd: Đăng nhập, Tạo đơn hàng) | Cột C (`Scenario Name`) / Group |
 | **Test Case Description** | Mô tả mục tiêu kiểm thử | Bắt đầu bằng "Xác minh rằng..." hoặc "Kiểm tra...", rõ ràng, đơn nghĩa | Cột E (`Description`) |
 | **Pre-condition** | Tiền điều kiện | Trạng thái hệ thống, tài khoản đăng nhập, dữ liệu có sẵn trước khi thực hiện | Cột F (`Pre-condition`) |
-| **Test Case Procedure** | Các bước thực hiện | Đánh số thứ tự (Step 1, Step 2, Step 3...), ghi rõ thao tác và dữ liệu nhập cụ thể | Cột G (`Test Case Procedure`) |
-| **Expected Output** | Kết quả mong đợi | Đánh số thứ tự tương ứng hoặc nêu rõ kết quả quan sát được, trạng thái màn hình, thông báo lỗi | Cột H (`Expected Results`) |
+| **Priority (risk-based)** | Mức ưu tiên tự đánh giá theo rủi ro/tác động nghiệp vụ | `Critical`, `High`, `Medium`, `Low` hoặc `N/A`; không đặt cùng một mức cho mọi testcase, không dựa vào độ phức tạp | Cột G (`Priority 2`) |
+| **Test Case Procedure** | Các bước thực hiện | Đánh số thứ tự (Step 1, Step 2, Step 3...), ghi rõ thao tác và dữ liệu nhập cụ thể | Cột H (`Test Case Procedure`) |
+| **Expected Output** | Kết quả mong đợi | Đánh số thứ tự tương ứng hoặc nêu rõ kết quả quan sát được, trạng thái màn hình, thông báo lỗi | Cột I (`Expected Results`) |
 
 ---
 

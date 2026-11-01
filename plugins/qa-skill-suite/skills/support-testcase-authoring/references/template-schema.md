@@ -6,7 +6,7 @@ Mỗi workbook được generate cùng một file Markdown cùng basename. Markd
 
 Master `assets/Template.xlsx` hiện có 5 sheet: `Cover`, `Test cases_App`, `Note`, `Report`, `Dropdown Keys - Do Not Delete -`. Generator thêm `RBAC Matrix` ngay sau `Test cases_App`, nên workbook đầu ra có 6 sheet
 
-The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/G/H; it never adds a selector or automation column to Excel. The source-to-test coverage matrix lives in Markdown and `.automation.json`; Excel keeps the stable requirement-derived Scenario/Testcase IDs without adding coverage columns
+The workbook columns remain fixed. The structured `execution` contract lives in the JSON source and Markdown companion, then projects into F/H/I; it never adds a selector or automation column to Excel. The source-to-test coverage matrix lives in Markdown and `.automation.json`; Excel keeps the stable requirement-derived Scenario/Testcase IDs without adding coverage columns
 
 ## Sheet `Cover` — metadata project
 
@@ -33,13 +33,16 @@ The workbook columns remain fixed. The structured `execution` contract lives in 
 | D | Test case ID | 12 |
 | E | Description | 50 |
 | F | Pre-condition | 25 |
-| G | Test Case Procedure | 30 |
-| H | Expected Results | 30 |
-| I | Results | 12 |
-| J | Priority | 10 |
-| K | Date | 12 |
-| L | Tester | 12 |
-| M | Notes | 20 |
+| G | Priority 2 | 12 |
+| H | Test Case Procedure | 30 |
+| I | Expected Results | 30 |
+| J | Results | 12 |
+| K | Priority 1 | 10 |
+| L | Date | 12 |
+| M | Tester | 12 |
+| N | Notes | 20 |
+
+`Priority 2` (col G) is the generator's own risk-based assessment of each testcase, written automatically from `case.priority` in the JSON source; it uses the same dropdown list as `Priority 1` (`Critical`, `High`, `Medium`, `Low`, `N/A`) but is never left blank. `Priority 1` (col K) stays blank for the tester/QA lead to set manually during execution tracking, exactly like before the column was renamed; the generator never writes to it
 
 ## Sheet `RBAC Matrix` — Role × Rule × Testcase coverage
 
@@ -111,3 +114,12 @@ Group từ tag OpenAPI/Swagger có thể chưa tồn tại trong template. Gener
 - Luôn có cả 2 phần, UI trước Functional
 - Mỗi phần: Group (LOGIN, REGISTER, BOOKING...) → Scenario (SCN-xxx) → Cases
 - Nếu feature không có UI → vẫn để phần UI với 1 group note "N/A" hoặc bỏ group
+
+## Module (Group) naming convention
+
+`group.name` là Module hiển thị ở cột C (group header) trong `Test cases_App` và trong Report sheet. Đặt tên theo Feature/Function thực tế lấy từ tài liệu yêu cầu, không tự suy diễn:
+
+- Ngắn gọn, có nghĩa, phản ánh đúng chức năng đang kiểm thử, vd `Authentication`, `User Management`, `Agent Management`, `Dashboard`, `Meeting Management`, `Email Integration`, `Creator Analytics`
+- Không dùng tên chung chung không gắn với Feature cụ thể: `Module 1`, `Module 2`, `General`, `Other`, `Miscellaneous`
+- Mọi testcase thuộc cùng một Feature phải nằm trong cùng một Module; chỉ tách Module riêng cho Sub-feature khi Sub-feature đó đủ lớn để cần theo dõi coverage độc lập
+- Tên Module phải giúp người đọc Report hiểu ngay đang kiểm thử chức năng gì mà không cần mở từng testcase

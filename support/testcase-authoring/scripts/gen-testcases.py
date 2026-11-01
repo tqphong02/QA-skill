@@ -55,6 +55,9 @@ def configure_cli_streams():
 # within each scenario. Alternative is optional; when absent the visible order
 # starts with Happy Path, Validation, then Edge Case.
 TYPE_ORDER = ['happy', 'alternative', 'validation', 'edge', 'negative', 'error', 'ui', 'additional']
+# Risk-based priority the generator projects into Excel column G ("Priority 2").
+# Must match the Priority 1/Priority 2 dropdown list exactly (see template-schema.md).
+PRIORITY_VALUES = {'Critical', 'High', 'Medium', 'Low', 'N/A'}
 BB_TECHNIQUES = {
     'EP', 'BVA', 'Decision Table', 'State Transition', 'Use Case Testing',
     'Error Guessing', 'Pairwise',
@@ -1020,6 +1023,12 @@ def iter_testcases(data):
                             raise ValueError(
                                 f'Unsupported bb_technique: {invalid_techniques}; allowed={sorted(BB_TECHNIQUES)}'
                             )
+                        case_priority = str(case.get('priority') or '').strip()
+                        if case_priority not in PRIORITY_VALUES:
+                            raise ValueError(
+                                f'New executable cases require case.priority in {sorted(PRIORITY_VALUES)}; '
+                                f'got: {case.get("priority")!r}'
+                            )
                         coverage_refs = _coverage_item_refs(case)
                         if case_type == 'additional':
                             if coverage_refs:
@@ -1740,7 +1749,7 @@ def _render_execution_case(case, execution):
 
 
 def render_case(case, execution_required=False):
-    """Render API, structured execution, or legacy text into F/G/H."""
+    """Render API, structured execution, or legacy text into F/H/I."""
     if case.get('api') is not None:
         if case.get('execution') is not None:
             raise ValueError('case.api cannot be combined with case.execution')
@@ -2256,11 +2265,11 @@ def safe_set(ws, coord, value):
 
 def d_formula(row, anchor_row, is_ui, project_code):
     """Cột D — Test case ID tự sinh.
-    Đếm số row đã có H (Expected) trong cùng section từ anchor_row đến row hiện tại.
+    Đếm số row đã có I (Expected) trong cùng section từ anchor_row đến row hiện tại.
     """
     prefix = f'{project_code}-UI-' if is_ui else f'{project_code}-'
-    return (f'=IF(H{row}="","","{prefix}'
-            f'&TEXT(COUNTIF($H${anchor_row+1}:H{row},"<>"),"00"))')
+    return (f'=IF(I{row}="","","{prefix}'
+            f'&TEXT(COUNTIF($I${anchor_row+1}:I{row},"<>"),"00"))')
 
 def parse_date(s):
     if not s: return None
@@ -2557,11 +2566,12 @@ def main():
         'B': capture_style(ws, 'B12'), 'C': capture_style(ws, 'C12') or sty_group,
         'D': capture_style(ws, 'D12'), 'E': capture_style(ws, 'E12'),
         'F': capture_style(ws, 'F12') or capture_style(ws, 'E12'),
-        'G': capture_style(ws, 'G12') or capture_style(ws, 'E12'),
-        'H': capture_style(ws, 'H12'), 'I': capture_style(ws, 'I12'),
-        'J': capture_style(ws, 'J12'), 'K': capture_style(ws, 'K12') or capture_style(ws, 'I12'),
-        'L': capture_style(ws, 'L12') or capture_style(ws, 'I12'),
-        'M': capture_style(ws, 'M12') or capture_style(ws, 'E12'),
+        'G': capture_style(ws, 'G12') or capture_style(ws, 'K12'),
+        'H': capture_style(ws, 'H12') or capture_style(ws, 'E12'),
+        'I': capture_style(ws, 'I12'), 'J': capture_style(ws, 'J12'),
+        'K': capture_style(ws, 'K12') or capture_style(ws, 'J12'),
+        'L': capture_style(ws, 'L12') or capture_style(ws, 'J12'),
+        'M': capture_style(ws, 'M12') or capture_style(ws, 'J12'),
         'N': capture_style(ws, 'N12') or capture_style(ws, 'E12'),
     }
 
@@ -2604,7 +2614,7 @@ def main():
     for r in range(10, ws.max_row + 1):
         title = ws.cell(row=r, column=3).value
         if title in section_styles:
-            apply_row_style(ws, r, 2, 13, section_styles[title])
+            apply_row_style(ws, r, 2, 14, section_styles[title])
 
     # Xoá data validation cũ
     ws.data_validations.dataValidation = []
@@ -2657,9 +2667,9 @@ def main():
                 print(f"  ⚠️  Không tìm thấy vị trí cho section='{sec_title}', group='{grp_name}'. Bỏ qua.")
                 continue
             section_row, group_row, current_row = pos
-            # Group/function title rows must carry their fill across B:M, not
+            # Group/function title rows must carry their fill across B:N, not
             # only the cell containing the title.
-            apply_row_style(ws, group_row, 2, 13, sty_group)
+            apply_row_style(ws, group_row, 2, 14, sty_group)
             # Ghi từng scenario
             for sc in ordered_scenarios(grp):
                 sid = sc.get('scenario_id', '')
@@ -2677,27 +2687,30 @@ def main():
                     )
                     req = case.get('req') or sc.get('requirement', '')
                     note = f"Ref: {req}" if req else ("Ref: (out-of-spec)" if ctype == 'additional' else "")
+                    priority2 = str(case.get('priority') or '').strip() or 'N/A'
                     vals = {
                         2: sid,                      # B: Scenario ID
                         3: sc_name,                  # C: Scenario Name (tên nhóm chức năng - shared)
                         5: desc,                     # E: Description (manual "Xác minh rằng...")
                         6: pre_condition,             # F: Pre-condition
-                        7: procedure,                 # G: Procedure
-                        8: expected_result,           # H: Expected Results
-                        # Cột I (Results), J (Priority), K (Date), L (Tester), M (Notes) - KHÔNG fill, để tester điền sau
+                        7: priority2,                 # G: Priority 2 (agent risk-based priority)
+                        8: procedure,                 # H: Procedure
+                        9: expected_result,           # I: Expected Results
+                        10: 'Untested',                # J: Results default state before execution
+                        # Cột K (Priority 1), L (Date), M (Tester), N (Notes) - KHÔNG fill, để tester điền sau
                     }
                     for col, v in vals.items():
                         cell = ws.cell(row=current_row, column=col, value=v)
                         letter = get_column_letter(col)
-                        wrap = col in (5, 6, 7, 8)
+                        wrap = col in (5, 6, 8, 9)
                         apply_style(cell, sty.get(letter) or sty['E'], wrap_text=wrap)
                     # Cột D uses the same stable ID as Markdown and automation manifest
                     d_id = record_by_case[id(case)]['test_id']
                     dcell = ws.cell(row=current_row, column=4, value=d_id)
                     apply_style(dcell, sty['D'])
-                    # I (Results), J (Priority), K (Date), L (Tester), M (Notes) - để trống cho tester
+                    # K (Priority 1), L (Date), M (Tester), N (Notes) - để trống cho tester
                     # CHỈ apply style (không fill value) để giữ format
-                    for empty_col in [9, 10, 11, 12, 13]:
+                    for empty_col in [11, 12, 13, 14]:
                         empty_cell = ws.cell(row=current_row, column=empty_col)
                         apply_style(empty_cell, sty.get(get_column_letter(empty_col)) or sty['E'])
                     # Base height; normalize again after sample-row deletion shifts indexes
@@ -2708,33 +2721,36 @@ def main():
     if all_data_ranges:
         rmin, rmax = min(all_data_ranges), max(all_data_ranges)
         # Dropdowns
-        dv_i = DataValidation(type='list', formula1='"Pass,Fail,N/A,Untested"', allow_blank=True)
-        dv_i.add(f'I{rmin}:I{rmax}')
-        ws.add_data_validation(dv_i)
-        dv_j = DataValidation(type='list', formula1='"Critical,High,Medium,Low,N/A"', allow_blank=True)
+        dv_g = DataValidation(type='list', formula1='"Critical,High,Medium,Low,N/A"', allow_blank=True)
+        dv_g.add(f'G{rmin}:G{rmax}')
+        ws.add_data_validation(dv_g)
+        dv_j = DataValidation(type='list', formula1='"Pass,Fail,N/A,Untested"', allow_blank=True)
         dv_j.add(f'J{rmin}:J{rmax}')
         ws.add_data_validation(dv_j)
-        
-        # Colors for Results (Col I)
-        colors_i = {
-            'Pass': ('C6EFCE', '006100'),
-            'Fail': ('FFC7CE', '9C0006'),
-            'N/A': ('FFEB9C', '9C6500'),
-            'Untested': ('D9D9D9', '595959')
-        }
-        for val, (bg, fg) in colors_i.items():
-            rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
-                              fill=PatternFill(start_color=bg, end_color=bg, fill_type='solid'),
-                              font=Font(color=fg))
-            ws.conditional_formatting.add(f'I{rmin}:I{rmax}', rule)
+        dv_k = DataValidation(type='list', formula1='"Critical,High,Medium,Low,N/A"', allow_blank=True)
+        dv_k.add(f'K{rmin}:K{rmax}')
+        ws.add_data_validation(dv_k)
 
-        # Colors for Priority (Col J)
-        colors_j = {
+        priority_colors = {
             'Critical': ('FF0000', 'FFFFFF'),
             'High': ('FFC7CE', '9C0006'),
             'Medium': ('FFEB9C', '9C6500'),
             'Low': ('C6EFCE', '006100'),
             'N/A': ('D9D9D9', '595959')
+        }
+        # Colors for Priority 2 (Col G)
+        for val, (bg, fg) in priority_colors.items():
+            rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
+                              fill=PatternFill(start_color=bg, end_color=bg, fill_type='solid'),
+                              font=Font(color=fg))
+            ws.conditional_formatting.add(f'G{rmin}:G{rmax}', rule)
+
+        # Colors for Results (Col J)
+        colors_j = {
+            'Pass': ('C6EFCE', '006100'),
+            'Fail': ('FFC7CE', '9C0006'),
+            'N/A': ('FFEB9C', '9C6500'),
+            'Untested': ('D9D9D9', '595959')
         }
         for val, (bg, fg) in colors_j.items():
             rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
@@ -2742,10 +2758,17 @@ def main():
                               font=Font(color=fg))
             ws.conditional_formatting.add(f'J{rmin}:J{rmax}', rule)
 
+        # Colors for Priority 1 (Col K)
+        for val, (bg, fg) in priority_colors.items():
+            rule = CellIsRule(operator='equal', formula=[f'"{val}"'], stopIfTrue=True,
+                              fill=PatternFill(start_color=bg, end_color=bg, fill_type='solid'),
+                              font=Font(color=fg))
+            ws.conditional_formatting.add(f'K{rmin}:K{rmax}', rule)
+
     # 7. Xoá HẲN các row mẫu còn sót (group headers KHÔNG có trong JSON + sample
     # case rows) thay vì chỉ clear value. Sau bước này, file đầu ra sẽ KHÔNG
     # còn dòng rác (trống nhưng vẫn giữ fill color + row height).
-    # Tìm các row từ 10..max mà TẤT CẢ các cột B/C/D/E/F/G/H đều trống.
+    # Tìm các row từ 10..max mà TẤT CẢ các cột B/C/D/E/F/G/H/I đều trống.
     # Chỉ giữ section rows. Duyệt từ dưới lên để delete_rows không shift index.
     rows_to_delete = []
     for r in range(10, ws.max_row + 1):
@@ -2755,7 +2778,7 @@ def main():
         # Check empty
         is_empty = all(
             (ws.cell(row=r, column=c).value in (None, ''))
-            for c in range(2, 9)  # B..H
+            for c in range(2, 10)  # B..I
         )
         if is_empty:
             rows_to_delete.append(r)
@@ -2788,16 +2811,16 @@ def main():
         if c2 not in (None, '') and ws.cell(row=r, column=4).value not in (None, ''):
             line_count = max(
                 str(ws.cell(row=r, column=c).value or '').count('\n') + 1
-                for c in range(5, 9)
+                for c in (5, 6, 8, 9)
             )
             ws.row_dimensions[r].height = min(300.0, max(51.0, line_count * 15.0))
 
         # Row deletion can shift a header. Reapply the full-band style after
         # the final row layout is known.
         if c3 in section_styles:
-            apply_row_style(ws, r, 2, 13, section_styles[c3])
+            apply_row_style(ws, r, 2, 14, section_styles[c3])
         elif c3 in declared_groups and not c2:
-            apply_row_style(ws, r, 2, 13, sty_group)
+            apply_row_style(ws, r, 2, 14, sty_group)
 
     # 8. Create the derived RBAC Matrix sheet from the same validated JSON source
     write_rbac_sheet(wb, rbac, case_registry)

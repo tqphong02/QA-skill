@@ -25,26 +25,26 @@ Markdown phải chứa đầy đủ:
 - Group
 - Scenario ID và Scenario Name
 - Testcase ID giống Excel
-- Type, mandatory black-box technique metadata, requirement reference và priority
+- Type, mandatory black-box technique metadata, requirement reference và priority (risk-based; projects into Excel Priority 2)
 - Description
 - Pre-condition
 - Procedure
 - Expected Results
-- Manual F/G/H projection with numbered Vietnamese preconditions, actions, waits and observable results; do not expose raw JSON, `S##`, `target.key` or assertion labels in this projection
+- Manual F/H/I projection with numbered Vietnamese preconditions, actions, waits and observable results; do not expose raw JSON, `S##`, `target.key` or assertion labels in this projection
 - Separate Execution Contract version, detailed entry state and test data for new executable UI/FUNCTION cases
 - Stable step IDs, exact structured values, semantic target keys, wait signals and step assertions in the technical Step Contract table
 - Final outcome assertions and cleanup contract
 - Selector status: unresolved until POM verifies the target in the runtime DOM
-- API request/response detail trong F/G/H nếu là API mode
+- API request/response detail trong F/H/I nếu là API mode
 
-Markdown không chứa execution columns I-M vì chúng được tester cập nhật trong Excel khi chạy
+Markdown không chứa execution columns J-N vì chúng được tester cập nhật trong Excel khi chạy
 
 ## Read order cho AI
 
 1. Khi đã có testcase Markdown, đọc file `.md` trước
 2. POM đọc `.automation.json`; manual tester đọc Pre-condition, Procedure và Expected Results; Markdown là bản đọc/review chung
 3. Không mở Excel chỉ để hiểu testcase design
-4. Chỉ đọc Excel khi cần format, dropdown, formula hoặc execution result I-M
+4. Chỉ đọc Excel khi cần format, dropdown, formula hoặc execution result J-N
 5. Nếu chỉnh testcase design, sửa JSON source rồi regenerate Markdown, automation manifest và Excel
 6. Không sửa riêng một artifact khiến ba bản lệch nhau
 
@@ -54,7 +54,7 @@ Markdown không chứa execution columns I-M vì chúng được tester cập nh
 - Tổng case phải bằng nhau
 - Mọi requirement coverage item phải là `COVERED`; không được generate khi thiếu case type, kỹ thuật hoặc minimum count
 - Scenario ID, Scenario Name, Testcase ID, description, pre-condition, procedure và expected phải khớp
-- Với case có `execution`, F/G/H phải là projection manual đúng thứ tự của `entry`, `steps` và `outcome.assertions`; Step Contract giữ machine keys/values cho automation và không được tạo nguồn flow thứ hai
+- Với case có `execution`, F/H/I phải là projection manual đúng thứ tự của `entry`, `steps` và `outcome.assertions`; Step Contract giữ machine keys/values cho automation và không được tạo nguồn flow thứ hai
 - New executable cases phải có Testcase ID explicit, unique và ổn định khi thêm/reorder case
 - Không có dấu `.` cuối prose và không có emoji/icon
 - Không lưu secret thật trong cả hai file
